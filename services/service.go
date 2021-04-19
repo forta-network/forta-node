@@ -36,8 +36,8 @@ func initExecID(ctx context.Context) context.Context {
 }
 
 func InitMainContext() (context.Context, context.CancelFunc) {
-	ctx, cancel := context.WithCancel(context.Background())
-	ctx = initExecID(ctx)
+	execIDCtx := initExecID(context.Background())
+	ctx, cancel := context.WithCancel(execIDCtx)
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc,
 		syscall.SIGHUP,
