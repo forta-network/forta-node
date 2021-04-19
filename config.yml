@@ -1,0 +1,5 @@
+ethereum:
+  jsonRpcUrl: "https://cloudflare-eth.com"
+
+log:
+  level: debug
