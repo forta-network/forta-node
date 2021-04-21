@@ -19,6 +19,18 @@ $ make build
 $ ./zephyr-node
 ```
 
+#### Stop Node
+
+```
+CTRL-C
+```
+
+#### View Logs
+
+```shell
+$ docker logs -f CONTAINER_IMAGE
+```
+
 #### Configuration
 
 See config.yml for configuration (Docs TBD)
