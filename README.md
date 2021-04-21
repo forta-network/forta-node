@@ -28,7 +28,7 @@ CTRL-C
 #### View Logs
 
 ```shell
-$ docker logs -f CONTAINER_IMAGE
+$ docker logs -f CONTAINER_ID
 ```
 
 #### Configuration
