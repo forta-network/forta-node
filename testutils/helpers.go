@@ -10,6 +10,9 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
+// mocking code borrowed from go-ethereum/core/types tests
+
+// TestTxs get a list of mock transactions with the following nonces
 func TestTxs(nonces ...int) []*types.Transaction {
 	testAddr := common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b")
 	var result []*types.Transaction
@@ -34,6 +37,7 @@ func TestTxs(nonces ...int) []*types.Transaction {
 	return result
 }
 
+// TestBlock gets a block with a list of transactions with the following nonces
 func TestBlock(nonces ...int) *types.Block {
 	return types.NewBlock(&types.Header{
 		Difficulty: math.BigPow(11, 11),
