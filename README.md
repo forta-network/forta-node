@@ -1,4 +1,4 @@
-## safe-node
+## zephyr-node
 
 #### Build Node
 
@@ -9,7 +9,7 @@ $ make build
 #### Run Node
 
 ```shell
-$ ./safe-node
+$ ./zephyr-node
 ```
 
 #### Configuration

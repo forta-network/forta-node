@@ -1,4 +1,4 @@
-module OpenZeppelin/safe-node
+module OpenZeppelin/zephyr-node
 
 go 1.16
 

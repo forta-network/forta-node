@@ -1,14 +1,14 @@
 
-build-safe-node:
-	docker build -t openzeppelin/safe-node -f Dockerfile-safe-node .
+build-node:
+	docker build -t openzeppelin/zephyr-node -f Dockerfile-zephyr-node .
 
 build-main:
-	go build -o safe-node main.go
+	go build -o zephyr-node main.go
 
 proto:
 	protoc -I=protocol --go-grpc_out=protocol/. --go_out=protocol/. protocol/*.proto
 
-build: proto build-main build-safe-node
+build: proto build-main build-node
 
 test:
 	go test ./...

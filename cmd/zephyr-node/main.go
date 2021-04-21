@@ -9,8 +9,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"OpenZeppelin/safe-node/config"
-	"OpenZeppelin/safe-node/services"
+	"OpenZeppelin/zephyr-node/config"
+	"OpenZeppelin/zephyr-node/services"
 )
 
 func initTxStream(ctx context.Context) (*services.TxStreamService, error) {

@@ -6,15 +6,16 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"OpenZeppelin/safe-node/config"
-	"OpenZeppelin/safe-node/services"
+	"OpenZeppelin/zephyr-node/config"
+	"OpenZeppelin/zephyr-node/services"
 )
 
 func initServices(cfg config.Config, ctx context.Context) ([]services.Service, error) {
 	svc, err := services.NewTxNodeService(ctx, services.TxNodeServiceConfig{
-		JsonRpcUrl: cfg.Ethereum.JsonRpcUrl,
-		LogLevel:   cfg.Log.Level,
-		StartBlock: cfg.Ethereum.StartBlock,
+		JsonRpcUrl:     cfg.Ethereum.JsonRpcUrl,
+		LogLevel:       cfg.Log.Level,
+		StartBlock:     cfg.Ethereum.StartBlock,
+		ContainerImage: cfg.Zephyr.NodeImage,
 	})
 	if err != nil {
 		return nil, err

@@ -6,8 +6,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"OpenZeppelin/safe-node/clients"
-	"OpenZeppelin/safe-node/config"
+	"OpenZeppelin/zephyr-node/clients"
+	"OpenZeppelin/zephyr-node/config"
 )
 
 const EnvJsonRpcUrl = "JSON_RPC_URL"
@@ -22,9 +22,10 @@ type TxNodeService struct {
 }
 
 type TxNodeServiceConfig struct {
-	JsonRpcUrl string
-	LogLevel   string
-	StartBlock int
+	JsonRpcUrl     string
+	LogLevel       string
+	ContainerImage string
+	StartBlock     int
 }
 
 func (t *TxNodeService) Start() error {
@@ -39,8 +40,8 @@ func (t *TxNodeService) Start() error {
 		startBlock = fmt.Sprintf("%d", t.config.StartBlock)
 	}
 	container, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
-		Name:  fmt.Sprintf("safe-node-%s", ExecID(t.ctx)),
-		Image: "openzeppelin/safe-node",
+		Name:  fmt.Sprintf("zephyr-node-%s", ExecID(t.ctx)),
+		Image: t.config.ContainerImage,
 		Env: map[string]string{
 			EnvJsonRpcUrl:      t.config.JsonRpcUrl,
 			EnvStartBlock:      startBlock,

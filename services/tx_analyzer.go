@@ -6,7 +6,7 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	log "github.com/sirupsen/logrus"
 
-	"OpenZeppelin/safe-node/feeds"
+	"OpenZeppelin/zephyr-node/feeds"
 )
 
 // TxAnalyzerService reads TX info, calls agents, and emits results

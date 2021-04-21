@@ -1,3 +1,6 @@
+zephyr:
+  nodeImage: "openzeppelin/zephyr-node:latest"
+
 ethereum:
   jsonRpcUrl: "https://cloudflare-eth.com"
   startBlock: 12284544

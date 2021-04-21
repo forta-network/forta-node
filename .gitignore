@@ -1,6 +1,6 @@
 .idea
 *.iml
 main
-safe-node
-!cmd/safe-node
+zephyr-node
+!cmd/zephyr-node
 *.pb.go

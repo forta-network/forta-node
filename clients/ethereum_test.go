@@ -11,8 +11,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	mocks "OpenZeppelin/safe-node/clients/mocks"
-	"OpenZeppelin/safe-node/testutils"
+	mocks "OpenZeppelin/zephyr-node/clients/mocks"
+	"OpenZeppelin/zephyr-node/testutils"
 )
 
 const testBlockHash = "0x4fc0862e76691f5312964883954d5c2db35e2b8f7a4f191775a4f50c69804a8d"

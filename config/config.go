@@ -10,6 +10,9 @@ import (
 const EnvLogLevel = "LOG_LEVEL"
 
 type Config struct {
+	Zephyr struct {
+		NodeImage string `yaml:"nodeImage"`
+	} `yaml:"zephyr"`
 	Ethereum struct {
 		JsonRpcUrl string `yaml:"jsonRpcUrl"`
 		StartBlock int    `yaml:"startBlock"`

@@ -11,8 +11,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	clients "OpenZeppelin/safe-node/clients/mocks"
-	"OpenZeppelin/safe-node/utils"
+	clients "OpenZeppelin/zephyr-node/clients/mocks"
+	"OpenZeppelin/zephyr-node/utils"
 )
 
 var testErr = errors.New("test")
