@@ -3,3 +3,4 @@
 main
 safe-node
 !cmd/safe-node
+*.pb.go

@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+option go_package = "./;protocol";
+
+service Agent {
+  rpc Initialize (InitializeRequest) returns (InitializeResponse) {}
+  rpc EvaluateTransaction (EvaluateRequest) returns (EvaluateResponse) {}
+}
+
+enum ResponseStatus {
+  UNKNOWN = 0;
+  ERROR = 1;
+  SUCCESS = 2;
+}
+
+message InitializeRequest {
+  string requestId = 1;
+  string analyzerHost = 2;
+  string proxyHost = 3;
+}
+
+message InitializeResponse {
+  string requestId = 1;
+  ResponseStatus status = 2;
+  repeated string addresses = 3;
+}
+
+message EvaluateRequest {
+  string requestId = 1;
+  TransactionEvent event = 2;
+}
+
+message EvaluateResponse {
+  string requestId = 1;
+  ResponseStatus status = 2;
+  float score = 3;
+  map<string, string> metadata = 4;
+}
+
+message TransactionEvent {
+
+  enum EventType {
+    BLOCK = 0;
+    REORG = 1;
+  }
+
+  message EthBlock {
+    string blockHash = 1;
+    string blockNumber = 2;
+  }
+
+  message EthTransaction {
+    string type = 1;
+    string nonce = 2;
+    string gasPrice = 3;
+    string gas = 4;
+    string value = 5;
+    string input = 6;
+    string v = 7;
+    string r = 8;
+    string s = 9;
+    string to = 10;
+    string hash = 11;
+  }
+
+  message Log {
+    string address = 1;
+    repeated string topics = 2;
+    string data = 3;
+    string blockNumber = 4;
+    string transactionHash = 5;
+    string transactionIndex = 6;
+    string blockHash = 7;
+    string logIndex = 8;
+    bool removed = 9;
+  }
+
+  message EthReceipt {
+    string root = 1;
+    string status = 2;
+    string cumulativeGasUsed = 3;
+    string logsBloom = 4;
+    repeated Log logs = 5;
+    string transactionHash = 6;
+    string contractAddress = 7;
+    string gasUsed = 8;
+    string blockHash = 9;
+    string blockNumber = 10;
+    string transactionIndex = 11;
+  }
+
+  EventType type = 1;
+  EthTransaction transaction = 2;
+  EthReceipt receipt = 3;
+}

@@ -41,8 +41,10 @@ func (bf *blockFeed) initialize() error {
 		if err != nil {
 			return err
 		}
+		log.Debugf("retrieved block number %d", res)
 		bf.start = big.NewInt(int64(res))
 	}
+	log.Infof("initialized block number %d", bf.start)
 	return nil
 }
 

@@ -11,6 +11,7 @@ import (
 )
 
 const EnvJsonRpcUrl = "JSON_RPC_URL"
+const EnvStartBlock = "START_BLOCK"
 
 // TxNodeService manages the safe-node docker container as a service
 type TxNodeService struct {
@@ -23,6 +24,7 @@ type TxNodeService struct {
 type TxNodeServiceConfig struct {
 	JsonRpcUrl string
 	LogLevel   string
+	StartBlock int
 }
 
 func (t *TxNodeService) Start() error {
@@ -32,11 +34,16 @@ func (t *TxNodeService) Start() error {
 		log.Error("invalid log level", err)
 		return err
 	}
+	var startBlock string
+	if t.config.StartBlock != 0 {
+		startBlock = fmt.Sprintf("%d", t.config.StartBlock)
+	}
 	container, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
 		Name:  fmt.Sprintf("safe-node-%s", ExecID(t.ctx)),
 		Image: "openzeppelin/safe-node",
 		Env: map[string]string{
 			EnvJsonRpcUrl:      t.config.JsonRpcUrl,
+			EnvStartBlock:      startBlock,
 			config.EnvLogLevel: t.config.LogLevel,
 		},
 	})

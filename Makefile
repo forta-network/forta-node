@@ -5,7 +5,11 @@ build-safe-node:
 build-main:
 	go build -o safe-node main.go
 
-build: build-safe-node build-main
+proto:
+	protoc -I=protocol --go-grpc_out=protocol/. --go_out=protocol/. protocol/*.proto
+
+build: proto build-main build-safe-node
 
 test:
 	go test ./...
+

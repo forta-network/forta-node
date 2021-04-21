@@ -1,15 +1,18 @@
 package feeds
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/golang/protobuf/jsonpb"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 
 	"OpenZeppelin/safe-node/clients"
+	"OpenZeppelin/safe-node/protocol"
 	"OpenZeppelin/safe-node/utils"
 )
 
@@ -28,9 +31,49 @@ type transactionFeed struct {
 }
 
 type TransactionEvent struct {
-	BlockEvent  *BlockEvent
+	EventType   EventType
+	Block       *types.Block
 	Transaction *types.Transaction
 	Receipt     *types.Receipt
+}
+
+// ToMessage converts the TransactionEvent to the protocol.TransactionEvent message
+func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
+	evtType := protocol.TransactionEvent_BLOCK
+	if t.EventType == "reorg" {
+		evtType = protocol.TransactionEvent_REORG
+	}
+	var tx protocol.TransactionEvent_EthTransaction
+	var receipt protocol.TransactionEvent_EthReceipt
+	um := jsonpb.Unmarshaler{
+		AllowUnknownFields: true,
+	}
+
+	if t.Transaction != nil {
+		txJson, err := t.Transaction.MarshalJSON()
+		if err != nil {
+			return nil, err
+		}
+		if err := um.Unmarshal(bytes.NewReader(txJson), &tx); err != nil {
+			return nil, err
+		}
+	}
+
+	if t.Receipt != nil {
+		receiptJson, err := t.Receipt.MarshalJSON()
+		if err != nil {
+			return nil, err
+		}
+		if err := um.Unmarshal(bytes.NewReader(receiptJson), &receipt); err != nil {
+			return nil, err
+		}
+	}
+
+	return &protocol.TransactionEvent{
+		Type:        evtType,
+		Transaction: &tx,
+		Receipt:     &receipt,
+	}, nil
 }
 
 func (tf *transactionFeed) streamBlocks() error {
@@ -53,7 +96,7 @@ func (tf *transactionFeed) streamTransactions() error {
 			default:
 				if !tf.cache.ExistsAndAdd(tx.Hash().Hex()) {
 					log.Debugf("tx-iterator: block(%d), txs <- %s", evt.Block.NumberU64(), tx.Hash().Hex())
-					tf.txCh <- &TransactionEvent{BlockEvent: evt, Transaction: tx}
+					tf.txCh <- &TransactionEvent{EventType: evt.EventType, Block: evt.Block, Transaction: tx}
 				}
 			}
 		}
@@ -64,7 +107,7 @@ func (tf *transactionFeed) streamTransactions() error {
 func (tf *transactionFeed) getWorker(workerID int, handler func(evt *TransactionEvent) error) func() error {
 	return func() error {
 		for tx := range tf.txCh {
-			log.Debugf("tx-processor(%d): block(%d) processing %s", workerID, tx.BlockEvent.Block.NumberU64(), tx.Transaction.Hash().Hex())
+			log.Debugf("tx-processor(%d): block(%d) processing %s", workerID, tx.Block.NumberU64(), tx.Transaction.Hash().Hex())
 			select {
 			case <-tf.ctx.Done():
 				log.Debugf("tx-processor(%d): context cancelled", workerID)
@@ -72,13 +115,13 @@ func (tf *transactionFeed) getWorker(workerID int, handler func(evt *Transaction
 			default:
 				receipt, err := tf.client.TransactionReceipt(tf.ctx, tx.Transaction.Hash())
 				if err != nil {
-					log.Debugf("tx-processor(%d): block(%d) tx(%s) get receipt failed (skipping): %s", workerID, tx.BlockEvent.Block.NumberU64(), tx.Transaction.Hash().Hex(), err.Error())
+					log.Debugf("tx-processor(%d): block(%d) tx(%s) get receipt failed (skipping): %s", workerID, tx.Block.NumberU64(), tx.Transaction.Hash().Hex(), err.Error())
 					continue
 				}
 				tx.Receipt = receipt
-				log.Debugf("tx-processor(%d): block(%d) tx(%s) invoking handler", workerID, tx.BlockEvent.Block.NumberU64(), tx.Transaction.Hash().Hex())
+				log.Debugf("tx-processor(%d): block(%d) tx(%s) invoking handler", workerID, tx.Block.NumberU64(), tx.Transaction.Hash().Hex())
 				if err := handler(tx); err != nil {
-					log.Debugf("tx-processor(%d): block(%d) tx(%s) handler returned error, cancelling: %s", workerID, tx.BlockEvent.Block.NumberU64(), tx.Transaction.Hash().Hex(), err.Error())
+					log.Debugf("tx-processor(%d): block(%d) tx(%s) handler returned error, cancelling: %s", workerID, tx.Block.NumberU64(), tx.Transaction.Hash().Hex(), err.Error())
 					return err
 				}
 			}

@@ -62,3 +62,27 @@ func TestTransactionFeed_ForEachTransaction(t *testing.T) {
 	assert.Equal(t, endOfBlocks, err)
 	assert.Len(t, evts, 9)
 }
+
+func TestTransactionFeed_ToMessage(t *testing.T) {
+	bf := NewMockBlockFeed([]*BlockEvent{
+		{
+			EventType: EventTypeBlock,
+			Block:     testutils.TestBlock(1),
+		},
+	})
+
+	txFeed, client := getTestTransactionFeed(t, bf)
+
+	client.EXPECT().TransactionReceipt(gomock.Any(), gomock.Any()).Return(nil, nil).Times(9)
+
+	var result *TransactionEvent
+	err := txFeed.ForEachTransaction(func(evt *TransactionEvent) error {
+		result = evt
+		return nil
+	})
+	assert.Equal(t, endOfBlocks, err)
+
+	msg, err := result.ToMessage()
+	assert.NoError(t, err)
+	assert.Equal(t, result.Transaction.Hash().Hex(), msg.Transaction.Hash)
+}

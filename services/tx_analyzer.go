@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 
+	"github.com/golang/protobuf/jsonpb"
 	log "github.com/sirupsen/logrus"
 
 	"OpenZeppelin/safe-node/feeds"
@@ -20,13 +21,18 @@ type TxAnalyzerServiceConfig struct {
 
 func (t *TxAnalyzerService) Start() error {
 	log.Infof("Starting %s", t.Name())
-	/* TODO:
-	1. Start all agent containers
-	2. Dispatch message to each container
-	3. Emit result
-	*/
 	for tx := range t.cfg.TxChannel {
-		log.Infof("%s, %d, %s", tx.BlockEvent.EventType, tx.BlockEvent.Block.NumberU64(), tx.Transaction.Hash().Hex())
+		//log.Infof("%s, %d, %s", tx.BlockEvent.EventType, tx.BlockEvent.Block.NumberU64(), tx.Transaction.Hash().Hex())
+		msg, err := tx.ToMessage()
+		if err != nil {
+			return err
+		}
+		jm := jsonpb.Marshaler{}
+		str, err := jm.MarshalToString(msg)
+		if err != nil {
+			return err
+		}
+		log.Info(str)
 	}
 	return nil
 }

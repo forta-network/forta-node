@@ -14,6 +14,7 @@ func initServices(cfg config.Config, ctx context.Context) ([]services.Service, e
 	svc, err := services.NewTxNodeService(ctx, services.TxNodeServiceConfig{
 		JsonRpcUrl: cfg.Ethereum.JsonRpcUrl,
 		LogLevel:   cfg.Log.Level,
+		StartBlock: cfg.Ethereum.StartBlock,
 	})
 	if err != nil {
 		return nil, err
@@ -42,7 +43,7 @@ func main() {
 		return
 	}
 
-	log.Info("Starting Node")
+	log.Infof("Starting Node, block = %d", cfg.Ethereum.StartBlock)
 
 	serviceList, err := initServices(cfg, ctx)
 	if err != nil {

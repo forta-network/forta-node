@@ -12,6 +12,7 @@ const EnvLogLevel = "LOG_LEVEL"
 type Config struct {
 	Ethereum struct {
 		JsonRpcUrl string `yaml:"jsonRpcUrl"`
+		StartBlock int    `yaml:"startBlock"`
 	} `yaml:"ethereum"`
 	Log struct {
 		Level string `yaml:"level"`

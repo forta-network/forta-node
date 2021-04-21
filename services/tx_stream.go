@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"math/big"
 
 	log "github.com/sirupsen/logrus"
 
@@ -18,7 +19,8 @@ type TxStreamService struct {
 }
 
 type TxStreamServiceConfig struct {
-	Url string
+	Url        string
+	StartBlock *big.Int
 }
 
 func (t *TxStreamService) ReadOnlyStream() <-chan *feeds.TransactionEvent {
@@ -50,7 +52,7 @@ func NewTxStreamService(ctx context.Context, cfg TxStreamServiceConfig) (*TxStre
 	if err != nil {
 		return nil, err
 	}
-	txFeed, err := feeds.NewTransactionFeed(ctx, ethClient, nil, 10)
+	txFeed, err := feeds.NewTransactionFeed(ctx, ethClient, cfg.StartBlock, 10)
 	if err != nil {
 		return nil, err
 	}

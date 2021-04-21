@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"os"
+	"strconv"
 
 	log "github.com/sirupsen/logrus"
 
@@ -13,11 +15,21 @@ import (
 
 func initTxStream(ctx context.Context) (*services.TxStreamService, error) {
 	url := os.Getenv(services.EnvJsonRpcUrl)
+	startBlock := os.Getenv(services.EnvStartBlock)
+	var sb *big.Int
+	if startBlock != "" {
+		sbVal, err := strconv.ParseInt(startBlock, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("%s must be numeric", services.EnvStartBlock)
+		}
+		sb = big.NewInt(sbVal)
+	}
 	if url == "" {
 		return nil, fmt.Errorf("%s is a required env var", services.EnvJsonRpcUrl)
 	}
 	return services.NewTxStreamService(ctx, services.TxStreamServiceConfig{
-		Url: url,
+		Url:        url,
+		StartBlock: sb,
 	})
 }
 
