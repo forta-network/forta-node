@@ -37,12 +37,12 @@ type BlockEvent struct {
 
 func (bf *blockFeed) initialize() error {
 	if bf.start == nil {
-		res, err := bf.client.BlockNumber(bf.ctx)
+		res, err := bf.client.BlockByNumber(bf.ctx, nil)
 		if err != nil {
 			return err
 		}
-		log.Debugf("retrieved block number %d", res)
-		bf.start = big.NewInt(int64(res))
+		log.Debugf("retrieved block number %d", res.Number())
+		bf.start = big.NewInt(int64(res.NumberU64()))
 	}
 	log.Infof("initialized block number %d", bf.start)
 	return nil
