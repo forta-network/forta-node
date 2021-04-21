@@ -23,13 +23,15 @@ type mockBlockFeed struct {
 	blocks []*BlockEvent
 }
 
+var endOfBlocks = errors.New("end of blocks")
+
 func (bf *mockBlockFeed) ForEachBlock(handler func(evt *BlockEvent) error) error {
 	for _, b := range bf.blocks {
 		if err := handler(b); err != nil {
 			return err
 		}
 	}
-	return nil
+	return endOfBlocks
 }
 
 func NewMockBlockFeed(blocks []*BlockEvent) *mockBlockFeed {

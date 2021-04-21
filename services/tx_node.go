@@ -12,6 +12,7 @@ import (
 
 const EnvJsonRpcUrl = "JSON_RPC_URL"
 
+// TxNodeService manages the safe-node docker container as a service
 type TxNodeService struct {
 	ctx       context.Context
 	client    clients.DockerClient

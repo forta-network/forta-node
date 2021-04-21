@@ -12,22 +12,21 @@ import (
 	"OpenZeppelin/safe-node/utils"
 )
 
-func getTestTransactionFeed(t *testing.T, blockFeed BlockFeed) (*transactionFeed, *clients.MockEthClient, context.Context, context.CancelFunc) {
+func getTestTransactionFeed(t *testing.T, blockFeed BlockFeed) (*transactionFeed, *clients.MockEthClient) {
 	blocks := make(chan *BlockEvent, 1)
 	txs := make(chan *TransactionEvent, 1)
 	ctrl := gomock.NewController(t)
 	client := clients.NewMockEthClient(ctrl)
-	ctx, cancel := context.WithCancel(context.Background())
 	cache := utils.NewCache(10000)
 	return &transactionFeed{
-		ctx:       ctx,
+		ctx:       context.Background(),
 		blockFeed: blockFeed,
 		cache:     cache,
 		txCh:      txs,
 		blockCh:   blocks,
 		client:    client,
 		workers:   1,
-	}, client, ctx, cancel
+	}, client
 }
 
 func TestTransactionFeed_ForEachTransaction(t *testing.T) {
@@ -49,21 +48,17 @@ func TestTransactionFeed_ForEachTransaction(t *testing.T) {
 			Block:     testutils.TestBlock(7, 8, 9),
 		},
 	})
-	totalExpected := 9
 
-	txFeed, client, _, _ := getTestTransactionFeed(t, bf)
+	txFeed, client := getTestTransactionFeed(t, bf)
 
 	client.EXPECT().TransactionReceipt(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 	var evts []*TransactionEvent
 	err := txFeed.ForEachTransaction(func(evt *TransactionEvent) error {
 		evts = append(evts, evt)
-		if len(evts) == totalExpected {
-			return context.Canceled
-		}
 		return nil
 	})
 
-	assert.Equal(t, context.Canceled, err)
+	assert.Equal(t, endOfBlocks, err)
 	assert.Len(t, evts, 9)
 }
