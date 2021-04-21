@@ -28,16 +28,7 @@ func (t *TxStreamService) ReadOnlyStream() <-chan *feeds.TransactionEvent {
 func (t *TxStreamService) Start() error {
 	log.Infof("Starting %s", t.Name())
 	defer close(t.output)
-	ethClient, err := clients.NewEthClient(t.ctx, t.cfg.Url)
-	if err != nil {
-		return err
-	}
-	txFeed, err := feeds.NewTransactionFeed(t.ctx, ethClient, nil)
-	if err != nil {
-		panic(err)
-	}
-
-	return txFeed.ForEachTransaction(func(evt *feeds.TransactionEvent) error {
+	return t.txFeed.ForEachTransaction(func(evt *feeds.TransactionEvent) error {
 		log.Debug("<- TxStreamService putting event in stream")
 		t.output <- evt
 		return nil
@@ -59,7 +50,7 @@ func NewTxStreamService(ctx context.Context, cfg TxStreamServiceConfig) (*TxStre
 	if err != nil {
 		return nil, err
 	}
-	txFeed, err := feeds.NewTransactionFeed(ctx, ethClient, nil)
+	txFeed, err := feeds.NewTransactionFeed(ctx, ethClient, nil, 10)
 	if err != nil {
 		return nil, err
 	}

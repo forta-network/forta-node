@@ -6,3 +6,6 @@ build-main:
 	go build -o safe-node main.go
 
 build: build-safe-node build-main
+
+test:
+	go test ./...

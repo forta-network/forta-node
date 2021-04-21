@@ -2,6 +2,7 @@ package feeds
 
 import (
 	"context"
+	"errors"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/core/types"
@@ -22,6 +23,8 @@ type transactionFeed struct {
 	client    clients.EthClient
 	blockFeed BlockFeed
 	workers   int
+	blockCh   chan *BlockEvent
+	txCh      chan *TransactionEvent
 }
 
 type TransactionEvent struct {
@@ -30,79 +33,94 @@ type TransactionEvent struct {
 	Receipt     *types.Receipt
 }
 
-func (tf *transactionFeed) ForEachTransaction(handler func(evt *TransactionEvent) error) error {
-	blocks := make(chan *BlockEvent, 10)
-	txs := make(chan *TransactionEvent, 100)
-
-	grp, _ := errgroup.WithContext(tf.ctx)
-
-	// iterate over blocks
-	grp.Go(func() error {
-		defer close(blocks)
-		return tf.blockFeed.ForEachBlock(func(evt *BlockEvent) error {
-			log.Debugf("block-iterator: blocks <- %d", evt.Block.NumberU64())
-			blocks <- evt
-			return nil
-		})
+func (tf *transactionFeed) streamBlocks() error {
+	defer close(tf.blockCh)
+	return tf.blockFeed.ForEachBlock(func(evt *BlockEvent) error {
+		log.Debugf("block-iterator: blocks <- %d", evt.Block.NumberU64())
+		tf.blockCh <- evt
+		return nil
 	})
+}
 
-	// iterate over transactions, check for duplicates
-	grp.Go(func() error {
-		defer close(txs)
-		for evt := range blocks {
-			log.Debugf("tx-iterator: block(%d) processing", evt.Block.NumberU64())
-			for _, tx := range evt.Block.Transactions() {
-				select {
-				case <-tf.ctx.Done():
-					return tf.ctx.Err()
-				default:
-					if !tf.cache.ExistsAndAdd(tx.Hash().Hex()) {
-						log.Debugf("tx-iterator: block(%d), txs <- %s", evt.Block.NumberU64(), tx.Hash().Hex())
-						txs <- &TransactionEvent{BlockEvent: evt, Transaction: tx}
-					}
+func (tf *transactionFeed) streamTransactions() error {
+	defer close(tf.txCh)
+	for evt := range tf.blockCh {
+		log.Debugf("tx-iterator: block(%d) processing", evt.Block.NumberU64())
+		for _, tx := range evt.Block.Transactions() {
+			select {
+			case <-tf.ctx.Done():
+				return tf.ctx.Err()
+			default:
+				if !tf.cache.ExistsAndAdd(tx.Hash().Hex()) {
+					log.Debugf("tx-iterator: block(%d), txs <- %s", evt.Block.NumberU64(), tx.Hash().Hex())
+					tf.txCh <- &TransactionEvent{BlockEvent: evt, Transaction: tx}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (tf *transactionFeed) getWorker(workerID int, handler func(evt *TransactionEvent) error) func() error {
+	return func() error {
+		for tx := range tf.txCh {
+			log.Debugf("tx-processor(%d): block(%d) processing %s", workerID, tx.BlockEvent.Block.NumberU64(), tx.Transaction.Hash().Hex())
+			select {
+			case <-tf.ctx.Done():
+				log.Debugf("tx-processor(%d): context cancelled", workerID)
+				return tf.ctx.Err()
+			default:
+				receipt, err := tf.client.TransactionReceipt(tf.ctx, tx.Transaction.Hash())
+				if err != nil {
+					log.Debugf("tx-processor(%d): block(%d) tx(%s) get receipt failed (skipping): %s", workerID, tx.BlockEvent.Block.NumberU64(), tx.Transaction.Hash().Hex(), err.Error())
+					continue
+				}
+				tx.Receipt = receipt
+				log.Debugf("tx-processor(%d): block(%d) tx(%s) invoking handler", workerID, tx.BlockEvent.Block.NumberU64(), tx.Transaction.Hash().Hex())
+				if err := handler(tx); err != nil {
+					log.Debugf("tx-processor(%d): block(%d) tx(%s) handler returned error, cancelling: %s", workerID, tx.BlockEvent.Block.NumberU64(), tx.Transaction.Hash().Hex(), err.Error())
+					return err
 				}
 			}
 		}
 		return nil
-	})
+	}
+}
+
+// ForEachTransaction invokes a handler for each transactions on a network until cancelled or handler returns error
+func (tf *transactionFeed) ForEachTransaction(handler func(evt *TransactionEvent) error) error {
+	grp, _ := errgroup.WithContext(tf.ctx)
+
+	// iterate over blocks
+	grp.Go(tf.streamBlocks)
+
+	// iterate over transactions, check for duplicates
+	grp.Go(tf.streamTransactions)
+
+	// because my tests weren't working and this was why
+	if tf.workers < 1 {
+		return errors.New("workers must be > 0")
+	}
 
 	// get receipt and invoke handler for each transaction (x workers)
 	for i := 0; i < tf.workers; i++ {
 		workerID := i
-		grp.Go(func() error {
-			for tx := range txs {
-				log.Debugf("tx-processor(%d): block(%d) processing %s", workerID, tx.BlockEvent.Block.NumberU64(), tx.Transaction.Hash().Hex())
-				select {
-				case <-tf.ctx.Done():
-					log.Debugf("tx-processor(%d): context cancelled", workerID)
-					return tf.ctx.Err()
-				default:
-					receipt, err := tf.client.TransactionReceipt(tf.ctx, tx.Transaction.Hash())
-					if err != nil {
-						log.Debugf("tx-processor(%d): block(%d) tx(%s) get receipt failed (skipping): %s", workerID, tx.BlockEvent.Block.NumberU64(), tx.Transaction.Hash().Hex(), err.Error())
-						continue
-					}
-					tx.Receipt = receipt
-					log.Debugf("tx-processor(%d): block(%d) tx(%s) invoking handler", workerID, tx.BlockEvent.Block.NumberU64(), tx.Transaction.Hash().Hex())
-					if err := handler(tx); err != nil {
-						log.Debugf("tx-processor(%d): block(%d) tx(%s) handler returned error, cancelling: %s", workerID, tx.BlockEvent.Block.NumberU64(), tx.Transaction.Hash().Hex(), err.Error())
-						return err
-					}
-				}
-			}
-			return nil
-		})
+		grp.Go(tf.getWorker(workerID, handler))
 	}
 
+	// block until above all finish (when context is cancelled or error returns)
 	return grp.Wait()
 }
 
-func NewTransactionFeed(ctx context.Context, client clients.EthClient, start *big.Int) (*transactionFeed, error) {
+func NewTransactionFeed(ctx context.Context, client clients.EthClient, start *big.Int, workers int) (*transactionFeed, error) {
+	blocks := make(chan *BlockEvent, 10)
+	txs := make(chan *TransactionEvent, 100)
 	blockFeed, err := NewBlockFeed(ctx, client, start)
+	cache := utils.NewCache(1000000)
 	if err != nil {
 		return nil, err
 	}
 	return &transactionFeed{
-		ctx, utils.NewCache(1000000), client, blockFeed, 10,
+		ctx: ctx, cache: cache, client: client, blockFeed: blockFeed, workers: workers, blockCh: blocks, txCh: txs,
 	}, nil
 }

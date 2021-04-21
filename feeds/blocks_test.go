@@ -19,7 +19,24 @@ var testErr = errors.New("test")
 var startHash = "0x4fc0862e76691f5312964883954d5c2db35e2b8f7a4f191775a4f50c69804a8d"
 var reorgHash = "0xb9b293da464be42bbb87695c372678ea93a2ef87dc54213bbaa93bd6d8880c17"
 
-func mockFeed(t *testing.T) (*blockFeed, *clients.MockEthClient, context.Context, context.CancelFunc) {
+type mockBlockFeed struct {
+	blocks []*BlockEvent
+}
+
+func (bf *mockBlockFeed) ForEachBlock(handler func(evt *BlockEvent) error) error {
+	for _, b := range bf.blocks {
+		if err := handler(b); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func NewMockBlockFeed(blocks []*BlockEvent) *mockBlockFeed {
+	return &mockBlockFeed{blocks}
+}
+
+func getTestBlockFeed(t *testing.T) (*blockFeed, *clients.MockEthClient, context.Context, context.CancelFunc) {
 	ctrl := gomock.NewController(t)
 	client := clients.NewMockEthClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -61,7 +78,7 @@ func assertEvts(t *testing.T, actual []*BlockEvent, expected ...*BlockEvent) {
 }
 
 func TestBlockFeed_ForEachBlock(t *testing.T) {
-	bf, client, ctx, _ := mockFeed(t)
+	bf, client, ctx, _ := getTestBlockFeed(t)
 
 	block1 := blockWithParent(startHash, 1)
 	block2 := blockWithParent(block1.Hash().Hex(), 2)
@@ -87,7 +104,7 @@ func TestBlockFeed_ForEachBlock(t *testing.T) {
 }
 
 func TestBlockFeed_ForEachBlock_Cancelled(t *testing.T) {
-	bf, client, ctx, cancel := mockFeed(t)
+	bf, client, ctx, cancel := getTestBlockFeed(t)
 
 	hash1 := "0x4fc0862e76691f5312964883954d5c2db35e2b8f7a4f191775a4f50c69804a8d"
 	block1 := types.NewBlockWithHeader(&types.Header{
@@ -110,7 +127,7 @@ func TestBlockFeed_ForEachBlock_Cancelled(t *testing.T) {
 }
 
 func TestBlockFeed_ForEachBlock_Reorg(t *testing.T) {
-	bf, client, ctx, _ := mockFeed(t)
+	bf, client, ctx, _ := getTestBlockFeed(t)
 
 	// START
 	block1 := blockWithParent(startHash, 1)
