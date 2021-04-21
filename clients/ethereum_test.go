@@ -36,6 +36,7 @@ func TestEthClient_BlockByHash(t *testing.T) {
 	hash := common.HexToHash(testBlockHash)
 	block := testutils.TestBlock(1)
 
+	// verify retry
 	client.EXPECT().BlockByHash(gomock.Any(), hash).Return(nil, testErr).Times(1)
 	client.EXPECT().BlockByHash(gomock.Any(), hash).Return(block, nil).Times(1)
 
@@ -50,6 +51,7 @@ func TestEthClient_BlockByNumber(t *testing.T) {
 	block := testutils.TestBlock(1)
 	num := big.NewInt(1)
 
+	// verify retry
 	client.EXPECT().BlockByNumber(gomock.Any(), num).Return(nil, testErr).Times(1)
 	client.EXPECT().BlockByNumber(gomock.Any(), num).Return(block, nil).Times(1)
 
@@ -62,6 +64,7 @@ func TestEthClient_BlockNumber(t *testing.T) {
 	ethClient, client, ctx := initClient(t)
 	num := big.NewInt(1)
 
+	// verify retry
 	client.EXPECT().BlockNumber(gomock.Any()).Return(uint64(0), testErr).Times(1)
 	client.EXPECT().BlockNumber(gomock.Any()).Return(num.Uint64(), nil).Times(1)
 
@@ -75,6 +78,7 @@ func TestEthClient_TransactionReceipt(t *testing.T) {
 
 	txHash := common.HexToHash(testTxHash)
 
+	// verify retry
 	client.EXPECT().TransactionReceipt(gomock.Any(), txHash).Return(nil, testErr).Times(1)
 	client.EXPECT().TransactionReceipt(gomock.Any(), txHash).Return(nil, nil).Times(1)
 
