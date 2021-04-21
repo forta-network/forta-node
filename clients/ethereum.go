@@ -27,11 +27,12 @@ const blocksByHash = "eth_blockByHash"
 const blockNumber = "eth_blockNumber"
 const transactionReceipt = "eth_transactionReceipt"
 
-const minBackoff = 1 * time.Second
+var minBackoff = 1 * time.Second
+var maxBackoff = 1 * time.Minute
 
 // ethClient wraps a go-ethereum client so that we can do smarter retries and timeouts
 type ethClient struct {
-	client *ethclient.Client
+	client EthClient
 }
 
 type RetryOptions struct {
@@ -48,6 +49,7 @@ func (e ethClient) Close() {
 // withBackoff wraps an operation in an exponential backoff logic
 func withBackoff(ctx context.Context, name string, operation func(ctx context.Context) error, options RetryOptions) error {
 	bo := backoff.NewExponentialBackOff()
+	bo.MaxInterval = maxBackoff
 	bo.InitialInterval = minBackoff
 	if options.MinBackoff != nil {
 		bo.InitialInterval = *options.MinBackoff

@@ -19,12 +19,14 @@ var testErr = errors.New("test")
 var startHash = "0x4fc0862e76691f5312964883954d5c2db35e2b8f7a4f191775a4f50c69804a8d"
 var reorgHash = "0xb9b293da464be42bbb87695c372678ea93a2ef87dc54213bbaa93bd6d8880c17"
 
+var endOfBlocks = errors.New("end of blocks")
+
+// mockBlockFeed is a mock block feed for tests
 type mockBlockFeed struct {
 	blocks []*BlockEvent
 }
 
-var endOfBlocks = errors.New("end of blocks")
-
+// ForEachBlock is a test method that iterates over mocked blocks
 func (bf *mockBlockFeed) ForEachBlock(handler func(evt *BlockEvent) error) error {
 	for _, b := range bf.blocks {
 		if err := handler(b); err != nil {
@@ -34,6 +36,7 @@ func (bf *mockBlockFeed) ForEachBlock(handler func(evt *BlockEvent) error) error
 	return endOfBlocks
 }
 
+// NewMockBlockFeed returns a new mockBlockFeed for tests
 func NewMockBlockFeed(blocks []*BlockEvent) *mockBlockFeed {
 	return &mockBlockFeed{blocks}
 }
