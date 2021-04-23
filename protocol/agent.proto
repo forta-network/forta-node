@@ -4,7 +4,11 @@ option go_package = "./;protocol";
 
 service Agent {
   rpc Initialize (InitializeRequest) returns (InitializeResponse) {}
-  rpc EvaluateTransaction (EvaluateRequest) returns (EvaluateResponse) {}
+  rpc Evaluate (EvaluateRequest) returns (EvaluateResponse) {}
+}
+
+message Error {
+  string message = 1;
 }
 
 enum ResponseStatus {
@@ -14,14 +18,13 @@ enum ResponseStatus {
 }
 
 message InitializeRequest {
-  string requestId = 1;
-  string analyzerHost = 2;
-  string proxyHost = 3;
+  string agentId = 1;
+  string proxyHost = 2;
 }
 
 message InitializeResponse {
-  string requestId = 1;
-  ResponseStatus status = 2;
+  ResponseStatus status = 1;
+  repeated Error errors = 2;
   repeated string addresses = 3;
 }
 
@@ -30,10 +33,23 @@ message EvaluateRequest {
   TransactionEvent event = 2;
 }
 
+message Finding {
+  enum Severity {
+    UNKNOWN = 0;
+    INFO = 1;
+    LOW = 2;
+    MEDIUM = 3;
+    HIGH = 4;
+    CRITICAL = 5;
+  }
+  Severity severity = 1;
+  map<string, string> metadata = 2;
+}
+
 message EvaluateResponse {
-  string requestId = 1;
-  ResponseStatus status = 2;
-  float score = 3;
+  ResponseStatus status = 1;
+  repeated Error errors = 2;
+  repeated Finding findings = 3;
   map<string, string> metadata = 4;
 }
 

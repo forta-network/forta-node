@@ -66,6 +66,7 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 			Env:   config.envVars(),
 		},
 		&container.HostConfig{
+			NetworkMode:  "host", //TODO: update to inter-container awareness
 			PortBindings: portBinding,
 		}, nil, config.Name)
 
