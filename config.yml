@@ -3,7 +3,14 @@ zephyr:
 
 ethereum:
   jsonRpcUrl: "https://cloudflare-eth.com"
-  # startBlock: 12284544
+
+agents:
+  - name: "example1"
+    image: "openzeppelin/zephyr-agent:latest"
+  - name: "example2"
+    image: "openzeppelin/zephyr-agent:latest"
+  - name: "example3"
+    image: "openzeppelin/zephyr-agent:latest"
 
 log:
-  level: debug
+  level: info

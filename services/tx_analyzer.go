@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/golang/protobuf/jsonpb"
@@ -22,7 +23,8 @@ type TxAnalyzerService struct {
 }
 
 type TxAnalyzerServiceConfig struct {
-	TxChannel <-chan *feeds.TransactionEvent
+	TxChannel      <-chan *feeds.TransactionEvent
+	AgentAddresses []string
 }
 
 // newAgentStream creates a agent transaction handler (sends and receives request)
@@ -108,14 +110,17 @@ func (t *TxAnalyzerService) Name() string {
 }
 
 func NewTxAnalyzerService(ctx context.Context, cfg TxAnalyzerServiceConfig) *TxAnalyzerService {
-	conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure(), grpc.WithBlock())
-	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+	var clients []protocol.AgentClient
+	for _, addr := range cfg.AgentAddresses {
+		conn, err := grpc.Dial(fmt.Sprintf("%s:50051", addr), grpc.WithInsecure(), grpc.WithBlock())
+		if err != nil {
+			log.Fatalf("did not connect to %s, %v", addr, err)
+		}
+		clients = append(clients, protocol.NewAgentClient(conn))
 	}
-	agent := protocol.NewAgentClient(conn)
 	return &TxAnalyzerService{
 		cfg:    cfg,
 		ctx:    ctx,
-		agents: []protocol.AgentClient{agent, agent, agent},
+		agents: clients,
 	}
 }

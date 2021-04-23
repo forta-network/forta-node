@@ -16,6 +16,7 @@ func initServices(cfg config.Config, ctx context.Context) ([]services.Service, e
 		LogLevel:       cfg.Log.Level,
 		StartBlock:     cfg.Ethereum.StartBlock,
 		ContainerImage: cfg.Zephyr.NodeImage,
+		AgentConfigs:   cfg.Agents,
 	})
 	if err != nil {
 		return nil, err
@@ -44,7 +45,7 @@ func main() {
 		return
 	}
 
-	log.Infof("Starting Node, block = %d", cfg.Ethereum.StartBlock)
+	log.Info("Starting Node")
 
 	serviceList, err := initServices(cfg, ctx)
 	if err != nil {

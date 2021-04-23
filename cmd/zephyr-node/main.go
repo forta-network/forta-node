@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"os"
 	"strconv"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -33,14 +34,26 @@ func initTxStream(ctx context.Context) (*services.TxStreamService, error) {
 	})
 }
 
+func initTxAnalyzer(ctx context.Context, stream *services.TxStreamService) (*services.TxAnalyzerService, error) {
+	agents := os.Getenv(services.EnvAgents)
+	if agents == "" {
+		return nil, fmt.Errorf("%s is a required env var", services.EnvAgents)
+	}
+	return services.NewTxAnalyzerService(ctx, services.TxAnalyzerServiceConfig{
+		TxChannel:      stream.ReadOnlyStream(),
+		AgentAddresses: strings.Split(agents, ","),
+	}), nil
+}
+
 func initServices(ctx context.Context) ([]services.Service, error) {
 	txStream, err := initTxStream(ctx)
 	if err != nil {
 		return nil, err
 	}
-	txAnalyzer := services.NewTxAnalyzerService(ctx, services.TxAnalyzerServiceConfig{
-		TxChannel: txStream.ReadOnlyStream(),
-	})
+	txAnalyzer, err := initTxAnalyzer(ctx, txStream)
+	if err != nil {
+		return nil, err
+	}
 	return []services.Service{
 		txStream,
 		txAnalyzer,

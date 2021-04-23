@@ -3,12 +3,11 @@ package clients
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
-	"github.com/docker/go-connections/nat"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -20,15 +19,20 @@ type DockerContainer struct {
 
 // DockerContainerConfig is configuration for a particular container
 type DockerContainerConfig struct {
-	Name  string
-	Image string
-	Env   map[string]string
+	Name       string
+	Image      string
+	Env        map[string]string
+	NetworkIDs []string
+	Ports      map[string]string
 }
 
 // DockerClient is a client interface for interacting with docker
 type DockerClient interface {
-	StartContainer(ctx context.Context, config DockerContainerConfig) (DockerContainer, error)
-	StopContainer(ID string) error
+	CreateNetwork(ctx context.Context, name string) (string, error)
+	AttachNetwork(ctx context.Context, containerID string, networkID string) error
+	StartContainer(ctx context.Context, config DockerContainerConfig) (*DockerContainer, error)
+	StopContainer(ctx context.Context, ID string) error
+	Prune(ctx context.Context) error
 }
 
 type dockerClient struct {
@@ -42,54 +46,97 @@ func (cfg DockerContainerConfig) envVars() []string {
 	return results
 }
 
-// StartContainer kicks off a container as a daemon and returns a summary of the container
-func (d *dockerClient) StartContainer(ctx context.Context, config DockerContainerConfig) (DockerContainer, error) {
-	cli, err := client.NewClientWithOpts()
-	if err != nil {
-		return DockerContainer{}, err
-	}
-
-	hostBinding := nat.PortBinding{
-		HostIP:   "0.0.0.0",
-		HostPort: "8000",
-	}
-	containerPort, err := nat.NewPort("tcp", "80")
-	if err != nil {
-		return DockerContainer{}, err
-	}
-
-	portBinding := nat.PortMap{containerPort: []nat.PortBinding{hostBinding}}
-	cont, err := cli.ContainerCreate(
-		ctx,
-		&container.Config{
-			Image: config.Image,
-			Env:   config.envVars(),
-		},
-		&container.HostConfig{
-			NetworkMode:  "host", //TODO: update to inter-container awareness
-			PortBindings: portBinding,
-		}, nil, config.Name)
-
-	if err != nil {
-		return DockerContainer{}, err
-	}
-
-	if err := cli.ContainerStart(ctx, cont.ID, types.ContainerStartOptions{}); err != nil {
-		return DockerContainer{}, err
-	}
-
-	log.Infof("Container %s is started", cont.ID)
-	return DockerContainer{ID: cont.ID, Config: config}, nil
-}
-
-// StopContainer kills a container by ID
-func (d *dockerClient) StopContainer(ID string) error {
+func (d *dockerClient) Prune(ctx context.Context) error {
 	cli, err := client.NewClientWithOpts()
 	if err != nil {
 		return err
 	}
-	timeout := time.Second * 30
-	return cli.ContainerStop(context.Background(), ID, &timeout)
+	zephyrFilter := filters.NewArgs(filters.Arg("label", "zephyr"))
+	res, err := cli.NetworksPrune(ctx, zephyrFilter)
+	if err != nil {
+		return err
+	}
+	for _, nw := range res.NetworksDeleted {
+		log.Infof("pruned network %s", nw)
+	}
+
+	cpRes, err := cli.ContainersPrune(ctx, zephyrFilter)
+	if err != nil {
+		return err
+	}
+	for _, cp := range cpRes.ContainersDeleted {
+		log.Infof("pruned container %s", cp)
+	}
+
+	return nil
+}
+
+func (d *dockerClient) CreateNetwork(ctx context.Context, name string) (string, error) {
+	cli, err := client.NewClientWithOpts()
+	if err != nil {
+		return "", err
+	}
+	resp, err := cli.NetworkCreate(ctx, name, types.NetworkCreate{
+		Labels: map[string]string{"zephyr": "true"},
+	})
+	if err != nil {
+		return "", err
+	}
+	return resp.ID, nil
+}
+
+func (d *dockerClient) AttachNetwork(ctx context.Context, containerID string, networkID string) error {
+	cli, err := client.NewClientWithOpts()
+	if err != nil {
+		return err
+	}
+	return cli.NetworkConnect(ctx, networkID, containerID, nil)
+}
+
+// StartContainer kicks off a container as a daemon and returns a summary of the container
+func (d *dockerClient) StartContainer(ctx context.Context, config DockerContainerConfig) (*DockerContainer, error) {
+	cli, err := client.NewClientWithOpts()
+	if err != nil {
+		return nil, err
+	}
+
+	cont, err := cli.ContainerCreate(
+		ctx,
+		&container.Config{
+			Image:  config.Image,
+			Env:    config.envVars(),
+			Labels: map[string]string{"zephyr": "true"},
+		},
+		&container.HostConfig{
+			NetworkMode: "bridge",
+		}, nil, config.Name)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if err := cli.ContainerStart(ctx, cont.ID, types.ContainerStartOptions{}); err != nil {
+		return nil, err
+	}
+
+	for _, nwID := range config.NetworkIDs {
+		if err := d.AttachNetwork(ctx, cont.ID, nwID); err != nil {
+			log.Error("error attaching network", err)
+			return nil, err
+		}
+	}
+
+	log.Infof("Container %s is started", cont.ID)
+	return &DockerContainer{ID: cont.ID, Config: config}, nil
+}
+
+// StopContainer kills a container by ID
+func (d *dockerClient) StopContainer(ctx context.Context, ID string) error {
+	cli, err := client.NewClientWithOpts()
+	if err != nil {
+		return err
+	}
+	return cli.ContainerKill(ctx, ID, "SIGKILL")
 }
 
 // NewDockerClient creates a new docker client

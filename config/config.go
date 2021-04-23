@@ -9,6 +9,11 @@ import (
 
 const EnvLogLevel = "LOG_LEVEL"
 
+type AgentConfig struct {
+	Name  string `yaml:"name"`
+	Image string `yaml:"image"`
+}
+
 type Config struct {
 	Zephyr struct {
 		NodeImage string `yaml:"nodeImage"`
@@ -17,7 +22,8 @@ type Config struct {
 		JsonRpcUrl string `yaml:"jsonRpcUrl"`
 		StartBlock int    `yaml:"startBlock"`
 	} `yaml:"ethereum"`
-	Log struct {
+	Agents []AgentConfig `yaml:"agents"`
+	Log    struct {
 		Level string `yaml:"level"`
 	} `yaml:"log"`
 }
