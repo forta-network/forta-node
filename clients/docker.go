@@ -19,16 +19,18 @@ type DockerContainer struct {
 
 // DockerContainerConfig is configuration for a particular container
 type DockerContainerConfig struct {
-	Name       string
-	Image      string
-	Env        map[string]string
-	NetworkIDs []string
-	Ports      map[string]string
+	Name           string
+	Image          string
+	Env            map[string]string
+	LinkNetworkIDs []string
+	NetworkID      string
+	Ports          map[string]string
 }
 
 // DockerClient is a client interface for interacting with docker
 type DockerClient interface {
-	CreateNetwork(ctx context.Context, name string) (string, error)
+	CreatePublicNetwork(ctx context.Context, name string) (string, error)
+	CreateInternalNetwork(ctx context.Context, name string) (string, error)
 	AttachNetwork(ctx context.Context, containerID string, networkID string) error
 	StartContainer(ctx context.Context, config DockerContainerConfig) (*DockerContainer, error)
 	StopContainer(ctx context.Context, ID string) error
@@ -71,13 +73,22 @@ func (d *dockerClient) Prune(ctx context.Context) error {
 	return nil
 }
 
-func (d *dockerClient) CreateNetwork(ctx context.Context, name string) (string, error) {
+func (d *dockerClient) CreatePublicNetwork(ctx context.Context, name string) (string, error) {
+	return d.createNetwork(ctx, name, false)
+}
+
+func (d *dockerClient) CreateInternalNetwork(ctx context.Context, name string) (string, error) {
+	return d.createNetwork(ctx, name, true)
+}
+
+func (d *dockerClient) createNetwork(ctx context.Context, name string, internal bool) (string, error) {
 	cli, err := client.NewClientWithOpts()
 	if err != nil {
 		return "", err
 	}
 	resp, err := cli.NetworkCreate(ctx, name, types.NetworkCreate{
-		Labels: map[string]string{"zephyr": "true"},
+		Labels:   map[string]string{"zephyr": "true"},
+		Internal: internal,
 	})
 	if err != nil {
 		return "", err
@@ -108,7 +119,7 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 			Labels: map[string]string{"zephyr": "true"},
 		},
 		&container.HostConfig{
-			NetworkMode: "bridge",
+			NetworkMode: container.NetworkMode(config.NetworkID),
 		}, nil, config.Name)
 
 	if err != nil {
@@ -119,7 +130,7 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 		return nil, err
 	}
 
-	for _, nwID := range config.NetworkIDs {
+	for _, nwID := range config.LinkNetworkIDs {
 		if err := d.AttachNetwork(ctx, cont.ID, nwID); err != nil {
 			log.Error("error attaching network", err)
 			return nil, err

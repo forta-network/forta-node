@@ -15,6 +15,8 @@ const EnvJsonRpcUrl = "JSON_RPC_URL"
 const EnvStartBlock = "START_BLOCK"
 const EnvAgents = "AGENTS"
 
+const ZephyrPrefix = "zephyr"
+
 // TxNodeService manages the safe-node docker container as a service
 type TxNodeService struct {
 	ctx             context.Context
@@ -51,17 +53,17 @@ func (t *TxNodeService) Start() error {
 	var networkIDs []string
 	var agentNames []string
 	for _, agent := range t.config.AgentConfigs {
-		nwID, err := t.client.CreateNetwork(t.ctx, agent.Name)
+		nwID, err := t.client.CreateInternalNetwork(t.ctx, agent.Name)
 		if err != nil {
 			return err
 		}
 		networkIDs = append(networkIDs, nwID)
-		name := fmt.Sprintf("zephyr-agent-%s", agent.Name)
+		name := fmt.Sprintf("%s-agent-%s", ZephyrPrefix, agent.Name)
 		agentNames = append(agentNames, name)
 		agentContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
-			Name:       name,
-			Image:      agent.Image,
-			NetworkIDs: []string{nwID},
+			Name:      name,
+			Image:     agent.Image,
+			NetworkID: nwID,
 		})
 		if err != nil {
 			return err
@@ -69,6 +71,10 @@ func (t *TxNodeService) Start() error {
 		t.agentContainers = append(t.agentContainers, agentContainer)
 	}
 
+	nwID, err := t.client.CreatePublicNetwork(t.ctx, fmt.Sprintf("%s-node", ZephyrPrefix))
+	if err != nil {
+		return err
+	}
 	container, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
 		Name:  "zephyr-node",
 		Image: t.config.ContainerImage,
@@ -78,7 +84,8 @@ func (t *TxNodeService) Start() error {
 			EnvAgents:          strings.Join(agentNames, ","),
 			config.EnvLogLevel: t.config.LogLevel,
 		},
-		NetworkIDs: networkIDs,
+		NetworkID:      nwID,
+		LinkNetworkIDs: networkIDs,
 	})
 	if err != nil {
 		return err
