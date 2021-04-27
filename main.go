@@ -12,11 +12,7 @@ import (
 
 func initServices(cfg config.Config, ctx context.Context) ([]services.Service, error) {
 	svc, err := services.NewTxNodeService(ctx, services.TxNodeServiceConfig{
-		JsonRpcUrl:     cfg.Ethereum.JsonRpcUrl,
-		LogLevel:       cfg.Log.Level,
-		StartBlock:     cfg.Ethereum.StartBlock,
-		ContainerImage: cfg.Zephyr.NodeImage,
-		AgentConfigs:   cfg.Agents,
+		Config: cfg,
 	})
 	if err != nil {
 		return nil, err

@@ -4,29 +4,20 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"os"
-	"strconv"
-	"strings"
-
-	log "github.com/sirupsen/logrus"
 
 	"OpenZeppelin/zephyr-node/config"
 	"OpenZeppelin/zephyr-node/services"
 )
 
-func initTxStream(ctx context.Context) (*services.TxStreamService, error) {
-	url := os.Getenv(services.EnvJsonRpcUrl)
-	startBlock := os.Getenv(services.EnvStartBlock)
+func initTxStream(ctx context.Context, cfg config.Config) (*services.TxStreamService, error) {
+	url := cfg.Ethereum.JsonRpcUrl
+	startBlock := cfg.Ethereum.StartBlock
 	var sb *big.Int
-	if startBlock != "" {
-		sbVal, err := strconv.ParseInt(startBlock, 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("%s must be numeric", services.EnvStartBlock)
-		}
-		sb = big.NewInt(sbVal)
+	if startBlock != 0 {
+		sb = big.NewInt(int64(startBlock))
 	}
 	if url == "" {
-		return nil, fmt.Errorf("%s is a required env var", services.EnvJsonRpcUrl)
+		return nil, fmt.Errorf("ethereum.jsonRpcUrl is required")
 	}
 	return services.NewTxStreamService(ctx, services.TxStreamServiceConfig{
 		Url:        url,
@@ -34,23 +25,19 @@ func initTxStream(ctx context.Context) (*services.TxStreamService, error) {
 	})
 }
 
-func initTxAnalyzer(ctx context.Context, stream *services.TxStreamService) (*services.TxAnalyzerService, error) {
-	agents := os.Getenv(services.EnvAgents)
-	if agents == "" {
-		return nil, fmt.Errorf("%s is a required env var", services.EnvAgents)
-	}
+func initTxAnalyzer(ctx context.Context, cfg config.Config, stream *services.TxStreamService) (*services.TxAnalyzerService, error) {
 	return services.NewTxAnalyzerService(ctx, services.TxAnalyzerServiceConfig{
 		TxChannel:      stream.ReadOnlyStream(),
-		AgentAddresses: strings.Split(agents, ","),
+		AgentAddresses: cfg.AgentContainerNames(),
 	}), nil
 }
 
-func initServices(ctx context.Context) ([]services.Service, error) {
-	txStream, err := initTxStream(ctx)
+func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
+	txStream, err := initTxStream(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
-	txAnalyzer, err := initTxAnalyzer(ctx, txStream)
+	txAnalyzer, err := initTxAnalyzer(ctx, cfg, txStream)
 	if err != nil {
 		return nil, err
 	}
@@ -62,30 +49,5 @@ func initServices(ctx context.Context) ([]services.Service, error) {
 }
 
 func main() {
-	logLevel := os.Getenv(config.EnvLogLevel)
-	if logLevel == "" {
-		logLevel = "info"
-	}
-	lvl, err := log.ParseLevel(logLevel)
-	if err != nil {
-		log.Error("could not initialize log level", err)
-		return
-	}
-	log.SetLevel(lvl)
-	log.Info("Starting Node")
-
-	ctx, cancel := services.InitMainContext()
-	defer cancel()
-
-	serviceList, err := initServices(ctx)
-	if err != nil {
-		log.Error("could not initialize services", err)
-		return
-	}
-
-	if err := services.StartServices(ctx, serviceList); err != nil {
-		log.Error("error running services", err)
-	}
-
-	log.Info("Stopping Node")
+	services.ContainerMain("zephyr-node", initServices)
 }

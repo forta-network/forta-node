@@ -9,6 +9,8 @@ import (
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
+
+	"OpenZeppelin/zephyr-node/config"
 )
 
 type Service interface {
@@ -33,6 +35,37 @@ func initExecID(ctx context.Context) context.Context {
 		panic(err)
 	}
 	return context.WithValue(ctx, execIDKey, execID.String())
+}
+
+func ContainerMain(name string, getServices func(ctx context.Context, cfg config.Config) ([]Service, error)) {
+	cfg, err := config.GetConfigFromEnv()
+	if err != nil {
+		log.Error("could not initialize log level", err)
+		return
+	}
+
+	lvl, err := log.ParseLevel(cfg.Log.Level)
+	if err != nil {
+		log.Error("could not initialize log level", err)
+		return
+	}
+	log.SetLevel(lvl)
+	log.Infof("Starting %s", name)
+
+	ctx, cancel := InitMainContext()
+	defer cancel()
+
+	serviceList, err := getServices(ctx, cfg)
+	if err != nil {
+		log.Error("could not initialize services", err)
+		return
+	}
+
+	if err := StartServices(ctx, serviceList); err != nil {
+		log.Error("error running services", err)
+	}
+
+	log.Infof("Stopping %s", name)
 }
 
 func InitMainContext() (context.Context, context.CancelFunc) {

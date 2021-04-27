@@ -1,0 +1,23 @@
+version: "3.3"
+services:
+  node:
+    image: "openzeppelin/zephyr-node:latest"
+    ports:
+      - "8088:80"
+    environment:
+      JSON_RPC_URL: https://cloudflare-eth.com
+    networks:
+      - agent1
+      - agent2
+  agent1:
+    image: "openzeppelin/zephyr-agent:latest"
+    networks:
+      - agent1
+  agent2:
+    image: "openzeppelin/zephyr-agent:latest"
+    networks:
+      - agent2
+
+networks:
+  agent1:
+  agent2:

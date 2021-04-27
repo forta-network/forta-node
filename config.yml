@@ -1,5 +1,6 @@
 zephyr:
   nodeImage: "openzeppelin/zephyr-node:latest"
+  proxyImage: "openzeppelin/zephyr-proxy:latest"
 
 ethereum:
   jsonRpcUrl: "https://cloudflare-eth.com"

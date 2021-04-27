@@ -12,6 +12,7 @@ require (
 	github.com/docker/docker v1.4.2-0.20180625184442-8e610b2b55bf
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-units v0.4.0 // indirect
+	github.com/elazarl/goproxy v0.0.0-20210110162100-a92cc753f88e // indirect
 	github.com/ethereum/go-ethereum v1.10.2
 	github.com/golang/mock v1.3.1
 	github.com/golang/protobuf v1.5.2
