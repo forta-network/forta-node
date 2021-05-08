@@ -2,5 +2,7 @@
 *.iml
 main
 zephyr-node
-!cmd/zephyr-node
+fortify
+!cmd/query
+!cmd/scanner
 *.pb.go

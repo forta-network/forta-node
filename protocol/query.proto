@@ -1,0 +1,25 @@
+syntax = "proto3";
+import public "agent.proto";
+
+option go_package = "./;protocol";
+
+service QueryNode {
+  rpc Notify (NotifyRequest) returns (NotifyResponse) {}
+}
+
+message AlertResponse {
+  repeated Alert alerts = 1;
+}
+
+message Alert {
+  string id = 1;
+  Finding finding = 2;
+  string timestamp = 3;
+  map<string, string> metadata = 4;
+}
+
+message NotifyRequest {
+  Alert alert = 1;
+}
+
+message NotifyResponse {}

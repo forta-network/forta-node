@@ -4,14 +4,15 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"os"
 
 	"OpenZeppelin/zephyr-node/config"
 	"OpenZeppelin/zephyr-node/services"
 )
 
 func initTxStream(ctx context.Context, cfg config.Config) (*services.TxStreamService, error) {
-	url := cfg.Ethereum.JsonRpcUrl
-	startBlock := cfg.Ethereum.StartBlock
+	url := cfg.Scanner.Ethereum.JsonRpcUrl
+	startBlock := cfg.Scanner.Ethereum.StartBlock
 	var sb *big.Int
 	if startBlock != 0 {
 		sb = big.NewInt(int64(startBlock))
@@ -26,10 +27,15 @@ func initTxStream(ctx context.Context, cfg config.Config) (*services.TxStreamSer
 }
 
 func initTxAnalyzer(ctx context.Context, cfg config.Config, stream *services.TxStreamService) (*services.TxAnalyzerService, error) {
+	qn := os.Getenv(config.EnvQueryNode)
+	if qn == "" {
+		return nil, fmt.Errorf("%s is a required env var", config.EnvQueryNode)
+	}
 	return services.NewTxAnalyzerService(ctx, services.TxAnalyzerServiceConfig{
 		TxChannel:      stream.ReadOnlyStream(),
 		AgentAddresses: cfg.AgentContainerNames(),
-	}), nil
+		QueryNodeAddr:  qn,
+	})
 }
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
@@ -49,5 +55,5 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 }
 
 func main() {
-	services.ContainerMain("zephyr-node", initServices)
+	services.ContainerMain("scanner", initServices)
 }

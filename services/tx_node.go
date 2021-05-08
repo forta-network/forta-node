@@ -5,28 +5,28 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 
 	"OpenZeppelin/zephyr-node/clients"
 	"OpenZeppelin/zephyr-node/config"
+	"OpenZeppelin/zephyr-node/store"
 )
 
-const ZephyrPrefix = "zephyr"
+const ContainerPrefix = "fortify"
 
-var nodeName = fmt.Sprintf("%s-node", ZephyrPrefix)
-var proxyName = fmt.Sprintf("%s-proxy", ZephyrPrefix)
+var scannerName = fmt.Sprintf("%s-scanner", ContainerPrefix)
+var queryName = fmt.Sprintf("%s-query", ContainerPrefix)
 
 // TxNodeService manages the safe-node docker container as a service
 type TxNodeService struct {
-	ctx             context.Context
-	client          clients.DockerClient
-	nodeContainer   *clients.DockerContainer
-	proxyContainer  *clients.DockerContainer
-	agentContainers []*clients.DockerContainer
-	config          TxNodeServiceConfig
+	ctx              context.Context
+	client           clients.DockerClient
+	scannerContainer *clients.DockerContainer
+	queryContainer   *clients.DockerContainer
+	agentContainers  []*clients.DockerContainer
+	config           TxNodeServiceConfig
 }
 
 type TxNodeServiceConfig struct {
@@ -57,7 +57,7 @@ func (t *TxNodeService) Start() error {
 		proxyKeys = append(proxyKeys, uuid.Must(uuid.NewRandom()).String())
 	}
 
-	nodeNetwork, err := t.client.CreatePublicNetwork(t.ctx, nodeName)
+	nodeNetwork, err := t.client.CreatePublicNetwork(t.ctx, scannerName)
 	if err != nil {
 		return err
 	}
@@ -68,8 +68,8 @@ func (t *TxNodeService) Start() error {
 	}
 
 	var networkIDs []string
-	for i, agent := range t.config.Config.Agents {
-		nwID, err := t.client.CreateInternalNetwork(t.ctx, agent.Name)
+	for _, agent := range t.config.Config.Agents {
+		nwID, err := t.client.CreatePublicNetwork(t.ctx, agent.Name)
 		if err != nil {
 			return err
 		}
@@ -79,10 +79,6 @@ func (t *TxNodeService) Start() error {
 			Image:          agent.Image,
 			NetworkID:      nwID,
 			LinkNetworkIDs: []string{},
-			Env: map[string]string{
-				config.EnvAgentKey:   proxyKeys[i],
-				config.EnvAgentProxy: proxyName,
-			},
 		})
 		if err != nil {
 			return err
@@ -90,26 +86,31 @@ func (t *TxNodeService) Start() error {
 		t.agentContainers = append(t.agentContainers, agentContainer)
 	}
 
-	proxyContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
-		Name:      proxyName,
-		Image:     t.config.Config.Zephyr.ProxyImage,
-		NetworkID: nodeNetwork,
+	queryContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
+		Name:  queryName,
+		Image: t.config.Config.Query.QueryImage,
 		Env: map[string]string{
-			config.EnvZephyrConfig: cfgJson,
-			config.EnvAgentKeys:    strings.Join(proxyKeys, ","),
+			config.EnvFortifyConfig: cfgJson,
 		},
-		LinkNetworkIDs: networkIDs,
+		Ports: map[string]string{
+			fmt.Sprintf("%d", t.config.Config.Query.Port): "80",
+		},
+		Volumes: map[string]string{
+			t.config.Config.Query.DB.Path: store.DBPath,
+		},
+		NetworkID: nodeNetwork,
 	})
 	if err != nil {
 		return err
 	}
-	t.proxyContainer = proxyContainer
+	t.queryContainer = queryContainer
 
-	nodeContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
-		Name:  nodeName,
-		Image: t.config.Config.Zephyr.NodeImage,
+	scannerContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
+		Name:  scannerName,
+		Image: t.config.Config.Scanner.ScannerImage,
 		Env: map[string]string{
-			config.EnvZephyrConfig: cfgJson,
+			config.EnvFortifyConfig: cfgJson,
+			config.EnvQueryNode:     queryName,
 		},
 		NetworkID:      nodeNetwork,
 		LinkNetworkIDs: networkIDs,
@@ -118,25 +119,24 @@ func (t *TxNodeService) Start() error {
 		return err
 	}
 
-	t.nodeContainer = nodeContainer
+	t.scannerContainer = scannerContainer
 	return nil
 }
 
 func (t *TxNodeService) Stop() error {
-	log.Infof("Stopping %s", t.Name())
 	ctx := context.Background()
-	if t.nodeContainer != nil {
-		if err := t.client.StopContainer(ctx, t.nodeContainer.ID); err != nil {
+	if t.scannerContainer != nil {
+		if err := t.client.StopContainer(ctx, t.scannerContainer.ID); err != nil {
 			log.Error("error stopping node container", err)
 		} else {
-			log.Infof("Container %s is stopped", t.nodeContainer.ID)
+			log.Infof("Container %s is stopped", t.scannerContainer.ID)
 		}
 	}
-	if t.proxyContainer != nil {
-		if err := t.client.StopContainer(ctx, t.proxyContainer.ID); err != nil {
-			log.Error("error stopping node container", err)
+	if t.queryContainer != nil {
+		if err := t.client.StopContainer(ctx, t.queryContainer.ID); err != nil {
+			log.Error("error stopping query container", err)
 		} else {
-			log.Infof("Container %s is stopped", t.proxyContainer.ID)
+			log.Infof("Container %s is stopped", t.queryContainer.ID)
 		}
 	}
 	for _, agt := range t.agentContainers {

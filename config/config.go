@@ -9,32 +9,47 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const EnvZephyrConfig = "ZEPHYR_CONFIG"
-const EnvAgentKeys = "AGENT_KEYS"
-const EnvAgentKey = "AGENT_KEY"
-const EnvAgentProxy = "AGENT_PROXY"
-const ZephyrPrefix = "zephyr"
+const EnvFortifyConfig = "FORTIFY_CONFIG"
+const FortifyPrefix = "fortify"
+
+//TODO: figure out protocol for this other than direct communication
+const EnvQueryNode = "QUERY_NODE"
 
 type AgentConfig struct {
 	Name  string `yaml:"name" json:"name"`
 	Image string `yaml:"image" json:"image"`
 }
 
+type DBConfig struct {
+	Path string `yaml:"path" json:"path"`
+}
+
+type EthereumConfig struct {
+	JsonRpcUrl string `yaml:"jsonRpcUrl" json:"jsonRpcUrl"`
+	StartBlock int    `yaml:"startBlock" json:"startBlock"`
+}
+
+type QueryConfig struct {
+	QueryImage string   `yaml:"queryImage" json:"queryImage"`
+	Port       int      `yaml:"port" json:"port"`
+	DB         DBConfig `yaml:"db" json:"db"`
+}
+
+type ScannerConfig struct {
+	ScannerImage string         `yaml:"scannerImage" json:"scannerImage"`
+	DB           DBConfig       `yaml:"db" json:"db"`
+	Ethereum     EthereumConfig `yaml:"ethereum" json:"ethereum"`
+}
+
 func (ac AgentConfig) ContainerName() string {
-	return fmt.Sprintf("%s-agent-%s", ZephyrPrefix, ac.Name)
+	return fmt.Sprintf("%s-agent-%s", FortifyPrefix, ac.Name)
 }
 
 type Config struct {
-	Zephyr struct {
-		NodeImage  string `yaml:"nodeImage" json:"nodeImage"`
-		ProxyImage string `yaml:"proxyImage" json:"proxyImage"`
-	} `yaml:"zephyr" json:"zephyr"`
-	Ethereum struct {
-		JsonRpcUrl string `yaml:"jsonRpcUrl" json:"jsonRpcUrl"`
-		StartBlock int    `yaml:"startBlock" json:"startBlock"`
-	} `yaml:"ethereum" json:"ethereum"`
-	Agents []AgentConfig `yaml:"agents" json:"agents"`
-	Log    struct {
+	Scanner ScannerConfig `yaml:"scanner" json:"scanner"`
+	Query   QueryConfig   `yaml:"query" json:"query"`
+	Agents  []AgentConfig `yaml:"agents" json:"agents"`
+	Log     struct {
 		Level string `yaml:"level" json:"level"`
 	} `yaml:"log" json:"log"`
 }
@@ -61,9 +76,9 @@ func InitLogLevel(cfg Config) error {
 }
 
 func GetConfigFromEnv() (Config, error) {
-	cfgJson := os.Getenv(EnvZephyrConfig)
+	cfgJson := os.Getenv(EnvFortifyConfig)
 	if cfgJson == "" {
-		return Config{}, fmt.Errorf("%s is required", EnvZephyrConfig)
+		return Config{}, fmt.Errorf("%s is required", EnvFortifyConfig)
 	}
 	var cfg Config
 	if err := json.Unmarshal([]byte(cfgJson), &cfg); err != nil {

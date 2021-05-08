@@ -8,8 +8,11 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
+	"github.com/docker/go-connections/nat"
 	log "github.com/sirupsen/logrus"
 )
+
+const dockerResourcesLabel = "Fortify"
 
 // DockerContainer is a resulting container reference, including the ID and configuration
 type DockerContainer struct {
@@ -25,6 +28,7 @@ type DockerContainerConfig struct {
 	LinkNetworkIDs []string
 	NetworkID      string
 	Ports          map[string]string
+	Volumes        map[string]string
 }
 
 // DockerClient is a client interface for interacting with docker
@@ -53,8 +57,8 @@ func (d *dockerClient) Prune(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	zephyrFilter := filters.NewArgs(filters.Arg("label", "zephyr"))
-	res, err := cli.NetworksPrune(ctx, zephyrFilter)
+	filter := filters.NewArgs(filters.Arg("label", dockerResourcesLabel))
+	res, err := cli.NetworksPrune(ctx, filter)
 	if err != nil {
 		return err
 	}
@@ -62,7 +66,7 @@ func (d *dockerClient) Prune(ctx context.Context) error {
 		log.Infof("pruned network %s", nw)
 	}
 
-	cpRes, err := cli.ContainersPrune(ctx, zephyrFilter)
+	cpRes, err := cli.ContainersPrune(ctx, filter)
 	if err != nil {
 		return err
 	}
@@ -87,7 +91,7 @@ func (d *dockerClient) createNetwork(ctx context.Context, name string, internal 
 		return "", err
 	}
 	resp, err := cli.NetworkCreate(ctx, name, types.NetworkCreate{
-		Labels:   map[string]string{"zephyr": "true"},
+		Labels:   map[string]string{dockerResourcesLabel: "true"},
 		Internal: internal,
 	})
 	if err != nil {
@@ -104,6 +108,10 @@ func (d *dockerClient) AttachNetwork(ctx context.Context, containerID string, ne
 	return cli.NetworkConnect(ctx, networkID, containerID, nil)
 }
 
+func withTcp(port string) string {
+	return fmt.Sprintf("%s/tcp", port)
+}
+
 // StartContainer kicks off a container as a daemon and returns a summary of the container
 func (d *dockerClient) StartContainer(ctx context.Context, config DockerContainerConfig) (*DockerContainer, error) {
 	cli, err := client.NewClientWithOpts()
@@ -111,15 +119,33 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 		return nil, err
 	}
 
+	bindings := make(map[nat.Port][]nat.PortBinding)
+	ps := make(nat.PortSet)
+	for hp, cp := range config.Ports {
+		contPort := nat.Port(withTcp(cp))
+		ps[contPort] = struct{}{}
+		bindings[contPort] = []nat.PortBinding{{
+			HostPort: hp,
+			HostIP:   "0.0.0.0",
+		}}
+	}
+
+	var volumes []string
+	for hostVol, containerMnt := range config.Volumes {
+		volumes = append(volumes, fmt.Sprintf("%s:%s", hostVol, containerMnt))
+	}
 	cont, err := cli.ContainerCreate(
 		ctx,
 		&container.Config{
 			Image:  config.Image,
 			Env:    config.envVars(),
-			Labels: map[string]string{"zephyr": "true"},
+			Labels: map[string]string{dockerResourcesLabel: "true"},
 		},
 		&container.HostConfig{
-			NetworkMode: container.NetworkMode(config.NetworkID),
+			NetworkMode:     container.NetworkMode(config.NetworkID),
+			PortBindings:    bindings,
+			PublishAllPorts: true,
+			Binds:           volumes,
 		}, nil, config.Name)
 
 	if err != nil {

@@ -33,6 +33,7 @@ message EvaluateRequest {
   TransactionEvent event = 2;
 }
 
+// stays in sync with Finding in node.proto
 message Finding {
   enum Severity {
     UNKNOWN = 0;

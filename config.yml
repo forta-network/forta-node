@@ -1,9 +1,15 @@
-zephyr:
-  nodeImage: "openzeppelin/zephyr-node:latest"
-  proxyImage: "openzeppelin/zephyr-proxy:latest"
+scanner:
+  scannerImage: "openzeppelin/fortify-scanner:latest"
+  db:
+    path: "/tmp/fortify-alerts"
+  ethereum:
+    jsonRpcUrl: "https://cloudflare-eth.com"
 
-ethereum:
-  jsonRpcUrl: "https://cloudflare-eth.com"
+query:
+  queryImage: "openzeppelin/fortify-query:latest"
+  port: 8778
+  db:
+    path: "/tmp/fortify-alerts"
 
 agents:
   - name: "example1"
