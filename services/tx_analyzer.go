@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
@@ -91,7 +91,7 @@ func (t *TxAnalyzerService) Start() error {
 				if err != nil {
 					return err
 				}
-				alertID := hexutil.Encode(sha3.New256().Sum(b))
+				alertID := base58.Encode(sha3.New256().Sum(b))
 				alert := &protocol.Alert{
 					Id:        alertID,
 					Finding:   f,

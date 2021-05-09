@@ -88,10 +88,7 @@ func (s *BadgerAlertStore) AddAlert(a *protocol.Alert) error {
 }
 
 func NewBadgerAlertStore() (*BadgerAlertStore, error) {
-	opts := badger.DefaultOptions("/tmp/fortify-alerts")
-	//TODO: this is just for the POC version
-	opts.BypassLockGuard = true
-	db, err := badger.Open(opts)
+	db, err := badger.Open(badger.DefaultOptions("/tmp/fortify-alerts"))
 	if err != nil {
 		return nil, err
 	}

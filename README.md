@@ -1,4 +1,4 @@
-## zephyr-node
+## fortify-node
 
 #### Dependencies
 
@@ -16,7 +16,7 @@ $ make build
 #### Run Node
 
 ```shell
-$ ./zephyr-node
+$ ./fortify
 ```
 
 #### Stop Node
@@ -30,6 +30,13 @@ CTRL-C
 ```shell
 $ docker logs -f CONTAINER_ID
 ```
+
+#### Get Alerts
+
+```shell
+$ curl -s http://localhost:8778/alerts
+```
+
 
 #### Configuration
 

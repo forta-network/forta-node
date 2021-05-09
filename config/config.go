@@ -37,7 +37,6 @@ type QueryConfig struct {
 
 type ScannerConfig struct {
 	ScannerImage string         `yaml:"scannerImage" json:"scannerImage"`
-	DB           DBConfig       `yaml:"db" json:"db"`
 	Ethereum     EthereumConfig `yaml:"ethereum" json:"ethereum"`
 }
 

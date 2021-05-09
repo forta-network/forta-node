@@ -1,7 +1,5 @@
 scanner:
   scannerImage: "openzeppelin/fortify-scanner:latest"
-  db:
-    path: "/tmp/fortify-alerts"
   ethereum:
     jsonRpcUrl: "https://cloudflare-eth.com"
 
