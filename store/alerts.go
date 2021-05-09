@@ -41,13 +41,13 @@ func (s *BadgerAlertStore) GetAlerts(from time.Time, to time.Time) ([]*protocol.
 		opts.PrefetchSize = 10
 		it := txn.NewIterator(opts)
 		defer it.Close()
-		//startKey := []byte(prefixKey(from))
-		//endKey := []byte(prefixKey(to))
+		startKey := []byte(prefixKey(from))
+		endKey := []byte(prefixKey(to))
 		for it.Rewind(); it.Valid(); it.Next() {
 			item := it.Item()
-			//if !isBetween(item.Key(), startKey, endKey) {
-			//	return nil
-			//}
+			if !isBetween(item.Key(), startKey, endKey) {
+				return nil
+			}
 			err := item.Value(func(v []byte) error {
 				var alert protocol.Alert
 				if err := proto.Unmarshal(v, &alert); err != nil {

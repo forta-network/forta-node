@@ -32,9 +32,9 @@ func initTxAnalyzer(ctx context.Context, cfg config.Config, stream *services.TxS
 		return nil, fmt.Errorf("%s is a required env var", config.EnvQueryNode)
 	}
 	return services.NewTxAnalyzerService(ctx, services.TxAnalyzerServiceConfig{
-		TxChannel:      stream.ReadOnlyStream(),
-		AgentAddresses: cfg.AgentContainerNames(),
-		QueryNodeAddr:  qn,
+		TxChannel:     stream.ReadOnlyStream(),
+		AgentConfigs:  cfg.Agents,
+		QueryNodeAddr: qn,
 	})
 }
 
