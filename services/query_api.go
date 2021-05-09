@@ -10,8 +10,8 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 
-	"OpenZeppelin/zephyr-node/protocol"
-	"OpenZeppelin/zephyr-node/store"
+	"OpenZeppelin/fortify-node/protocol"
+	"OpenZeppelin/fortify-node/store"
 )
 
 // AlertApi allows retrieval of alerts from the database

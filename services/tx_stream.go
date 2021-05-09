@@ -6,8 +6,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"OpenZeppelin/zephyr-node/clients"
-	"OpenZeppelin/zephyr-node/feeds"
+	"OpenZeppelin/fortify-node/clients"
+	"OpenZeppelin/fortify-node/feeds"
 )
 
 // TxStreamService pulls TX info from providers and emits to channel

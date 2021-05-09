@@ -6,8 +6,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"OpenZeppelin/zephyr-node/config"
-	"OpenZeppelin/zephyr-node/services"
+	"OpenZeppelin/fortify-node/config"
+	"OpenZeppelin/fortify-node/services"
 )
 
 func initServices(cfg config.Config, ctx context.Context) ([]services.Service, error) {

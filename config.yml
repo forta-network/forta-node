@@ -12,12 +12,8 @@ query:
     path: "/tmp/fortify-alerts"
 
 agents:
-  - name: "example1"
-    image: "openzeppelin/zephyr-agent:latest"
-  - name: "example2"
-    image: "openzeppelin/zephyr-agent:latest"
-  - name: "example3"
-    image: "openzeppelin/zephyr-agent:latest"
+  - name: "example-agent"
+    image: "openzeppelin/fortify-agent:latest"
 
 log:
   level: info

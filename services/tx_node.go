@@ -9,9 +9,9 @@ import (
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 
-	"OpenZeppelin/zephyr-node/clients"
-	"OpenZeppelin/zephyr-node/config"
-	"OpenZeppelin/zephyr-node/store"
+	"OpenZeppelin/fortify-node/clients"
+	"OpenZeppelin/fortify-node/config"
+	"OpenZeppelin/fortify-node/store"
 )
 
 const ContainerPrefix = "fortify"

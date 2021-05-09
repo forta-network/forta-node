@@ -14,9 +14,9 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 
-	"OpenZeppelin/zephyr-node/config"
-	"OpenZeppelin/zephyr-node/feeds"
-	"OpenZeppelin/zephyr-node/protocol"
+	"OpenZeppelin/fortify-node/config"
+	"OpenZeppelin/fortify-node/feeds"
+	"OpenZeppelin/fortify-node/protocol"
 )
 
 // TxAnalyzerService reads TX info, calls agents, and emits results

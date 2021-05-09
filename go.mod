@@ -1,4 +1,4 @@
-module OpenZeppelin/zephyr-node
+module OpenZeppelin/fortify-node
 
 go 1.16
 

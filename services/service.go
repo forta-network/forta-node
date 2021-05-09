@@ -10,7 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 
-	"OpenZeppelin/zephyr-node/config"
+	"OpenZeppelin/fortify-node/config"
 )
 
 type Service interface {

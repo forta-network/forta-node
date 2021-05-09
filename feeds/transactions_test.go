@@ -7,9 +7,9 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	clients "OpenZeppelin/zephyr-node/clients/mocks"
-	"OpenZeppelin/zephyr-node/testutils"
-	"OpenZeppelin/zephyr-node/utils"
+	clients "OpenZeppelin/fortify-node/clients/mocks"
+	"OpenZeppelin/fortify-node/testutils"
+	"OpenZeppelin/fortify-node/utils"
 )
 
 func getTestTransactionFeed(t *testing.T, blockFeed BlockFeed) (*transactionFeed, *clients.MockEthClient) {

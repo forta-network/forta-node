@@ -6,8 +6,8 @@ import (
 	"math/big"
 	"os"
 
-	"OpenZeppelin/zephyr-node/config"
-	"OpenZeppelin/zephyr-node/services"
+	"OpenZeppelin/fortify-node/config"
+	"OpenZeppelin/fortify-node/services"
 )
 
 func initTxStream(ctx context.Context, cfg config.Config) (*services.TxStreamService, error) {

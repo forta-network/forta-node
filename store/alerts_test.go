@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"OpenZeppelin/zephyr-node/protocol"
+	"OpenZeppelin/fortify-node/protocol"
 )
 
 func TestBadgerAlertStore_AddAlert(t *testing.T) {

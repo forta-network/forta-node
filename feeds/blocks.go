@@ -8,8 +8,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	log "github.com/sirupsen/logrus"
 
-	"OpenZeppelin/zephyr-node/clients"
-	"OpenZeppelin/zephyr-node/utils"
+	"OpenZeppelin/fortify-node/clients"
+	"OpenZeppelin/fortify-node/utils"
 )
 
 type BlockFeed interface {

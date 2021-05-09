@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 
-	"OpenZeppelin/zephyr-node/config"
-	"OpenZeppelin/zephyr-node/services"
-	"OpenZeppelin/zephyr-node/store"
+	"OpenZeppelin/fortify-node/config"
+	"OpenZeppelin/fortify-node/services"
+	"OpenZeppelin/fortify-node/store"
 )
 
 func initApi(ctx context.Context, as store.AlertStore, cfg config.Config) (*services.AlertApi, error) {

@@ -11,9 +11,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 
-	"OpenZeppelin/zephyr-node/clients"
-	"OpenZeppelin/zephyr-node/protocol"
-	"OpenZeppelin/zephyr-node/utils"
+	"OpenZeppelin/fortify-node/clients"
+	"OpenZeppelin/fortify-node/protocol"
+	"OpenZeppelin/fortify-node/utils"
 )
 
 type TransactionFeed interface {
