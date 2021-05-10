@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 
 	"OpenZeppelin/fortify-node/protocol"
@@ -49,7 +50,12 @@ func (t *AlertApi) getAlerts(w http.ResponseWriter, r *http.Request) {
 func (t *AlertApi) Start() error {
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/alerts", t.getAlerts)
-	return http.ListenAndServe(fmt.Sprintf(":%d", t.cfg.Port), router)
+
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowCredentials: true,
+	})
+	return http.ListenAndServe(fmt.Sprintf(":%d", t.cfg.Port), c.Handler(router))
 }
 
 func (t *AlertApi) Stop() error {
