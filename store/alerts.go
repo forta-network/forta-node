@@ -88,7 +88,7 @@ func (s *BadgerAlertStore) AddAlert(a *protocol.Alert) error {
 }
 
 func NewBadgerAlertStore() (*BadgerAlertStore, error) {
-	db, err := badger.Open(badger.DefaultOptions("/tmp/fortify-alerts"))
+	db, err := badger.Open(badger.DefaultOptions("/db/fortify-alerts"))
 	if err != nil {
 		return nil, err
 	}
