@@ -39,7 +39,7 @@ func getDateParam(r *http.Request, name string, defaultTime time.Time) (time.Tim
 	if dtStr == "" {
 		return defaultTime, nil
 	}
-	return time.Parse(time.RFC3339, dtStr)
+	return time.Parse(store.AlertTimeKeyFormat, dtStr)
 }
 
 func parseQueryRequest(r *http.Request) (*store.AlertQueryRequest, error) {
@@ -54,8 +54,8 @@ func parseQueryRequest(r *http.Request) (*store.AlertQueryRequest, error) {
 	}
 
 	request := &store.AlertQueryRequest{
-		FromTime:  startDate,
-		ToTime:    endDate,
+		StartTime: startDate,
+		EndTime:   endDate,
 		PageToken: r.URL.Query().Get("pageToken"),
 		Limit:     defaultPageLimit,
 	}
@@ -80,6 +80,7 @@ func (t *AlertApi) getAlerts(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
+	log.Infof(queryReq.Json())
 
 	alerts, err := t.store.QueryAlerts(queryReq)
 	if err != nil {

@@ -17,6 +17,7 @@ import (
 	"OpenZeppelin/fortify-node/config"
 	"OpenZeppelin/fortify-node/feeds"
 	"OpenZeppelin/fortify-node/protocol"
+	"OpenZeppelin/fortify-node/store"
 )
 
 // TxAnalyzerService reads TX info, calls agents, and emits results
@@ -95,7 +96,7 @@ func (t *TxAnalyzerService) Start() error {
 				alert := &protocol.Alert{
 					Id:        alertID,
 					Finding:   f,
-					Timestamp: ts.Format(time.RFC3339),
+					Timestamp: ts.Format(store.AlertTimeFormat),
 					Metadata: map[string]string{
 						"agent-name":  resp.agent.config.Name,
 						"agent-image": resp.agent.config.Image,

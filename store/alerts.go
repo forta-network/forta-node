@@ -1,6 +1,7 @@
 package store
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -12,12 +13,22 @@ import (
 
 //DBPath is a local location of badger db (/db is a mounted volume)
 const DBPath = "/db/fortify-alerts"
+const AlertTimeFormat = time.RFC3339Nano
+const AlertTimeKeyFormat = time.RFC3339
 
 type AlertQueryRequest struct {
-	FromTime  time.Time
-	ToTime    time.Time
+	StartTime time.Time
+	EndTime   time.Time
 	PageToken string
 	Limit     int
+}
+
+func (r *AlertQueryRequest) Json() string {
+	b, err := json.Marshal(r)
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
 }
 
 type AlertQueryResponse struct {
@@ -34,12 +45,18 @@ type BadgerAlertStore struct {
 	db *badger.DB
 }
 
-func alertKey(a *protocol.Alert) string {
-	return fmt.Sprintf("%s-%s", a.Timestamp, a.Id)
+func alertKey(a *protocol.Alert) (string, error) {
+	ts, err := time.Parse(AlertTimeFormat, a.Timestamp)
+	if err != nil {
+		return "", err
+	}
+	res := ts.Truncate(time.Second)
+	return fmt.Sprintf("%s-%s", res.Format(AlertTimeKeyFormat), a.Id), nil
 }
 
-func prefixKey(t time.Time) string {
-	return t.Format(time.RFC3339)
+func formatSearchKey(t time.Time) string {
+	trunc := t.Truncate(1 * time.Second)
+	return trunc.Format(AlertTimeKeyFormat)
 }
 
 func isBetween(key []byte, startKey []byte, endKey []byte) bool {
@@ -70,23 +87,29 @@ func (s *BadgerAlertStore) QueryAlerts(request *AlertQueryRequest) (*AlertQueryR
 	result := &AlertQueryResponse{
 		Alerts: make([]*protocol.Alert, 0),
 	}
+
+	// seek to this key first
+	startKey := request.PageToken
+	if startKey == "" {
+		startKey = formatSearchKey(request.StartTime)
+	}
+
 	err := s.db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchSize = 10
 		it := txn.NewIterator(opts)
 		defer it.Close()
-		startKey := []byte(prefixKey(request.FromTime))
-		if request.PageToken != "" {
-			startKey = []byte(request.PageToken)
-		}
-		endKey := []byte(prefixKey(request.ToTime))
-		for it.Rewind(); it.Valid(); it.Next() {
+
+		startTime := []byte(formatSearchKey(request.StartTime))
+		endTime := []byte(formatSearchKey(request.EndTime))
+
+		for it.Seek([]byte(startKey)); it.Valid(); it.Next() {
 			item := it.Item()
 			if len(result.Alerts) == request.Limit {
 				result.NextPageToken = string(item.Key())
 				return nil
 			}
-			if !isBetween(item.Key(), startKey, endKey) {
+			if !isBetween(item.Key(), startTime, endTime) {
 				return nil
 			}
 			err := item.Value(func(v []byte) error {
@@ -100,7 +123,6 @@ func (s *BadgerAlertStore) QueryAlerts(request *AlertQueryRequest) (*AlertQueryR
 			if err != nil {
 				return err
 			}
-
 		}
 		return nil
 	})
@@ -120,7 +142,11 @@ func (s *BadgerAlertStore) AddAlert(a *protocol.Alert) error {
 		if err != nil {
 			return err
 		}
-		e := badger.NewEntry([]byte(alertKey(a)), b).WithTTL(time.Hour * 24 * 7)
+		ak, err := alertKey(a)
+		if err != nil {
+			return err
+		}
+		e := badger.NewEntry([]byte(ak), b).WithTTL(time.Hour * 24 * 7)
 		err = txn.SetEntry(e)
 		if err != nil {
 			return err
