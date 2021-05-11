@@ -85,7 +85,7 @@ func (t *TxAnalyzerService) Start() error {
 	output := make(chan *responseWrapper, 100)
 	grp.Go(func() error {
 		for resp := range output {
-			ts := time.Now()
+			ts := time.Now().UTC()
 			for _, f := range resp.response.Findings {
 				b, err := proto.Marshal(f)
 				if err != nil {
