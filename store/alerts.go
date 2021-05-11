@@ -21,13 +21,12 @@ type AlertQueryRequest struct {
 }
 
 type AlertQueryResponse struct {
-	Request       *AlertQueryRequest
 	Alerts        []*protocol.Alert
 	NextPageToken string
 }
 
 type AlertStore interface {
-	GetAlerts(request *AlertQueryRequest) (*AlertQueryResponse, error)
+	QueryAlerts(request *AlertQueryRequest) (*AlertQueryResponse, error)
 	AddAlert(a *protocol.Alert) error
 }
 
@@ -40,17 +39,36 @@ func alertKey(a *protocol.Alert) string {
 }
 
 func prefixKey(t time.Time) string {
-	return fmt.Sprintf("%s", t)
+	return t.Format(time.RFC3339)
 }
 
 func isBetween(key []byte, startKey []byte, endKey []byte) bool {
 	return string(key) >= string(startKey) && string(key) < string(endKey)
 }
 
-func (s *BadgerAlertStore) GetAlerts(request *AlertQueryRequest) (*AlertQueryResponse, error) {
+// GetAllKeys is a utility method for debugging
+func (s *BadgerAlertStore) GetAllKeys() ([]string, error) {
+	var keys []string
+	err := s.db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchSize = 10
+		it := txn.NewIterator(opts)
+		defer it.Close()
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+			keys = append(keys, string(item.Key()))
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return keys, err
+}
+
+func (s *BadgerAlertStore) QueryAlerts(request *AlertQueryRequest) (*AlertQueryResponse, error) {
 	result := &AlertQueryResponse{
-		Alerts:  make([]*protocol.Alert, 0),
-		Request: request,
+		Alerts: make([]*protocol.Alert, 0),
 	}
 	err := s.db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions

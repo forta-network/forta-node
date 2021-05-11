@@ -81,7 +81,7 @@ func (t *AlertApi) getAlerts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	alerts, err := t.store.GetAlerts(queryReq)
+	alerts, err := t.store.QueryAlerts(queryReq)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return

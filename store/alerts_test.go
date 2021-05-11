@@ -16,9 +16,9 @@ func TestBadgerAlertStore_AddAlert(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	alertTime := time.Now()
-	a := &protocol.Alert{Id: "test1", Timestamp: alertTime.String()}
-	b := &protocol.Alert{Id: "test2", Timestamp: alertTime.String()}
+	alertTime := time.Now().UTC()
+	a := &protocol.Alert{Id: "test1", Timestamp: alertTime.Format(time.RFC3339)}
+	b := &protocol.Alert{Id: "test2", Timestamp: alertTime.Format(time.RFC3339)}
 
 	assert.NoError(t, store.AddAlert(a))
 	assert.NoError(t, store.AddAlert(b))
@@ -26,13 +26,13 @@ func TestBadgerAlertStore_AddAlert(t *testing.T) {
 	startRange := alertTime.Add(-1 * time.Minute)
 	endRange := alertTime.Add(1 * time.Minute)
 
-	res, err := store.GetAlerts(AlertQueryRequest{
+	res, err := store.QueryAlerts(&AlertQueryRequest{
 		FromTime:  startRange,
 		ToTime:    endRange,
-		PageStart: "",
+		PageToken: "",
 		Limit:     1,
 	})
 	assert.NoError(t, err)
 	assert.Lenf(t, res.Alerts, 1, "result should have one entry")
-	assert.Equal(t, fmt.Sprintf("%s-%s", alertTime.String(), b.Id), res.NextPageStart)
+	assert.Equal(t, fmt.Sprintf("%s-%s", alertTime.Format(time.RFC3339), b.Id), res.NextPageToken)
 }
