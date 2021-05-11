@@ -95,7 +95,7 @@ func (t *TxAnalyzerService) Start() error {
 				alert := &protocol.Alert{
 					Id:        alertID,
 					Finding:   f,
-					Timestamp: ts.String(),
+					Timestamp: ts.Format(time.RFC3339),
 					Metadata: map[string]string{
 						"agent-name":  resp.agent.config.Name,
 						"agent-image": resp.agent.config.Image,

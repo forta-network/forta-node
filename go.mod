@@ -22,6 +22,7 @@ require (
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
+	github.com/rs/cors v1.7.0 // indirect
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.7.0
 	github.com/tylertreat/BoomFilters v0.0.0-20210315201527-1a82519a3e43

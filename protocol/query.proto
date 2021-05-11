@@ -9,6 +9,7 @@ service QueryNode {
 
 message AlertResponse {
   repeated Alert alerts = 1;
+  string NextPageToken = 2;
 }
 
 message Alert {
