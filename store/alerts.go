@@ -2,6 +2,7 @@ package store
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -14,7 +15,8 @@ import (
 //DBPath is a local location of badger db (/db is a mounted volume)
 const DBPath = "/db/fortify-alerts"
 const AlertTimeFormat = time.RFC3339Nano
-const AlertTimeKeyFormat = time.RFC3339
+
+var ErrNoPruneNeeded = errors.New("no prune was deemed necessary")
 
 type AlertQueryRequest struct {
 	StartTime time.Time
@@ -39,6 +41,7 @@ type AlertQueryResponse struct {
 type AlertStore interface {
 	QueryAlerts(request *AlertQueryRequest) (*AlertQueryResponse, error)
 	AddAlert(a *protocol.Alert) error
+	Prune() error
 }
 
 type BadgerAlertStore struct {
@@ -50,13 +53,11 @@ func alertKey(a *protocol.Alert) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	res := ts.Truncate(time.Second)
-	return fmt.Sprintf("%s-%s", res.Format(AlertTimeKeyFormat), a.Id), nil
+	return fmt.Sprintf("%s-%s", formatSearchKey(ts), a.Id), nil
 }
 
 func formatSearchKey(t time.Time) string {
-	trunc := t.Truncate(1 * time.Second)
-	return trunc.Format(AlertTimeKeyFormat)
+	return fmt.Sprintf("%d", t.UnixNano()/1e6)
 }
 
 func isBetween(key []byte, startKey []byte, endKey []byte) bool {
@@ -81,6 +82,14 @@ func (s *BadgerAlertStore) GetAllKeys() ([]string, error) {
 		return nil, err
 	}
 	return keys, err
+}
+
+func (s *BadgerAlertStore) Prune() error {
+	err := s.db.RunValueLogGC(0.5)
+	if err == badger.ErrNoRewrite {
+		return ErrNoPruneNeeded
+	}
+	return err
 }
 
 func (s *BadgerAlertStore) QueryAlerts(request *AlertQueryRequest) (*AlertQueryResponse, error) {

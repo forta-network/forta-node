@@ -39,7 +39,11 @@ func getDateParam(r *http.Request, name string, defaultTime time.Time) (time.Tim
 	if dtStr == "" {
 		return defaultTime, nil
 	}
-	return time.Parse(store.AlertTimeKeyFormat, dtStr)
+	ms, err := strconv.Atoi(dtStr)
+	if err != nil || ms < 1e12 {
+		return time.Time{}, fmt.Errorf("%s must be in milliseconds format", name)
+	}
+	return time.Unix(0, int64(ms)*int64(time.Millisecond)), nil
 }
 
 func parseQueryRequest(r *http.Request) (*store.AlertQueryRequest, error) {

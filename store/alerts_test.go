@@ -1,7 +1,6 @@
 package store
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -9,6 +8,11 @@ import (
 
 	"OpenZeppelin/fortify-node/protocol"
 )
+
+func TestFormat(t *testing.T) {
+	val := "2021-05-11T23:41:11.304Z"
+	time.Parse(AlertTimeFormat, val)
+}
 
 func TestBadgerAlertStore_AddAlert(t *testing.T) {
 	store, err := NewBadgerAlertStoreWithPath("/tmp/alert-test")
@@ -28,6 +32,7 @@ func TestBadgerAlertStore_AddAlert(t *testing.T) {
 
 	ks, err := store.GetAllKeys()
 	assert.NoError(t, err)
+	assert.Len(t, ks, 2)
 	for _, k := range ks {
 		t.Log(k)
 	}
@@ -39,8 +44,11 @@ func TestBadgerAlertStore_AddAlert(t *testing.T) {
 		Limit:     1,
 	})
 	assert.NoError(t, err)
+
+	expectedKeyB, err := alertKey(b)
+	assert.NoError(t, err)
 	assert.Lenf(t, res.Alerts, 1, "result should have one entry")
-	assert.Equal(t, fmt.Sprintf("%s-%s", alertTime.Format(AlertTimeKeyFormat), b.Id), res.NextPageToken)
+	assert.Equal(t, expectedKeyB, res.NextPageToken)
 
 	res2, err := store.QueryAlerts(&AlertQueryRequest{
 		StartTime: startRange,
