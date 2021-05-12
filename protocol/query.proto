@@ -12,11 +12,25 @@ message AlertResponse {
   string nextPageToken = 2;
 }
 
+message AgentInfo {
+  string image = 1;
+  string imageHash = 2;
+  string name = 3;
+}
+
+enum AlertType {
+  UNKNOWN_ALERT_TYPE = 0;
+  TRANSACTION = 1;
+}
+
 message Alert {
   string id = 1;
-  Finding finding = 2;
-  string timestamp = 3;
-  map<string, string> metadata = 4;
+  AlertType type = 2;
+  Finding finding = 3;
+  string timestamp = 4;
+  map<string, string> metadata = 5;
+  AgentInfo agent = 6;
+  map<string, string> tags = 7;
 }
 
 message NotifyRequest {

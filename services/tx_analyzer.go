@@ -40,6 +40,7 @@ type TxAnalyzerServiceConfig struct {
 }
 
 type responseWrapper struct {
+	request  *protocol.EvaluateRequest
 	agent    AnalyzerAgent
 	response *protocol.EvaluateResponse
 }
@@ -62,6 +63,7 @@ func newAgentStream(ctx context.Context, agent AnalyzerAgent, input <-chan *prot
 			output <- &responseWrapper{
 				agent:    agent,
 				response: resp,
+				request:  request,
 			}
 
 			//TODO: this print logic is just for test purposes
@@ -87,21 +89,28 @@ func (t *TxAnalyzerService) Start() error {
 	grp.Go(func() error {
 		for resp := range output {
 			ts := time.Now().UTC()
+
+			//TODO: validate finding returned is well-formed
 			for _, f := range resp.response.Findings {
 				b, err := proto.Marshal(f)
 				if err != nil {
 					return err
 				}
 				alertID := base58.Encode(sha3.New256().Sum(b))
+				r := resp.request.Event.Receipt
 				alert := &protocol.Alert{
 					Id:        alertID,
 					Finding:   f,
 					Timestamp: ts.Format(store.AlertTimeFormat),
-					Metadata: map[string]string{
-						"agent-name":  resp.agent.config.Name,
-						"agent-image": resp.agent.config.Image,
+					Type:      protocol.AlertType_TRANSACTION,
+					Agent:     &protocol.AgentInfo{Name: resp.agent.config.Name, Image: resp.agent.config.Image},
+					Tags: map[string]string{
+						"blockHash":   r.BlockHash,
+						"blockNumber": r.BlockNumber,
+						"txHash":      r.TransactionHash,
 					},
 				}
+				//TODO: sign notification
 				_, err = t.queryNode.Notify(ctx, &protocol.NotifyRequest{
 					Alert: alert,
 				})
