@@ -17,10 +17,11 @@ type BlockFeed interface {
 }
 
 type blockFeed struct {
-	start  *big.Int
-	ctx    context.Context
-	client clients.EthClient
-	cache  utils.Cache
+	start   *big.Int
+	ctx     context.Context
+	client  clients.EthClient
+	cache   utils.Cache
+	chainID *big.Int
 }
 
 type EventType string
@@ -32,6 +33,7 @@ const (
 
 type BlockEvent struct {
 	EventType EventType
+	ChainID   *big.Int
 	Block     *types.Block
 }
 
@@ -45,6 +47,13 @@ func (bf *blockFeed) initialize() error {
 		bf.start = big.NewInt(int64(res.NumberU64()))
 	}
 	log.Infof("initialized block number %d", bf.start)
+
+	chainID, err := bf.client.ChainID(bf.ctx)
+	if err != nil {
+		return err
+	}
+	bf.chainID = chainID
+	log.Infof("initialized chain id %d", bf.chainID)
 	return nil
 }
 
@@ -69,7 +78,7 @@ func (bf *blockFeed) processReorg(parentHash common.Hash, handler func(evt *Bloc
 			// stop if prior to horizon
 			return nil
 		}
-		evt := &BlockEvent{EventTypeReorg, block}
+		evt := &BlockEvent{EventType: EventTypeReorg, Block: block, ChainID: bf.chainID}
 		if err := handler(evt); err != nil {
 			return err
 		}
@@ -93,7 +102,7 @@ func (bf *blockFeed) ForEachBlock(handler func(evt *BlockEvent) error) error {
 			return err
 		}
 
-		evt := &BlockEvent{EventTypeBlock, block}
+		evt := &BlockEvent{EventType: EventTypeBlock, Block: block, ChainID: bf.chainID}
 		if err := handler(evt); err != nil {
 			return err
 		}
@@ -110,7 +119,7 @@ func (bf *blockFeed) ForEachBlock(handler func(evt *BlockEvent) error) error {
 
 func NewBlockFeed(ctx context.Context, client clients.EthClient, start *big.Int) (*blockFeed, error) {
 	bf := &blockFeed{
-		start, ctx, client, utils.NewCache(10000),
+		start: start, ctx: ctx, client: client, cache: utils.NewCache(10000),
 	}
 	if err := bf.initialize(); err != nil {
 		return nil, err

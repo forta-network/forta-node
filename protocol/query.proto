@@ -12,6 +12,10 @@ message AlertResponse {
   string nextPageToken = 2;
 }
 
+message ScannerInfo {
+
+}
+
 message AgentInfo {
   string image = 1;
   string imageHash = 2;
@@ -31,6 +35,7 @@ message Alert {
   map<string, string> metadata = 5;
   AgentInfo agent = 6;
   map<string, string> tags = 7;
+  ScannerInfo scanner = 8;
 }
 
 message NotifyRequest {

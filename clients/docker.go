@@ -16,8 +16,9 @@ const dockerResourcesLabel = "Fortify"
 
 // DockerContainer is a resulting container reference, including the ID and configuration
 type DockerContainer struct {
-	ID     string
-	Config DockerContainerConfig
+	ID        string
+	ImageHash string
+	Config    DockerContainerConfig
 }
 
 // DockerContainerConfig is configuration for a particular container
@@ -163,8 +164,13 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 		}
 	}
 
-	log.Infof("Container %s is started", cont.ID)
-	return &DockerContainer{ID: cont.ID, Config: config}, nil
+	inspection, err := cli.ContainerInspect(ctx, cont.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Infof("Container %s (%s) is started", cont.ID, config.Name)
+	return &DockerContainer{ID: cont.ID, Config: config, ImageHash: inspection.Image}, nil
 }
 
 // StopContainer kills a container by ID

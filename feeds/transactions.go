@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/core/types"
@@ -31,16 +32,19 @@ type transactionFeed struct {
 }
 
 type TransactionEvent struct {
-	EventType   EventType
-	Block       *types.Block
+	BlockEvt    *BlockEvent
 	Transaction *types.Transaction
 	Receipt     *types.Receipt
+}
+
+func bigIntToHex(i *big.Int) string {
+	return fmt.Sprintf("0x%0x", i.Int64())
 }
 
 // ToMessage converts the TransactionEvent to the protocol.TransactionEvent message
 func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 	evtType := protocol.TransactionEvent_BLOCK
-	if t.EventType == "reorg" {
+	if t.BlockEvt.EventType == "reorg" {
 		evtType = protocol.TransactionEvent_REORG
 	}
 	var tx protocol.TransactionEvent_EthTransaction
@@ -69,10 +73,15 @@ func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 		}
 	}
 
+	nw := &protocol.TransactionEvent_Network{
+		ChainId: bigIntToHex(t.BlockEvt.ChainID),
+	}
+
 	return &protocol.TransactionEvent{
 		Type:        evtType,
 		Transaction: &tx,
 		Receipt:     &receipt,
+		Network:     nw,
 	}, nil
 }
 
@@ -96,7 +105,10 @@ func (tf *transactionFeed) streamTransactions() error {
 			default:
 				if !tf.cache.ExistsAndAdd(tx.Hash().Hex()) {
 					log.Debugf("tx-iterator: block(%d), txs <- %s", evt.Block.NumberU64(), tx.Hash().Hex())
-					tf.txCh <- &TransactionEvent{EventType: evt.EventType, Block: evt.Block, Transaction: tx}
+					tf.txCh <- &TransactionEvent{
+						BlockEvt:    evt,
+						Transaction: tx,
+					}
 				}
 			}
 		}
@@ -107,7 +119,7 @@ func (tf *transactionFeed) streamTransactions() error {
 func (tf *transactionFeed) getWorker(workerID int, handler func(evt *TransactionEvent) error) func() error {
 	return func() error {
 		for tx := range tf.txCh {
-			log.Debugf("tx-processor(%d): block(%d) processing %s", workerID, tx.Block.NumberU64(), tx.Transaction.Hash().Hex())
+			log.Debugf("tx-processor(%d): block(%d) processing %s", workerID, tx.BlockEvt.Block.NumberU64(), tx.Transaction.Hash().Hex())
 			select {
 			case <-tf.ctx.Done():
 				log.Debugf("tx-processor(%d): context cancelled", workerID)
@@ -115,13 +127,13 @@ func (tf *transactionFeed) getWorker(workerID int, handler func(evt *Transaction
 			default:
 				receipt, err := tf.client.TransactionReceipt(tf.ctx, tx.Transaction.Hash())
 				if err != nil {
-					log.Debugf("tx-processor(%d): block(%d) tx(%s) get receipt failed (skipping): %s", workerID, tx.Block.NumberU64(), tx.Transaction.Hash().Hex(), err.Error())
+					log.Debugf("tx-processor(%d): block(%d) tx(%s) get receipt failed (skipping): %s", workerID, tx.BlockEvt.Block.NumberU64(), tx.Transaction.Hash().Hex(), err.Error())
 					continue
 				}
 				tx.Receipt = receipt
-				log.Debugf("tx-processor(%d): block(%d) tx(%s) invoking handler", workerID, tx.Block.NumberU64(), tx.Transaction.Hash().Hex())
+				log.Debugf("tx-processor(%d): block(%d) tx(%s) invoking handler", workerID, tx.BlockEvt.Block.NumberU64(), tx.Transaction.Hash().Hex())
 				if err := handler(tx); err != nil {
-					log.Debugf("tx-processor(%d): block(%d) tx(%s) handler returned error, cancelling: %s", workerID, tx.Block.NumberU64(), tx.Transaction.Hash().Hex(), err.Error())
+					log.Debugf("tx-processor(%d): block(%d) tx(%s) handler returned error, cancelling: %s", workerID, tx.BlockEvt.Block.NumberU64(), tx.Transaction.Hash().Hex(), err.Error())
 					return err
 				}
 			}

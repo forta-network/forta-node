@@ -20,14 +20,14 @@ const testTxHash = "0x9b9cc76d6b3b51976b1396a5b417b3bf3f4b39b8fe080e4a5aef39d02b
 
 var testErr = errors.New("test err")
 
-func initClient(t *testing.T) (*ethClient, *mocks.MockEthClient, context.Context) {
+func initClient(t *testing.T) (*streamEthClient, *mocks.MockEthClient, context.Context) {
 	minBackoff = 1 * time.Millisecond
 	maxBackoff = 1 * time.Millisecond
 	ctx := context.Background()
 	ctrl := gomock.NewController(t)
 	client := mocks.NewMockEthClient(ctrl)
 
-	return &ethClient{client}, client, ctx
+	return &streamEthClient{client}, client, ctx
 }
 
 func TestEthClient_BlockByHash(t *testing.T) {

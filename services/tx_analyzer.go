@@ -105,6 +105,7 @@ func (t *TxAnalyzerService) Start() error {
 					Type:      protocol.AlertType_TRANSACTION,
 					Agent:     &protocol.AgentInfo{Name: resp.agent.config.Name, Image: resp.agent.config.Image},
 					Tags: map[string]string{
+						"chainId":     resp.request.Event.Network.ChainId,
 						"blockHash":   r.BlockHash,
 						"blockNumber": r.BlockNumber,
 						"txHash":      r.TransactionHash,

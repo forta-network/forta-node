@@ -48,7 +48,7 @@ func (t *TxStreamService) Name() string {
 
 func NewTxStreamService(ctx context.Context, cfg TxStreamServiceConfig) (*TxStreamService, error) {
 	output := make(chan *feeds.TransactionEvent)
-	ethClient, err := clients.NewEthClient(ctx, cfg.Url)
+	ethClient, err := clients.NewStreamEthClient(ctx, cfg.Url)
 	if err != nil {
 		return nil, err
 	}
