@@ -82,6 +82,21 @@ func (mr *MockEthClientMockRecorder) BlockNumber(ctx interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlockNumber", reflect.TypeOf((*MockEthClient)(nil).BlockNumber), ctx)
 }
 
+// ChainID mocks base method.
+func (m *MockEthClient) ChainID(ctx context.Context) (*big.Int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChainID", ctx)
+	ret0, _ := ret[0].(*big.Int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ChainID indicates an expected call of ChainID.
+func (mr *MockEthClientMockRecorder) ChainID(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChainID", reflect.TypeOf((*MockEthClient)(nil).ChainID), ctx)
+}
+
 // Close mocks base method.
 func (m *MockEthClient) Close() {
 	m.ctrl.T.Helper()

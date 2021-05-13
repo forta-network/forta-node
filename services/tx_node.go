@@ -3,10 +3,8 @@ package services
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
-	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 
 	"OpenZeppelin/fortify-node/clients"
@@ -17,16 +15,15 @@ import (
 const ContainerPrefix = "fortify"
 
 var scannerName = fmt.Sprintf("%s-scanner", ContainerPrefix)
+var jsonRpcProxyName = fmt.Sprintf("%s-json-rpc", ContainerPrefix)
 var queryName = fmt.Sprintf("%s-query", ContainerPrefix)
 
 // TxNodeService manages the safe-node docker container as a service
 type TxNodeService struct {
-	ctx              context.Context
-	client           clients.DockerClient
-	scannerContainer *clients.DockerContainer
-	queryContainer   *clients.DockerContainer
-	agentContainers  []*clients.DockerContainer
-	config           TxNodeServiceConfig
+	ctx        context.Context
+	client     clients.DockerClient
+	containers []*clients.DockerContainer
+	config     TxNodeServiceConfig
 }
 
 type TxNodeServiceConfig struct {
@@ -52,19 +49,9 @@ func (t *TxNodeService) Start() error {
 		return err
 	}
 
-	var proxyKeys []string
-	for range t.config.Config.Agents {
-		proxyKeys = append(proxyKeys, uuid.Must(uuid.NewRandom()).String())
-	}
-
 	nodeNetwork, err := t.client.CreatePublicNetwork(t.ctx, scannerName)
 	if err != nil {
 		return err
-	}
-
-	// removes ide warning about possible nil slice
-	if proxyKeys == nil {
-		return errors.New("proxy keys is nil")
 	}
 
 	var networkIDs []string
@@ -79,11 +66,15 @@ func (t *TxNodeService) Start() error {
 			Image:          agent.Image,
 			NetworkID:      nwID,
 			LinkNetworkIDs: []string{},
+			Env: map[string]string{
+				config.EnvJsonRpcHost: jsonRpcProxyName,
+				config.EnvJsonRpcPort: "8545",
+			},
 		})
 		if err != nil {
 			return err
 		}
-		t.agentContainers = append(t.agentContainers, agentContainer)
+		t.containers = append(t.containers, agentContainer)
 	}
 
 	queryContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
@@ -103,7 +94,19 @@ func (t *TxNodeService) Start() error {
 	if err != nil {
 		return err
 	}
-	t.queryContainer = queryContainer
+
+	jsonRpcContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
+		Name:  jsonRpcProxyName,
+		Image: t.config.Config.JsonRpcProxy.JsonRpcImage,
+		Env: map[string]string{
+			config.EnvFortifyConfig: cfgJson,
+		},
+		NetworkID:      nodeNetwork,
+		LinkNetworkIDs: networkIDs,
+	})
+	if err != nil {
+		return err
+	}
 
 	scannerContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
 		Name:  scannerName,
@@ -119,31 +122,18 @@ func (t *TxNodeService) Start() error {
 		return err
 	}
 
-	t.scannerContainer = scannerContainer
+	t.containers = append(t.containers, jsonRpcContainer, scannerContainer, queryContainer)
+
 	return nil
 }
 
 func (t *TxNodeService) Stop() error {
 	ctx := context.Background()
-	if t.scannerContainer != nil {
-		if err := t.client.StopContainer(ctx, t.scannerContainer.ID); err != nil {
-			log.Error("error stopping node container", err)
+	for _, cnt := range t.containers {
+		if err := t.client.StopContainer(ctx, cnt.ID); err != nil {
+			log.Error(fmt.Sprintf("error stopping %s container", cnt.ID), err)
 		} else {
-			log.Infof("Container %s is stopped", t.scannerContainer.ID)
-		}
-	}
-	if t.queryContainer != nil {
-		if err := t.client.StopContainer(ctx, t.queryContainer.ID); err != nil {
-			log.Error("error stopping query container", err)
-		} else {
-			log.Infof("Container %s is stopped", t.queryContainer.ID)
-		}
-	}
-	for _, agt := range t.agentContainers {
-		if err := t.client.StopContainer(ctx, agt.ID); err != nil {
-			log.Error(fmt.Sprintf("error stopping %s container", agt.ID), err)
-		} else {
-			log.Infof("Container %s is stopped", agt.ID)
+			log.Infof("Container %s is stopped", cnt.ID)
 		}
 	}
 	return nil

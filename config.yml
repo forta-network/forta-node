@@ -2,12 +2,21 @@ scanner:
   scannerImage: "openzeppelin/fortify-scanner:latest"
   ethereum:
     jsonRpcUrl: "https://cloudflare-eth.com"
+#    headers:
+#      "Content-Type": "application/json"
 
 query:
   queryImage: "openzeppelin/fortify-query:latest"
   port: 8778
   db:
     path: "/tmp/fortify-alerts"
+
+json-rpc-proxy:
+  jsonRpcImage: "openzeppelin/fortify-json-rpc:latest"
+  ethereum:
+    jsonRpcUrl: "https://cloudflare-eth.com"
+#    headers:
+#      "Content-Type": "application/json"
 
 agents:
   - name: "example-agent"

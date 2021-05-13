@@ -10,6 +10,8 @@ import (
 )
 
 const EnvFortifyConfig = "FORTIFY_CONFIG"
+const EnvJsonRpcHost = "JSON_RPC_HOST"
+const EnvJsonRpcPort = "JSON_RPC_PORT"
 const FortifyPrefix = "fortify"
 
 //TODO: figure out protocol for this other than direct communication
@@ -25,8 +27,8 @@ type DBConfig struct {
 }
 
 type EthereumConfig struct {
-	JsonRpcUrl string `yaml:"jsonRpcUrl" json:"jsonRpcUrl"`
-	StartBlock int    `yaml:"startBlock" json:"startBlock"`
+	JsonRpcUrl string            `yaml:"jsonRpcUrl" json:"jsonRpcUrl"`
+	Headers    map[string]string `yaml:"headers" json:"headers"`
 }
 
 type QueryConfig struct {
@@ -37,6 +39,12 @@ type QueryConfig struct {
 
 type ScannerConfig struct {
 	ScannerImage string         `yaml:"scannerImage" json:"scannerImage"`
+	StartBlock   int            `yaml:"startBlock" json:"startBlock"`
+	Ethereum     EthereumConfig `yaml:"ethereum" json:"ethereum"`
+}
+
+type JsonRpcProxyConfig struct {
+	JsonRpcImage string         `yaml:"jsonRpcImage" json:"jsonRpcImage"`
 	Ethereum     EthereumConfig `yaml:"ethereum" json:"ethereum"`
 }
 
@@ -45,10 +53,11 @@ func (ac AgentConfig) ContainerName() string {
 }
 
 type Config struct {
-	Scanner ScannerConfig `yaml:"scanner" json:"scanner"`
-	Query   QueryConfig   `yaml:"query" json:"query"`
-	Agents  []AgentConfig `yaml:"agents" json:"agents"`
-	Log     struct {
+	Scanner      ScannerConfig      `yaml:"scanner" json:"scanner"`
+	Query        QueryConfig        `yaml:"query" json:"query"`
+	JsonRpcProxy JsonRpcProxyConfig `yaml:"json-rpc-proxy" json:"jsonRpcProxy"`
+	Agents       []AgentConfig      `yaml:"agents" json:"agents"`
+	Log          struct {
 		Level string `yaml:"level" json:"level"`
 	} `yaml:"log" json:"log"`
 }

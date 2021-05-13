@@ -1,6 +1,7 @@
 containers:
 	docker build -t openzeppelin/fortify-scanner -f Dockerfile-scanner .
 	docker build -t openzeppelin/fortify-query -f Dockerfile-query .
+	docker build -t openzeppelin/fortify-json-rpc -f Dockerfile-json-rpc .
 
 main:
 	go build -o fortify main.go

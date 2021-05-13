@@ -12,7 +12,7 @@ import (
 
 func initTxStream(ctx context.Context, cfg config.Config) (*services.TxStreamService, error) {
 	url := cfg.Scanner.Ethereum.JsonRpcUrl
-	startBlock := cfg.Scanner.Ethereum.StartBlock
+	startBlock := cfg.Scanner.StartBlock
 	var sb *big.Int
 	if startBlock != 0 {
 		sb = big.NewInt(int64(startBlock))
