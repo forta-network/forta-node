@@ -43,11 +43,15 @@ func (p *JsonRpcProxy) Start() error {
 	rp.Director = func(r *http.Request) {
 		d(r)
 		r.Host = rpcUrl.Host
+		r.URL = rpcUrl
 	}
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		//TODO: this is where we can validate methods
+		req.URL = rpcUrl
+		req.Host = rpcUrl.Host
+
 		for h, v := range p.cfg.Ethereum.Headers {
 			req.Header.Set(h, v)
 		}
