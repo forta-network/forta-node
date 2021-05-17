@@ -142,11 +142,22 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 			Env:    config.envVars(),
 			Labels: map[string]string{dockerResourcesLabel: "true"},
 		},
+
+		//TODO: revisit whether a bump in ulimit is actually necessary
 		&container.HostConfig{
 			NetworkMode:     container.NetworkMode(config.NetworkID),
 			PortBindings:    bindings,
 			PublishAllPorts: true,
 			Binds:           volumes,
+			//Resources: container.Resources{
+			//	Ulimits: []*units.Ulimit{
+			//		{
+			//			Name: "nofile",
+			//			Hard: 60000,
+			//			Soft: 60000,
+			//		},
+			//	},
+			//},
 		}, nil, config.Name)
 
 	if err != nil {
