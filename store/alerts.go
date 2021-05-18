@@ -16,13 +16,84 @@ import (
 const DBPath = "/db/fortify-alerts"
 const AlertTimeFormat = time.RFC3339Nano
 
+type Operator string
+
+const Equals Operator = "EQUALS"
+const NotEquals Operator = "NOT_EQUALS"
+
 var ErrNoPruneNeeded = errors.New("no prune was deemed necessary")
+
+type FilterCriterion struct {
+	Operator Operator
+	Field    string
+	Values   []string
+}
+
+func stringVal(fieldName string, alert *protocol.Alert) (string, bool) {
+	if fieldName == "severity" {
+		return alert.Finding.Severity.String(), true
+	}
+	if fieldName == "protocol" {
+		return alert.Finding.Protocol, true
+	}
+	if fieldName == "type" {
+		return alert.Finding.Type.String(), true
+	}
+	if fieldName == "agentName" {
+		return alert.Agent.Name, true
+	}
+	if fieldName == "agentImage" {
+		return alert.Agent.Image, true
+	}
+	if fieldName == "agentImageHash" {
+		return alert.Agent.ImageHash, true
+	}
+	if val, ok := alert.Tags[fieldName]; ok {
+		return val, true
+	}
+	return "", false
+}
+
+func (fc *FilterCriterion) Matches(alert *protocol.Alert) bool {
+	val, ok := stringVal(fc.Field, alert)
+	if ok && fc.Operator == Equals {
+		// any must match
+		for _, v := range fc.Values {
+			if v == val {
+				return true
+			}
+		}
+	} else if fc.Operator == NotEquals {
+		if !ok {
+			return true
+		}
+		// all must not match
+		for _, v := range fc.Values {
+			if v == val {
+				return false
+			}
+		}
+		return true
+	}
+	return false
+}
 
 type AlertQueryRequest struct {
 	StartTime time.Time
 	EndTime   time.Time
 	PageToken string
 	Limit     int
+	Criteria  []*FilterCriterion
+}
+
+func (r *AlertQueryRequest) Matches(alert *protocol.Alert) bool {
+	// must match all, if any
+	for _, fc := range r.Criteria {
+		if !fc.Matches(alert) {
+			return false
+		}
+	}
+	return true
 }
 
 func (r *AlertQueryRequest) Json() string {
@@ -126,7 +197,9 @@ func (s *BadgerAlertStore) QueryAlerts(request *AlertQueryRequest) (*AlertQueryR
 				if err := proto.Unmarshal(v, &alert); err != nil {
 					return err
 				}
-				result.Alerts = append(result.Alerts, &alert)
+				if request.Matches(&alert) {
+					result.Alerts = append(result.Alerts, &alert)
+				}
 				return nil
 			})
 			if err != nil {

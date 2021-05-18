@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang/protobuf/jsonpb"
@@ -30,6 +31,10 @@ const defaultSinceDate = -24 * 7 * time.Hour // last 7 days
 const defaultPageLimit = 100
 const maxPageLimit = 1000
 
+const prefixNot = "{not}"
+
+var nonFilterParams []string = []string{"startDate", "endDate", "limit", "pageToken"}
+
 type AlertApiConfig struct {
 	Port int
 }
@@ -46,6 +51,35 @@ func getDateParam(r *http.Request, name string, defaultTime time.Time) (time.Tim
 	return time.Unix(0, int64(ms)*int64(time.Millisecond)), nil
 }
 
+func parseFilterCriteria(r *http.Request) ([]*store.FilterCriterion, error) {
+	var filters []*store.FilterCriterion
+	values := r.URL.Query()
+	for k, v := range values {
+		// skip startDate, endDate, limit, pageToken
+		for _, nfp := range nonFilterParams {
+			if nfp == k {
+				continue
+			}
+		}
+		if len(v) > 1 {
+			return nil, fmt.Errorf("%s cannot be array", k)
+		}
+		val := v[0]
+		op := store.Equals
+		if strings.HasPrefix(val, prefixNot) {
+			op = store.NotEquals
+			val = strings.TrimPrefix(val, prefixNot)
+		}
+		valList := strings.Split(val, ",")
+		filters = append(filters, &store.FilterCriterion{
+			Operator: op,
+			Field:    k,
+			Values:   valList,
+		})
+	}
+	return filters, nil
+}
+
 func parseQueryRequest(r *http.Request) (*store.AlertQueryRequest, error) {
 	now := time.Now()
 	startDate, err := getDateParam(r, paramStartDate, now.Add(defaultSinceDate))
@@ -56,12 +90,16 @@ func parseQueryRequest(r *http.Request) (*store.AlertQueryRequest, error) {
 	if err != nil {
 		return nil, fmt.Errorf("endDate must be in RFC3339 format")
 	}
-
+	filters, err := parseFilterCriteria(r)
+	if err != nil {
+		return nil, err
+	}
 	request := &store.AlertQueryRequest{
 		StartTime: startDate,
 		EndTime:   endDate,
 		PageToken: r.URL.Query().Get("pageToken"),
 		Limit:     defaultPageLimit,
+		Criteria:  filters,
 	}
 
 	limit := r.URL.Query().Get("limit")
