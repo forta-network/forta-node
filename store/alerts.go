@@ -83,6 +83,7 @@ type AlertQueryRequest struct {
 	EndTime   time.Time
 	PageToken string
 	Limit     int
+	Reverse   bool
 	Criteria  []*FilterCriterion
 }
 
@@ -171,12 +172,17 @@ func (s *BadgerAlertStore) QueryAlerts(request *AlertQueryRequest) (*AlertQueryR
 	// seek to this key first
 	startKey := request.PageToken
 	if startKey == "" {
-		startKey = formatSearchKey(request.StartTime)
+		if request.Reverse {
+			startKey = formatSearchKey(request.EndTime)
+		} else {
+			startKey = formatSearchKey(request.StartTime)
+		}
 	}
 
 	err := s.db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchSize = 10
+		opts.Reverse = request.Reverse
 		it := txn.NewIterator(opts)
 		defer it.Close()
 

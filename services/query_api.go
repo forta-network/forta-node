@@ -33,7 +33,7 @@ const maxPageLimit = 1000
 
 const prefixNot = "{not}"
 
-var reservedParams = []string{"startDate", "endDate", "limit", "pageToken"}
+var reservedParams = []string{"startDate", "endDate", "limit", "pageToken", "sort"}
 
 type AlertApiConfig struct {
 	Port int
@@ -100,12 +100,24 @@ func parseQueryRequest(r *http.Request) (*store.AlertQueryRequest, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	var reverse bool
+	s := r.URL.Query().Get("sort")
+	if s == "asc" {
+		reverse = false
+	} else if s == "desc" {
+		reverse = true
+	} else if s != "" {
+		return nil, fmt.Errorf("sort must be either asc or desc (default asc)")
+	}
+
 	request := &store.AlertQueryRequest{
 		StartTime: startDate,
 		EndTime:   endDate,
 		PageToken: r.URL.Query().Get("pageToken"),
 		Limit:     defaultPageLimit,
 		Criteria:  filters,
+		Reverse:   reverse,
 	}
 
 	limit := r.URL.Query().Get("limit")
