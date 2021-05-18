@@ -33,7 +33,7 @@ const maxPageLimit = 1000
 
 const prefixNot = "{not}"
 
-var nonFilterParams []string = []string{"startDate", "endDate", "limit", "pageToken"}
+var reservedParams = []string{"startDate", "endDate", "limit", "pageToken"}
 
 type AlertApiConfig struct {
 	Port int
@@ -51,31 +51,37 @@ func getDateParam(r *http.Request, name string, defaultTime time.Time) (time.Tim
 	return time.Unix(0, int64(ms)*int64(time.Millisecond)), nil
 }
 
+func isReservedParam(param string) bool {
+	for _, nfp := range reservedParams {
+		if nfp == param {
+			return true
+		}
+	}
+	return false
+}
+
 func parseFilterCriteria(r *http.Request) ([]*store.FilterCriterion, error) {
 	var filters []*store.FilterCriterion
 	values := r.URL.Query()
 	for k, v := range values {
 		// skip startDate, endDate, limit, pageToken
-		for _, nfp := range nonFilterParams {
-			if nfp == k {
-				continue
+		if !isReservedParam(k) {
+			if len(v) > 1 {
+				return nil, fmt.Errorf("%s cannot be array", k)
 			}
+			val := v[0]
+			op := store.Equals
+			if strings.HasPrefix(val, prefixNot) {
+				op = store.NotEquals
+				val = strings.TrimPrefix(val, prefixNot)
+			}
+			valList := strings.Split(val, ",")
+			filters = append(filters, &store.FilterCriterion{
+				Operator: op,
+				Field:    k,
+				Values:   valList,
+			})
 		}
-		if len(v) > 1 {
-			return nil, fmt.Errorf("%s cannot be array", k)
-		}
-		val := v[0]
-		op := store.Equals
-		if strings.HasPrefix(val, prefixNot) {
-			op = store.NotEquals
-			val = strings.TrimPrefix(val, prefixNot)
-		}
-		valList := strings.Split(val, ",")
-		filters = append(filters, &store.FilterCriterion{
-			Operator: op,
-			Field:    k,
-			Values:   valList,
-		})
 	}
 	return filters, nil
 }
@@ -109,7 +115,7 @@ func parseQueryRequest(r *http.Request) (*store.AlertQueryRequest, error) {
 			return nil, fmt.Errorf("limit must be an integer")
 		}
 		if l > maxPageLimit {
-			return nil, fmt.Errorf("limit must be less than 1000")
+			return nil, fmt.Errorf("limit cannot exceed %d", maxPageLimit)
 		}
 		request.Limit = l
 	}
