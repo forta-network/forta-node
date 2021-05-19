@@ -63,6 +63,22 @@ type Config struct {
 	} `yaml:"log" json:"log"`
 }
 
+func GetFortifyCfgDir() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s/.fortify", home), nil
+}
+
+func GetKeyStorePath() (string, error) {
+	cfgDir, err := GetFortifyCfgDir()
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s/.keys", cfgDir), nil
+}
+
 func (c Config) AgentContainerNames() []string {
 	var agents []string
 	for _, agt := range c.Agents {

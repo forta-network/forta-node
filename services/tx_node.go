@@ -27,7 +27,8 @@ type TxNodeService struct {
 }
 
 type TxNodeServiceConfig struct {
-	Config config.Config
+	Config     config.Config
+	Passphrase string
 }
 
 func (t *TxNodeService) Start() error {
@@ -111,12 +112,23 @@ func (t *TxNodeService) Start() error {
 		return err
 	}
 
+	keyPath, err := config.GetKeyStorePath()
+	if err != nil {
+		return err
+	}
+
 	scannerContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
 		Name:  scannerName,
 		Image: t.config.Config.Scanner.ScannerImage,
 		Env: map[string]string{
 			config.EnvFortifyConfig: cfgJson,
 			config.EnvQueryNode:     queryName,
+		},
+		Volumes: map[string]string{
+			keyPath: "/.keys",
+		},
+		Files: map[string][]byte{
+			"passphrase": []byte(t.config.Passphrase),
 		},
 		NetworkID:      nodeNetwork,
 		LinkNetworkIDs: networkIDs,

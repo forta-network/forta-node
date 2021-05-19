@@ -1,11 +1,17 @@
 package services
 
 import (
+	"bufio"
 	"context"
+	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/btcsuite/btcutil/base58"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
@@ -19,6 +25,8 @@ import (
 	"OpenZeppelin/fortify-node/protocol"
 	"OpenZeppelin/fortify-node/store"
 )
+
+const keyPath = "/.keys"
 
 // TxAnalyzerService reads TX info, calls agents, and emits results
 type TxAnalyzerService struct {
@@ -77,6 +85,35 @@ func newAgentStream(ctx context.Context, agent AnalyzerAgent, input <-chan *prot
 		}
 		return nil
 	}
+}
+
+func loadKey() (*keystore.Key, error) {
+	f, err := os.OpenFile("/passphrase", os.O_RDONLY, 400)
+	if err != nil {
+		return nil, err
+	}
+
+	pw, err := io.ReadAll(bufio.NewReader(f))
+	if err != nil {
+		return nil, err
+	}
+	passphrase := string(pw)
+
+	files, err := ioutil.ReadDir(keyPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(files) != 1 {
+		return nil, errors.New("there must be only one key in key directory")
+	}
+
+	keyBytes, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", keyPath, files[0].Name()))
+	if err != nil {
+		return nil, err
+	}
+
+	return keystore.DecryptKey(keyBytes, passphrase)
 }
 
 func (t *TxAnalyzerService) Start() error {
@@ -200,6 +237,13 @@ func NewTxAnalyzerService(ctx context.Context, cfg TxAnalyzerServiceConfig) (*Tx
 		return nil, err
 	}
 	qn := protocol.NewQueryNodeClient(conn)
+
+	k, err := loadKey()
+	if err != nil {
+		return nil, err
+	}
+
+	log.Infof("loaded address %s", k.Address.Hex())
 
 	return &TxAnalyzerService{
 		cfg:       cfg,

@@ -1,6 +1,8 @@
 package clients
 
 import (
+	"archive/tar"
+	"bytes"
 	"context"
 	"fmt"
 
@@ -13,6 +15,8 @@ import (
 )
 
 const dockerResourcesLabel = "Fortify"
+
+var labels = map[string]string{dockerResourcesLabel: "true"}
 
 // DockerContainer is a resulting container reference, including the ID and configuration
 type DockerContainer struct {
@@ -30,6 +34,7 @@ type DockerContainerConfig struct {
 	NetworkID      string
 	Ports          map[string]string
 	Volumes        map[string]string
+	Files          map[string][]byte
 }
 
 // DockerClient is a client interface for interacting with docker
@@ -92,7 +97,7 @@ func (d *dockerClient) createNetwork(ctx context.Context, name string, internal 
 		return "", err
 	}
 	resp, err := cli.NetworkCreate(ctx, name, types.NetworkCreate{
-		Labels:   map[string]string{dockerResourcesLabel: "true"},
+		Labels:   labels,
 		Internal: internal,
 	})
 	if err != nil {
@@ -111,6 +116,29 @@ func (d *dockerClient) AttachNetwork(ctx context.Context, containerID string, ne
 
 func withTcp(port string) string {
 	return fmt.Sprintf("%s/tcp", port)
+}
+
+// copyFile copies content bytes into container at /filename
+func copyFile(cli *client.Client, ctx context.Context, filename string, content []byte, containerId string) error {
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	err := tw.WriteHeader(&tar.Header{
+		Name: filename,
+		Mode: 0400,
+		Size: int64(len(content)),
+	})
+	if err != nil {
+		return err
+	}
+	_, err = tw.Write(content)
+	if err != nil {
+		return err
+	}
+	err = tw.Close()
+	if err != nil {
+		return err
+	}
+	return cli.CopyToContainer(ctx, containerId, "/", &buf, types.CopyToContainerOptions{})
 }
 
 // StartContainer kicks off a container as a daemon and returns a summary of the container
@@ -140,28 +168,23 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 		&container.Config{
 			Image:  config.Image,
 			Env:    config.envVars(),
-			Labels: map[string]string{dockerResourcesLabel: "true"},
+			Labels: labels,
 		},
-
-		//TODO: revisit whether a bump in ulimit is actually necessary
 		&container.HostConfig{
 			NetworkMode:     container.NetworkMode(config.NetworkID),
 			PortBindings:    bindings,
 			PublishAllPorts: true,
 			Binds:           volumes,
-			//Resources: container.Resources{
-			//	Ulimits: []*units.Ulimit{
-			//		{
-			//			Name: "nofile",
-			//			Hard: 60000,
-			//			Soft: 60000,
-			//		},
-			//	},
-			//},
 		}, nil, config.Name)
 
 	if err != nil {
 		return nil, err
+	}
+
+	for fn, b := range config.Files {
+		if err := copyFile(cli, ctx, fn, b, cont.ID); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := cli.ContainerStart(ctx, cont.ID, types.ContainerStartOptions{}); err != nil {

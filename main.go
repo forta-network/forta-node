@@ -3,16 +3,19 @@ package main
 import (
 	"context"
 	"flag"
+	"os"
 
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	log "github.com/sirupsen/logrus"
 
 	"OpenZeppelin/fortify-node/config"
 	"OpenZeppelin/fortify-node/services"
 )
 
-func initServices(cfg config.Config, ctx context.Context) ([]services.Service, error) {
+func initServices(cfg config.Config, passphrase string, ctx context.Context) ([]services.Service, error) {
 	svc, err := services.NewTxNodeService(ctx, services.TxNodeServiceConfig{
-		Config: cfg,
+		Config:     cfg,
+		Passphrase: passphrase,
 	})
 	if err != nil {
 		return nil, err
@@ -22,14 +25,47 @@ func initServices(cfg config.Config, ctx context.Context) ([]services.Service, e
 	}, nil
 }
 
+func initKeyFile(passphrase string) error {
+	keyPath, err := config.GetKeyStorePath()
+	if err != nil {
+		return err
+	}
+	f, err := os.OpenFile(keyPath, os.O_RDONLY, 400)
+	defer func() {
+		if f != nil {
+			f.Close()
+		}
+	}()
+	if os.IsNotExist(err) {
+		ks := keystore.NewKeyStore(keyPath, keystore.StandardScryptN, keystore.StandardScryptP)
+		acct, err := ks.NewAccount(passphrase)
+		if err != nil {
+			return err
+		}
+		log.Infof("Generated Address: %s", acct.Address.Hex())
+	}
+	return nil
+}
+
 func main() {
 
 	ctx, cancel := services.InitMainContext()
 	defer cancel()
 
 	cfgFile := flag.String("config", "config.yml", "filename for configuration yaml")
+	passphrase := flag.String("passphrase", "", "passphrase for configuration yaml")
 
 	flag.Parse()
+
+	if *passphrase == "" {
+		log.Error("-passphrase is required")
+		return
+	}
+
+	if err := initKeyFile(*passphrase); err != nil {
+		log.Error("could not initialize key", err)
+		return
+	}
 
 	cfg, err := config.GetConfig(*cfgFile)
 	if err != nil {
@@ -43,7 +79,7 @@ func main() {
 
 	log.Info("Starting Node")
 
-	serviceList, err := initServices(cfg, ctx)
+	serviceList, err := initServices(cfg, *passphrase, ctx)
 	if err != nil {
 		log.Error("could not initialize services", err)
 		return
