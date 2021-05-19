@@ -18,8 +18,9 @@ const FortifyPrefix = "fortify"
 const EnvQueryNode = "QUERY_NODE"
 
 type AgentConfig struct {
-	Name  string `yaml:"name" json:"name"`
-	Image string `yaml:"image" json:"image"`
+	Name      string `yaml:"name" json:"name"`
+	Image     string `yaml:"image" json:"image"`
+	ImageHash string `yaml:"imageHash" json:"imageHash"`
 }
 
 type DBConfig struct {

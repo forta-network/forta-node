@@ -103,7 +103,11 @@ func (t *TxAnalyzerService) Start() error {
 					Finding:   f,
 					Timestamp: ts.Format(store.AlertTimeFormat),
 					Type:      protocol.AlertType_TRANSACTION,
-					Agent:     &protocol.AgentInfo{Name: resp.agent.config.Name, Image: resp.agent.config.Image},
+					Agent: &protocol.AgentInfo{
+						Name:      resp.agent.config.Name,
+						Image:     resp.agent.config.Image,
+						ImageHash: resp.agent.config.ImageHash,
+					},
 					Tags: map[string]string{
 						"chainId":     resp.request.Event.Network.ChainId,
 						"blockHash":   r.BlockHash,

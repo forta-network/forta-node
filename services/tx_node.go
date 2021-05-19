@@ -75,6 +75,9 @@ func (t *TxNodeService) Start() error {
 			return err
 		}
 		t.containers = append(t.containers, agentContainer)
+		if agentContainer.ImageHash != agent.ImageHash {
+			return fmt.Errorf("agent %s has invalid hash (expected=%s got=%s)", agent.Name, agent.ImageHash, agentContainer.ImageHash)
+		}
 	}
 
 	queryContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
