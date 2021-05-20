@@ -3,6 +3,7 @@ package services
 import (
 	"bufio"
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
@@ -34,6 +36,7 @@ type TxAnalyzerService struct {
 	cfg       TxAnalyzerServiceConfig
 	ctx       context.Context
 	agents    []AnalyzerAgent
+	key       *keystore.Key
 }
 
 type AnalyzerAgent struct {
@@ -116,6 +119,26 @@ func loadKey() (*keystore.Key, error) {
 	return keystore.DecryptKey(keyBytes, passphrase)
 }
 
+func (t *TxAnalyzerService) sign(alert *protocol.Alert) (*protocol.SignedAlert, error) {
+	b, err := proto.Marshal(alert)
+	if err != nil {
+		return nil, err
+	}
+	hash := crypto.Keccak256(b)
+	sig, err := crypto.Sign(hash, t.key.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+	signature := fmt.Sprintf("0x%s", hex.EncodeToString(sig))
+	return &protocol.SignedAlert{
+		Alert: alert,
+		Signature: &protocol.Signature{
+			Signature: signature,
+			Algorithm: "ECDSA",
+		},
+	}, nil
+}
+
 func (t *TxAnalyzerService) Start() error {
 	log.Infof("Starting %s", t.Name())
 	grp, ctx := errgroup.WithContext(t.ctx)
@@ -151,10 +174,17 @@ func (t *TxAnalyzerService) Start() error {
 						"blockNumber": r.BlockNumber,
 						"txHash":      r.TransactionHash,
 					},
+					Scanner: &protocol.ScannerInfo{
+						Address: t.key.Address.Hex(),
+					},
 				}
-				//TODO: sign notification
+
+				signedAlert, err := t.sign(alert)
+				if err != nil {
+					return err
+				}
 				_, err = t.queryNode.Notify(ctx, &protocol.NotifyRequest{
-					Alert: alert,
+					SignedAlert: signedAlert,
 				})
 				if err != nil {
 					return err
@@ -250,5 +280,6 @@ func NewTxAnalyzerService(ctx context.Context, cfg TxAnalyzerServiceConfig) (*Tx
 		ctx:       ctx,
 		agents:    agents,
 		queryNode: qn,
+		key:       k,
 	}, nil
 }

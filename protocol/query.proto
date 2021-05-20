@@ -8,18 +8,23 @@ service QueryNode {
 }
 
 message AlertResponse {
-  repeated Alert alerts = 1;
+  repeated SignedAlert alerts = 1;
   string nextPageToken = 2;
 }
 
 message ScannerInfo {
-
+  string address = 1;
 }
 
 message AgentInfo {
   string image = 1;
   string imageHash = 2;
   string name = 3;
+}
+
+message Signature {
+  string signature = 1;
+  string algorithm = 2;
 }
 
 enum AlertType {
@@ -38,8 +43,13 @@ message Alert {
   ScannerInfo scanner = 8;
 }
 
-message NotifyRequest {
+message SignedAlert {
   Alert alert = 1;
+  Signature signature = 2;
+}
+
+message NotifyRequest {
+  SignedAlert signedAlert = 1;
 }
 
 message NotifyResponse {}

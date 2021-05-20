@@ -24,8 +24,8 @@ type AlertListenerConfig struct {
 }
 
 func (al *AlertListener) Notify(ctx context.Context, req *protocol.NotifyRequest) (*protocol.NotifyResponse, error) {
-	log.Infof("alert: %s", req.Alert.Id)
-	if err := al.store.AddAlert(req.Alert); err != nil {
+	log.Infof("alert: %s", req.SignedAlert.Alert.Id)
+	if err := al.store.AddAlert(req.SignedAlert); err != nil {
 		return nil, err
 	}
 	return &protocol.NotifyResponse{}, nil

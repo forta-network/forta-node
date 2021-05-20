@@ -54,8 +54,8 @@ func stringVal(fieldName string, alert *protocol.Alert) (string, bool) {
 	return "", false
 }
 
-func (fc *FilterCriterion) Matches(alert *protocol.Alert) bool {
-	val, ok := stringVal(fc.Field, alert)
+func (fc *FilterCriterion) Matches(alert *protocol.SignedAlert) bool {
+	val, ok := stringVal(fc.Field, alert.Alert)
 	if ok && fc.Operator == Equals {
 		// any must match
 		for _, v := range fc.Values {
@@ -87,7 +87,7 @@ type AlertQueryRequest struct {
 	Criteria  []*FilterCriterion
 }
 
-func (r *AlertQueryRequest) Matches(alert *protocol.Alert) bool {
+func (r *AlertQueryRequest) Matches(alert *protocol.SignedAlert) bool {
 	// must match all, if any
 	for _, fc := range r.Criteria {
 		if !fc.Matches(alert) {
@@ -106,13 +106,13 @@ func (r *AlertQueryRequest) Json() string {
 }
 
 type AlertQueryResponse struct {
-	Alerts        []*protocol.Alert
+	Alerts        []*protocol.SignedAlert
 	NextPageToken string
 }
 
 type AlertStore interface {
 	QueryAlerts(request *AlertQueryRequest) (*AlertQueryResponse, error)
-	AddAlert(a *protocol.Alert) error
+	AddAlert(a *protocol.SignedAlert) error
 	Prune() error
 }
 
@@ -120,12 +120,12 @@ type BadgerAlertStore struct {
 	db *badger.DB
 }
 
-func alertKey(a *protocol.Alert) (string, error) {
-	ts, err := time.Parse(AlertTimeFormat, a.Timestamp)
+func alertKey(a *protocol.SignedAlert) (string, error) {
+	ts, err := time.Parse(AlertTimeFormat, a.Alert.Timestamp)
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%s-%s", formatSearchKey(ts), a.Id), nil
+	return fmt.Sprintf("%s-%s", formatSearchKey(ts), a.Alert.Id), nil
 }
 
 func formatSearchKey(t time.Time) string {
@@ -166,7 +166,7 @@ func (s *BadgerAlertStore) Prune() error {
 
 func (s *BadgerAlertStore) QueryAlerts(request *AlertQueryRequest) (*AlertQueryResponse, error) {
 	result := &AlertQueryResponse{
-		Alerts: make([]*protocol.Alert, 0),
+		Alerts: make([]*protocol.SignedAlert, 0),
 	}
 
 	// seek to this key first
@@ -199,7 +199,7 @@ func (s *BadgerAlertStore) QueryAlerts(request *AlertQueryRequest) (*AlertQueryR
 				return nil
 			}
 			err := item.Value(func(v []byte) error {
-				var alert protocol.Alert
+				var alert protocol.SignedAlert
 				if err := proto.Unmarshal(v, &alert); err != nil {
 					return err
 				}
@@ -224,7 +224,7 @@ func (s *BadgerAlertStore) Clear() error {
 	return s.db.DropAll()
 }
 
-func (s *BadgerAlertStore) AddAlert(a *protocol.Alert) error {
+func (s *BadgerAlertStore) AddAlert(a *protocol.SignedAlert) error {
 	return s.db.Update(func(txn *badger.Txn) error {
 		b, err := proto.Marshal(a)
 		if err != nil {

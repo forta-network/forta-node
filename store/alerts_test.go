@@ -21,21 +21,14 @@ func TestBadgerAlertStore_AddAlert(t *testing.T) {
 	assert.NoError(t, err)
 
 	alertTime := time.Now().UTC()
-	a := &protocol.Alert{Id: "test1", Timestamp: alertTime.Format(AlertTimeFormat)}
-	b := &protocol.Alert{Id: "test2", Timestamp: alertTime.Format(AlertTimeFormat)}
+	a := &protocol.SignedAlert{Alert: &protocol.Alert{Id: "test1", Timestamp: alertTime.Format(AlertTimeFormat)}}
+	b := &protocol.SignedAlert{Alert: &protocol.Alert{Id: "test2", Timestamp: alertTime.Format(AlertTimeFormat)}}
 
 	assert.NoError(t, store.AddAlert(a))
 	assert.NoError(t, store.AddAlert(b))
 
 	startRange := alertTime.Add(-1 * time.Minute)
 	endRange := alertTime.Add(1 * time.Minute)
-
-	ks, err := store.GetAllKeys()
-	assert.NoError(t, err)
-	assert.Len(t, ks, 2)
-	for _, k := range ks {
-		t.Log(k)
-	}
 
 	res, err := store.QueryAlerts(&AlertQueryRequest{
 		StartTime: startRange,
