@@ -5,19 +5,20 @@ import (
 
 	"OpenZeppelin/fortify-node/config"
 	"OpenZeppelin/fortify-node/services"
+	"OpenZeppelin/fortify-node/services/query"
 	"OpenZeppelin/fortify-node/store"
 )
 
-func initApi(ctx context.Context, as store.AlertStore, cfg config.Config) (*services.AlertApi, error) {
-	return services.NewAlertApi(ctx, as, services.AlertApiConfig{Port: 80})
+func initApi(ctx context.Context, as store.AlertStore, cfg config.Config) (*query.AlertApi, error) {
+	return query.NewAlertApi(ctx, as, query.AlertApiConfig{Port: 80})
 }
 
-func initListener(ctx context.Context, as store.AlertStore, cfg config.Config) (*services.AlertListener, error) {
-	return services.NewAlertListener(ctx, as, services.AlertListenerConfig{Port: 8770})
+func initListener(ctx context.Context, as store.AlertStore, cfg config.Config) (*query.AlertListener, error) {
+	return query.NewAlertListener(ctx, as, query.AlertListenerConfig{Port: 8770})
 }
 
-func initPruner(ctx context.Context, as store.AlertStore, cfg config.Config) (*services.DBPruner, error) {
-	return services.NewDBPruner(ctx, as)
+func initPruner(ctx context.Context, as store.AlertStore, cfg config.Config) (*query.DBPruner, error) {
+	return query.NewDBPruner(ctx, as)
 }
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {

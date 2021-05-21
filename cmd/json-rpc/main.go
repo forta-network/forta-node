@@ -5,10 +5,11 @@ import (
 
 	"OpenZeppelin/fortify-node/config"
 	"OpenZeppelin/fortify-node/services"
+	jrp "OpenZeppelin/fortify-node/services/json-rpc"
 )
 
-func initJsonRpcProxy(ctx context.Context, cfg config.Config) (*services.JsonRpcProxy, error) {
-	return services.NewJsonRpcProxy(ctx, cfg)
+func initJsonRpcProxy(ctx context.Context, cfg config.Config) (*jrp.JsonRpcProxy, error) {
+	return jrp.NewJsonRpcProxy(ctx, cfg)
 }
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {

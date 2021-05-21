@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"OpenZeppelin/fortify-node/clients"
+	"OpenZeppelin/fortify-node/protocol"
 	"OpenZeppelin/fortify-node/utils"
 )
 
@@ -35,6 +36,21 @@ type BlockEvent struct {
 	EventType EventType
 	ChainID   *big.Int
 	Block     *types.Block
+}
+
+func (t *BlockEvent) ToMessage() (*protocol.BlockEvent, error) {
+	evtType := protocol.BlockEvent_BLOCK
+	if t.EventType == "reorg" {
+		evtType = protocol.BlockEvent_REORG
+	}
+	return &protocol.BlockEvent{
+		Type:        evtType,
+		BlockHash:   t.Block.Hash().Hex(),
+		BlockNumber: bigIntToHex(t.Block.Number()),
+		Network: &protocol.BlockEvent_Network{
+			ChainId: bigIntToHex(t.ChainID),
+		},
+	}, nil
 }
 
 func (bf *blockFeed) initialize() error {

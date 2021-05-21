@@ -10,10 +10,11 @@ import (
 
 	"OpenZeppelin/fortify-node/config"
 	"OpenZeppelin/fortify-node/services"
+	"OpenZeppelin/fortify-node/services/containers"
 )
 
 func initServices(cfg config.Config, passphrase string, ctx context.Context) ([]services.Service, error) {
-	svc, err := services.NewTxNodeService(ctx, services.TxNodeServiceConfig{
+	svc, err := containers.NewTxNodeService(ctx, containers.TxNodeServiceConfig{
 		Config:     cfg,
 		Passphrase: passphrase,
 	})

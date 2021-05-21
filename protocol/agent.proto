@@ -4,7 +4,8 @@ option go_package = "./;protocol";
 
 service Agent {
   rpc Initialize (InitializeRequest) returns (InitializeResponse) {}
-  rpc Evaluate (EvaluateRequest) returns (EvaluateResponse) {}
+  rpc EvaluateTx (EvaluateTxRequest) returns (EvaluateTxResponse) {}
+  rpc EvaluateBlock (EvaluateBlockRequest) returns (EvaluateBlockResponse) {}
 }
 
 message Error {
@@ -28,9 +29,14 @@ message InitializeResponse {
   repeated string addresses = 3;
 }
 
-message EvaluateRequest {
+message EvaluateTxRequest {
   string requestId = 1;
   TransactionEvent event = 2;
+}
+
+message EvaluateBlockRequest {
+  string requestId = 1;
+  BlockEvent event = 2;
 }
 
 message Finding {
@@ -47,6 +53,7 @@ message Finding {
     UNKNOWN_TYPE = 0;
     EXPLOIT = 1;
     SUSPICIOUS = 2;
+    DEGRADED = 3;
   }
 
   string protocol = 1;
@@ -55,11 +62,32 @@ message Finding {
   FindingType type = 4;
 }
 
-message EvaluateResponse {
+message EvaluateTxResponse {
   ResponseStatus status = 1;
   repeated Error errors = 2;
   repeated Finding findings = 3;
   map<string, string> metadata = 4;
+}
+
+message EvaluateBlockResponse {
+  ResponseStatus status = 1;
+  repeated Error errors = 2;
+  repeated Finding findings = 3;
+  map<string, string> metadata = 4;
+}
+
+message BlockEvent {
+  enum EventType {
+    BLOCK = 0;
+    REORG = 1;
+  }
+  message Network {
+    string chainId = 1;
+  }
+  EventType type = 1;
+  string blockHash = 2;
+  string blockNumber = 3;
+  Network network = 4;
 }
 
 message TransactionEvent {
