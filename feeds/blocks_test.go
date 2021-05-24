@@ -11,7 +11,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	clients "OpenZeppelin/fortify-node/clients/mocks"
+	"OpenZeppelin/fortify-node/domain"
+	mocks "OpenZeppelin/fortify-node/ethereum/mocks"
 	"OpenZeppelin/fortify-node/utils"
 )
 
@@ -23,11 +24,11 @@ var endOfBlocks = errors.New("end of blocks")
 
 // mockBlockFeed is a mock block feed for tests
 type mockBlockFeed struct {
-	blocks []*BlockEvent
+	blocks []*domain.BlockEvent
 }
 
 // ForEachBlock is a test method that iterates over mocked blocks
-func (bf *mockBlockFeed) ForEachBlock(handler func(evt *BlockEvent) error) error {
+func (bf *mockBlockFeed) ForEachBlock(handler func(evt *domain.BlockEvent) error) error {
 	for _, b := range bf.blocks {
 		if err := handler(b); err != nil {
 			return err
@@ -37,13 +38,13 @@ func (bf *mockBlockFeed) ForEachBlock(handler func(evt *BlockEvent) error) error
 }
 
 // NewMockBlockFeed returns a new mockBlockFeed for tests
-func NewMockBlockFeed(blocks []*BlockEvent) *mockBlockFeed {
+func NewMockBlockFeed(blocks []*domain.BlockEvent) *mockBlockFeed {
 	return &mockBlockFeed{blocks}
 }
 
-func getTestBlockFeed(t *testing.T) (*blockFeed, *clients.MockEthClient, context.Context, context.CancelFunc) {
+func getTestBlockFeed(t *testing.T) (*blockFeed, *mocks.MockClient, context.Context, context.CancelFunc) {
 	ctrl := gomock.NewController(t)
-	client := clients.NewMockEthClient(ctrl)
+	client := mocks.NewMockClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())
 	cache := utils.NewCache(10000)
 	return &blockFeed{
@@ -61,21 +62,21 @@ func blockWithParent(hash string, num int) *types.Block {
 	})
 }
 
-func blockEvent(blk *types.Block) *BlockEvent {
-	return &BlockEvent{
-		EventType: EventTypeBlock,
+func blockEvent(blk *types.Block) *domain.BlockEvent {
+	return &domain.BlockEvent{
+		EventType: domain.EventTypeBlock,
 		Block:     blk,
 	}
 }
 
-func reorgEvent(blk *types.Block) *BlockEvent {
-	return &BlockEvent{
-		EventType: EventTypeReorg,
+func reorgEvent(blk *types.Block) *domain.BlockEvent {
+	return &domain.BlockEvent{
+		EventType: domain.EventTypeReorg,
 		Block:     blk,
 	}
 }
 
-func assertEvts(t *testing.T, actual []*BlockEvent, expected ...*BlockEvent) {
+func assertEvts(t *testing.T, actual []*domain.BlockEvent, expected ...*domain.BlockEvent) {
 	assert.Equal(t, len(actual), len(expected), "expect same length")
 	for i, exp := range expected {
 		assert.Equal(t, exp, actual[i])
@@ -89,13 +90,19 @@ func TestBlockFeed_ForEachBlock(t *testing.T) {
 	block2 := blockWithParent(block1.Hash().Hex(), 2)
 	block3 := blockWithParent(block2.Hash().Hex(), 3)
 
+	//TODO: actually test that the trace part matters (this returns nil for now)
 	client.EXPECT().BlockByNumber(ctx, big.NewInt(1)).Return(block1, nil).Times(1)
+	client.EXPECT().TraceBlock(ctx, block1.Hash()).Return(nil, nil).Times(1)
+
 	client.EXPECT().BlockByNumber(ctx, big.NewInt(2)).Return(block2, nil).Times(1)
+	client.EXPECT().TraceBlock(ctx, block2.Hash()).Return(nil, nil).Times(1)
+
 	client.EXPECT().BlockByNumber(ctx, big.NewInt(3)).Return(block3, nil).Times(1)
+	client.EXPECT().TraceBlock(ctx, block3.Hash()).Return(nil, nil).Times(1)
 
 	count := 0
-	var evts []*BlockEvent
-	res := bf.ForEachBlock(func(evt *BlockEvent) error {
+	var evts []*domain.BlockEvent
+	res := bf.ForEachBlock(func(evt *domain.BlockEvent) error {
 		count++
 		evts = append(evts, evt)
 		if count == 3 {
@@ -119,8 +126,8 @@ func TestBlockFeed_ForEachBlock_Cancelled(t *testing.T) {
 	client.EXPECT().BlockByNumber(ctx, big.NewInt(1)).Return(block1, nil).Times(1)
 
 	count := 0
-	var evts []*BlockEvent
-	res := bf.ForEachBlock(func(evt *BlockEvent) error {
+	var evts []*domain.BlockEvent
+	res := bf.ForEachBlock(func(evt *domain.BlockEvent) error {
 		count++
 		evts = append(evts, evt)
 		cancel()
@@ -150,8 +157,8 @@ func TestBlockFeed_ForEachBlock_Reorg(t *testing.T) {
 	client.EXPECT().BlockByNumber(ctx, big.NewInt(3)).Return(block3, nil).Times(1)
 
 	count := 0
-	var evts []*BlockEvent
-	res := bf.ForEachBlock(func(evt *BlockEvent) error {
+	var evts []*domain.BlockEvent
+	res := bf.ForEachBlock(func(evt *domain.BlockEvent) error {
 		count++
 		evts = append(evts, evt)
 		if count == 4 {

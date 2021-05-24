@@ -1,94 +1,36 @@
 package feeds
 
 import (
-	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/golang/protobuf/jsonpb"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 
-	"OpenZeppelin/fortify-node/clients"
-	"OpenZeppelin/fortify-node/protocol"
+	"OpenZeppelin/fortify-node/domain"
+	"OpenZeppelin/fortify-node/ethereum"
 	"OpenZeppelin/fortify-node/utils"
 )
 
 type TransactionFeed interface {
-	ForEachTransaction(blockHandler func(evt *BlockEvent) error, txHandler func(evt *TransactionEvent) error) error
+	ForEachTransaction(blockHandler func(evt *domain.BlockEvent) error, txHandler func(evt *domain.TransactionEvent) error) error
 }
 
 type transactionFeed struct {
 	ctx       context.Context
 	cache     utils.Cache
-	client    clients.EthClient
+	client    ethereum.Client
 	blockFeed BlockFeed
 	workers   int
-	blockCh   chan *BlockEvent
-	blocksOut chan *BlockEvent
-	txCh      chan *TransactionEvent
-}
-
-type TransactionEvent struct {
-	BlockEvt    *BlockEvent
-	Transaction *types.Transaction
-	Receipt     *types.Receipt
-}
-
-func bigIntToHex(i *big.Int) string {
-	return fmt.Sprintf("0x%0x", i.Int64())
-}
-
-// ToMessage converts the TransactionEvent to the protocol.TransactionEvent message
-func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
-	evtType := protocol.TransactionEvent_BLOCK
-	if t.BlockEvt.EventType == "reorg" {
-		evtType = protocol.TransactionEvent_REORG
-	}
-	var tx protocol.TransactionEvent_EthTransaction
-	var receipt protocol.TransactionEvent_EthReceipt
-	um := jsonpb.Unmarshaler{
-		AllowUnknownFields: true,
-	}
-
-	if t.Transaction != nil {
-		txJson, err := t.Transaction.MarshalJSON()
-		if err != nil {
-			return nil, err
-		}
-		if err := um.Unmarshal(bytes.NewReader(txJson), &tx); err != nil {
-			return nil, err
-		}
-	}
-
-	if t.Receipt != nil {
-		receiptJson, err := t.Receipt.MarshalJSON()
-		if err != nil {
-			return nil, err
-		}
-		if err := um.Unmarshal(bytes.NewReader(receiptJson), &receipt); err != nil {
-			return nil, err
-		}
-	}
-
-	nw := &protocol.TransactionEvent_Network{
-		ChainId: bigIntToHex(t.BlockEvt.ChainID),
-	}
-
-	return &protocol.TransactionEvent{
-		Type:        evtType,
-		Transaction: &tx,
-		Receipt:     &receipt,
-		Network:     nw,
-	}, nil
+	blockCh   chan *domain.BlockEvent
+	blocksOut chan *domain.BlockEvent
+	txCh      chan *domain.TransactionEvent
 }
 
 func (tf *transactionFeed) streamBlocks() error {
 	defer close(tf.blockCh)
-	return tf.blockFeed.ForEachBlock(func(evt *BlockEvent) error {
+	return tf.blockFeed.ForEachBlock(func(evt *domain.BlockEvent) error {
 		log.Debugf("block-iterator: blocks <- %d", evt.Block.NumberU64())
 		tf.blockCh <- evt
 		return nil
@@ -106,7 +48,7 @@ func (tf *transactionFeed) streamTransactions() error {
 			default:
 				if !tf.cache.ExistsAndAdd(tx.Hash().Hex()) {
 					log.Debugf("tx-iterator: block(%d), txs <- %s", evt.Block.NumberU64(), tx.Hash().Hex())
-					tf.txCh <- &TransactionEvent{
+					tf.txCh <- &domain.TransactionEvent{
 						BlockEvt:    evt,
 						Transaction: tx,
 					}
@@ -117,7 +59,7 @@ func (tf *transactionFeed) streamTransactions() error {
 	return nil
 }
 
-func (tf *transactionFeed) getWorker(workerID int, handler func(evt *TransactionEvent) error) func() error {
+func (tf *transactionFeed) getWorker(workerID int, handler func(evt *domain.TransactionEvent) error) func() error {
 	return func() error {
 		for tx := range tf.txCh {
 			log.Debugf("tx-processor(%d): block(%d) processing %s", workerID, tx.BlockEvt.Block.NumberU64(), tx.Transaction.Hash().Hex())
@@ -144,13 +86,13 @@ func (tf *transactionFeed) getWorker(workerID int, handler func(evt *Transaction
 }
 
 // ForEachTransaction invokes a handler for each transactions on a network until cancelled or handler returns error
-func (tf *transactionFeed) ForEachTransaction(blockHandler func(evt *BlockEvent) error, txHandler func(evt *TransactionEvent) error) error {
+func (tf *transactionFeed) ForEachTransaction(blockHandler func(evt *domain.BlockEvent) error, txHandler func(evt *domain.TransactionEvent) error) error {
 	grp, _ := errgroup.WithContext(tf.ctx)
 
 	// iterate over blocks
 	grp.Go(func() error {
 		defer close(tf.blockCh)
-		return tf.blockFeed.ForEachBlock(func(evt *BlockEvent) error {
+		return tf.blockFeed.ForEachBlock(func(evt *domain.BlockEvent) error {
 			log.Debugf("block-iterator: blocks <- %d", evt.Block.NumberU64())
 			tf.blockCh <- evt
 			return blockHandler(evt)
@@ -175,10 +117,10 @@ func (tf *transactionFeed) ForEachTransaction(blockHandler func(evt *BlockEvent)
 	return grp.Wait()
 }
 
-func NewTransactionFeed(ctx context.Context, client clients.EthClient, start *big.Int, workers int) (*transactionFeed, error) {
-	blocks := make(chan *BlockEvent, 10)
-	blocksOut := make(chan *BlockEvent)
-	txs := make(chan *TransactionEvent, 100)
+func NewTransactionFeed(ctx context.Context, client ethereum.Client, start *big.Int, workers int) (*transactionFeed, error) {
+	blocks := make(chan *domain.BlockEvent, 10)
+	blocksOut := make(chan *domain.BlockEvent)
+	txs := make(chan *domain.TransactionEvent, 100)
 	blockFeed, err := NewBlockFeed(ctx, client, start)
 	cache := utils.NewCache(1000000)
 	if err != nil {

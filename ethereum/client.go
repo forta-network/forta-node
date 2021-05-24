@@ -1,4 +1,4 @@
-package clients
+package ethereum
 
 import (
 	"context"
@@ -10,11 +10,15 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 	log "github.com/sirupsen/logrus"
+
+	"OpenZeppelin/fortify-node/domain"
+	"OpenZeppelin/fortify-node/utils"
 )
 
-// EthClient is an interface for ethclient.Client
-type EthClient interface {
+// ethClient is an interface for ethclient.Client (primarily for tests)
+type ethClient interface {
 	Close()
 	BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error)
 	BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error)
@@ -23,10 +27,21 @@ type EthClient interface {
 	ChainID(ctx context.Context) (*big.Int, error)
 }
 
+type rpcClient interface {
+	CallContext(ctx context.Context, result interface{}, method string, args ...interface{}) error
+}
+
+// Client is an interface encompassing all ethereum actions
+type Client interface {
+	ethClient
+	TraceBlock(ctx context.Context, number *big.Int) ([]domain.Trace, error)
+}
+
 const blocksByNumber = "eth_blocksByNumber"
 const blocksByHash = "eth_blockByHash"
 const blockNumber = "eth_blockNumber"
 const transactionReceipt = "eth_transactionReceipt"
+const traceBlock = "trace_block"
 const chainId = "eth_chainId"
 
 var minBackoff = 1 * time.Second
@@ -34,7 +49,8 @@ var maxBackoff = 1 * time.Minute
 
 // streamEthClient wraps a go-ethereum client purpose-built for streaming txs (with long retries/timeouts)
 type streamEthClient struct {
-	client EthClient
+	client    ethClient
+	rpcClient rpcClient
 }
 
 type RetryOptions struct {
@@ -107,6 +123,20 @@ func (e streamEthClient) BlockByHash(ctx context.Context, hash common.Hash) (*ty
 	return result, err
 }
 
+// TraceBlock returns the traced block
+func (e streamEthClient) TraceBlock(ctx context.Context, number *big.Int) ([]domain.Trace, error) {
+	name := fmt.Sprintf("%s(%s)", traceBlock, number)
+	log.Debugf(name)
+	var result []domain.Trace
+	err := withBackoff(ctx, name, func(ctx context.Context) error {
+		return e.rpcClient.CallContext(ctx, &result, traceBlock, utils.BigIntToHex(number))
+	}, RetryOptions{
+		MaxElapsedTime: pointDur(12 * time.Hour),
+		MaxBackoff:     pointDur(15 * time.Second),
+	})
+	return result, err
+}
+
 // BlockByNumber returns the block by number
 func (e streamEthClient) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
 	name := fmt.Sprintf("%s(%d)", blocksByNumber, number)
@@ -166,12 +196,17 @@ func (e streamEthClient) TransactionReceipt(ctx context.Context, txHash common.H
 	return result, err
 }
 
+func NewInjectedStreamEthClient(rc rpcClient, ec ethClient) *streamEthClient {
+	return &streamEthClient{rpcClient: rc, client: ec}
+}
+
 // NewStreamEthClient creates a new ethereum client
 func NewStreamEthClient(ctx context.Context, url string) (*streamEthClient, error) {
 	//TODO: consider NewClient with a custom RPC so that one can inject headers
-	client, err := ethclient.DialContext(ctx, url)
+	rpcClient, err := rpc.DialContext(ctx, url)
 	if err != nil {
 		return nil, err
 	}
-	return &streamEthClient{client}, nil
+	client := ethclient.NewClient(rpcClient)
+	return &streamEthClient{rpcClient: rpcClient, client: client}, nil
 }

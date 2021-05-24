@@ -6,7 +6,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"OpenZeppelin/fortify-node/clients"
+	"OpenZeppelin/fortify-node/domain"
+	"OpenZeppelin/fortify-node/ethereum"
 	"OpenZeppelin/fortify-node/feeds"
 )
 
@@ -14,8 +15,8 @@ import (
 type TxStreamService struct {
 	cfg         TxStreamServiceConfig
 	ctx         context.Context
-	blockOutput chan *feeds.BlockEvent
-	txOutput    chan *feeds.TransactionEvent
+	blockOutput chan *domain.BlockEvent
+	txOutput    chan *domain.TransactionEvent
 	txFeed      feeds.TransactionFeed
 }
 
@@ -24,21 +25,21 @@ type TxStreamServiceConfig struct {
 	StartBlock *big.Int
 }
 
-func (t *TxStreamService) ReadOnlyBlockStream() <-chan *feeds.BlockEvent {
+func (t *TxStreamService) ReadOnlyBlockStream() <-chan *domain.BlockEvent {
 	return t.blockOutput
 }
 
-func (t *TxStreamService) ReadOnlyTxStream() <-chan *feeds.TransactionEvent {
+func (t *TxStreamService) ReadOnlyTxStream() <-chan *domain.TransactionEvent {
 	return t.txOutput
 }
 
-func (t *TxStreamService) handleBlock(evt *feeds.BlockEvent) error {
+func (t *TxStreamService) handleBlock(evt *domain.BlockEvent) error {
 	log.Debug("<- TxStream putting block in stream")
 	t.blockOutput <- evt
 	return nil
 }
 
-func (t *TxStreamService) handleTx(evt *feeds.TransactionEvent) error {
+func (t *TxStreamService) handleTx(evt *domain.TransactionEvent) error {
 	log.Debug("<- TxStream putting tx in stream")
 	t.txOutput <- evt
 	return nil
@@ -61,10 +62,10 @@ func (t *TxStreamService) Name() string {
 }
 
 func NewTxStreamService(ctx context.Context, cfg TxStreamServiceConfig) (*TxStreamService, error) {
-	txOutput := make(chan *feeds.TransactionEvent)
-	blockOutput := make(chan *feeds.BlockEvent)
+	txOutput := make(chan *domain.TransactionEvent)
+	blockOutput := make(chan *domain.BlockEvent)
 
-	ethClient, err := clients.NewStreamEthClient(ctx, cfg.Url)
+	ethClient, err := ethereum.NewStreamEthClient(ctx, cfg.Url)
 	if err != nil {
 		return nil, err
 	}

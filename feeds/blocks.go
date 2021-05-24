@@ -8,49 +8,21 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	log "github.com/sirupsen/logrus"
 
-	"OpenZeppelin/fortify-node/clients"
-	"OpenZeppelin/fortify-node/protocol"
+	"OpenZeppelin/fortify-node/domain"
+	"OpenZeppelin/fortify-node/ethereum"
 	"OpenZeppelin/fortify-node/utils"
 )
 
 type BlockFeed interface {
-	ForEachBlock(handler func(evt *BlockEvent) error) error
+	ForEachBlock(handler func(evt *domain.BlockEvent) error) error
 }
 
 type blockFeed struct {
 	start   *big.Int
 	ctx     context.Context
-	client  clients.EthClient
+	client  ethereum.Client
 	cache   utils.Cache
 	chainID *big.Int
-}
-
-type EventType string
-
-const (
-	EventTypeReorg EventType = "reorg"
-	EventTypeBlock EventType = "block"
-)
-
-type BlockEvent struct {
-	EventType EventType
-	ChainID   *big.Int
-	Block     *types.Block
-}
-
-func (t *BlockEvent) ToMessage() (*protocol.BlockEvent, error) {
-	evtType := protocol.BlockEvent_BLOCK
-	if t.EventType == "reorg" {
-		evtType = protocol.BlockEvent_REORG
-	}
-	return &protocol.BlockEvent{
-		Type:        evtType,
-		BlockHash:   t.Block.Hash().Hex(),
-		BlockNumber: bigIntToHex(t.Block.Number()),
-		Network: &protocol.BlockEvent_Network{
-			ChainId: bigIntToHex(t.ChainID),
-		},
-	}, nil
 }
 
 func (bf *blockFeed) initialize() error {
@@ -73,7 +45,7 @@ func (bf *blockFeed) initialize() error {
 	return nil
 }
 
-func (bf *blockFeed) processReorg(parentHash common.Hash, handler func(evt *BlockEvent) error) error {
+func (bf *blockFeed) processReorg(parentHash common.Hash, handler func(evt *domain.BlockEvent) error) error {
 	// don't process anything before start index
 	currentHash := parentHash
 	for {
@@ -86,7 +58,13 @@ func (bf *blockFeed) processReorg(parentHash common.Hash, handler func(evt *Bloc
 		}
 		block, err := bf.client.BlockByHash(bf.ctx, currentHash)
 		if err != nil {
-			log.Errorf("processReorg: err getting block: %s (skipping)", err.Error())
+			log.Errorf("reorg: err getting block: %s (skipping)", err.Error())
+			return nil
+		}
+
+		traces, err := bf.client.TraceBlock(bf.ctx, block.Number())
+		if err != nil {
+			log.Errorf("reorg: error tracing block: %s (skipping)", err.Error())
 			return nil
 		}
 
@@ -94,7 +72,7 @@ func (bf *blockFeed) processReorg(parentHash common.Hash, handler func(evt *Bloc
 			// stop if prior to horizon
 			return nil
 		}
-		evt := &BlockEvent{EventType: EventTypeReorg, Block: block, ChainID: bf.chainID}
+		evt := &domain.BlockEvent{EventType: domain.EventTypeReorg, Block: block, ChainID: bf.chainID, Traces: traces}
 		if err := handler(evt); err != nil {
 			return err
 		}
@@ -104,7 +82,7 @@ func (bf *blockFeed) processReorg(parentHash common.Hash, handler func(evt *Bloc
 	}
 }
 
-func (bf *blockFeed) ForEachBlock(handler func(evt *BlockEvent) error) error {
+func (bf *blockFeed) ForEachBlock(handler func(evt *domain.BlockEvent) error) error {
 	increment := big.NewInt(1)
 	blockNum := big.NewInt(bf.start.Int64())
 
@@ -112,13 +90,27 @@ func (bf *blockFeed) ForEachBlock(handler func(evt *BlockEvent) error) error {
 		if bf.ctx.Err() != nil {
 			return bf.ctx.Err()
 		}
-		block, err := bf.client.BlockByNumber(bf.ctx, blockNum)
+
+		traces, err := bf.client.TraceBlock(bf.ctx, blockNum)
 		if err != nil {
-			log.Errorf("ForEachBlock: err getting block: %s", err.Error())
+			log.Errorf("error tracing block: %s", err.Error())
 			return err
 		}
 
-		evt := &BlockEvent{EventType: EventTypeBlock, Block: block, ChainID: bf.chainID}
+		var block *types.Block
+		if len(traces) == 0 {
+			block, err = bf.client.BlockByNumber(bf.ctx, blockNum)
+		} else {
+			// this forces the SAME block to be returned as traces (so that a re-org doesn't split it)
+			hash := traces[0].BlockHash
+			block, err = bf.client.BlockByHash(bf.ctx, common.HexToHash(*hash))
+		}
+		if err != nil {
+			log.Errorf("error getting block: %s", err.Error())
+			return err
+		}
+
+		evt := &domain.BlockEvent{EventType: domain.EventTypeBlock, Block: block, ChainID: bf.chainID, Traces: traces}
 		if err := handler(evt); err != nil {
 			return err
 		}
@@ -133,7 +125,7 @@ func (bf *blockFeed) ForEachBlock(handler func(evt *BlockEvent) error) error {
 	}
 }
 
-func NewBlockFeed(ctx context.Context, client clients.EthClient, start *big.Int) (*blockFeed, error) {
+func NewBlockFeed(ctx context.Context, client ethereum.Client, start *big.Int) (*blockFeed, error) {
 	bf := &blockFeed{
 		start: start, ctx: ctx, client: client, cache: utils.NewCache(10000),
 	}

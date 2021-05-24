@@ -1,4 +1,4 @@
-package clients
+package ethereum
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	mocks "OpenZeppelin/fortify-node/clients/mocks"
+	mocks "OpenZeppelin/fortify-node/ethereum/mocks"
 	"OpenZeppelin/fortify-node/testutils"
 )
 
@@ -20,14 +20,14 @@ const testTxHash = "0x9b9cc76d6b3b51976b1396a5b417b3bf3f4b39b8fe080e4a5aef39d02b
 
 var testErr = errors.New("test err")
 
-func initClient(t *testing.T) (*streamEthClient, *mocks.MockEthClient, context.Context) {
+func initClient(t *testing.T) (*streamEthClient, *mocks.MockClient, context.Context) {
 	minBackoff = 1 * time.Millisecond
 	maxBackoff = 1 * time.Millisecond
 	ctx := context.Background()
 	ctrl := gomock.NewController(t)
-	client := mocks.NewMockEthClient(ctrl)
+	client := mocks.NewMockClient(ctrl)
 
-	return &streamEthClient{client}, client, ctx
+	return &streamEthClient{rpcClient: nil, client: client}, client, ctx
 }
 
 func TestEthClient_BlockByHash(t *testing.T) {

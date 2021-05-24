@@ -16,7 +16,7 @@ import (
 
 	"OpenZeppelin/fortify-node/clients"
 	"OpenZeppelin/fortify-node/config"
-	"OpenZeppelin/fortify-node/feeds"
+	"OpenZeppelin/fortify-node/domain"
 	"OpenZeppelin/fortify-node/protocol"
 	"OpenZeppelin/fortify-node/store"
 )
@@ -29,7 +29,7 @@ type TxAnalyzerService struct {
 }
 
 type TxAnalyzerServiceConfig struct {
-	TxChannel    <-chan *feeds.TransactionEvent
+	TxChannel    <-chan *domain.TransactionEvent
 	AlertSender  clients.AlertSender
 	AgentConfigs []config.AgentConfig
 }

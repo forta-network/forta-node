@@ -10,7 +10,10 @@ proto:
 	protoc -I=protocol --go-grpc_out=protocol/. --go_out=protocol/. protocol/agent.proto
 	protoc -I=protocol --go-grpc_out=protocol/. --go_out=protocol/. protocol/query.proto
 
-build: proto main containers
+mocks:
+	mockgen -source ethereum/client.go > ethereum/mocks/mock_client.go
+
+build: proto mocks main containers
 
 test:
 	go test ./...

@@ -7,16 +7,17 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	clients "OpenZeppelin/fortify-node/clients/mocks"
+	"OpenZeppelin/fortify-node/domain"
+	clients "OpenZeppelin/fortify-node/ethereum/mocks"
 	"OpenZeppelin/fortify-node/testutils"
 	"OpenZeppelin/fortify-node/utils"
 )
 
-func getTestTransactionFeed(t *testing.T, blockFeed BlockFeed) (*transactionFeed, *clients.MockEthClient) {
-	blocks := make(chan *BlockEvent, 1)
-	txs := make(chan *TransactionEvent, 1)
+func getTestTransactionFeed(t *testing.T, blockFeed BlockFeed) (*transactionFeed, *clients.MockClient) {
+	blocks := make(chan *domain.BlockEvent, 1)
+	txs := make(chan *domain.TransactionEvent, 1)
 	ctrl := gomock.NewController(t)
-	client := clients.NewMockEthClient(ctrl)
+	client := clients.NewMockClient(ctrl)
 	cache := utils.NewCache(10000)
 	return &transactionFeed{
 		ctx:       context.Background(),
@@ -30,21 +31,21 @@ func getTestTransactionFeed(t *testing.T, blockFeed BlockFeed) (*transactionFeed
 }
 
 func TestTransactionFeed_ForEachTransaction(t *testing.T) {
-	bf := NewMockBlockFeed([]*BlockEvent{
+	bf := NewMockBlockFeed([]*domain.BlockEvent{
 		{
-			EventType: EventTypeBlock,
+			EventType: domain.EventTypeBlock,
 			Block:     testutils.TestBlock(1, 2, 3),
 		},
 		{
-			EventType: EventTypeBlock,
+			EventType: domain.EventTypeBlock,
 			Block:     testutils.TestBlock(4, 5, 6, 6), // with duplicate
 		},
 		{
-			EventType: EventTypeBlock,
+			EventType: domain.EventTypeBlock,
 			Block:     testutils.TestBlock(), // empty
 		},
 		{
-			EventType: EventTypeBlock,
+			EventType: domain.EventTypeBlock,
 			Block:     testutils.TestBlock(7, 8, 9),
 		},
 	})
@@ -53,8 +54,8 @@ func TestTransactionFeed_ForEachTransaction(t *testing.T) {
 
 	client.EXPECT().TransactionReceipt(gomock.Any(), gomock.Any()).Return(nil, nil).Times(9)
 
-	var evts []*TransactionEvent
-	err := txFeed.ForEachTransaction(func(evt *TransactionEvent) error {
+	var evts []*domain.TransactionEvent
+	err := txFeed.ForEachTransaction(func(evt *domain.BlockEvent) error { return nil }, func(evt *domain.TransactionEvent) error {
 		evts = append(evts, evt)
 		return nil
 	})
@@ -64,9 +65,9 @@ func TestTransactionFeed_ForEachTransaction(t *testing.T) {
 }
 
 func TestTransactionFeed_ToMessage(t *testing.T) {
-	bf := NewMockBlockFeed([]*BlockEvent{
+	bf := NewMockBlockFeed([]*domain.BlockEvent{
 		{
-			EventType: EventTypeBlock,
+			EventType: domain.EventTypeBlock,
 			Block:     testutils.TestBlock(1),
 		},
 	})
@@ -75,8 +76,8 @@ func TestTransactionFeed_ToMessage(t *testing.T) {
 
 	client.EXPECT().TransactionReceipt(gomock.Any(), gomock.Any()).Return(nil, nil).Times(9)
 
-	var result *TransactionEvent
-	err := txFeed.ForEachTransaction(func(evt *TransactionEvent) error {
+	var result *domain.TransactionEvent
+	err := txFeed.ForEachTransaction(func(evt *domain.BlockEvent) error { return nil }, func(evt *domain.TransactionEvent) error {
 		result = evt
 		return nil
 	})

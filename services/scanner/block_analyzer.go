@@ -16,7 +16,7 @@ import (
 
 	"OpenZeppelin/fortify-node/clients"
 	"OpenZeppelin/fortify-node/config"
-	"OpenZeppelin/fortify-node/feeds"
+	"OpenZeppelin/fortify-node/domain"
 	"OpenZeppelin/fortify-node/protocol"
 	"OpenZeppelin/fortify-node/store"
 )
@@ -30,7 +30,7 @@ type BlockAnalyzerService struct {
 }
 
 type BlockAnalyzerServiceConfig struct {
-	BlockChannel <-chan *feeds.BlockEvent
+	BlockChannel <-chan *domain.BlockEvent
 	AlertSender  clients.AlertSender
 	AgentConfigs []config.AgentConfig
 }
