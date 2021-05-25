@@ -2,6 +2,7 @@ package domain
 
 import (
 	"bytes"
+	"encoding/json"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/core/types"
@@ -52,12 +53,29 @@ func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 	if t.BlockEvt.EventType == "reorg" {
 		evtType = protocol.TransactionEvent_REORG
 	}
-	var tx protocol.TransactionEvent_EthTransaction
-	var receipt protocol.TransactionEvent_EthReceipt
+
 	um := jsonpb.Unmarshaler{
 		AllowUnknownFields: true,
 	}
 
+	// convert trace domain model to proto (filter traces)
+	var traces []*protocol.TransactionEvent_Trace
+	for _, trace := range t.BlockEvt.Traces {
+		if trace.TransactionHash != nil && *trace.TransactionHash == t.Transaction.Hash().Hex() {
+			var pTrace protocol.TransactionEvent_Trace
+			traceJson, err := json.Marshal(trace)
+			if err != nil {
+				return nil, err
+			}
+			if err := um.Unmarshal(bytes.NewReader(traceJson), &pTrace); err != nil {
+				return nil, err
+			}
+			traces = append(traces, &pTrace)
+		}
+	}
+
+	// convert tx domain model to proto
+	var tx protocol.TransactionEvent_EthTransaction
 	if t.Transaction != nil {
 		txJson, err := t.Transaction.MarshalJSON()
 		if err != nil {
@@ -68,6 +86,8 @@ func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 		}
 	}
 
+	// convert receipt domain model to proto
+	var receipt protocol.TransactionEvent_EthReceipt
 	if t.Receipt != nil {
 		receiptJson, err := t.Receipt.MarshalJSON()
 		if err != nil {
@@ -87,5 +107,6 @@ func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 		Transaction: &tx,
 		Receipt:     &receipt,
 		Network:     nw,
+		Traces:      traces,
 	}, nil
 }

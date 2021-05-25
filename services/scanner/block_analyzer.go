@@ -74,13 +74,20 @@ func newAgentBlockStream(ctx context.Context, agent AnalyzerAgent, input <-chan 
 	}
 }
 
+func (t *BlockAnalyzerService) calculateAlertID(resp *evalBlockResp, f *protocol.Finding) (string, error) {
+	findingBytes, err := proto.Marshal(f)
+	if err != nil {
+		return "", err
+	}
+	idStr := fmt.Sprintf("%s%s%s", resp.request.Event.Network.ChainId, resp.request.Event.BlockHash, string(findingBytes))
+	return base58.Encode(sha3.New256().Sum([]byte(idStr))), nil
+}
+
 func (t *BlockAnalyzerService) findingToAlert(resp *evalBlockResp, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
-	b, err := proto.Marshal(f)
+	alertID, err := t.calculateAlertID(resp, f)
 	if err != nil {
 		return nil, err
 	}
-	//TODO: come up with explicit way of producing ID
-	alertID := base58.Encode(sha3.New256().Sum(b))
 	return &protocol.Alert{
 		Id:        alertID,
 		Finding:   f,

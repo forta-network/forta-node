@@ -146,8 +146,40 @@ message TransactionEvent {
     string transactionIndex = 11;
   }
 
+  message TraceAction {
+   string callType = 1;
+   string to = 2;
+   string input = 3;
+   string from = 4;
+   string value = 5;
+   string init = 6;
+   string address = 7;
+   string balance = 8;
+   string refundAddress = 9;
+  }
+
+  message TraceResult {
+    string gasUsed = 1;
+    string address = 2;
+    string code = 3;
+  }
+
+  message Trace {
+    TraceAction action = 1;
+    string blockHash = 2;
+    string blockNumber = 3;
+    TraceResult result = 4;
+    int64 subtraces = 5;
+    repeated int64 traceAddress = 6;
+    string transactionHash = 7;
+    int64 transactionPosition = 8;
+    string type = 9;
+    string error = 10;
+  }
+
   EventType type = 1;
   EthTransaction transaction = 2;
   EthReceipt receipt = 3;
   Network network = 4;
+  repeated Trace traces = 5;
 }

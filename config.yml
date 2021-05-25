@@ -1,8 +1,7 @@
 scanner:
   scannerImage: "openzeppelin/fortify-scanner:latest"
-  startBlock: 1058931
   ethereum:
-    jsonRpcUrl: "http://54.191.199.113:8545"
+    jsonRpcUrl: "http://eth.fortify-dev.com:8545"
 
 query:
   queryImage: "openzeppelin/fortify-query:latest"
@@ -13,12 +12,12 @@ query:
 json-rpc-proxy:
   jsonRpcImage: "openzeppelin/fortify-json-rpc:latest"
   ethereum:
-    jsonRpcUrl: "http://54.191.199.113:8545"
+    jsonRpcUrl: "http://eth.fortify-dev.com:8545"
 
 agents:
   - name: "example-agent"
     image: "openzeppelin/fortify-agent:latest"
-    imageHash: "sha256:efeb2a41008333d9fc266e274fa84dec8cce50b5765aa25370a942255bbb1013"
+    imageHash: "sha256:766277b009bf504d274a976a24a31bedfe0b2df92c1a4299b06cfdfdd241d516"
 
 log:
   level: debug
