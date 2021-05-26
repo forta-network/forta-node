@@ -31,7 +31,7 @@ type transactionFeed struct {
 func (tf *transactionFeed) streamBlocks() error {
 	defer close(tf.blockCh)
 	return tf.blockFeed.ForEachBlock(func(evt *domain.BlockEvent) error {
-		log.Debugf("block-iterator: blocks <- %d", evt.Block.NumberU64())
+		log.Debugf("block-iterator: blocks <- %s", evt.Block.Number)
 		tf.blockCh <- evt
 		return nil
 	})
@@ -40,17 +40,17 @@ func (tf *transactionFeed) streamBlocks() error {
 func (tf *transactionFeed) streamTransactions() error {
 	defer close(tf.txCh)
 	for evt := range tf.blockCh {
-		log.Debugf("tx-iterator: block(%d) processing", evt.Block.NumberU64())
-		for _, tx := range evt.Block.Transactions() {
+		log.Debugf("tx-iterator: block(%s) processing", evt.Block.Number)
+		for _, tx := range evt.Block.Transactions {
 			select {
 			case <-tf.ctx.Done():
 				return tf.ctx.Err()
 			default:
-				if !tf.cache.ExistsAndAdd(tx.Hash().Hex()) {
-					log.Debugf("tx-iterator: block(%d), txs <- %s", evt.Block.NumberU64(), tx.Hash().Hex())
+				if !tf.cache.ExistsAndAdd(tx.Hash) {
+					log.Debugf("tx-iterator: block(%s), txs <- %s", evt.Block.Number, tx.Hash)
 					tf.txCh <- &domain.TransactionEvent{
 						BlockEvt:    evt,
-						Transaction: tx,
+						Transaction: &tx,
 					}
 				}
 			}
@@ -62,21 +62,21 @@ func (tf *transactionFeed) streamTransactions() error {
 func (tf *transactionFeed) getWorker(workerID int, handler func(evt *domain.TransactionEvent) error) func() error {
 	return func() error {
 		for tx := range tf.txCh {
-			log.Debugf("tx-processor(%d): block(%d) processing %s", workerID, tx.BlockEvt.Block.NumberU64(), tx.Transaction.Hash().Hex())
+			log.Debugf("tx-processor(%d): block(%s) processing %s", workerID, tx.BlockEvt.Block.Number, tx.Transaction.Hash)
 			select {
 			case <-tf.ctx.Done():
 				log.Debugf("tx-processor(%d): context cancelled", workerID)
 				return tf.ctx.Err()
 			default:
-				receipt, err := tf.client.TransactionReceipt(tf.ctx, tx.Transaction.Hash())
+				receipt, err := tf.client.TransactionReceipt(tf.ctx, tx.Transaction.Hash)
 				if err != nil {
-					log.Debugf("tx-processor(%d): block(%d) tx(%s) get receipt failed (skipping): %s", workerID, tx.BlockEvt.Block.NumberU64(), tx.Transaction.Hash().Hex(), err.Error())
+					log.Debugf("tx-processor(%d): block(%s) tx(%s) get receipt failed (skipping): %s", workerID, tx.BlockEvt.Block.Number, tx.Transaction.Hash, err.Error())
 					continue
 				}
 				tx.Receipt = receipt
-				log.Debugf("tx-processor(%d): block(%d) tx(%s) invoking handler", workerID, tx.BlockEvt.Block.NumberU64(), tx.Transaction.Hash().Hex())
+				log.Debugf("tx-processor(%d): block(%s) tx(%s) invoking handler", workerID, tx.BlockEvt.Block.Number, tx.Transaction.Hash)
 				if err := handler(tx); err != nil {
-					log.Debugf("tx-processor(%d): block(%d) tx(%s) handler returned error, cancelling: %s", workerID, tx.BlockEvt.Block.NumberU64(), tx.Transaction.Hash().Hex(), err.Error())
+					log.Debugf("tx-processor(%d): block(%s) tx(%s) handler returned error, cancelling: %s", workerID, tx.BlockEvt.Block.Number, tx.Transaction.Hash, err.Error())
 					return err
 				}
 			}
@@ -93,7 +93,7 @@ func (tf *transactionFeed) ForEachTransaction(blockHandler func(evt *domain.Bloc
 	grp.Go(func() error {
 		defer close(tf.blockCh)
 		return tf.blockFeed.ForEachBlock(func(evt *domain.BlockEvent) error {
-			log.Debugf("block-iterator: blocks <- %d", evt.Block.NumberU64())
+			log.Debugf("block-iterator: blocks <- %s", evt.Block.Number)
 			tf.blockCh <- evt
 			return blockHandler(evt)
 		})
@@ -117,11 +117,11 @@ func (tf *transactionFeed) ForEachTransaction(blockHandler func(evt *domain.Bloc
 	return grp.Wait()
 }
 
-func NewTransactionFeed(ctx context.Context, client ethereum.Client, start *big.Int, workers int) (*transactionFeed, error) {
+func NewTransactionFeed(ctx context.Context, client ethereum.Client, chainID *big.Int, start *big.Int, workers int) (*transactionFeed, error) {
 	blocks := make(chan *domain.BlockEvent, 10)
 	blocksOut := make(chan *domain.BlockEvent)
 	txs := make(chan *domain.TransactionEvent, 100)
-	blockFeed, err := NewBlockFeed(ctx, client, start)
+	blockFeed, err := NewBlockFeed(ctx, client, chainID, start)
 	cache := utils.NewCache(1000000)
 	if err != nil {
 		return nil, err

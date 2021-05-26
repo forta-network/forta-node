@@ -85,5 +85,5 @@ func TestTransactionFeed_ToMessage(t *testing.T) {
 
 	msg, err := result.ToMessage()
 	assert.NoError(t, err)
-	assert.Equal(t, result.Transaction.Hash().Hex(), msg.Transaction.Hash)
+	assert.Equal(t, result.Transaction.Hash, msg.Transaction.Hash)
 }

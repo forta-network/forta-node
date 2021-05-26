@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/golang/protobuf/jsonpb"
+	log "github.com/sirupsen/logrus"
 
 	"OpenZeppelin/fortify-node/protocol"
 	"OpenZeppelin/fortify-node/utils"
@@ -22,7 +22,7 @@ const (
 type BlockEvent struct {
 	EventType EventType
 	ChainID   *big.Int
-	Block     *types.Block
+	Block     *Block
 	Traces    []Trace
 }
 
@@ -33,8 +33,8 @@ func (t *BlockEvent) ToMessage() (*protocol.BlockEvent, error) {
 	}
 	return &protocol.BlockEvent{
 		Type:        evtType,
-		BlockHash:   t.Block.Hash().Hex(),
-		BlockNumber: utils.BigIntToHex(t.Block.Number()),
+		BlockHash:   t.Block.Hash,
+		BlockNumber: t.Block.Number,
 		Network: &protocol.BlockEvent_Network{
 			ChainId: utils.BigIntToHex(t.ChainID),
 		},
@@ -43,8 +43,14 @@ func (t *BlockEvent) ToMessage() (*protocol.BlockEvent, error) {
 
 type TransactionEvent struct {
 	BlockEvt    *BlockEvent
-	Transaction *types.Transaction
-	Receipt     *types.Receipt
+	Transaction *Transaction
+	Receipt     *TransactionReceipt
+}
+
+func safeAddStrToMap(addresses map[string]bool, addr *string) {
+	if addr != nil {
+		addresses[*addr] = true
+	}
 }
 
 // ToMessage converts the TransactionEvent to the protocol.TransactionEvent message
@@ -54,6 +60,8 @@ func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 		evtType = protocol.TransactionEvent_REORG
 	}
 
+	addresses := make(map[string]bool)
+
 	um := jsonpb.Unmarshaler{
 		AllowUnknownFields: true,
 	}
@@ -61,13 +69,20 @@ func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 	// convert trace domain model to proto (filter traces)
 	var traces []*protocol.TransactionEvent_Trace
 	for _, trace := range t.BlockEvt.Traces {
-		if trace.TransactionHash != nil && *trace.TransactionHash == t.Transaction.Hash().Hex() {
+		if trace.TransactionHash != nil && *trace.TransactionHash == t.Transaction.Hash {
+			safeAddStrToMap(addresses, trace.Action.Address)
+			safeAddStrToMap(addresses, trace.Action.RefundAddress)
+			safeAddStrToMap(addresses, trace.Action.To)
+			safeAddStrToMap(addresses, trace.Action.From)
+
 			var pTrace protocol.TransactionEvent_Trace
 			traceJson, err := json.Marshal(trace)
 			if err != nil {
 				return nil, err
 			}
 			if err := um.Unmarshal(bytes.NewReader(traceJson), &pTrace); err != nil {
+				log.Errorf("cannot unmarshal traceJson: %s", err.Error())
+				log.Errorf("JSON: %s", string(traceJson))
 				return nil, err
 			}
 			traces = append(traces, &pTrace)
@@ -77,11 +92,16 @@ func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 	// convert tx domain model to proto
 	var tx protocol.TransactionEvent_EthTransaction
 	if t.Transaction != nil {
-		txJson, err := t.Transaction.MarshalJSON()
+		safeAddStrToMap(addresses, t.Transaction.To)
+		safeAddStrToMap(addresses, &t.Transaction.From)
+
+		txJson, err := json.Marshal(t.Transaction)
 		if err != nil {
 			return nil, err
 		}
 		if err := um.Unmarshal(bytes.NewReader(txJson), &tx); err != nil {
+			log.Errorf("cannot unmarshal txJson: %s", err.Error())
+			log.Errorf("JSON: %s", string(txJson))
 			return nil, err
 		}
 	}
@@ -89,17 +109,20 @@ func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 	// convert receipt domain model to proto
 	var receipt protocol.TransactionEvent_EthReceipt
 	if t.Receipt != nil {
-		receiptJson, err := t.Receipt.MarshalJSON()
+		receiptJson, err := json.Marshal(t.Receipt)
 		if err != nil {
 			return nil, err
 		}
 		if err := um.Unmarshal(bytes.NewReader(receiptJson), &receipt); err != nil {
+			log.Errorf("cannot unmarshal receiptJson: %s", err.Error())
+			log.Errorf("JSON: %s", string(receiptJson))
 			return nil, err
 		}
 	}
 
-	nw := &protocol.TransactionEvent_Network{
-		ChainId: utils.BigIntToHex(t.BlockEvt.ChainID),
+	nw := &protocol.TransactionEvent_Network{}
+	if t.BlockEvt.ChainID != nil {
+		nw.ChainId = utils.BigIntToHex(t.BlockEvt.ChainID)
 	}
 
 	return &protocol.TransactionEvent{

@@ -7,3 +7,4 @@ fortify
 !cmd/scanner
 *.pb.go
 private.key
+debug

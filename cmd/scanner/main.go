@@ -49,10 +49,13 @@ func loadKey() (*keystore.Key, error) {
 
 func initTxStream(ctx context.Context, cfg config.Config) (*scanner.TxStreamService, error) {
 	url := cfg.Scanner.Ethereum.JsonRpcUrl
-	startBlock := cfg.Scanner.StartBlock
 	var sb *big.Int
-	if startBlock != 0 {
-		sb = big.NewInt(int64(startBlock))
+	if cfg.Scanner.StartBlock != 0 {
+		sb = big.NewInt(int64(cfg.Scanner.StartBlock))
+	}
+	var chainID *big.Int
+	if cfg.Scanner.ChainID != 0 {
+		chainID = big.NewInt(int64(cfg.Scanner.ChainID))
 	}
 	if url == "" {
 		return nil, fmt.Errorf("ethereum.jsonRpcUrl is required")
@@ -60,6 +63,7 @@ func initTxStream(ctx context.Context, cfg config.Config) (*scanner.TxStreamServ
 	return scanner.NewTxStreamService(ctx, scanner.TxStreamServiceConfig{
 		Url:        url,
 		StartBlock: sb,
+		ChainID:    chainID,
 	})
 }
 

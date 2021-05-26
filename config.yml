@@ -1,5 +1,6 @@
 scanner:
   scannerImage: "openzeppelin/fortify-scanner:latest"
+  chainId: 1
   ethereum:
     jsonRpcUrl: "http://eth.fortify-dev.com:8545"
 
@@ -17,7 +18,7 @@ json-rpc-proxy:
 agents:
   - name: "example-agent"
     image: "openzeppelin/fortify-agent:latest"
-    imageHash: "sha256:766277b009bf504d274a976a24a31bedfe0b2df92c1a4299b06cfdfdd241d516"
+    imageHash: "sha256:a0f49d3a5f3f14909309f3d7bd89b0adf4f9bbb4e7c08fee8c39975bf77afca0"
 
 log:
   level: debug

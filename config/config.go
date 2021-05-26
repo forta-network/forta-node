@@ -39,6 +39,7 @@ type QueryConfig struct {
 }
 
 type ScannerConfig struct {
+	ChainID      int            `yaml:"chainId" json:"chainId"`
 	ScannerImage string         `yaml:"scannerImage" json:"scannerImage"`
 	StartBlock   int            `yaml:"startBlock" json:"startBlock"`
 	Ethereum     EthereumConfig `yaml:"ethereum" json:"ethereum"`

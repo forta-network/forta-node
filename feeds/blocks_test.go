@@ -3,11 +3,10 @@ package feeds
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
@@ -55,21 +54,22 @@ func getTestBlockFeed(t *testing.T) (*blockFeed, *mocks.MockClient, context.Cont
 	}, client, ctx, cancel
 }
 
-func blockWithParent(hash string, num int) *types.Block {
-	return types.NewBlockWithHeader(&types.Header{
-		ParentHash: common.HexToHash(hash),
-		Number:     big.NewInt(int64(num)),
-	})
+func blockWithParent(hash string, num int) *domain.Block {
+	return &domain.Block{
+		Hash:       fmt.Sprintf("0x%s%d", hash, num),
+		ParentHash: hash,
+		Number:     utils.BigIntToHex(big.NewInt(int64(num))),
+	}
 }
 
-func blockEvent(blk *types.Block) *domain.BlockEvent {
+func blockEvent(blk *domain.Block) *domain.BlockEvent {
 	return &domain.BlockEvent{
 		EventType: domain.EventTypeBlock,
 		Block:     blk,
 	}
 }
 
-func reorgEvent(blk *types.Block) *domain.BlockEvent {
+func reorgEvent(blk *domain.Block) *domain.BlockEvent {
 	return &domain.BlockEvent{
 		EventType: domain.EventTypeReorg,
 		Block:     blk,
@@ -87,18 +87,18 @@ func TestBlockFeed_ForEachBlock(t *testing.T) {
 	bf, client, ctx, _ := getTestBlockFeed(t)
 
 	block1 := blockWithParent(startHash, 1)
-	block2 := blockWithParent(block1.Hash().Hex(), 2)
-	block3 := blockWithParent(block2.Hash().Hex(), 3)
+	block2 := blockWithParent(block1.Hash, 2)
+	block3 := blockWithParent(block2.Hash, 3)
 
 	//TODO: actually test that the trace part matters (this returns nil for now)
 	client.EXPECT().BlockByNumber(ctx, big.NewInt(1)).Return(block1, nil).Times(1)
-	client.EXPECT().TraceBlock(ctx, block1.Hash()).Return(nil, nil).Times(1)
+	client.EXPECT().TraceBlock(ctx, utils.HexToBigInt(block1.Number)).Return(nil, nil).Times(1)
 
 	client.EXPECT().BlockByNumber(ctx, big.NewInt(2)).Return(block2, nil).Times(1)
-	client.EXPECT().TraceBlock(ctx, block2.Hash()).Return(nil, nil).Times(1)
+	client.EXPECT().TraceBlock(ctx, utils.HexToBigInt(block2.Number)).Return(nil, nil).Times(1)
 
 	client.EXPECT().BlockByNumber(ctx, big.NewInt(3)).Return(block3, nil).Times(1)
-	client.EXPECT().TraceBlock(ctx, block3.Hash()).Return(nil, nil).Times(1)
+	client.EXPECT().TraceBlock(ctx, utils.HexToBigInt(block3.Number)).Return(nil, nil).Times(1)
 
 	count := 0
 	var evts []*domain.BlockEvent
@@ -119,11 +119,10 @@ func TestBlockFeed_ForEachBlock_Cancelled(t *testing.T) {
 	bf, client, ctx, cancel := getTestBlockFeed(t)
 
 	hash1 := "0x4fc0862e76691f5312964883954d5c2db35e2b8f7a4f191775a4f50c69804a8d"
-	block1 := types.NewBlockWithHeader(&types.Header{
-		ParentHash: common.HexToHash(hash1),
-	})
+	block1 := blockWithParent(hash1, 1)
 
 	client.EXPECT().BlockByNumber(ctx, big.NewInt(1)).Return(block1, nil).Times(1)
+	client.EXPECT().TraceBlock(ctx, utils.HexToBigInt(block1.Number)).Return(nil, nil).Times(1)
 
 	count := 0
 	var evts []*domain.BlockEvent
@@ -147,14 +146,22 @@ func TestBlockFeed_ForEachBlock_Reorg(t *testing.T) {
 	// Different Parent!
 	reorg := blockWithParent(reorgHash, 1)
 	// Reorg...Its Parent is START, found common ancestry (exists in cache)
-	block2 := blockWithParent(block1.Hash().Hex(), 2)
+	block2 := blockWithParent(block1.Hash, 2)
 	// And Continue
-	block3 := blockWithParent(block2.Hash().Hex(), 3)
+	block3 := blockWithParent(block2.Hash, 3)
 
+	client.EXPECT().TraceBlock(ctx, big.NewInt(1)).Return(nil, nil).Times(1)
 	client.EXPECT().BlockByNumber(ctx, big.NewInt(1)).Return(block1, nil).Times(1)
+
+	client.EXPECT().TraceBlock(ctx, big.NewInt(2)).Return(nil, nil).Times(1)
 	client.EXPECT().BlockByNumber(ctx, big.NewInt(2)).Return(reorg, nil).Times(1)
-	client.EXPECT().BlockByHash(ctx, reorg.ParentHash()).Return(block2, nil).Times(1)
+
+	client.EXPECT().BlockByHash(ctx, reorg.ParentHash).Return(block2, nil).Times(1)
+	client.EXPECT().TraceBlock(ctx, big.NewInt(2)).Return(nil, nil).Times(1)
+
+	client.EXPECT().TraceBlock(ctx, big.NewInt(3)).Return(nil, nil).Times(1)
 	client.EXPECT().BlockByNumber(ctx, big.NewInt(3)).Return(block3, nil).Times(1)
+	client.EXPECT().TraceBlock(ctx, utils.HexToBigInt(block3.Number)).Return(nil, nil).Times(1)
 
 	count := 0
 	var evts []*domain.BlockEvent

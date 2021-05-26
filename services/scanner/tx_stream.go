@@ -23,6 +23,7 @@ type TxStreamService struct {
 type TxStreamServiceConfig struct {
 	Url        string
 	StartBlock *big.Int
+	ChainID    *big.Int
 }
 
 func (t *TxStreamService) ReadOnlyBlockStream() <-chan *domain.BlockEvent {
@@ -69,7 +70,8 @@ func NewTxStreamService(ctx context.Context, cfg TxStreamServiceConfig) (*TxStre
 	if err != nil {
 		return nil, err
 	}
-	txFeed, err := feeds.NewTransactionFeed(ctx, ethClient, cfg.StartBlock, 10)
+
+	txFeed, err := feeds.NewTransactionFeed(ctx, ethClient, cfg.ChainID, cfg.StartBlock, 10)
 	if err != nil {
 		return nil, err
 	}

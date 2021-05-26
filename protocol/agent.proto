@@ -167,7 +167,7 @@ message TransactionEvent {
   message Trace {
     TraceAction action = 1;
     string blockHash = 2;
-    string blockNumber = 3;
+    int64 blockNumber = 3;
     TraceResult result = 4;
     int64 subtraces = 5;
     repeated int64 traceAddress = 6;
@@ -182,4 +182,5 @@ message TransactionEvent {
   EthReceipt receipt = 3;
   Network network = 4;
   repeated Trace traces = 5;
+  map<string, bool> addresses = 6;
 }

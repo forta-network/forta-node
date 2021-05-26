@@ -10,120 +10,8 @@ import (
 	big "math/big"
 	reflect "reflect"
 
-	common "github.com/ethereum/go-ethereum/common"
-	types "github.com/ethereum/go-ethereum/core/types"
 	gomock "github.com/golang/mock/gomock"
 )
-
-// MockethClient is a mock of ethClient interface.
-type MockethClient struct {
-	ctrl     *gomock.Controller
-	recorder *MockethClientMockRecorder
-}
-
-// MockethClientMockRecorder is the mock recorder for MockethClient.
-type MockethClientMockRecorder struct {
-	mock *MockethClient
-}
-
-// NewMockethClient creates a new mock instance.
-func NewMockethClient(ctrl *gomock.Controller) *MockethClient {
-	mock := &MockethClient{ctrl: ctrl}
-	mock.recorder = &MockethClientMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockethClient) EXPECT() *MockethClientMockRecorder {
-	return m.recorder
-}
-
-// BlockByHash mocks base method.
-func (m *MockethClient) BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BlockByHash", ctx, hash)
-	ret0, _ := ret[0].(*types.Block)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// BlockByHash indicates an expected call of BlockByHash.
-func (mr *MockethClientMockRecorder) BlockByHash(ctx, hash interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlockByHash", reflect.TypeOf((*MockethClient)(nil).BlockByHash), ctx, hash)
-}
-
-// BlockByNumber mocks base method.
-func (m *MockethClient) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BlockByNumber", ctx, number)
-	ret0, _ := ret[0].(*types.Block)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// BlockByNumber indicates an expected call of BlockByNumber.
-func (mr *MockethClientMockRecorder) BlockByNumber(ctx, number interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlockByNumber", reflect.TypeOf((*MockethClient)(nil).BlockByNumber), ctx, number)
-}
-
-// BlockNumber mocks base method.
-func (m *MockethClient) BlockNumber(ctx context.Context) (uint64, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BlockNumber", ctx)
-	ret0, _ := ret[0].(uint64)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// BlockNumber indicates an expected call of BlockNumber.
-func (mr *MockethClientMockRecorder) BlockNumber(ctx interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlockNumber", reflect.TypeOf((*MockethClient)(nil).BlockNumber), ctx)
-}
-
-// ChainID mocks base method.
-func (m *MockethClient) ChainID(ctx context.Context) (*big.Int, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ChainID", ctx)
-	ret0, _ := ret[0].(*big.Int)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ChainID indicates an expected call of ChainID.
-func (mr *MockethClientMockRecorder) ChainID(ctx interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChainID", reflect.TypeOf((*MockethClient)(nil).ChainID), ctx)
-}
-
-// Close mocks base method.
-func (m *MockethClient) Close() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Close")
-}
-
-// Close indicates an expected call of Close.
-func (mr *MockethClientMockRecorder) Close() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockethClient)(nil).Close))
-}
-
-// TransactionReceipt mocks base method.
-func (m *MockethClient) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TransactionReceipt", ctx, txHash)
-	ret0, _ := ret[0].(*types.Receipt)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// TransactionReceipt indicates an expected call of TransactionReceipt.
-func (mr *MockethClientMockRecorder) TransactionReceipt(ctx, txHash interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TransactionReceipt", reflect.TypeOf((*MockethClient)(nil).TransactionReceipt), ctx, txHash)
-}
 
 // MockrpcClient is a mock of rpcClient interface.
 type MockrpcClient struct {
@@ -167,6 +55,18 @@ func (mr *MockrpcClientMockRecorder) CallContext(ctx, result, method interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CallContext", reflect.TypeOf((*MockrpcClient)(nil).CallContext), varargs...)
 }
 
+// Close mocks base method.
+func (m *MockrpcClient) Close() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Close")
+}
+
+// Close indicates an expected call of Close.
+func (mr *MockrpcClientMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockrpcClient)(nil).Close))
+}
+
 // MockClient is a mock of Client interface.
 type MockClient struct {
 	ctrl     *gomock.Controller
@@ -191,10 +91,10 @@ func (m *MockClient) EXPECT() *MockClientMockRecorder {
 }
 
 // BlockByHash mocks base method.
-func (m *MockClient) BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error) {
+func (m *MockClient) BlockByHash(ctx context.Context, hash string) (*domain.Block, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BlockByHash", ctx, hash)
-	ret0, _ := ret[0].(*types.Block)
+	ret0, _ := ret[0].(*domain.Block)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -206,10 +106,10 @@ func (mr *MockClientMockRecorder) BlockByHash(ctx, hash interface{}) *gomock.Cal
 }
 
 // BlockByNumber mocks base method.
-func (m *MockClient) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
+func (m *MockClient) BlockByNumber(ctx context.Context, number *big.Int) (*domain.Block, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BlockByNumber", ctx, number)
-	ret0, _ := ret[0].(*types.Block)
+	ret0, _ := ret[0].(*domain.Block)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -221,10 +121,10 @@ func (mr *MockClientMockRecorder) BlockByNumber(ctx, number interface{}) *gomock
 }
 
 // BlockNumber mocks base method.
-func (m *MockClient) BlockNumber(ctx context.Context) (uint64, error) {
+func (m *MockClient) BlockNumber(ctx context.Context) (*big.Int, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BlockNumber", ctx)
-	ret0, _ := ret[0].(uint64)
+	ret0, _ := ret[0].(*big.Int)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -278,10 +178,10 @@ func (mr *MockClientMockRecorder) TraceBlock(ctx, number interface{}) *gomock.Ca
 }
 
 // TransactionReceipt mocks base method.
-func (m *MockClient) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
+func (m *MockClient) TransactionReceipt(ctx context.Context, txHash string) (*domain.TransactionReceipt, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "TransactionReceipt", ctx, txHash)
-	ret0, _ := ret[0].(*types.Receipt)
+	ret0, _ := ret[0].(*domain.TransactionReceipt)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
