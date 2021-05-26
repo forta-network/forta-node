@@ -38,6 +38,7 @@ const transactionReceipt = "eth_getTransactionReceipt"
 const traceBlock = "trace_block"
 const chainId = "eth_chainId"
 
+var ErrNotFound = fmt.Errorf("not found")
 var permanentErrors = []string{"method not found"}
 
 var minBackoff = 1 * time.Second
@@ -123,7 +124,14 @@ func (e streamEthClient) BlockByHash(ctx context.Context, hash string) (*domain.
 	log.Debugf(name)
 	var result domain.Block
 	err := withBackoff(ctx, name, func(ctx context.Context) error {
-		return e.rpcClient.CallContext(ctx, &result, blocksByHash, hash, true)
+		err := e.rpcClient.CallContext(ctx, &result, blocksByHash, hash, true)
+		if err != nil {
+			return err
+		}
+		if result.Hash == "" {
+			return ErrNotFound
+		}
+		return nil
 	}, RetryOptions{
 		MaxElapsedTime: pointDur(12 * time.Hour),
 		MaxBackoff:     pointDur(15 * time.Second),
@@ -156,7 +164,14 @@ func (e streamEthClient) BlockByNumber(ctx context.Context, number *big.Int) (*d
 	log.Debugf(name)
 
 	err := withBackoff(ctx, name, func(ctx context.Context) error {
-		return e.rpcClient.CallContext(ctx, &result, blocksByNumber, num, true)
+		err := e.rpcClient.CallContext(ctx, &result, blocksByNumber, num, true)
+		if err != nil {
+			return err
+		}
+		if result.Hash == "" {
+			return ErrNotFound
+		}
+		return nil
 	}, RetryOptions{
 		MaxElapsedTime: pointDur(12 * time.Hour),
 		MaxBackoff:     pointDur(15 * time.Second),
