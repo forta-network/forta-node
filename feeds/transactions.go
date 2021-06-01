@@ -3,7 +3,6 @@ package feeds
 import (
 	"context"
 	"errors"
-	"math/big"
 
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
@@ -40,17 +39,19 @@ func (tf *transactionFeed) streamBlocks() error {
 func (tf *transactionFeed) streamTransactions() error {
 	defer close(tf.txCh)
 	for evt := range tf.blockCh {
+		blockEvt := evt
 		log.Debugf("tx-iterator: block(%s) processing", evt.Block.Number)
 		for _, tx := range evt.Block.Transactions {
+			txTemp := tx
 			select {
 			case <-tf.ctx.Done():
 				return tf.ctx.Err()
 			default:
 				if !tf.cache.ExistsAndAdd(tx.Hash) {
-					log.Debugf("tx-iterator: block(%s), txs <- %s", evt.Block.Number, tx.Hash)
+					log.Infof("tx-iterator: block(%s), txs <- %s", evt.Block.Number, tx.Hash)
 					tf.txCh <- &domain.TransactionEvent{
-						BlockEvt:    evt,
-						Transaction: &tx,
+						BlockEvt:    blockEvt,
+						Transaction: &txTemp,
 					}
 				}
 			}
@@ -117,11 +118,11 @@ func (tf *transactionFeed) ForEachTransaction(blockHandler func(evt *domain.Bloc
 	return grp.Wait()
 }
 
-func NewTransactionFeed(ctx context.Context, client ethereum.Client, chainID *big.Int, start *big.Int, workers int) (*transactionFeed, error) {
+func NewTransactionFeed(ctx context.Context, client ethereum.Client, cfg BlockFeedConfig, workers int) (*transactionFeed, error) {
 	blocks := make(chan *domain.BlockEvent, 10)
 	blocksOut := make(chan *domain.BlockEvent)
 	txs := make(chan *domain.TransactionEvent, 100)
-	blockFeed, err := NewBlockFeed(ctx, client, chainID, start)
+	blockFeed, err := NewBlockFeed(ctx, client, cfg)
 	cache := utils.NewCache(1000000)
 	if err != nil {
 		return nil, err

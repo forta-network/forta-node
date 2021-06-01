@@ -113,6 +113,10 @@ func (t *TxAnalyzerService) Start() error {
 	//TODO: change this protocol when we know more about query-node delivery
 	// Gear 3: receive result from agent
 	output := make(chan *evalTxResp, 100)
+	defer func() {
+		close(output)
+	}()
+
 	grp.Go(func() error {
 		for resp := range output {
 			ts := time.Now().UTC()
@@ -145,7 +149,6 @@ func (t *TxAnalyzerService) Start() error {
 			for _, agtCh := range agentChannels {
 				close(agtCh)
 			}
-			close(output)
 		}()
 
 		// for each transaction

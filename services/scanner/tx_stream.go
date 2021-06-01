@@ -2,7 +2,6 @@ package scanner
 
 import (
 	"context"
-	"math/big"
 
 	log "github.com/sirupsen/logrus"
 
@@ -21,9 +20,8 @@ type TxStreamService struct {
 }
 
 type TxStreamServiceConfig struct {
-	Url        string
-	StartBlock *big.Int
-	ChainID    *big.Int
+	Url             string
+	BlockFeedConfig feeds.BlockFeedConfig
 }
 
 func (t *TxStreamService) ReadOnlyBlockStream() <-chan *domain.BlockEvent {
@@ -71,7 +69,7 @@ func NewTxStreamService(ctx context.Context, cfg TxStreamServiceConfig) (*TxStre
 		return nil, err
 	}
 
-	txFeed, err := feeds.NewTransactionFeed(ctx, ethClient, cfg.ChainID, cfg.StartBlock, 10)
+	txFeed, err := feeds.NewTransactionFeed(ctx, ethClient, cfg.BlockFeedConfig, 10)
 	if err != nil {
 		return nil, err
 	}

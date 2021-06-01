@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math/big"
 	"os"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 
 	"OpenZeppelin/fortify-node/clients"
 	"OpenZeppelin/fortify-node/config"
+	"OpenZeppelin/fortify-node/feeds"
 	"OpenZeppelin/fortify-node/services"
 	"OpenZeppelin/fortify-node/services/scanner"
 )
@@ -49,21 +49,27 @@ func loadKey() (*keystore.Key, error) {
 
 func initTxStream(ctx context.Context, cfg config.Config) (*scanner.TxStreamService, error) {
 	url := cfg.Scanner.Ethereum.JsonRpcUrl
-	var sb *big.Int
-	if cfg.Scanner.StartBlock != 0 {
-		sb = big.NewInt(int64(cfg.Scanner.StartBlock))
-	}
-	var chainID *big.Int
-	if cfg.Scanner.ChainID != 0 {
-		chainID = big.NewInt(int64(cfg.Scanner.ChainID))
-	}
+	startBlock := config.ParseBigInt(cfg.Scanner.StartBlock)
+	endBlock := config.ParseBigInt(cfg.Scanner.EndBlock)
+	chainID := config.ParseBigInt(cfg.Scanner.ChainID)
+
 	if url == "" {
 		return nil, fmt.Errorf("ethereum.jsonRpcUrl is required")
 	}
+
+	tracing := true
+	if cfg.Scanner.DisableTracing {
+		tracing = false
+	}
+
 	return scanner.NewTxStreamService(ctx, scanner.TxStreamServiceConfig{
-		Url:        url,
-		StartBlock: sb,
-		ChainID:    chainID,
+		Url: url,
+		BlockFeedConfig: feeds.BlockFeedConfig{
+			Start:   startBlock,
+			End:     endBlock,
+			ChainID: chainID,
+			Tracing: tracing,
+		},
 	})
 }
 

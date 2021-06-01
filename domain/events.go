@@ -131,5 +131,6 @@ func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 		Receipt:     &receipt,
 		Network:     nw,
 		Traces:      traces,
+		Addresses:   addresses,
 	}, nil
 }

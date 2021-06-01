@@ -2,6 +2,7 @@ package feeds
 
 import (
 	"context"
+	"errors"
 	"math/big"
 
 	log "github.com/sirupsen/logrus"
@@ -11,16 +12,27 @@ import (
 	"OpenZeppelin/fortify-node/utils"
 )
 
+var ErrEndBlockReached = errors.New("end block reached")
+
 type BlockFeed interface {
 	ForEachBlock(handler func(evt *domain.BlockEvent) error) error
 }
 
 type blockFeed struct {
 	start   *big.Int
+	end     *big.Int
 	ctx     context.Context
 	client  ethereum.Client
 	cache   utils.Cache
 	chainID *big.Int
+	tracing bool
+}
+
+type BlockFeedConfig struct {
+	Start   *big.Int
+	End     *big.Int
+	ChainID *big.Int
+	Tracing bool
 }
 
 func (bf *blockFeed) initialize() error {
@@ -73,10 +85,13 @@ func (bf *blockFeed) processReorg(parentHash string, handler func(evt *domain.Bl
 			return nil
 		}
 
-		traces, err := bf.client.TraceBlock(bf.ctx, blockNum)
-		if err != nil {
-			log.Errorf("reorg: error tracing block: %s (skipping)", err.Error())
-			return nil
+		var traces []domain.Trace
+		if bf.tracing {
+			traces, err = bf.client.TraceBlock(bf.ctx, blockNum)
+			if err != nil {
+				log.Errorf("error tracing block: %s", err.Error())
+				return err
+			}
 		}
 
 		if blockNum.Uint64() <= bf.start.Uint64() {
@@ -101,11 +116,18 @@ func (bf *blockFeed) ForEachBlock(handler func(evt *domain.BlockEvent) error) er
 		if bf.ctx.Err() != nil {
 			return bf.ctx.Err()
 		}
+		if bf.end != nil && blockNum.Uint64() > bf.end.Uint64() {
+			return ErrEndBlockReached
+		}
 
-		traces, err := bf.client.TraceBlock(bf.ctx, blockNum)
-		if err != nil {
-			log.Errorf("error tracing block: %s", err.Error())
-			return err
+		var err error
+		var traces []domain.Trace
+		if bf.tracing {
+			traces, err = bf.client.TraceBlock(bf.ctx, blockNum)
+			if err != nil {
+				log.Errorf("error tracing block: %s", err.Error())
+				return err
+			}
 		}
 
 		var block *domain.Block
@@ -136,9 +158,15 @@ func (bf *blockFeed) ForEachBlock(handler func(evt *domain.BlockEvent) error) er
 	}
 }
 
-func NewBlockFeed(ctx context.Context, client ethereum.Client, chainID *big.Int, start *big.Int) (*blockFeed, error) {
+func NewBlockFeed(ctx context.Context, client ethereum.Client, cfg BlockFeedConfig) (*blockFeed, error) {
 	bf := &blockFeed{
-		start: start, ctx: ctx, client: client, cache: utils.NewCache(10000), chainID: chainID,
+		start:   cfg.Start,
+		end:     cfg.End,
+		ctx:     ctx,
+		client:  client,
+		cache:   utils.NewCache(10000),
+		chainID: cfg.ChainID,
+		tracing: cfg.Tracing,
 	}
 	if err := bf.initialize(); err != nil {
 		return nil, err

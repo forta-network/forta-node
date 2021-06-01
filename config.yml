@@ -1,6 +1,9 @@
 scanner:
   scannerImage: "openzeppelin/fortify-scanner:latest"
   chainId: 1
+  #startBlock: 11792184
+  #endBlock: 11792184
+  #disableTracing: true
   ethereum:
     jsonRpcUrl: "http://eth.fortify-dev.com:8545"
 
@@ -13,12 +16,15 @@ query:
 json-rpc-proxy:
   jsonRpcImage: "openzeppelin/fortify-json-rpc:latest"
   ethereum:
-    jsonRpcUrl: "http://eth.fortify-dev.com:8545"
+    jsonRpcUrl: "https://eth-mainnet.alchemyapi.io/v2/buJLG95oaeuw0XaC0ZYXYHdDs4pOSSTe"
 
 agents:
   - name: "example-agent"
     image: "openzeppelin/fortify-agent:latest"
-    imageHash: "sha256:a0f49d3a5f3f14909309f3d7bd89b0adf4f9bbb4e7c08fee8c39975bf77afca0"
+    imageHash: "sha256:db7de781be9b7d6d2a217078e7082d7fe4a0d69b165d5d25f4d458952b7ec5b0"
+#  - name: "flash-loans"
+#    image: "openzeppelin/lab-flash-loans:latest"
+#    imageHash: "sha256:b33c53cbbf29faa3511d4e339288e3d86d290771535d3dcd15f8ba23d7c91a99"
 
 log:
   level: debug

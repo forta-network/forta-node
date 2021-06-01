@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -39,10 +40,12 @@ type QueryConfig struct {
 }
 
 type ScannerConfig struct {
-	ChainID      int            `yaml:"chainId" json:"chainId"`
-	ScannerImage string         `yaml:"scannerImage" json:"scannerImage"`
-	StartBlock   int            `yaml:"startBlock" json:"startBlock"`
-	Ethereum     EthereumConfig `yaml:"ethereum" json:"ethereum"`
+	ChainID        int            `yaml:"chainId" json:"chainId"`
+	ScannerImage   string         `yaml:"scannerImage" json:"scannerImage"`
+	StartBlock     int            `yaml:"startBlock" json:"startBlock"`
+	EndBlock       int            `yaml:"endBlock" json:"endBlock"`
+	Ethereum       EthereumConfig `yaml:"ethereum" json:"ethereum"`
+	DisableTracing bool           `yaml:"disableTracing" json:"disableTracing"`
 }
 
 type JsonRpcProxyConfig struct {
@@ -78,6 +81,14 @@ func GetKeyStorePath() (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("%s/.keys", cfgDir), nil
+}
+
+func ParseBigInt(num int) *big.Int {
+	var val *big.Int
+	if num != 0 {
+		val = big.NewInt(int64(num))
+	}
+	return val
 }
 
 func (c Config) AgentContainerNames() []string {
