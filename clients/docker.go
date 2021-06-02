@@ -35,6 +35,8 @@ type DockerContainerConfig struct {
 	Ports          map[string]string
 	Volumes        map[string]string
 	Files          map[string][]byte
+	MaxLogSize     string
+	MaxLogFiles    int
 }
 
 // DockerClient is a client interface for interacting with docker
@@ -163,6 +165,17 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 	for hostVol, containerMnt := range config.Volumes {
 		volumes = append(volumes, fmt.Sprintf("%s:%s", hostVol, containerMnt))
 	}
+
+	maxLogSize := config.MaxLogSize
+	if maxLogSize == "" {
+		maxLogSize = "10m"
+	}
+
+	maxLogFiles := config.MaxLogFiles
+	if maxLogFiles == 0 {
+		maxLogFiles = 10
+	}
+
 	cont, err := cli.ContainerCreate(
 		ctx,
 		&container.Config{
@@ -175,6 +188,13 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 			PortBindings:    bindings,
 			PublishAllPorts: true,
 			Binds:           volumes,
+			LogConfig: container.LogConfig{
+				Config: map[string]string{
+					"max-file": fmt.Sprintf("%d", maxLogFiles),
+					"max-size": maxLogSize,
+				},
+				Type: "json-file",
+			},
 		}, nil, config.Name)
 
 	if err != nil {

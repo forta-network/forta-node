@@ -39,6 +39,9 @@ func (t *TxNodeService) Start() error {
 		return err
 	}
 
+	maxLogSize := t.config.Config.Log.MaxLogSize
+	maxLogFiles := t.config.Config.Log.MaxLogFiles
+
 	cfgBytes, err := json.Marshal(t.config.Config)
 	if err != nil {
 		log.Error("cannot marshal config to json", err)
@@ -71,6 +74,8 @@ func (t *TxNodeService) Start() error {
 				config.EnvJsonRpcHost: jsonRpcProxyName,
 				config.EnvJsonRpcPort: "8545",
 			},
+			MaxLogFiles: maxLogFiles,
+			MaxLogSize:  maxLogSize,
 		})
 		if err != nil {
 			return err
@@ -93,7 +98,9 @@ func (t *TxNodeService) Start() error {
 		Volumes: map[string]string{
 			t.config.Config.Query.DB.Path: store.DBPath,
 		},
-		NetworkID: nodeNetwork,
+		NetworkID:   nodeNetwork,
+		MaxLogFiles: maxLogFiles,
+		MaxLogSize:  maxLogSize,
 	})
 	if err != nil {
 		return err
@@ -107,6 +114,8 @@ func (t *TxNodeService) Start() error {
 		},
 		NetworkID:      nodeNetwork,
 		LinkNetworkIDs: networkIDs,
+		MaxLogFiles:    maxLogFiles,
+		MaxLogSize:     maxLogSize,
 	})
 	if err != nil {
 		return err
@@ -132,6 +141,8 @@ func (t *TxNodeService) Start() error {
 		},
 		NetworkID:      nodeNetwork,
 		LinkNetworkIDs: networkIDs,
+		MaxLogFiles:    maxLogFiles,
+		MaxLogSize:     maxLogSize,
 	})
 	if err != nil {
 		return err

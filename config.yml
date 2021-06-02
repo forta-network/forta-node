@@ -16,7 +16,7 @@ query:
 json-rpc-proxy:
   jsonRpcImage: "openzeppelin/fortify-json-rpc:latest"
   ethereum:
-    jsonRpcUrl: "https://eth-mainnet.alchemyapi.io/v2/buJLG95oaeuw0XaC0ZYXYHdDs4pOSSTe"
+    jsonRpcUrl: "http://eth.fortify-dev.com:8545"
 
 agents:
   - name: "example-agent"
@@ -28,3 +28,5 @@ agents:
 
 log:
   level: debug
+  maxLogSize: 10m
+  maxLogFiles: 10
