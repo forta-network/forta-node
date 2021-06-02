@@ -53,6 +53,12 @@ type JsonRpcProxyConfig struct {
 	Ethereum     EthereumConfig `yaml:"ethereum" json:"ethereum"`
 }
 
+type LogConfig struct {
+	Level       string `yaml:"level" json:"level"`
+	MaxLogSize  string `yaml:"maxLogSize" json:"maxLogSize"`
+	MaxLogFiles int    `yaml:"maxLogFiles" json:"maxLogFiles"`
+}
+
 func (ac AgentConfig) ContainerName() string {
 	return fmt.Sprintf("%s-agent-%s", FortifyPrefix, ac.Name)
 }
@@ -62,9 +68,7 @@ type Config struct {
 	Query        QueryConfig        `yaml:"query" json:"query"`
 	JsonRpcProxy JsonRpcProxyConfig `yaml:"json-rpc-proxy" json:"jsonRpcProxy"`
 	Agents       []AgentConfig      `yaml:"agents" json:"agents"`
-	Log          struct {
-		Level string `yaml:"level" json:"level"`
-	} `yaml:"log" json:"log"`
+	Log          LogConfig          `yaml:"log" json:"log"`
 }
 
 func GetFortifyCfgDir() (string, error) {
