@@ -7,6 +7,14 @@
 3. [Install Protobuf Compiler](https://grpc.io/docs/protoc-installation/)
 4. Start Docker Service
 
+#### Libraries to install
+```shell
+$ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc 
+```
+```shell 
+$ go install github.com/golang/mock/mockgen@v1.5.0
+```
+
 #### Build Node
 
 ```shell
