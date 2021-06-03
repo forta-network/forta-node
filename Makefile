@@ -3,9 +3,10 @@ containers:
 	docker build -t openzeppelin/fortify-query -f Dockerfile-query .
 	docker build -t openzeppelin/fortify-json-rpc -f Dockerfile-json-rpc .
 
-# this ecr target shouldn't generally be used, but can be helpful from laptop
-ecr:
+docker-login:
 	aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 997179694723.dkr.ecr.us-west-2.amazonaws.com
+
+ecr:
 	docker tag openzeppelin/fortify-scanner:latest 997179694723.dkr.ecr.us-west-2.amazonaws.com/fortify-scanner:latest
 	docker tag openzeppelin/fortify-query:latest 997179694723.dkr.ecr.us-west-2.amazonaws.com/fortify-query:latest
 	docker tag openzeppelin/fortify-json-rpc:latest 997179694723.dkr.ecr.us-west-2.amazonaws.com/fortify-json-rpc:latest
