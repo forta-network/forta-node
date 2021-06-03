@@ -2,11 +2,11 @@ on:
   push:
     branches: [ master ]
 
-name: Deploy to Amazon ECS
+name: Deploy
 
 jobs:
   deploy:
-    name: Deploy Dev
+    name: Deploy
     runs-on: ubuntu-latest
     environment: dev
 
@@ -60,7 +60,7 @@ jobs:
           docker tag openzeppelin/fortify-json-rpc:latest $ECR_REGISTRY/fortify-json-rpc:$IMAGE_TAG
 
           echo "::set-output name=image::$IMAGE_TAG"
-      - name: copy fortify cli to remote
+      - name: Copy fortify cli to remote
         uses: garygrossgarten/github-action-scp@release
         with:
           local: fortify
@@ -68,11 +68,19 @@ jobs:
           host: ${{ secrets.DEV_HOST }}
           username: ${{ secrets.DEV_SSH_USER }}
           privateKey: ${{ secrets.DEV_SSH_KEY }}
-      - name: copy config yaml to remote
+      - name: Copy config yaml to remote
         uses: garygrossgarten/github-action-scp@release
         with:
           local: config-dev.yml
           remote: /home/ec2-user/fortify/config.yml
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_SSH_USER }}
+          privateKey: ${{ secrets.DEV_SSH_KEY }}
+      - name: Copy start script to server
+        uses: garygrossgarten/github-action-scp@release
+        with:
+          local: scripts/start-dev.sh
+          remote: /home/ec2-user/fortify/start-dev.sh
           host: ${{ secrets.DEV_HOST }}
           username: ${{ secrets.DEV_SSH_USER }}
           privateKey: ${{ secrets.DEV_SSH_KEY }}
@@ -87,3 +95,13 @@ jobs:
           docker push $ECR_REGISTRY/fortify-scanner:$IMAGE_TAG
           docker push $ECR_REGISTRY/fortify-query:latest
           docker push $ECR_REGISTRY/fortify-query:$IMAGE_TAG
+      - name: Restarting Fortify
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_SSH_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          script: |
+            chmod 755 /home/ec2-user/fortify/start-dev.sh
+            chmod 755 /home/ec2-user/fortify/fortify
+            nohup fortify/start-dev.sh ${{ github.sha }} >/dev/null 2>&1 &
