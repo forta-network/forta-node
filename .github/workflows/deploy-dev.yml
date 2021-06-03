@@ -67,6 +67,14 @@ jobs:
           host: ${{ secrets.DEV_HOST }}
           username: ${{ secrets.DEV_SSH_USER }}
           privateKey: ${{ secrets.DEV_SSH_KEY }}
+      - name: copy config yaml to remote
+        uses: garygrossgarten/github-action-scp@release
+        with:
+          local: config-dev.yml
+          remote: /home/ec2-user/fortify/config.yml
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_SSH_USER }}
+          privateKey: ${{ secrets.DEV_SSH_KEY }}
       - name: Push to ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
