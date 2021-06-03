@@ -34,6 +34,7 @@ jobs:
         run: |
           make build
           chmod 755 fortify
+          sed -i 's/GITHUB_HASH/${{ github.sha }}/g' config-dev.yml
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
