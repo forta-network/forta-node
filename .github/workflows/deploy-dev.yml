@@ -106,4 +106,4 @@ jobs:
           script: |
             chmod 755 /home/ec2-user/fortify/start-dev.sh
             chmod 755 /home/ec2-user/fortify/fortify
-            /home/ec2-user/fortify/start-dev.sh ${{ github.sha }}
+            nohup fortify/start-dev.sh ${{ github.sha }} >/dev/null 2>&1 &
