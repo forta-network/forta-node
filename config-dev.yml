@@ -1,0 +1,30 @@
+# This file is used by the development server (on AWS)
+scanner:
+  scannerImage: "997179694723.dkr.ecr.us-west-2.amazonaws.com/fortify-scanner:latest"
+  chainId: 1
+  #startBlock: 11792184
+  #endBlock: 11792184
+  #disableTracing: true
+  ethereum:
+    jsonRpcUrl: "http://172.31.47.42:8545"
+
+query:
+  queryImage: "997179694723.dkr.ecr.us-west-2.amazonaws.com/fortify-query:latest"
+  port: 8778
+  db:
+    path: "/tmp/fortify-alerts"
+
+json-rpc-proxy:
+  jsonRpcImage: "997179694723.dkr.ecr.us-west-2.amazonaws.com/fortify-json-rpc:latest"
+  ethereum:
+    jsonRpcUrl: "http://172.31.47.42:8545"
+
+agents:
+  - name: "example-agent"
+    image: "openzeppelin/fortify-agent:latest"
+    imageHash: "sha256:db7de781be9b7d6d2a217078e7082d7fe4a0d69b165d5d25f4d458952b7ec5b0"
+
+log:
+  level: info
+  maxLogSize: 10m
+  maxLogFiles: 10

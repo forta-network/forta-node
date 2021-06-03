@@ -8,6 +8,7 @@ import (
 
 func TestHexToBigInt(t *testing.T) {
 	hex := "0xabc"
-	res := HexToBigInt(hex)
+	res, err := HexToBigInt(hex)
+	assert.NoError(t, err)
 	assert.Equal(t, int64(2748), res.Int64())
 }
