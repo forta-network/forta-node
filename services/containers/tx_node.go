@@ -7,9 +7,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"OpenZeppelin/fotify-node/clients"
-	"OpenZeppelin/fotify-node/config"
-	"OpenZeppelin/fotify-node/store"
+	"OpenZeppelin/fortify-node/clients"
+	"OpenZeppelin/fortify-node/config"
+	"OpenZeppelin/fortify-node/store"
 )
 
 const ContainerPrefix = "fortify"

@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 
-	"OpenZeppelin/fotify-node/config"
-	"OpenZeppelin/fotify-node/services"
-	jrp "OpenZeppelin/fotify-node/services/json-rpc"
+	"OpenZeppelin/fortify-node/config"
+	"OpenZeppelin/fortify-node/services"
+	jrp "OpenZeppelin/fortify-node/services/json-rpc"
 )
 
 func initJsonRpcProxy(ctx context.Context, cfg config.Config) (*jrp.JsonRpcProxy, error) {

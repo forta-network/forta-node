@@ -1,4 +1,4 @@
-module OpenZeppelin/fotify-node
+module OpenZeppelin/fortify-node
 
 go 1.16
 

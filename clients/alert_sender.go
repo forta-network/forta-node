@@ -8,8 +8,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
-	"OpenZeppelin/fotify-node/protocol"
-	"OpenZeppelin/fotify-node/security"
+	"OpenZeppelin/fortify-node/protocol"
+	"OpenZeppelin/fortify-node/security"
 )
 
 type AlertSender interface {

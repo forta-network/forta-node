@@ -8,9 +8,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	log "github.com/sirupsen/logrus"
 
-	"OpenZeppelin/fotify-node/config"
-	"OpenZeppelin/fotify-node/services"
-	"OpenZeppelin/fotify-node/services/containers"
+	"OpenZeppelin/fortify-node/config"
+	"OpenZeppelin/fortify-node/services"
+	"OpenZeppelin/fortify-node/services/containers"
 )
 
 func initServices(cfg config.Config, passphrase string, ctx context.Context) ([]services.Service, error) {
