@@ -13,8 +13,8 @@ import (
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 
-	"fortify-node/protocol"
-	"fortify-node/store"
+	"OpenZeppelin/fotify-node/protocol"
+	"OpenZeppelin/fotify-node/store"
 )
 
 // AlertApi allows retrieval of alerts from the database

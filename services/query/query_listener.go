@@ -7,8 +7,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
-	"fortify-node/protocol"
-	"fortify-node/store"
+	"OpenZeppelin/fotify-node/protocol"
+	"OpenZeppelin/fotify-node/store"
 )
 
 // AlertListener allows retrieval of alerts from the database

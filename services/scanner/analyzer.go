@@ -1,8 +1,8 @@
 package scanner
 
 import (
-	"fortify-node/config"
-	"fortify-node/protocol"
+	"OpenZeppelin/fotify-node/config"
+	"OpenZeppelin/fotify-node/protocol"
 )
 
 type AnalyzerAgent struct {

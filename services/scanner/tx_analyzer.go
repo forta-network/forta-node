@@ -14,11 +14,11 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 
-	"fortify-node/clients"
-	"fortify-node/config"
-	"fortify-node/domain"
-	"fortify-node/protocol"
-	"fortify-node/store"
+	"OpenZeppelin/fotify-node/clients"
+	"OpenZeppelin/fotify-node/config"
+	"OpenZeppelin/fotify-node/domain"
+	"OpenZeppelin/fotify-node/protocol"
+	"OpenZeppelin/fotify-node/store"
 )
 
 // TxAnalyzerService reads TX info, calls agents, and emits results

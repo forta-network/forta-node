@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 
-	"fortify-node/config"
-	"fortify-node/services"
-	"fortify-node/services/query"
-	"fortify-node/store"
+	"OpenZeppelin/fotify-node/config"
+	"OpenZeppelin/fotify-node/services"
+	"OpenZeppelin/fotify-node/services/query"
+	"OpenZeppelin/fotify-node/store"
 )
 
 func initApi(ctx context.Context, as store.AlertStore, cfg config.Config) (*query.AlertApi, error) {

@@ -11,11 +11,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 
-	"fortify-node/clients"
-	"fortify-node/config"
-	"fortify-node/feeds"
-	"fortify-node/services"
-	"fortify-node/services/scanner"
+	"OpenZeppelin/fotify-node/clients"
+	"OpenZeppelin/fotify-node/config"
+	"OpenZeppelin/fotify-node/feeds"
+	"OpenZeppelin/fotify-node/services"
+	"OpenZeppelin/fotify-node/services/scanner"
 )
 
 func loadKey() (*keystore.Key, error) {
