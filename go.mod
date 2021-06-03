@@ -1,4 +1,4 @@
-module github.com/OpenZeppelin/fortify-node
+module fortify-node
 
 go 1.16
 

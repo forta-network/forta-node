@@ -9,7 +9,7 @@ import (
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/OpenZeppelin/fortify-node/config"
+	"fortify-node/config"
 )
 
 // JsonRpcProxy proxies requests from agents to json-rpc endpoint

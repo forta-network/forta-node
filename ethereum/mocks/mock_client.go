@@ -6,7 +6,7 @@ package mock_ethereum
 
 import (
 	context "context"
-	domain "github.com/OpenZeppelin/fortify-node/domain"
+	domain "fortify-node/domain"
 	big "math/big"
 	reflect "reflect"
 

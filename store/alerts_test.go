@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/OpenZeppelin/fortify-node/protocol"
+	"fortify-node/protocol"
 )
 
 func TestFormat(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/proto"
 
-	"github.com/OpenZeppelin/fortify-node/protocol"
+	"fortify-node/protocol"
 )
 
 func SignAlert(key *keystore.Key, alert *protocol.Alert) (*protocol.SignedAlert, error) {

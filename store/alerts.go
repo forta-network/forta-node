@@ -9,7 +9,7 @@ import (
 	"github.com/dgraph-io/badger/v3"
 	"github.com/golang/protobuf/proto"
 
-	"github.com/OpenZeppelin/fortify-node/protocol"
+	"fortify-node/protocol"
 )
 
 //DBPath is a local location of badger db (/db is a mounted volume)

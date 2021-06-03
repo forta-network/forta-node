@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/OpenZeppelin/fortify-node/store"
+	"fortify-node/store"
 )
 
 // DBPruner periodically prunes db of old records

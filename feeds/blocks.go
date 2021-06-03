@@ -7,9 +7,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/OpenZeppelin/fortify-node/domain"
-	"github.com/OpenZeppelin/fortify-node/ethereum"
-	"github.com/OpenZeppelin/fortify-node/utils"
+	"fortify-node/domain"
+	"fortify-node/ethereum"
+	"fortify-node/utils"
 )
 
 var ErrEndBlockReached = errors.New("end block reached")

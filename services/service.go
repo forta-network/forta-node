@@ -10,7 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/OpenZeppelin/fortify-node/config"
+	"fortify-node/config"
 )
 
 type Service interface {

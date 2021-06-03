@@ -8,8 +8,8 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/OpenZeppelin/fortify-node/protocol"
-	"github.com/OpenZeppelin/fortify-node/utils"
+	"fortify-node/protocol"
+	"fortify-node/utils"
 )
 
 type EventType string
