@@ -2,11 +2,11 @@ on:
   push:
     branches: [ master ]
 
-name: Deploy to Dev
+name: Deploy
 
 jobs:
   deploy:
-    name: Deploy Dev
+    name: Deploy
     runs-on: ubuntu-latest
     environment: dev
 
