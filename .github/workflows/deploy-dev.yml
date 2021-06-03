@@ -13,8 +13,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Copy via ssh
-        uses: garygrossgarten/github-action-scp@v0.7.3
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
