@@ -103,4 +103,7 @@ jobs:
           host: ${{ secrets.DEV_HOST }}
           username: ${{ secrets.DEV_SSH_USER }}
           key: ${{ secrets.DEV_SSH_KEY }}
-          script: /home/ec2-user/fortify/start-dev.sh ${{ github.sha }}
+          script: |
+            chmod 755 /home/ec2-user/fortify/start-dev.sh
+            chmod 755 /home/ec2-user/fortify/fortify
+            /home/ec2-user/fortify/start-dev.sh ${{ github.sha }}
