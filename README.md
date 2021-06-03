@@ -1,3 +1,5 @@
+![Go](https://github.com/OpenZeppelin/defender/workflows/Go/badge.svg)
+
 ## fortify-node
 
 #### Dependencies
