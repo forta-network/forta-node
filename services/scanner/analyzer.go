@@ -1,8 +1,8 @@
 package scanner
 
 import (
-	"OpenZeppelin/fortify-node/config"
-	"OpenZeppelin/fortify-node/protocol"
+	"github.com/OpenZeppelin/fortify-node/config"
+	"github.com/OpenZeppelin/fortify-node/protocol"
 )
 
 type AnalyzerAgent struct {

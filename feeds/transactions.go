@@ -7,9 +7,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 
-	"OpenZeppelin/fortify-node/domain"
-	"OpenZeppelin/fortify-node/ethereum"
-	"OpenZeppelin/fortify-node/utils"
+	"github.com/OpenZeppelin/fortify-node/domain"
+	"github.com/OpenZeppelin/fortify-node/ethereum"
+	"github.com/OpenZeppelin/fortify-node/utils"
 )
 
 type TransactionFeed interface {

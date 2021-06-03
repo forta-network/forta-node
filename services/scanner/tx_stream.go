@@ -5,9 +5,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"OpenZeppelin/fortify-node/domain"
-	"OpenZeppelin/fortify-node/ethereum"
-	"OpenZeppelin/fortify-node/feeds"
+	"github.com/OpenZeppelin/fortify-node/domain"
+	"github.com/OpenZeppelin/fortify-node/ethereum"
+	"github.com/OpenZeppelin/fortify-node/feeds"
 )
 
 // TxStreamService pulls TX info from providers and emits to channel

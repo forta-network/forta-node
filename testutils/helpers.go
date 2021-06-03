@@ -3,7 +3,7 @@ package testutils
 import (
 	"fmt"
 
-	"OpenZeppelin/fortify-node/domain"
+	"github.com/OpenZeppelin/fortify-node/domain"
 )
 
 // mocking code borrowed from go-ethereum/core/types tests

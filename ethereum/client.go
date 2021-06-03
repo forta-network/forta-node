@@ -11,8 +11,8 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	log "github.com/sirupsen/logrus"
 
-	"OpenZeppelin/fortify-node/domain"
-	"OpenZeppelin/fortify-node/utils"
+	"github.com/OpenZeppelin/fortify-node/domain"
+	"github.com/OpenZeppelin/fortify-node/utils"
 )
 
 type rpcClient interface {
