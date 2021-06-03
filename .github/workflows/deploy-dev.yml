@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [ master ]
 
-name: Deploy to Amazon ECS
+name: Deploy to Dev
 
 jobs:
   deploy:
@@ -97,10 +97,10 @@ jobs:
           docker push $ECR_REGISTRY/fortify-scanner:$IMAGE_TAG
           docker push $ECR_REGISTRY/fortify-query:latest
           docker push $ECR_REGISTRY/fortify-query:$IMAGE_TAG
-      - name: Executing remote ssh commands using password
+      - name: Restarting Fortify
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.DEV_HOST }}
           username: ${{ secrets.DEV_SSH_USER }}
           key: ${{ secrets.DEV_SSH_KEY }}
-          script: ./start-dev.sh ${{ github.sha }}
+          script: /home/ec2-user/fortify/start-dev.sh ${{ github.sha }}
