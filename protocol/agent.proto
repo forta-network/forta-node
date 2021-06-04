@@ -60,6 +60,7 @@ message Finding {
   Severity severity = 2;
   map<string, string> metadata = 3;
   FindingType type = 4;
+  string alertId = 5;
 }
 
 message EvaluateTxResponse {

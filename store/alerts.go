@@ -30,6 +30,9 @@ type FilterCriterion struct {
 }
 
 func stringVal(fieldName string, alert *protocol.Alert) (string, bool) {
+	if fieldName == "alertId" {
+		return alert.Finding.AlertId, true
+	}
 	if fieldName == "severity" {
 		return alert.Finding.Severity.String(), true
 	}
