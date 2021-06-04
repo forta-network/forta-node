@@ -23,7 +23,7 @@ json-rpc-proxy:
 agents:
   - name: "example-agent"
     image: "openzeppelin/fortify-agent:latest"
-    imageHash: "sha256:d2edd2040544eba5c46f539b45684742bf71f010067469e588af2b8e90ddacdd"
+    imageHash: "sha256:567a1190b892fc8d46ec464c5dd6bba7967a608616867f575373d643b90bddfb"
 
 log:
   level: info

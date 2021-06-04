@@ -19,6 +19,7 @@ main:
 	docker create --name build-fortify build-fortify
 	docker cp build-fortify:/main fortify
 	docker rm -f build-fortify
+	chmod 755 fortify
 
 proto:
 	protoc -I=protocol --go-grpc_out=protocol/. --go_out=protocol/. protocol/agent.proto
