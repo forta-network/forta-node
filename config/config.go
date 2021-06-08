@@ -13,6 +13,7 @@ import (
 const EnvFortifyConfig = "FORTIFY_CONFIG"
 const EnvJsonRpcHost = "JSON_RPC_HOST"
 const EnvJsonRpcPort = "JSON_RPC_PORT"
+const EnvAgentGrpcPort = "AGENT_GRPC_PORT"
 const FortifyPrefix = "fortify"
 
 //TODO: figure out protocol for this other than direct communication
@@ -61,6 +62,10 @@ type LogConfig struct {
 
 func (ac AgentConfig) ContainerName() string {
 	return fmt.Sprintf("%s-agent-%s", FortifyPrefix, ac.Name)
+}
+
+func (ac AgentConfig) GrpcPort() string {
+	return "50051"
 }
 
 type Config struct {

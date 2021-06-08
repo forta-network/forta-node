@@ -71,8 +71,9 @@ func (t *TxNodeService) Start() error {
 			NetworkID:      nwID,
 			LinkNetworkIDs: []string{},
 			Env: map[string]string{
-				config.EnvJsonRpcHost: jsonRpcProxyName,
-				config.EnvJsonRpcPort: "8545",
+				config.EnvJsonRpcHost:   jsonRpcProxyName,
+				config.EnvJsonRpcPort:   "8545",
+				config.EnvAgentGrpcPort: agent.GrpcPort(),
 			},
 			MaxLogFiles: maxLogFiles,
 			MaxLogSize:  maxLogSize,

@@ -191,7 +191,7 @@ func (t *TxAnalyzerService) Name() string {
 func NewTxAnalyzerService(ctx context.Context, cfg TxAnalyzerServiceConfig) (*TxAnalyzerService, error) {
 	var agents []AnalyzerAgent
 	for _, agt := range cfg.AgentConfigs {
-		conn, err := grpc.Dial(fmt.Sprintf("%s:50051", agt.ContainerName()), grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(10*time.Second))
+		conn, err := grpc.Dial(fmt.Sprintf("%s:%s", agt.ContainerName(), agt.GrpcPort()), grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(10*time.Second))
 		if err != nil {
 			log.Fatalf("did not connect to %s, %v", agt.ContainerName(), err)
 		}
