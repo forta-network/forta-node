@@ -186,7 +186,7 @@ func (t *BlockAnalyzerService) Name() string {
 func NewBlockAnalyzerService(ctx context.Context, cfg BlockAnalyzerServiceConfig) (*BlockAnalyzerService, error) {
 	var agents []AnalyzerAgent
 	for _, agt := range cfg.AgentConfigs {
-		conn, err := grpc.Dial(fmt.Sprintf("%s:%s", agt.ContainerName(), agt.GrpcPort()), grpc.WithInsecure(), grpc.WithBlock())
+		conn, err := grpc.Dial(fmt.Sprintf("%s:%s", agt.ContainerName(), agt.GrpcPort()), grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(10*time.Second))
 		if err != nil {
 			log.Fatalf("did not connect to %s, %v", agt.ContainerName(), err)
 		}
