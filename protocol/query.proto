@@ -1,4 +1,7 @@
 syntax = "proto3";
+
+package com.openzeppelin.fortify;
+
 import public "agent.proto";
 
 option go_package = "./;protocol";

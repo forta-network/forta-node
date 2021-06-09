@@ -132,5 +132,10 @@ func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 		Network:     nw,
 		Traces:      traces,
 		Addresses:   addresses,
+		Block: &protocol.TransactionEvent_EthBlock{
+			BlockHash:      t.BlockEvt.Block.Hash,
+			BlockNumber:    t.BlockEvt.Block.Number,
+			BlockTimestamp: t.BlockEvt.Block.Timestamp,
+		},
 	}, nil
 }
