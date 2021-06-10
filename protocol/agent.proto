@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+package com.openzeppelin.fortify;
+
 option go_package = "./;protocol";
 
 service Agent {
@@ -105,6 +107,7 @@ message TransactionEvent {
   message EthBlock {
     string blockHash = 1;
     string blockNumber = 2;
+    string blockTimestamp = 3;
   }
 
   message EthTransaction {
@@ -119,6 +122,7 @@ message TransactionEvent {
     string s = 9;
     string to = 10;
     string hash = 11;
+    string from = 12;
   }
 
   message Log {
@@ -184,4 +188,5 @@ message TransactionEvent {
   Network network = 4;
   repeated Trace traces = 5;
   map<string, bool> addresses = 6;
+  EthBlock block = 7;
 }
