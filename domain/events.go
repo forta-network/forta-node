@@ -47,7 +47,7 @@ type TransactionEvent struct {
 	Receipt     *TransactionReceipt
 }
 
-func safeAddStrValeToMap(addresses map[string]bool, addr string) {
+func safeAddStrValueToMap(addresses map[string]bool, addr string) {
 	if addr != "" {
 		addresses[addr] = true
 	}
@@ -127,9 +127,9 @@ func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 			return nil, err
 		}
 
-		safeAddStrValeToMap(addresses, receipt.ContractAddress)
+		safeAddStrValueToMap(addresses, receipt.ContractAddress)
 		for _, l := range receipt.Logs {
-			safeAddStrValeToMap(addresses, l.Address)
+			safeAddStrValueToMap(addresses, l.Address)
 		}
 	}
 
