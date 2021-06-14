@@ -47,6 +47,12 @@ type TransactionEvent struct {
 	Receipt     *TransactionReceipt
 }
 
+func safeAddStrValeToMap(addresses map[string]bool, addr string) {
+	if addr != "" {
+		addresses[addr] = true
+	}
+}
+
 func safeAddStrToMap(addresses map[string]bool, addr *string) {
 	if addr != nil {
 		addresses[*addr] = true
@@ -113,10 +119,17 @@ func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := um.Unmarshal(bytes.NewReader(receiptJson), &receipt); err != nil {
+		err = um.Unmarshal(bytes.NewReader(receiptJson), &receipt)
+
+		if err != nil {
 			log.Errorf("cannot unmarshal receiptJson: %s", err.Error())
 			log.Errorf("JSON: %s", string(receiptJson))
 			return nil, err
+		}
+
+		safeAddStrValeToMap(addresses, receipt.ContractAddress)
+		for _, l := range receipt.Logs {
+			safeAddStrValeToMap(addresses, l.Address)
 		}
 	}
 
