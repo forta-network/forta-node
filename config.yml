@@ -21,7 +21,7 @@ json-rpc-proxy:
 agents:
   - name: "example-agent"
     image: "openzeppelin/fortify-agent:latest"
-    imageHash: "sha256:2c1304243b69a7daea49d5b62b9a4b589b5378299c9f9ffb62ba12178f425787"
+    imageHash: "sha256:af480655d5f64955f5c579469d20fdc26540cd262f19f804c66a5618b5f07e25"
 #  - name: "flash-loans"
 #    image: "openzeppelin/lab-flash-loans:latest"
 #    imageHash: "sha256:b33c53cbbf29faa3511d4e339288e3d86d290771535d3dcd15f8ba23d7c91a99"
