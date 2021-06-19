@@ -22,7 +22,7 @@ json-rpc-proxy:
 
 agents:
   - name: "high-gas"
-    image: "997179694723.dkr.ecr.us-west-2.amazonaws.com/fortify-agent-lab:high-gas-aec3ab981bfc0224b61d57b186d84501da38e2ae"
+    image: "997179694723.dkr.ecr.us-west-2.amazonaws.com/fortify-agent-lab:high-gas-48e19c3ba4590d921c0faa9f60e27c86471e1d05"
 
 log:
   level: info
