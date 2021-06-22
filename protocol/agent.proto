@@ -63,6 +63,8 @@ message Finding {
   map<string, string> metadata = 3;
   FindingType type = 4;
   string alertId = 5;
+  string name = 6;
+  string description = 7;
 }
 
 message EvaluateTxResponse {
