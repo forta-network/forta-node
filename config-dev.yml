@@ -22,9 +22,9 @@ json-rpc-proxy:
 
 agents:
   - name: "high-gas"
-    image: "997179694723.dkr.ecr.us-west-2.amazonaws.com/fortify-agent-lab:high-gas-48e19c3ba4590d921c0faa9f60e27c86471e1d05"
+    image: "997179694723.dkr.ecr.us-west-2.amazonaws.com/fortify-agent-lab:high-gas-9ebdb8de0ea28460d42910020d7f1f1acd3eb2f5"
   - name: "ownership-change"
-    image: "997179694723.dkr.ecr.us-west-2.amazonaws.com/fortify-agent-lab:ownership-change-a64b652c20c2c2e37e2dbedde508c400e53ad85d"
+    image: "997179694723.dkr.ecr.us-west-2.amazonaws.com/fortify-agent-lab:ownership-change-9ebdb8de0ea28460d42910020d7f1f1acd3eb2f5"
 
 log:
   level: info
