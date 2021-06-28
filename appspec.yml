@@ -2,9 +2,9 @@ version: 0.0
 os: linux
 files:
   - source: fortify
-    destination: /usr/bin/fortify
+    destination: /usr/local/bin/
   - source: config-fortify-dev.yml
-    destination: /etc/fortify/config.yml
+    destination: /etc/fortify/
 hooks:
   ApplicationStop:
     - location: scripts/stop-server.sh
@@ -13,7 +13,7 @@ hooks:
   AfterInstall:
     - location: scripts/set-permissions.sh
       timeout: 300
-      runas: fortify
+      runas: root
     - location: scripts/load-images.sh
       timeout: 300
       runas: fortify
