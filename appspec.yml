@@ -3,22 +3,27 @@ os: linux
 files:
   - source: fortify
     destination: /usr/bin/fortify
-  - source: config-dev.yml
+  - source: config-fortify-dev.yml
     destination: /etc/fortify/config.yml
+  - source: scripts
+    destination: /home/fortify/scripts
 hooks:
   ApplicationStop:
-    - location: scripts/stop-server.sh
+    - location: /home/fortify/scripts/stop-server.sh
       timeout: 300
-      runas: root
+      runas: fortify
   AfterInstall:
-    - location: scripts/set-permissions.sh
+    - location: /home/fortify/scripts/set-permissions.sh
       timeout: 300
-      runas: root
+      runas: fortify
+    - location: /home/fortify/scripts/load-images.sh
+      timeout: 300
+      runas: fortify
   ApplicationStart:
-    - location: scripts/start-server.sh
+    - location: /home/fortify/scripts/start-server.sh
       timeout: 300
       runas: fortify
   AfterAllowTraffic:
-    - location: scripts/after-start.sh
+    - location: /home/fortify/scripts/after-start.sh
       timeout: 300
       runas: fortify
