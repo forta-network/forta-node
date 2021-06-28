@@ -1,7 +1,5 @@
 #!/bin/bash
 
-source /home/fortify/.bash_profile
-
 region=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)
 accountId=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .accountId)
 
