@@ -79,6 +79,7 @@ jobs:
           mkdir dist
           cp fortify dist/
           cp config-fortify-dev.yml dist/
+          cp appspec.yml dist/
           cp -R scripts dist/
       - name: Zip Distribution
         uses: vimtor/action-zip@v1
