@@ -34,13 +34,18 @@ jobs:
         run: |
           make build
           chmod 755 fortify
-      - name: Populate Templates
-        run: |
-          sed -i 's/GITHUB_HASH/${{ github.sha }}/g' config-fortify-dev.yml
-          sed -i 's/GITHUB_HASH/${{ github.sha }}/g' scripts/load-images.sh
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
+      - name: Populate Templates
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          GITHUB_HASH: ${{ github.sha }}
+        run: |
+          sed -i "s/GITHUB_HASH/$GITHUB_HASH/g" config-fortify-dev.yml
+          sed -i "s/ECR_REGISTRY/$ECR_REGISTRY/g" config-fortify-dev.yml
+          sed -i "s/GITHUB_HASH/$GITHUB_HASH/g" scripts/load-images.sh
+          sed -i "s/ECR_REGISTRY/$ECR_REGISTRY/g" scripts/load-images.sh
       - name: Build and Tag ECR images
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
