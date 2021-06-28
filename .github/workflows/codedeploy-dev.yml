@@ -80,7 +80,7 @@ jobs:
           cp fortify dist/
           cp config-fortify-dev.yml dist/
           cp -R scripts dist/
-      - name: Easy Zip Files
+      - name: Zip Distribution
         uses: vimtor/action-zip@v1
         with:
           files: dist/
@@ -98,5 +98,5 @@ jobs:
           codedeploy_name: ${{ secrets.DEV_CODEDEPLOY_APP }}
           codedeploy_group: ${{ secrets.DEV_CODEDEPLOY_GROUP }}
           s3_bucket: ${{ secrets.DEV_DEPLOY_BUCKET }}
-          s3_folder: /
-          archive: deploy.zip
+          s3_folder: dev
+          directory: ./dist/
