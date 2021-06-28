@@ -89,3 +89,14 @@ jobs:
         with:
           name: deploy-artifact
           path: ${{ github.workspace }}/deploy.zip
+      - name: AWS CodeDeploy
+        uses: sourcetoad/aws-codedeploy-action@v1
+        with:
+          aws_access_key: ${{ secrets.DEV_DEPLOY_AWS_ACCESS_KEY }}
+          aws_secret_key: ${{ secrets.DEV_DEPLOY_AWS_SECRET_KEY }}
+          aws_region: ${{ secrets.DEV_DEPLOY_AWS_REGION }}
+          codedeploy_name: ${{ secrets.DEV_CODEDEPLOY_APP }}
+          codedeploy_group: ${{ secrets.DEV_CODEDEPLOY_GROUP }}
+          s3_bucket: ${{ secrets.DEV_DEPLOY_BUCKET }}
+          s3_folder: /
+          archive: deploy.zip
