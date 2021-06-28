@@ -1,0 +1,73 @@
+name: Go
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1
+      - name: Install protoc-gen-go-grpc
+        run: |
+          go get -u github.com/golang/protobuf/protoc-gen-go
+          go get -u google.golang.org/grpc/cmd/protoc-gen-go-grpc
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.DEV_DEPLOY_AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.DEV_DEPLOY_AWS_SECRET_KEY }}
+          aws-region: ${{ secrets.DEV_DEPLOY_AWS_REGION }}
+      - name: Make Containers
+        run: |
+          make build
+          chmod 755 fortify
+          sed -i 's/GITHUB_HASH/${{ github.sha }}/g' config-dev.yml
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+      - name: Build and Tag ECR images
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Build a docker container and
+          # push it to ECR so that it can
+          # be deployed to ECS.
+
+          # scanner
+          docker tag openzeppelin/fortify-scanner:latest $ECR_REGISTRY/fortify-scanner:latest
+          docker tag openzeppelin/fortify-scanner:latest $ECR_REGISTRY/fortify-scanner:$IMAGE_TAG
+
+          # query
+          docker tag openzeppelin/fortify-query:latest $ECR_REGISTRY/fortify-query:latest
+          docker tag openzeppelin/fortify-query:latest $ECR_REGISTRY/fortify-query:$IMAGE_TAG
+
+          # json-rpc
+          docker tag openzeppelin/fortify-json-rpc:latest $ECR_REGISTRY/fortify-json-rpc:latest
+          docker tag openzeppelin/fortify-json-rpc:latest $ECR_REGISTRY/fortify-json-rpc:$IMAGE_TAG
+
+          echo "::set-output name=image::$IMAGE_TAG"
+      - name: Push to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker push $ECR_REGISTRY/fortify-json-rpc:latest
+          docker push $ECR_REGISTRY/fortify-json-rpc:$IMAGE_TAG
+          docker push $ECR_REGISTRY/fortify-scanner:latest
+          docker push $ECR_REGISTRY/fortify-scanner:$IMAGE_TAG
+          docker push $ECR_REGISTRY/fortify-query:latest
+          docker push $ECR_REGISTRY/fortify-query:$IMAGE_TAG
