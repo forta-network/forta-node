@@ -6,7 +6,7 @@ files:
   - source: config-fortify-dev.yml
     destination: /etc/fortify/
 hooks:
-  ApplicationStop:
+  BeforeInstall:
     - location: scripts/stop-server.sh
       timeout: 300
       runas: fortify
