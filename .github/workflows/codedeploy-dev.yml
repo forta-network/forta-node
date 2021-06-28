@@ -74,10 +74,16 @@ jobs:
           docker push $ECR_REGISTRY/fortify-scanner:$IMAGE_TAG
           docker push $ECR_REGISTRY/fortify-query:latest
           docker push $ECR_REGISTRY/fortify-query:$IMAGE_TAG
+      - name: Prepare Distribution
+        run: |
+          mkdir dist
+          cp fortify dist/
+          cp config-fortify-dev.yml dist/
+          cp -R scripts dist/
       - name: Easy Zip Files
         uses: vimtor/action-zip@v1
         with:
-          files: fortify config-fortify-dev.yml scripts/
+          files: dist/
           dest: deploy.zip
       - uses: actions/upload-artifact@v1
         with:
