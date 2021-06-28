@@ -16,13 +16,19 @@ const EnvJsonRpcPort = "JSON_RPC_PORT"
 const EnvAgentGrpcPort = "AGENT_GRPC_PORT"
 const FortifyPrefix = "fortify"
 
-//TODO: figure out protocol for this other than direct communication
-const EnvQueryNode = "QUERY_NODE"
+const (
+	//TODO: figure out protocol for this other than direct communication
+	EnvQueryNode = "QUERY_NODE"
+	// NATS node name env var
+	EnvNatsNode = "NATS_NODE"
+)
 
 type AgentConfig struct {
-	Name      string `yaml:"name" json:"name"`
-	Image     string `yaml:"image" json:"image"`
-	ImageHash string `yaml:"imageHash" json:"imageHash"`
+	Name       string `yaml:"name" json:"name"`
+	Image      string `yaml:"image" json:"image"`
+	ImageHash  string `yaml:"imageHash" json:"imageHash"`
+	StartBlock uint64 `yaml:"startBlock" json:"startBlock"`
+	StopBlock  uint64 `yaml:"stopBlock" json:"stopBlock"`
 }
 
 type DBConfig struct {

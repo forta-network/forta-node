@@ -20,6 +20,7 @@ var labels = map[string]string{dockerResourcesLabel: "true"}
 
 // DockerContainer is a resulting container reference, including the ID and configuration
 type DockerContainer struct {
+	Name      string
 	ID        string
 	ImageHash string
 	Config    DockerContainerConfig
@@ -39,17 +40,32 @@ type DockerContainerConfig struct {
 	MaxLogFiles    int
 }
 
+// DockerContainerList contains the full container data.
+type DockerContainerList []types.Container
+
+// FindByID finds the container by the ID.
+func (dcl DockerContainerList) FindByID(id string) (*types.Container, bool) {
+	for _, container := range dcl {
+		if container.ID == id {
+			return &container, true
+		}
+	}
+	return nil, false
+}
+
 // DockerClient is a client interface for interacting with docker
 type DockerClient interface {
 	CreatePublicNetwork(ctx context.Context, name string) (string, error)
 	CreateInternalNetwork(ctx context.Context, name string) (string, error)
 	AttachNetwork(ctx context.Context, containerID string, networkID string) error
+	GetContainers(ctx context.Context) (DockerContainerList, error)
 	StartContainer(ctx context.Context, config DockerContainerConfig) (*DockerContainer, error)
 	StopContainer(ctx context.Context, ID string) error
 	Prune(ctx context.Context) error
 }
 
 type dockerClient struct {
+	cli *client.Client
 }
 
 func (cfg DockerContainerConfig) envVars() []string {
@@ -61,12 +77,8 @@ func (cfg DockerContainerConfig) envVars() []string {
 }
 
 func (d *dockerClient) Prune(ctx context.Context) error {
-	cli, err := client.NewClientWithOpts()
-	if err != nil {
-		return err
-	}
 	filter := filters.NewArgs(filters.Arg("label", dockerResourcesLabel))
-	res, err := cli.NetworksPrune(ctx, filter)
+	res, err := d.cli.NetworksPrune(ctx, filter)
 	if err != nil {
 		return err
 	}
@@ -74,7 +86,7 @@ func (d *dockerClient) Prune(ctx context.Context) error {
 		log.Infof("pruned network %s", nw)
 	}
 
-	cpRes, err := cli.ContainersPrune(ctx, filter)
+	cpRes, err := d.cli.ContainersPrune(ctx, filter)
 	if err != nil {
 		return err
 	}
@@ -94,11 +106,7 @@ func (d *dockerClient) CreateInternalNetwork(ctx context.Context, name string) (
 }
 
 func (d *dockerClient) createNetwork(ctx context.Context, name string, internal bool) (string, error) {
-	cli, err := client.NewClientWithOpts()
-	if err != nil {
-		return "", err
-	}
-	resp, err := cli.NetworkCreate(ctx, name, types.NetworkCreate{
+	resp, err := d.cli.NetworkCreate(ctx, name, types.NetworkCreate{
 		Labels:   labels,
 		Internal: internal,
 	})
@@ -109,11 +117,7 @@ func (d *dockerClient) createNetwork(ctx context.Context, name string, internal 
 }
 
 func (d *dockerClient) AttachNetwork(ctx context.Context, containerID string, networkID string) error {
-	cli, err := client.NewClientWithOpts()
-	if err != nil {
-		return err
-	}
-	return cli.NetworkConnect(ctx, networkID, containerID, nil)
+	return d.cli.NetworkConnect(ctx, networkID, containerID, nil)
 }
 
 func withTcp(port string) string {
@@ -143,13 +147,15 @@ func copyFile(cli *client.Client, ctx context.Context, filename string, content 
 	return cli.CopyToContainer(ctx, containerId, "/", &buf, types.CopyToContainerOptions{})
 }
 
+// GetContainers returns all of the containers.
+func (d *dockerClient) GetContainers(ctx context.Context) (DockerContainerList, error) {
+	return d.cli.ContainerList(ctx, types.ContainerListOptions{
+		All: true,
+	})
+}
+
 // StartContainer kicks off a container as a daemon and returns a summary of the container
 func (d *dockerClient) StartContainer(ctx context.Context, config DockerContainerConfig) (*DockerContainer, error) {
-	cli, err := client.NewClientWithOpts()
-	if err != nil {
-		return nil, err
-	}
-
 	bindings := make(map[nat.Port][]nat.PortBinding)
 	ps := make(nat.PortSet)
 	for hp, cp := range config.Ports {
@@ -176,7 +182,7 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 		maxLogFiles = 10
 	}
 
-	cont, err := cli.ContainerCreate(
+	cont, err := d.cli.ContainerCreate(
 		ctx,
 		&container.Config{
 			Image:  config.Image,
@@ -202,12 +208,12 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 	}
 
 	for fn, b := range config.Files {
-		if err := copyFile(cli, ctx, fn, b, cont.ID); err != nil {
+		if err := copyFile(d.cli, ctx, fn, b, cont.ID); err != nil {
 			return nil, err
 		}
 	}
 
-	if err := cli.ContainerStart(ctx, cont.ID, types.ContainerStartOptions{}); err != nil {
+	if err := d.cli.ContainerStart(ctx, cont.ID, types.ContainerStartOptions{}); err != nil {
 		return nil, err
 	}
 
@@ -218,25 +224,27 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 		}
 	}
 
-	inspection, err := cli.ContainerInspect(ctx, cont.ID)
+	inspection, err := d.cli.ContainerInspect(ctx, cont.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	log.Infof("Container %s (%s) is started", cont.ID, config.Name)
-	return &DockerContainer{ID: cont.ID, Config: config, ImageHash: inspection.Image}, nil
+	return &DockerContainer{Name: config.Name, ID: cont.ID, Config: config, ImageHash: inspection.Image}, nil
 }
 
 // StopContainer kills a container by ID
 func (d *dockerClient) StopContainer(ctx context.Context, ID string) error {
-	cli, err := client.NewClientWithOpts()
-	if err != nil {
-		return err
-	}
-	return cli.ContainerKill(ctx, ID, "SIGKILL")
+	return d.cli.ContainerKill(ctx, ID, "SIGKILL")
 }
 
 // NewDockerClient creates a new docker client
-func NewDockerClient() *dockerClient {
-	return &dockerClient{}
+func NewDockerClient() (*dockerClient, error) {
+	cli, err := client.NewClientWithOpts()
+	if err != nil {
+		return nil, err
+	}
+	return &dockerClient{
+		cli: cli,
+	}, nil
 }

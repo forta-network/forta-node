@@ -1,4 +1,5 @@
 containers:
+	docker pull nats:latest
 	docker build -t openzeppelin/fortify-scanner -f Dockerfile-scanner .
 	docker build -t openzeppelin/fortify-query -f Dockerfile-query .
 	docker build -t openzeppelin/fortify-json-rpc -f Dockerfile-json-rpc .
@@ -32,4 +33,3 @@ build: proto main containers
 
 test:
 	go test ./...
-

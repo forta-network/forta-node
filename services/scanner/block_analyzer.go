@@ -12,12 +12,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/sha3"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc"
 
 	"OpenZeppelin/fortify-node/clients"
-	"OpenZeppelin/fortify-node/config"
 	"OpenZeppelin/fortify-node/domain"
 	"OpenZeppelin/fortify-node/protocol"
+	"OpenZeppelin/fortify-node/services/scanner/agentpool"
 	"OpenZeppelin/fortify-node/store"
 )
 
@@ -26,65 +25,25 @@ type BlockAnalyzerService struct {
 	queryNode protocol.QueryNodeClient
 	cfg       BlockAnalyzerServiceConfig
 	ctx       context.Context
-	agents    []AnalyzerAgent
 }
 
 type BlockAnalyzerServiceConfig struct {
 	BlockChannel <-chan *domain.BlockEvent
 	AlertSender  clients.AlertSender
-	AgentConfigs []config.AgentConfig
+	AgentPool    *agentpool.AgentPool
 }
 
-type evalBlockResp struct {
-	request  *protocol.EvaluateBlockRequest
-	agent    AnalyzerAgent
-	response *protocol.EvaluateBlockResponse
-}
-
-// newAgentStream creates a agent transaction handler (sends and receives request)
-func newAgentBlockStream(ctx context.Context, agent AnalyzerAgent, input <-chan *protocol.EvaluateBlockRequest, output chan<- *evalBlockResp) func() error {
-	return func() error {
-		for request := range input {
-			if ctx.Err() != nil {
-				return ctx.Err()
-			}
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			resp, err := agent.client.EvaluateBlock(ctx, request)
-			cancel()
-			if err != nil {
-				log.Error("error invoking agent", err)
-				continue
-			}
-			resp.Metadata["imageHash"] = agent.config.ImageHash
-			output <- &evalBlockResp{
-				agent:    agent,
-				response: resp,
-				request:  request,
-			}
-
-			m := jsonpb.Marshaler{}
-			resStr, err := m.MarshalToString(resp)
-			if err != nil {
-				log.Error("error marshaling response", err)
-				continue
-			}
-			log.Debugf(resStr)
-		}
-		return nil
-	}
-}
-
-func (t *BlockAnalyzerService) calculateAlertID(resp *evalBlockResp, f *protocol.Finding) (string, error) {
+func (t *BlockAnalyzerService) calculateAlertID(result *agentpool.BlockResult, f *protocol.Finding) (string, error) {
 	findingBytes, err := proto.Marshal(f)
 	if err != nil {
 		return "", err
 	}
-	idStr := fmt.Sprintf("%s%s%s", resp.request.Event.Network.ChainId, resp.request.Event.BlockHash, string(findingBytes))
+	idStr := fmt.Sprintf("%s%s%s", result.Request.Event.Network.ChainId, result.Request.Event.BlockHash, string(findingBytes))
 	return base58.Encode(sha3.New256().Sum([]byte(idStr))), nil
 }
 
-func (t *BlockAnalyzerService) findingToAlert(resp *evalBlockResp, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
-	alertID, err := t.calculateAlertID(resp, f)
+func (t *BlockAnalyzerService) findingToAlert(result *agentpool.BlockResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
+	alertID, err := t.calculateAlertID(result, f)
 	if err != nil {
 		return nil, err
 	}
@@ -94,13 +53,13 @@ func (t *BlockAnalyzerService) findingToAlert(resp *evalBlockResp, ts time.Time,
 		Timestamp: ts.Format(store.AlertTimeFormat),
 		Type:      protocol.AlertType_BLOCK,
 		Agent: &protocol.AgentInfo{
-			Name:      resp.agent.config.Name,
-			Image:     resp.agent.config.Image,
-			ImageHash: resp.agent.config.ImageHash,
+			Name:      result.Agent.Config().Name,
+			Image:     result.Agent.Config().Image,
+			ImageHash: result.Agent.Config().ImageHash,
 		},
 		Tags: map[string]string{
-			"blockHash":   resp.request.Event.BlockHash,
-			"blockNumber": resp.request.Event.BlockNumber,
+			"blockHash":   result.Request.Event.BlockHash,
+			"blockNumber": result.Request.Event.BlockNumber,
 		},
 	}, nil
 }
@@ -110,13 +69,25 @@ func (t *BlockAnalyzerService) Start() error {
 	grp, ctx := errgroup.WithContext(t.ctx)
 
 	//TODO: change this protocol when we know more about query-node delivery
-	// Gear 3: receive result from agent
-	output := make(chan *evalBlockResp, 100)
+	// Gear 2: receive result from agent
 	grp.Go(func() error {
-		for resp := range output {
+		for result := range t.cfg.AgentPool.BlockResults() {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+
 			ts := time.Now().UTC()
-			for _, f := range resp.response.Findings {
-				alert, err := t.findingToAlert(resp, ts, f)
+
+			m := jsonpb.Marshaler{}
+			resStr, err := m.MarshalToString(result.Response)
+			if err != nil {
+				log.Error("error marshaling response", err)
+				continue
+			}
+			log.Debugf(resStr)
+
+			for _, f := range result.Response.Findings {
+				alert, err := t.findingToAlert(result, ts, f)
 				if err != nil {
 					return err
 				}
@@ -128,24 +99,8 @@ func (t *BlockAnalyzerService) Start() error {
 		return nil
 	})
 
-	// Gear 2: set of agents pulling from their own individual channels
-	var agentChannels []chan *protocol.EvaluateBlockRequest
-	for _, agt := range t.agents {
-		agent := agt
-		input := make(chan *protocol.EvaluateBlockRequest, 100)
-		agentChannels = append(agentChannels, input)
-		grp.Go(newAgentBlockStream(ctx, agent, input, output))
-	}
-
-	// Gear 1: loops over transactions and distributes to all agents
+	// Gear 1: loops over blocks and distributes to all agents
 	grp.Go(func() error {
-		defer func() {
-			for _, agtCh := range agentChannels {
-				close(agtCh)
-			}
-			close(output)
-		}()
-
 		// for each block
 		for block := range t.cfg.BlockChannel {
 			if ctx.Err() != nil {
@@ -163,10 +118,8 @@ func (t *BlockAnalyzerService) Start() error {
 			requestId := uuid.Must(uuid.NewUUID())
 			request := &protocol.EvaluateBlockRequest{RequestId: requestId.String(), Event: blockEvt}
 
-			// forward to each agent channel
-			for _, agtCh := range agentChannels {
-				agtCh <- request
-			}
+			// forward to the pool
+			t.cfg.AgentPool.SendEvaluateBlockRequest(request)
 		}
 		return nil
 	})
@@ -184,22 +137,8 @@ func (t *BlockAnalyzerService) Name() string {
 }
 
 func NewBlockAnalyzerService(ctx context.Context, cfg BlockAnalyzerServiceConfig) (*BlockAnalyzerService, error) {
-	var agents []AnalyzerAgent
-	for _, agt := range cfg.AgentConfigs {
-		conn, err := grpc.Dial(fmt.Sprintf("%s:%s", agt.ContainerName(), agt.GrpcPort()), grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(10*time.Second))
-		if err != nil {
-			log.Fatalf("did not connect to %s, %v", agt.ContainerName(), err)
-		}
-		client := protocol.NewAgentClient(conn)
-		agents = append(agents, AnalyzerAgent{
-			config: agt,
-			client: client,
-		})
-	}
-
 	return &BlockAnalyzerService{
-		cfg:    cfg,
-		ctx:    ctx,
-		agents: agents,
+		cfg: cfg,
+		ctx: ctx,
 	}, nil
 }

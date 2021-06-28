@@ -15,7 +15,9 @@ import (
 	"OpenZeppelin/fortify-node/config"
 	"OpenZeppelin/fortify-node/feeds"
 	"OpenZeppelin/fortify-node/services"
+	"OpenZeppelin/fortify-node/services/registry"
 	"OpenZeppelin/fortify-node/services/scanner"
+	"OpenZeppelin/fortify-node/services/scanner/agentpool"
 )
 
 func loadKey() (*keystore.Key, error) {
@@ -73,27 +75,27 @@ func initTxStream(ctx context.Context, cfg config.Config) (*scanner.TxStreamServ
 	})
 }
 
-func initTxAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.TxStreamService) (*scanner.TxAnalyzerService, error) {
+func initTxAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.TxStreamService, ap *agentpool.AgentPool) (*scanner.TxAnalyzerService, error) {
 	qn := os.Getenv(config.EnvQueryNode)
 	if qn == "" {
 		return nil, fmt.Errorf("%s is a required env var", config.EnvQueryNode)
 	}
 	return scanner.NewTxAnalyzerService(ctx, scanner.TxAnalyzerServiceConfig{
-		TxChannel:    stream.ReadOnlyTxStream(),
-		AgentConfigs: cfg.Agents,
-		AlertSender:  as,
+		TxChannel:   stream.ReadOnlyTxStream(),
+		AlertSender: as,
+		AgentPool:   ap,
 	})
 }
 
-func initBlockAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.TxStreamService) (*scanner.BlockAnalyzerService, error) {
+func initBlockAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.TxStreamService, ap *agentpool.AgentPool) (*scanner.BlockAnalyzerService, error) {
 	qn := os.Getenv(config.EnvQueryNode)
 	if qn == "" {
 		return nil, fmt.Errorf("%s is a required env var", config.EnvQueryNode)
 	}
 	return scanner.NewBlockAnalyzerService(ctx, scanner.BlockAnalyzerServiceConfig{
 		BlockChannel: stream.ReadOnlyBlockStream(),
-		AgentConfigs: cfg.Agents,
 		AlertSender:  as,
+		AgentPool:    ap,
 	})
 }
 
@@ -121,20 +123,26 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	if err != nil {
 		return nil, err
 	}
-	txAnalyzer, err := initTxAnalyzer(ctx, cfg, as, txStream)
+
+	agentPool := agentpool.NewAgentPool()
+	txAnalyzer, err := initTxAnalyzer(ctx, cfg, as, txStream, agentPool)
 	if err != nil {
 		return nil, err
 	}
-	blockAnalyzer, err := initBlockAnalyzer(ctx, cfg, as, txStream)
+	blockAnalyzer, err := initBlockAnalyzer(ctx, cfg, as, txStream, agentPool)
 	if err != nil {
 		return nil, err
 	}
+
+	// Finally start the registry service so we know what agents we are running and receive updates.
+	registryService := registry.New(cfg)
 
 	return []services.Service{
 		txStream,
 		txAnalyzer,
 		blockAnalyzer,
 		scanner.NewTxLogger(ctx),
+		registryService,
 	}, nil
 }
 
