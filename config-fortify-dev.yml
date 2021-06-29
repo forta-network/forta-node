@@ -1,0 +1,32 @@
+# This file is used by the development server (on AWS)
+# GITHUB_HASH is replaced on the server at deploy time
+scanner:
+  scannerImage: "ECR_REGISTRY/fortify-scanner:GITHUB_HASH"
+  chainId: 1
+  startBlock: 12723532
+  #endBlock: 11792184
+  disableTracing: true
+  ethereum:
+    jsonRpcUrl: "https://cloudflare-eth.com"
+
+query:
+  queryImage: "ECR_REGISTRY/fortify-query:GITHUB_HASH"
+  port: 8778
+  db:
+    path: "/tmp/fortify-alerts"
+
+json-rpc-proxy:
+  jsonRpcImage: "ECR_REGISTRY/fortify-json-rpc:GITHUB_HASH"
+  ethereum:
+    jsonRpcUrl: "https://cloudflare-eth.com"
+
+agents:
+  - name: "high-gas"
+    image: "ECR_REGISTRY/fortify-agent-lab:high-gas-609e0c238f298c5bf7feb356edec6d80e6e5a8be"
+  - name: "ownership-change"
+    image: "ECR_REGISTRY/fortify-agent-lab:ownership-change-609e0c238f298c5bf7feb356edec6d80e6e5a8be"
+
+log:
+  level: info
+  maxLogSize: 10m
+  maxLogFiles: 10
