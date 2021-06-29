@@ -1,4 +1,4 @@
-name: CodeDeploy
+name: Deploy Dev
 
 on:
   push:

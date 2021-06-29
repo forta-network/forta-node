@@ -1,6 +1,6 @@
 ![Go](https://github.com/OpenZeppelin/fortify-node/workflows/Go/badge.svg)
 ![Deploy](https://github.com/OpenZeppelin/fortify-node/workflows/Deploy/badge.svg)
-
+![Deploy Dev](https://github.com/OpenZeppelin/fortify-node/actions/workflows/deploy-dev.yml/badge.svg)
 ## fortify-node
 
 #### Dependencies
