@@ -12,6 +12,11 @@ import (
 	"google.golang.org/grpc"
 )
 
+// Constants
+const (
+	DefaultBufferSize = 100
+)
+
 // Agent receives blocks and transactions, and produces results.
 type Agent struct {
 	config config.AgentConfig
@@ -27,23 +32,23 @@ type Agent struct {
 }
 
 // NewAgent creates a new agent.
-func NewAgent(agentCfg config.AgentConfig, txResults chan<- *TxResult, blockResults chan<- *BlockResult) Agent {
-	return Agent{
+func NewAgent(agentCfg config.AgentConfig, txResults chan<- *TxResult, blockResults chan<- *BlockResult) *Agent {
+	return &Agent{
 		config:       agentCfg,
-		evalTxCh:     make(chan *protocol.EvaluateTxRequest, 100),
+		evalTxCh:     make(chan *protocol.EvaluateTxRequest, DefaultBufferSize),
 		txResults:    txResults,
-		evalBlockCh:  make(chan *protocol.EvaluateBlockRequest, 100),
+		evalBlockCh:  make(chan *protocol.EvaluateBlockRequest, DefaultBufferSize),
 		blockResults: blockResults,
 	}
 }
 
 // Config returns the agent config.
-func (agent Agent) Config() config.AgentConfig {
+func (agent *Agent) Config() config.AgentConfig {
 	return agent.config
 }
 
 // Close implements io.Closer.
-func (agent Agent) Close() error {
+func (agent *Agent) Close() error {
 	close(agent.evalTxCh)
 	close(agent.evalBlockCh)
 	if agent.conn != nil {
@@ -52,18 +57,31 @@ func (agent Agent) Close() error {
 	return nil
 }
 
-func (agent Agent) connect() error {
+func (agent *Agent) connect() error {
 	cfg := agent.config
-	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", cfg.ContainerName(), cfg.GrpcPort()), grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(10*time.Second))
+	var (
+		conn *grpc.ClientConn
+		err  error
+	)
+	for i := 0; i < 10; i++ {
+		conn, err = grpc.Dial(fmt.Sprintf("%s:%s", cfg.ContainerName(), cfg.GrpcPort()), grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(10*time.Second))
+		if err == nil {
+			break
+		}
+		err = fmt.Errorf("failed to connect to agent '%s': %v", cfg.ContainerName(), err)
+		log.Debug(err)
+		time.Sleep(time.Second * 2)
+	}
 	if err != nil {
-		return fmt.Errorf("failed to connect to agent '%s': %v", cfg.ContainerName(), err)
+		log.Panic(err)
 	}
 	agent.client = protocol.NewAgentClient(conn)
 	agent.conn = conn
+	log.Debugf("connected to agent: %s", cfg.ContainerName())
 	return nil
 }
 
-func (agent Agent) processTransactions() {
+func (agent *Agent) processTransactions() {
 	for request := range agent.evalTxCh {
 		processingState.waitIfPaused()
 
@@ -76,14 +94,14 @@ func (agent Agent) processTransactions() {
 		}
 		resp.Metadata["imageHash"] = agent.config.ImageHash
 		agent.txResults <- &TxResult{
-			Agent:    agent,
-			Request:  request,
-			Response: resp,
+			AgentConfig: agent.config,
+			Request:     request,
+			Response:    resp,
 		}
 	}
 }
 
-func (agent Agent) processBlocks() {
+func (agent *Agent) processBlocks() {
 	for request := range agent.evalBlockCh {
 		processingState.waitIfPaused()
 
@@ -96,20 +114,28 @@ func (agent Agent) processBlocks() {
 		}
 		resp.Metadata["imageHash"] = agent.config.ImageHash
 		agent.blockResults <- &BlockResult{
-			Agent:    agent,
-			Request:  request,
-			Response: resp,
+			AgentConfig: agent.config,
+			Request:     request,
+			Response:    resp,
 		}
 	}
 }
 
-func (agent Agent) shouldProcessBlock(blockNumber string) bool {
+func (agent *Agent) shouldProcessBlock(blockNumber string) bool {
 	n, _ := strconv.ParseUint(blockNumber, 10, 64)
-	if n >= agent.config.StartBlock {
-		return true
+	var isAtLeastStartBlock bool
+	if agent.config.StartBlock != nil {
+		isAtLeastStartBlock = *agent.config.StartBlock >= n
+	} else {
+		isAtLeastStartBlock = true
 	}
-	if n <= agent.config.StopBlock { // stop block is included
-		return true
+
+	var isAtMostStopBlock bool
+	if agent.config.StopBlock != nil {
+		isAtMostStopBlock = *agent.config.StopBlock <= n
+	} else {
+		isAtMostStopBlock = true
 	}
-	return false
+
+	return isAtLeastStartBlock && isAtMostStopBlock
 }

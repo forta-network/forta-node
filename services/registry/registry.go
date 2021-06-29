@@ -10,6 +10,7 @@ import (
 // can stay in sync.
 // TODO: Instead of publishing messages for the static config,
 // check or listen to an actively maintained resource (e.g. a smart contract).
+// TODO: The registry service or the config should construct unique names for the agents.
 type RegistryService struct {
 	cfg config.Config
 }

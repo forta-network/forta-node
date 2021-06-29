@@ -20,7 +20,7 @@ func (t *TxNodeService) startAgent(agent config.AgentConfig) error {
 		NetworkID:      nwID,
 		LinkNetworkIDs: []string{},
 		Env: map[string]string{
-			config.EnvJsonRpcHost:   jsonRpcProxyName,
+			config.EnvJsonRpcHost:   config.DockerJSONRPCProxyContainerName,
 			config.EnvJsonRpcPort:   "8545",
 			config.EnvAgentGrpcPort: agent.GrpcPort(),
 		},
@@ -32,19 +32,21 @@ func (t *TxNodeService) startAgent(agent config.AgentConfig) error {
 	}
 	// Attach the scanner and the JSON-RPC proxy to the agent's network.
 	for _, containerID := range []string{t.scannerContainer.ID, t.jsonRpcContainer.ID} {
-		if err := t.client.AttachNetwork(t.ctx, containerID, nwID); err != nil {
+		err := t.client.AttachNetwork(t.ctx, containerID, nwID)
+		if err == clients.ErrAlreadyExistsInNetwork {
+			continue
+		}
+		if err != nil {
 			return err
 		}
 	}
 
-	t.addContainer(agentContainer)
+	t.addContainerUnsafe(agentContainer)
 
 	return nil
 }
 
-func (t *TxNodeService) getContainer(name string) (*clients.DockerContainer, bool) {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
+func (t *TxNodeService) getContainerUnsafe(name string) (*clients.DockerContainer, bool) {
 	for _, container := range t.containers {
 		if container.Name == name {
 			return container, true
@@ -53,17 +55,21 @@ func (t *TxNodeService) getContainer(name string) (*clients.DockerContainer, boo
 	return nil, false
 }
 
-func (t *TxNodeService) addContainer(container ...*clients.DockerContainer) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
+func (t *TxNodeService) addContainerUnsafe(container ...*clients.DockerContainer) {
 	t.containers = append(t.containers, container...)
 }
 
-func (t *TxNodeService) handleAgentRun(payload interface{}) error {
-	// TODO: Be careful about the agent names (container names) when running two
-	// versions of the same agent. The registry should enforce the correct names.
-	// TODO: Should be idempotent to handle message redelivery cases.
-	for _, agent := range payload.(messaging.AgentPayload) {
+func (t *TxNodeService) handleAgentRun(payload messaging.AgentPayload) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	for _, agent := range payload {
+		_, ok := t.getContainerUnsafe(agent.ContainerName())
+		if ok {
+			log.Infof("agent container '%s' is already running - skipped", agent.ContainerName())
+			continue
+		}
+
 		if err := t.startAgent(agent); err != nil {
 			return err
 		}
@@ -73,21 +79,21 @@ func (t *TxNodeService) handleAgentRun(payload interface{}) error {
 	return nil
 }
 
-func (t *TxNodeService) handleAgentStop(payload interface{}) error {
+func (t *TxNodeService) handleAgentStop(payload messaging.AgentPayload) error {
 	t.mu.Lock()
-	defer t.mu.RUnlock()
+	defer t.mu.Unlock()
 
 	stopped := make(map[string]bool)
-	for _, agentCfg := range payload.(messaging.AgentPayload) {
-		container, ok := t.getContainer(agentCfg.Name)
+	for _, agentCfg := range payload {
+		container, ok := t.getContainerUnsafe(agentCfg.ContainerName())
 		if !ok {
-			log.Warnf("container for agent '%s' was not found - skipping stop action", agentCfg.Name)
+			log.Warnf("container for agent '%s' was not found - skipping stop action", agentCfg.ContainerName())
 			continue
 		}
 		if err := t.client.StopContainer(t.ctx, container.ID); err != nil {
 			return fmt.Errorf("failed to stop container '%s': %v", container.ID, err)
 		}
-		log.Infof("successfully stopped the container: %v", agentCfg.Name)
+		log.Infof("successfully stopped the container: %v", agentCfg.ContainerName())
 		stopped[container.ID] = true
 	}
 
@@ -106,6 +112,6 @@ func (t *TxNodeService) handleAgentStop(payload interface{}) error {
 }
 
 func (tx *TxNodeService) registerMessageHandlers() {
-	messaging.Subscribe(messaging.SubjectAgentsActionRun, tx.handleAgentRun)
-	messaging.Subscribe(messaging.SubjectAgentsActionStop, tx.handleAgentStop)
+	messaging.Subscribe(messaging.SubjectAgentsActionRun, messaging.AgentsHandler(tx.handleAgentRun))
+	messaging.Subscribe(messaging.SubjectAgentsActionStop, messaging.AgentsHandler(tx.handleAgentStop))
 }

@@ -4,7 +4,9 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -17,6 +19,11 @@ import (
 const dockerResourcesLabel = "Fortify"
 
 var labels = map[string]string{dockerResourcesLabel: "true"}
+
+// Client errors
+var (
+	ErrAlreadyExistsInNetwork = errors.New("already exists in network")
+)
 
 // DockerContainer is a resulting container reference, including the ID and configuration
 type DockerContainer struct {
@@ -106,6 +113,17 @@ func (d *dockerClient) CreateInternalNetwork(ctx context.Context, name string) (
 }
 
 func (d *dockerClient) createNetwork(ctx context.Context, name string, internal bool) (string, error) {
+	// Reuse if network exists.
+	networks, err := d.cli.NetworkList(ctx, types.NetworkListOptions{})
+	if err != nil {
+		return "", err
+	}
+	for _, network := range networks {
+		if network.Name == name {
+			return network.ID, nil
+		}
+	}
+
 	resp, err := d.cli.NetworkCreate(ctx, name, types.NetworkCreate{
 		Labels:   labels,
 		Internal: internal,
@@ -117,7 +135,14 @@ func (d *dockerClient) createNetwork(ctx context.Context, name string, internal 
 }
 
 func (d *dockerClient) AttachNetwork(ctx context.Context, containerID string, networkID string) error {
-	return d.cli.NetworkConnect(ctx, networkID, containerID, nil)
+	err := d.cli.NetworkConnect(ctx, networkID, containerID, nil)
+	if err == nil {
+		return nil
+	}
+	if strings.Contains(err.Error(), "already exists") {
+		return ErrAlreadyExistsInNetwork
+	}
+	return err
 }
 
 func withTcp(port string) string {
@@ -156,6 +181,34 @@ func (d *dockerClient) GetContainers(ctx context.Context) (DockerContainerList, 
 
 // StartContainer kicks off a container as a daemon and returns a summary of the container
 func (d *dockerClient) StartContainer(ctx context.Context, config DockerContainerConfig) (*DockerContainer, error) {
+	containers, err := d.GetContainers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// If we already have the container but it is not running, then just start it.
+	var foundContainer *types.Container
+	for _, container := range containers {
+		if len(container.Names) == 0 {
+			continue
+		}
+		foundName := container.Names[0][1:] // remove / in the beginning
+		if foundName == config.Name {
+			foundContainer = &container
+			break
+		}
+	}
+	if foundContainer != nil {
+		if err := d.cli.ContainerStart(ctx, foundContainer.ID, types.ContainerStartOptions{}); err != nil {
+			return nil, err
+		}
+		inspection, err := d.cli.ContainerInspect(ctx, foundContainer.ID)
+		if err != nil {
+			return nil, err
+		}
+		log.Infof("Container %s (%s) is started", foundContainer.ID, config.Name)
+		return &DockerContainer{Name: config.Name, ID: foundContainer.ID, Config: config, ImageHash: inspection.Image}, nil
+	}
+
 	bindings := make(map[nat.Port][]nat.PortBinding)
 	ps := make(nat.PortSet)
 	for hp, cp := range config.Ports {

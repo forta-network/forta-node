@@ -52,9 +52,9 @@ func (t *TxAnalyzerService) findingToAlert(result *agentpool.TxResult, ts time.T
 		Timestamp: ts.Format(store.AlertTimeFormat),
 		Type:      protocol.AlertType_TRANSACTION,
 		Agent: &protocol.AgentInfo{
-			Name:      result.Agent.Config().Name,
-			Image:     result.Agent.Config().Image,
-			ImageHash: result.Agent.Config().ImageHash,
+			Name:      result.AgentConfig.Name,
+			Image:     result.AgentConfig.Image,
+			ImageHash: result.AgentConfig.ImageHash,
 		},
 		Tags: map[string]string{
 			"chainId":     result.Request.Event.Network.ChainId,

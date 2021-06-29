@@ -14,13 +14,6 @@ import (
 	"OpenZeppelin/fortify-node/store"
 )
 
-const ContainerPrefix = "fortify"
-
-var natsName = fmt.Sprintf("%s-nats", ContainerPrefix)
-var scannerName = fmt.Sprintf("%s-scanner", ContainerPrefix)
-var jsonRpcProxyName = fmt.Sprintf("%s-json-rpc", ContainerPrefix)
-var queryName = fmt.Sprintf("%s-query", ContainerPrefix)
-
 // TxNodeService manages the safe-node docker container as a service
 type TxNodeService struct {
 	ctx         context.Context
@@ -62,13 +55,13 @@ func (t *TxNodeService) Start() error {
 		return err
 	}
 
-	nodeNetwork, err := t.client.CreatePublicNetwork(t.ctx, scannerName)
+	nodeNetwork, err := t.client.CreatePublicNetwork(t.ctx, config.DockerNetworkName)
 	if err != nil {
 		return err
 	}
 
 	natsContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
-		Name:  natsName,
+		Name:  config.DockerNatsContainerName,
 		Image: "nats:latest",
 		Ports: map[string]string{
 			"4222": "4222",
@@ -82,11 +75,11 @@ func (t *TxNodeService) Start() error {
 	}
 
 	// Start the messaging client and register handlers.
-	messaging.Start(fmt.Sprintf("%s:4222", natsName))
+	messaging.Start("cli", ":"+config.DefaultNatsPort) // accessible from localhost
 	t.registerMessageHandlers()
 
 	queryContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
-		Name:  queryName,
+		Name:  config.DockerQueryContainerName,
 		Image: t.config.Config.Query.QueryImage,
 		Env: map[string]string{
 			config.EnvFortifyConfig: cfgJson,
@@ -106,7 +99,7 @@ func (t *TxNodeService) Start() error {
 	}
 
 	t.jsonRpcContainer, err = t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
-		Name:  jsonRpcProxyName,
+		Name:  config.DockerJSONRPCProxyContainerName,
 		Image: t.config.Config.JsonRpcProxy.JsonRpcImage,
 		Env: map[string]string{
 			config.EnvFortifyConfig: cfgJson,
@@ -125,12 +118,12 @@ func (t *TxNodeService) Start() error {
 	}
 
 	t.scannerContainer, err = t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
-		Name:  scannerName,
+		Name:  config.DockerScannerContainerName,
 		Image: t.config.Config.Scanner.ScannerImage,
 		Env: map[string]string{
 			config.EnvFortifyConfig: cfgJson,
-			config.EnvQueryNode:     queryName,
-			config.EnvNatsNode:      natsName,
+			config.EnvQueryNode:     config.DockerQueryContainerName,
+			config.EnvNatsHost:      config.DockerNatsContainerName,
 		},
 		Volumes: map[string]string{
 			keyPath: "/.keys",
@@ -146,7 +139,7 @@ func (t *TxNodeService) Start() error {
 		return err
 	}
 
-	t.addContainer(natsContainer, queryContainer, t.jsonRpcContainer, t.scannerContainer)
+	t.addContainerUnsafe(natsContainer, queryContainer, t.jsonRpcContainer, t.scannerContainer)
 
 	go t.healthCheck()
 

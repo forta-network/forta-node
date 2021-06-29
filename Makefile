@@ -33,3 +33,6 @@ build: proto main containers
 
 test:
 	go test ./...
+
+run:
+	go build -o build/fortify . && ./build/fortify --passphrase 123

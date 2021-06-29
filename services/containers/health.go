@@ -52,13 +52,14 @@ func (t *TxNodeService) ensureUp(knownContainer *clients.DockerContainer, foundC
 	case "created", "running", "restarting", "paused", "dead":
 		return nil
 	case "exited":
-		log.Warnf("restarting exited container '%s'", knownContainer.Name)
+		log.Warnf("starting exited container '%s'", knownContainer.Name)
 		_, err := t.client.StartContainer(t.ctx, knownContainer.Config)
 		if err != nil {
 			return fmt.Errorf("failed to start container '%s': %v", knownContainer.Name, err)
 		}
 		return nil
 	default:
-		return fmt.Errorf("unhandled container state: %v", foundContainer.State)
+		log.Panicf("unhandled container state: %s", foundContainer.State)
 	}
+	return nil
 }

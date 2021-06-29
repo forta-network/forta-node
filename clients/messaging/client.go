@@ -1,6 +1,10 @@
 package messaging
 
 import (
+	"encoding/json"
+	"fmt"
+	"sync"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/nats-io/nats.go"
@@ -11,11 +15,16 @@ var (
 	BufferSize = 1000
 
 	defaultClient *Client
+	initOnce      sync.Once
+	logger        *log.Entry
 )
 
 // Start starts the default client.
-func Start(natsURL string) {
-	defaultClient = NewClient(natsURL)
+func Start(name, natsURL string) {
+	initOnce.Do(func() {
+		logger = log.WithField("name", fmt.Sprintf("%s/messaging", name)).WithField("nats", natsURL)
+		defaultClient = NewClient(natsURL)
+	})
 }
 
 // DefaultClient returns the default client.
@@ -25,56 +34,80 @@ func DefaultClient() *Client {
 
 // Client wraps the NATS client to publish and receive our messages.
 type Client struct {
-	ec *nats.EncodedConn
+	nc *nats.Conn
 }
 
 // NewClient creates and starts a new client.
 func NewClient(natsURL string) *Client {
-	nc, err := nats.Connect(natsURL)
-	if err != nil {
-		log.Panicf("failed to connect to nats server: %v", err)
+	logger.Infof("connecting to: %s", natsURL)
+	var (
+		nc  *nats.Conn
+		err error
+	)
+	for i := 0; i < 10; i++ {
+		nc, err = nats.Connect(natsURL)
+		if err == nil {
+			break
+		}
+		err = fmt.Errorf("failed to connect to nats server: %v", err)
+		logger.Error(err)
 	}
-	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
 	if err != nil {
-		log.Panicf("failed to create the encoded connection: %v", err)
+		logger.Panic(err)
 	}
 	client := &Client{
-		ec: ec,
+		nc: nc,
 	}
 	return client
 }
 
+// AgentsHandler handles agents.* subjects.
+type AgentsHandler func(AgentPayload) error
+
 // Subscribe subscribes the consumer to this client.
-func (client *Client) Subscribe(subject string, handler func(interface{}) error) {
+func (client *Client) Subscribe(subject string, handler interface{}) {
 	// TODO: Configure redelivery options somehow.
-	_, err := client.ec.Subscribe(subject, func(m *nats.Msg) {
-		payload, ok := schemaReg(subject)
-		if !ok {
-			return
+	logger := logger.WithField("subject", subject)
+	_, err := client.nc.Subscribe(subject, func(m *nats.Msg) {
+		logger.Debugf("received: %s", string(m.Data))
+
+		var err error
+		switch h := handler.(type) {
+		case AgentsHandler:
+			var payload AgentPayload
+			err = json.Unmarshal(m.Data, &payload)
+			if err != nil {
+				break
+			}
+			err = h(payload)
+
+		default:
+			logger.Panicf("no handler found")
 		}
-		if err := handler(payload); err != nil {
+
+		if err != nil {
 			m.Nak()
-			log.Errorf("failed to handle msg: %v", err)
-		}
-		if err := m.Ack(); err != nil {
-			log.Errorf("failed to ack msg: %v", err)
+			logger.Errorf("failed to handle msg: %v", err)
 		}
 	})
 	if err != nil {
-		log.Panicf("failed to subscribe to '%s': %v", subject, err)
+		logger.Panicf("failed to subscribe: %v", err)
 	}
+	logger.Info("subscribed")
 }
 
 // Publish publishes new messages.
 func (client *Client) Publish(subject string, payload interface{}) {
-	// TODO: Validate payload type?
-	if err := client.ec.Publish(subject, payload); err != nil {
-		log.Errorf("failed to publish msg: %v", err)
+	logger := logger.WithField("subject", subject)
+	data, _ := json.Marshal(payload)
+	if err := client.nc.Publish(subject, data); err != nil {
+		logger.Errorf("failed to publish msg: %v", err)
 	}
+	logger.Debugf("published: %s", string(data))
 }
 
 // Subscribe uses the default client to call Subscribe.
-func Subscribe(subject string, handler func(interface{}) error) {
+func Subscribe(subject string, handler interface{}) {
 	defaultClient.Subscribe(subject, handler)
 }
 

@@ -9,22 +9,22 @@ import (
 
 // TxResult contains request and response data.
 type TxResult struct {
-	Agent    Agent
-	Request  *protocol.EvaluateTxRequest
-	Response *protocol.EvaluateTxResponse
+	AgentConfig config.AgentConfig
+	Request     *protocol.EvaluateTxRequest
+	Response    *protocol.EvaluateTxResponse
 }
 
 // BlockResult contains request and response data.
 type BlockResult struct {
-	Agent    Agent
-	Request  *protocol.EvaluateBlockRequest
-	Response *protocol.EvaluateBlockResponse
+	AgentConfig config.AgentConfig
+	Request     *protocol.EvaluateBlockRequest
+	Response    *protocol.EvaluateBlockResponse
 }
 
 // AgentPool maintains the pool of agents that the scanner should
 // interact with.
 type AgentPool struct {
-	agents       []Agent
+	agents       []*Agent
 	txResults    chan *TxResult
 	blockResults chan *BlockResult
 	mu           sync.RWMutex
@@ -32,21 +32,25 @@ type AgentPool struct {
 
 // NewAgentPool creates a new agent pool.
 func NewAgentPool() *AgentPool {
-	return &AgentPool{
-		txResults:    make(chan *TxResult, 100),
-		blockResults: make(chan *BlockResult, 100),
+	agentPool := &AgentPool{
+		txResults:    make(chan *TxResult, DefaultBufferSize),
+		blockResults: make(chan *BlockResult, DefaultBufferSize),
 	}
+	agentPool.registerMessageHandlers()
+	return agentPool
 }
 
 // SendEvaluateTxRequest sends the request to all of the active agents which
 // should be processing the block.
 func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 	ap.mu.RLock()
-	defer ap.mu.RUnlock()
-	for _, agent := range ap.agents {
-		if agent.shouldProcessBlock(req.Event.Block.BlockNumber) {
-			agent.evalTxCh <- req
+	agents := ap.agents
+	ap.mu.RUnlock()
+	for _, agent := range agents {
+		if !agent.ready || !agent.shouldProcessBlock(req.Event.Block.BlockNumber) {
+			continue
 		}
+		agent.evalTxCh <- req
 	}
 }
 
@@ -59,11 +63,13 @@ func (ap *AgentPool) TxResults() <-chan *TxResult {
 // should be processing the block.
 func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest) {
 	ap.mu.RLock()
-	defer ap.mu.RUnlock()
-	for _, agent := range ap.agents {
-		if agent.shouldProcessBlock(req.Event.BlockNumber) {
-			agent.evalBlockCh <- req
+	agents := ap.agents
+	ap.mu.RUnlock()
+	for _, agent := range agents {
+		if !agent.ready || !agent.shouldProcessBlock(req.Event.BlockNumber) {
+			continue
 		}
+		agent.evalBlockCh <- req
 	}
 }
 
@@ -72,13 +78,13 @@ func (ap *AgentPool) BlockResults() <-chan *BlockResult {
 	return ap.blockResults
 }
 
-func (ap *AgentPool) handleAgentVersionsUpdate(payload interface{}) error {
+func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) error {
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
-	latestVersions := payload.([]config.AgentConfig)
+	latestVersions := payload
 
 	// The agents list which we completely replace with the old ones.
-	var newAgents []Agent
+	var newAgents []*Agent
 
 	// Find the missing agents in the pool, add them to the new agents list
 	// and send a "run" message.
@@ -86,15 +92,12 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload interface{}) error {
 	for _, agentCfg := range latestVersions {
 		var found bool
 		for _, agent := range ap.agents {
-			found = found || (agent.config.Name == agentCfg.Name)
+			found = found || (agent.config.ContainerName() == agentCfg.ContainerName())
 		}
 		if !found {
 			newAgents = append(newAgents, NewAgent(agentCfg, ap.txResults, ap.blockResults))
 			agentsToRun = append(agentsToRun, agentCfg)
 		}
-	}
-	if len(agentsToRun) > 0 {
-		messaging.DefaultClient().Publish(messaging.SubjectAgentsActionRun, agentsToRun)
 	}
 
 	// Find the missing agents in the latest versions and send a "stop" message.
@@ -104,34 +107,37 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload interface{}) error {
 		var found bool
 		var agentCfg config.AgentConfig
 		for _, agentCfg = range latestVersions {
-			found = found || (agent.config.Name == agentCfg.Name)
+			found = found || (agent.config.ContainerName() == agentCfg.ContainerName())
 			if found {
 				break
 			}
 		}
 		if !found {
-			agentsToStop = append(agentsToStop, agentCfg)
+			agentsToStop = append(agentsToStop, agent.config)
 		} else {
 			newAgents = append(newAgents, agent)
 		}
 	}
-	if len(agentsToStop) > 0 {
-		messaging.DefaultClient().Publish(messaging.SubjectAgentsActionStop, agentsToStop)
-	}
 
 	ap.agents = newAgents
 	ap.manageReadinessUnsafe()
+	if len(agentsToRun) > 0 {
+		messaging.DefaultClient().Publish(messaging.SubjectAgentsActionRun, agentsToRun)
+	}
+	if len(agentsToStop) > 0 {
+		messaging.DefaultClient().Publish(messaging.SubjectAgentsActionStop, agentsToStop)
+	}
 	return nil
 }
 
-func (ap *AgentPool) handleStatusRunning(payload interface{}) error {
+func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
 	// If an agent was added before and just started to run, we should mark as ready
 	// and start the processing goroutines.
-	for _, agentCfg := range payload.([]config.AgentConfig) {
+	for _, agentCfg := range payload {
 		for _, agent := range ap.agents {
-			if agent.config.Name == agentCfg.Name {
+			if agent.config.ContainerName() == agentCfg.ContainerName() {
 				if err := agent.connect(); err != nil {
 					return err
 				}
@@ -145,14 +151,14 @@ func (ap *AgentPool) handleStatusRunning(payload interface{}) error {
 	return nil
 }
 
-func (ap *AgentPool) handleStatusStopped(payload interface{}) error {
+func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
-	var newAgents []Agent
+	var newAgents []*Agent
 	for _, agent := range ap.agents {
 		var stopped bool
-		for _, agentCfg := range payload.([]config.AgentConfig) {
-			if agent.config.Name == agentCfg.Name {
+		for _, agentCfg := range payload {
+			if agent.config.ContainerName() == agentCfg.ContainerName() {
 				stopped = true
 				agent.Close()
 				break
@@ -180,6 +186,7 @@ func (ap *AgentPool) manageReadinessUnsafe() {
 }
 
 func (ap *AgentPool) registerMessageHandlers() {
-	messaging.Subscribe(messaging.SubjectAgentsStatusRunning, ap.handleStatusRunning)
-	messaging.Subscribe(messaging.SubjectAgentsStatusStopped, ap.handleStatusStopped)
+	messaging.Subscribe(messaging.SubjectAgentsVersionsLatest, messaging.AgentsHandler(ap.handleAgentVersionsUpdate))
+	messaging.Subscribe(messaging.SubjectAgentsStatusRunning, messaging.AgentsHandler(ap.handleStatusRunning))
+	messaging.Subscribe(messaging.SubjectAgentsStatusStopped, messaging.AgentsHandler(ap.handleStatusStopped))
 }

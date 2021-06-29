@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 
 	"OpenZeppelin/fortify-node/clients"
+	"OpenZeppelin/fortify-node/clients/messaging"
 	"OpenZeppelin/fortify-node/config"
 	"OpenZeppelin/fortify-node/feeds"
 	"OpenZeppelin/fortify-node/services"
@@ -115,6 +116,12 @@ func initAlertSender(ctx context.Context) (clients.AlertSender, error) {
 }
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
+	natsHost := os.Getenv(config.EnvNatsHost)
+	if natsHost == "" {
+		return nil, fmt.Errorf("%s is a required env var", config.EnvNatsHost)
+	}
+	messaging.Start("scanner", fmt.Sprintf("%s:%s", natsHost, config.DefaultNatsPort))
+
 	as, err := initAlertSender(ctx)
 	if err != nil {
 		return nil, err
