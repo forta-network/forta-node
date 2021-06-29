@@ -1,8 +1,8 @@
+name: CodeDeploy
+
 on:
   push:
     branches: [ master ]
-
-name: Deploy
 
 jobs:
   deploy:
@@ -27,18 +27,26 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-west-2
+          aws-access-key-id: ${{ secrets.DEV_DEPLOY_AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.DEV_DEPLOY_AWS_SECRET_KEY }}
+          aws-region: ${{ secrets.DEV_DEPLOY_AWS_REGION }}
       - name: Make Containers
         run: |
           make build
           chmod 755 fortify
-          sed -i 's/GITHUB_HASH/${{ github.sha }}/g' config-dev.yml
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
-      - name: Build, tag ECR images
+      - name: Populate Templates
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          GITHUB_HASH: ${{ github.sha }}
+        run: |
+          sed -i "s/GITHUB_HASH/$GITHUB_HASH/g" config-fortify-dev.yml
+          sed -i "s/ECR_REGISTRY/$ECR_REGISTRY/g" config-fortify-dev.yml
+          sed -i "s/GITHUB_HASH/$GITHUB_HASH/g" scripts/load-images.sh
+          sed -i "s/ECR_REGISTRY/$ECR_REGISTRY/g" scripts/load-images.sh
+      - name: Build and Tag ECR images
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
@@ -60,30 +68,6 @@ jobs:
           docker tag openzeppelin/fortify-json-rpc:latest $ECR_REGISTRY/fortify-json-rpc:$IMAGE_TAG
 
           echo "::set-output name=image::$IMAGE_TAG"
-      - name: Copy fortify cli to remote
-        uses: garygrossgarten/github-action-scp@release
-        with:
-          local: fortify
-          remote: /home/ec2-user/fortify/fortify
-          host: ${{ secrets.DEV_HOST }}
-          username: ${{ secrets.DEV_SSH_USER }}
-          privateKey: ${{ secrets.DEV_SSH_KEY }}
-      - name: Copy config yaml to remote
-        uses: garygrossgarten/github-action-scp@release
-        with:
-          local: config-dev.yml
-          remote: /home/ec2-user/fortify/config.yml
-          host: ${{ secrets.DEV_HOST }}
-          username: ${{ secrets.DEV_SSH_USER }}
-          privateKey: ${{ secrets.DEV_SSH_KEY }}
-      - name: Copy start script to server
-        uses: garygrossgarten/github-action-scp@release
-        with:
-          local: scripts/start-dev.sh
-          remote: /home/ec2-user/fortify/start-dev.sh
-          host: ${{ secrets.DEV_HOST }}
-          username: ${{ secrets.DEV_SSH_USER }}
-          privateKey: ${{ secrets.DEV_SSH_KEY }}
       - name: Push to ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -95,13 +79,30 @@ jobs:
           docker push $ECR_REGISTRY/fortify-scanner:$IMAGE_TAG
           docker push $ECR_REGISTRY/fortify-query:latest
           docker push $ECR_REGISTRY/fortify-query:$IMAGE_TAG
-      - name: Restarting Fortify
-        uses: appleboy/ssh-action@master
+      - name: Prepare Distribution
+        run: |
+          mkdir dist
+          cp fortify dist/
+          cp config-fortify-dev.yml dist/
+          cp appspec.yml dist/
+          cp -R scripts dist/
+      - name: Zip Distribution
+        uses: vimtor/action-zip@v1
         with:
-          host: ${{ secrets.DEV_HOST }}
-          username: ${{ secrets.DEV_SSH_USER }}
-          key: ${{ secrets.DEV_SSH_KEY }}
-          script: |
-            chmod 755 /home/ec2-user/fortify/start-dev.sh
-            chmod 755 /home/ec2-user/fortify/fortify
-            nohup fortify/start-dev.sh ${{ github.sha }} >/dev/null 2>&1 &
+          files: dist/
+          dest: deploy.zip
+      - uses: actions/upload-artifact@v1
+        with:
+          name: deploy-artifact
+          path: ${{ github.workspace }}/deploy.zip
+      - name: AWS CodeDeploy
+        uses: sourcetoad/aws-codedeploy-action@v1
+        with:
+          aws_access_key: ${{ secrets.DEV_DEPLOY_AWS_ACCESS_KEY }}
+          aws_secret_key: ${{ secrets.DEV_DEPLOY_AWS_SECRET_KEY }}
+          aws_region: ${{ secrets.DEV_DEPLOY_AWS_REGION }}
+          codedeploy_name: ${{ secrets.DEV_CODEDEPLOY_APP }}
+          codedeploy_group: ${{ secrets.DEV_CODEDEPLOY_GROUP }}
+          s3_bucket: ${{ secrets.DEV_DEPLOY_BUCKET }}
+          s3_folder: dev
+          directory: ./dist/
