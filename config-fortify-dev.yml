@@ -3,7 +3,7 @@
 scanner:
   scannerImage: "ECR_REGISTRY/fortify-scanner:GITHUB_HASH"
   chainId: 1
-  startBlock: 12723532
+  startBlock: 12743139
   #endBlock: 11792184
   disableTracing: true
   ethereum:
@@ -29,6 +29,6 @@ agents:
     image: "ECR_REGISTRY/fortify-agent-lab:compound-governance-84d0fb97dbd7443c3f19b05c84a582289e8a5074"
    
 log:
-  level: info
+  level: debug
   maxLogSize: 10m
   maxLogFiles: 10
