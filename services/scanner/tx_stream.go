@@ -1,13 +1,12 @@
 package scanner
 
 import (
-	"context"
-
-	log "github.com/sirupsen/logrus"
-
 	"OpenZeppelin/fortify-node/domain"
 	"OpenZeppelin/fortify-node/ethereum"
 	"OpenZeppelin/fortify-node/feeds"
+	"context"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // TxStreamService pulls TX info from providers and emits to channel

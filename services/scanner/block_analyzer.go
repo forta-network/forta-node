@@ -1,6 +1,10 @@
 package scanner
 
 import (
+	"OpenZeppelin/fortify-node/clients"
+	"OpenZeppelin/fortify-node/domain"
+	"OpenZeppelin/fortify-node/protocol"
+	"OpenZeppelin/fortify-node/store"
 	"context"
 	"fmt"
 	"time"
@@ -12,11 +16,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/sha3"
 	"golang.org/x/sync/errgroup"
-
-	"OpenZeppelin/fortify-node/clients"
-	"OpenZeppelin/fortify-node/domain"
-	"OpenZeppelin/fortify-node/protocol"
-	"OpenZeppelin/fortify-node/store"
 )
 
 // BlockAnalyzerService reads TX info, calls agents, and emits results
