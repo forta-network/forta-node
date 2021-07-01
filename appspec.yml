@@ -14,10 +14,10 @@ hooks:
     - location: scripts/set-permissions.sh
       timeout: 300
       runas: root
-    - location: scripts/load-images.sh
-      timeout: 300
-      runas: fortify
     - location: scripts/inject-alchemy-url.sh
+      timeout: 300
+      runas: root
+    - location: scripts/load-images.sh
       timeout: 300
       runas: fortify
   ApplicationStart:
