@@ -13,3 +13,4 @@ envPrefix=$(aws ec2 describe-tags --region $region --filters "Name=resource-id,V
 
 # pull agents by parsing config file
 cat "/etc/fortify/config-fortify-${envPrefix}.yml" | grep image | sed -e 's/.* //g'|xargs -I {} docker pull {}
+docker pull nats:latest

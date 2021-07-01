@@ -4,26 +4,29 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 
 	"OpenZeppelin/fortify-node/clients"
+	"OpenZeppelin/fortify-node/clients/messaging"
 	"OpenZeppelin/fortify-node/config"
 	"OpenZeppelin/fortify-node/store"
 )
 
-const ContainerPrefix = "fortify"
-
-var scannerName = fmt.Sprintf("%s-scanner", ContainerPrefix)
-var jsonRpcProxyName = fmt.Sprintf("%s-json-rpc", ContainerPrefix)
-var queryName = fmt.Sprintf("%s-query", ContainerPrefix)
-
 // TxNodeService manages the safe-node docker container as a service
 type TxNodeService struct {
-	ctx        context.Context
-	client     clients.DockerClient
-	containers []*clients.DockerContainer
-	config     TxNodeServiceConfig
+	ctx         context.Context
+	client      clients.DockerClient
+	msgClient   clients.MessageClient
+	config      TxNodeServiceConfig
+	maxLogSize  string
+	maxLogFiles int
+
+	scannerContainer *clients.DockerContainer
+	jsonRpcContainer *clients.DockerContainer
+	containers       []*clients.DockerContainer
+	mu               sync.RWMutex
 }
 
 type TxNodeServiceConfig struct {
@@ -32,6 +35,19 @@ type TxNodeServiceConfig struct {
 }
 
 func (t *TxNodeService) Start() error {
+	if err := t.start(); err != nil {
+		return err
+	}
+
+	t.msgClient = messaging.NewClient("cli", ":"+config.DefaultNatsPort) // accessible from localhost
+	t.registerMessageHandlers()
+
+	go t.healthCheck()
+
+	return nil
+}
+
+func (t *TxNodeService) start() error {
 	log.Infof("Starting %s", t.Name())
 	_, err := log.ParseLevel(t.config.Config.Log.Level)
 	if err != nil {
@@ -39,8 +55,8 @@ func (t *TxNodeService) Start() error {
 		return err
 	}
 
-	maxLogSize := t.config.Config.Log.MaxLogSize
-	maxLogFiles := t.config.Config.Log.MaxLogFiles
+	t.maxLogSize = t.config.Config.Log.MaxLogSize
+	t.maxLogFiles = t.config.Config.Log.MaxLogFiles
 
 	cfgBytes, err := json.Marshal(t.config.Config)
 	if err != nil {
@@ -53,43 +69,27 @@ func (t *TxNodeService) Start() error {
 		return err
 	}
 
-	nodeNetwork, err := t.client.CreatePublicNetwork(t.ctx, scannerName)
+	nodeNetwork, err := t.client.CreatePublicNetwork(t.ctx, config.DockerNetworkName)
 	if err != nil {
 		return err
 	}
 
-	var networkIDs []string
-	for _, agent := range t.config.Config.Agents {
-		nwID, err := t.client.CreatePublicNetwork(t.ctx, agent.Name)
-		if err != nil {
-			return err
-		}
-		networkIDs = append(networkIDs, nwID)
-		agentContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
-			Name:           agent.ContainerName(),
-			Image:          agent.Image,
-			NetworkID:      nwID,
-			LinkNetworkIDs: []string{},
-			Env: map[string]string{
-				config.EnvJsonRpcHost:   jsonRpcProxyName,
-				config.EnvJsonRpcPort:   "8545",
-				config.EnvAgentGrpcPort: agent.GrpcPort(),
-			},
-			MaxLogFiles: maxLogFiles,
-			MaxLogSize:  maxLogSize,
-		})
-		if err != nil {
-			return err
-		}
-		t.containers = append(t.containers, agentContainer)
-		//TODO: enable hash check scheme once agents are discovered in registry
-		//if agentContainer.ImageHash != agent.ImageHash {
-		//	return fmt.Errorf("agent %s has invalid hash (expected=%s got=%s)", agent.Name, agent.ImageHash, agentContainer.ImageHash)
-		//}
+	natsContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
+		Name:  config.DockerNatsContainerName,
+		Image: "nats:latest",
+		Ports: map[string]string{
+			"4222": "4222",
+		},
+		NetworkID:   nodeNetwork,
+		MaxLogFiles: t.maxLogFiles,
+		MaxLogSize:  t.maxLogSize,
+	})
+	if err != nil {
+		return err
 	}
 
 	queryContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
-		Name:  queryName,
+		Name:  config.DockerQueryContainerName,
 		Image: t.config.Config.Query.QueryImage,
 		Env: map[string]string{
 			config.EnvFortifyConfig: cfgJson,
@@ -101,23 +101,22 @@ func (t *TxNodeService) Start() error {
 			t.config.Config.Query.DB.Path: store.DBPath,
 		},
 		NetworkID:   nodeNetwork,
-		MaxLogFiles: maxLogFiles,
-		MaxLogSize:  maxLogSize,
+		MaxLogFiles: t.maxLogFiles,
+		MaxLogSize:  t.maxLogSize,
 	})
 	if err != nil {
 		return err
 	}
 
-	jsonRpcContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
-		Name:  jsonRpcProxyName,
+	t.jsonRpcContainer, err = t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
+		Name:  config.DockerJSONRPCProxyContainerName,
 		Image: t.config.Config.JsonRpcProxy.JsonRpcImage,
 		Env: map[string]string{
 			config.EnvFortifyConfig: cfgJson,
 		},
-		NetworkID:      nodeNetwork,
-		LinkNetworkIDs: networkIDs,
-		MaxLogFiles:    maxLogFiles,
-		MaxLogSize:     maxLogSize,
+		NetworkID:   nodeNetwork,
+		MaxLogFiles: t.maxLogFiles,
+		MaxLogSize:  t.maxLogSize,
 	})
 	if err != nil {
 		return err
@@ -128,12 +127,13 @@ func (t *TxNodeService) Start() error {
 		return err
 	}
 
-	scannerContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
-		Name:  scannerName,
+	t.scannerContainer, err = t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
+		Name:  config.DockerScannerContainerName,
 		Image: t.config.Config.Scanner.ScannerImage,
 		Env: map[string]string{
 			config.EnvFortifyConfig: cfgJson,
-			config.EnvQueryNode:     queryName,
+			config.EnvQueryNode:     config.DockerQueryContainerName,
+			config.EnvNatsHost:      config.DockerNatsContainerName,
 		},
 		Volumes: map[string]string{
 			keyPath: "/.keys",
@@ -141,21 +141,23 @@ func (t *TxNodeService) Start() error {
 		Files: map[string][]byte{
 			"passphrase": []byte(t.config.Passphrase),
 		},
-		NetworkID:      nodeNetwork,
-		LinkNetworkIDs: networkIDs,
-		MaxLogFiles:    maxLogFiles,
-		MaxLogSize:     maxLogSize,
+		NetworkID:   nodeNetwork,
+		MaxLogFiles: t.maxLogFiles,
+		MaxLogSize:  t.maxLogSize,
 	})
 	if err != nil {
 		return err
 	}
 
-	t.containers = append(t.containers, jsonRpcContainer, scannerContainer, queryContainer)
+	t.addContainerUnsafe(natsContainer, queryContainer, t.jsonRpcContainer, t.scannerContainer)
 
 	return nil
 }
 
 func (t *TxNodeService) Stop() error {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
 	ctx := context.Background()
 	for _, cnt := range t.containers {
 		if err := t.client.StopContainer(ctx, cnt.ID); err != nil {
@@ -172,7 +174,10 @@ func (t *TxNodeService) Name() string {
 }
 
 func NewTxNodeService(ctx context.Context, cfg TxNodeServiceConfig) (*TxNodeService, error) {
-	dockerClient := clients.NewDockerClient()
+	dockerClient, err := clients.NewDockerClient()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create the docker client: %v", err)
+	}
 	return &TxNodeService{
 		ctx:    ctx,
 		client: dockerClient,

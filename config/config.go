@@ -16,13 +16,34 @@ const EnvJsonRpcPort = "JSON_RPC_PORT"
 const EnvAgentGrpcPort = "AGENT_GRPC_PORT"
 const FortifyPrefix = "fortify"
 
-//TODO: figure out protocol for this other than direct communication
-const EnvQueryNode = "QUERY_NODE"
+const (
+	//TODO: figure out protocol for this other than direct communication
+	EnvQueryNode = "QUERY_NODE"
+	// NATS node name env var
+	EnvNatsHost = "NATS_HOST"
+)
+
+// Docker container names
+var (
+	DockerNatsContainerName         = fmt.Sprintf("%s-nats", FortifyPrefix)
+	DockerScannerContainerName      = fmt.Sprintf("%s-scanner", FortifyPrefix)
+	DockerJSONRPCProxyContainerName = fmt.Sprintf("%s-json-rpc", FortifyPrefix)
+	DockerQueryContainerName        = fmt.Sprintf("%s-query", FortifyPrefix)
+
+	DockerNetworkName = DockerScannerContainerName
+)
+
+// Global constant values
+var (
+	DefaultNatsPort = "4222"
+)
 
 type AgentConfig struct {
-	Name      string `yaml:"name" json:"name"`
-	Image     string `yaml:"image" json:"image"`
-	ImageHash string `yaml:"imageHash" json:"imageHash"`
+	Name       string  `yaml:"name" json:"name"`
+	Image      string  `yaml:"image" json:"image"`
+	ImageHash  string  `yaml:"imageHash" json:"imageHash"`
+	StartBlock *uint64 `yaml:"startBlock" json:"startBlock,omitempty"`
+	StopBlock  *uint64 `yaml:"stopBlock" json:"stopBlock,omitempty"`
 }
 
 type DBConfig struct {

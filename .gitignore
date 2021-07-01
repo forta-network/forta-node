@@ -1,10 +1,12 @@
 .idea
 *.iml
 main
-zephyr-node
+fortify-node
 fortify
 !cmd/query
 !cmd/scanner
 *.pb.go
 private.key
 debug
+build
+.vscode
