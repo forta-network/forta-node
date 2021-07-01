@@ -229,5 +229,6 @@ func NewStreamEthClient(ctx context.Context, url string) (*streamEthClient, erro
 	if err != nil {
 		return nil, err
 	}
+	rpcClient.SetHeader("Content-Type", "application/json")
 	return &streamEthClient{rpcClient: rpcClient}, nil
 }
