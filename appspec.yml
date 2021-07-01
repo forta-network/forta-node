@@ -17,6 +17,9 @@ hooks:
     - location: scripts/load-images.sh
       timeout: 300
       runas: fortify
+    - location: scripts/inject-alchemy-url.sh
+      timeout: 300
+      runas: fortify
   ApplicationStart:
     - location: scripts/start-server.sh
       timeout: 300
