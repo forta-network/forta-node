@@ -3,11 +3,11 @@
 scanner:
   scannerImage: "ECR_REGISTRY/fortify-scanner:GITHUB_HASH"
   chainId: 1
-  startBlock: 12743139
+  #startBlock: 12743139
   #endBlock: 11792184
-  disableTracing: true
+  #disableTracing: true
   ethereum:
-    jsonRpcUrl: "https://cloudflare-eth.com"
+    jsonRpcUrl: "http://eth.fortify-dev.com:8545"
 
 query:
   queryImage: "ECR_REGISTRY/fortify-query:GITHUB_HASH"
@@ -18,7 +18,7 @@ query:
 json-rpc-proxy:
   jsonRpcImage: "ECR_REGISTRY/fortify-json-rpc:GITHUB_HASH"
   ethereum:
-    jsonRpcUrl: "https://cloudflare-eth.com"
+    jsonRpcUrl: "http://eth.fortify-dev.com:8545"
 
 agents:
   - name: "high-gas"
