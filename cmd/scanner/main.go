@@ -120,7 +120,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	if natsHost == "" {
 		return nil, fmt.Errorf("%s is a required env var", config.EnvNatsHost)
 	}
-	messaging.Start("scanner", fmt.Sprintf("%s:%s", natsHost, config.DefaultNatsPort))
+	msgClient := messaging.NewClient("scanner", fmt.Sprintf("%s:%s", natsHost, config.DefaultNatsPort))
 
 	as, err := initAlertSender(ctx)
 	if err != nil {
@@ -131,7 +131,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 
-	agentPool := agentpool.NewAgentPool()
+	agentPool := agentpool.NewAgentPool(msgClient)
 	txAnalyzer, err := initTxAnalyzer(ctx, cfg, as, txStream, agentPool)
 	if err != nil {
 		return nil, err
@@ -142,7 +142,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	}
 
 	// Finally start the registry service so we know what agents we are running and receive updates.
-	registryService := registry.New(cfg)
+	registryService := registry.New(cfg, msgClient)
 
 	return []services.Service{
 		txStream,

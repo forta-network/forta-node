@@ -75,7 +75,7 @@ func (t *TxNodeService) handleAgentRun(payload messaging.AgentPayload) error {
 		}
 	}
 	// Broadcast the agent statuses.
-	messaging.Publish(messaging.SubjectAgentsStatusRunning, payload)
+	t.msgClient.Publish(messaging.SubjectAgentsStatusRunning, payload)
 	return nil
 }
 
@@ -107,11 +107,13 @@ func (t *TxNodeService) handleAgentStop(payload messaging.AgentPayload) error {
 	t.containers = remainingContainers
 
 	// Broadcast the agent statuses.
-	messaging.Publish(messaging.SubjectAgentsStatusStopped, payload)
+	if len(payload) > 0 {
+		t.msgClient.Publish(messaging.SubjectAgentsStatusStopped, payload)
+	}
 	return nil
 }
 
-func (tx *TxNodeService) registerMessageHandlers() {
-	messaging.Subscribe(messaging.SubjectAgentsActionRun, messaging.AgentsHandler(tx.handleAgentRun))
-	messaging.Subscribe(messaging.SubjectAgentsActionStop, messaging.AgentsHandler(tx.handleAgentStop))
+func (t *TxNodeService) registerMessageHandlers() {
+	t.msgClient.Subscribe(messaging.SubjectAgentsActionRun, messaging.AgentsHandler(t.handleAgentRun))
+	t.msgClient.Subscribe(messaging.SubjectAgentsActionStop, messaging.AgentsHandler(t.handleAgentStop))
 }

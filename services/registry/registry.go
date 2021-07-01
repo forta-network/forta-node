@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"OpenZeppelin/fortify-node/clients"
 	"OpenZeppelin/fortify-node/clients/messaging"
 	"OpenZeppelin/fortify-node/config"
 	"OpenZeppelin/fortify-node/services"
@@ -12,19 +13,21 @@ import (
 // check or listen to an actively maintained resource (e.g. a smart contract).
 // TODO: The registry service or the config should construct unique names for the agents.
 type RegistryService struct {
-	cfg config.Config
+	cfg       config.Config
+	msgClient clients.MessageClient
 }
 
 // New creates a new service.
-func New(cfg config.Config) services.Service {
+func New(cfg config.Config, msgClient clients.MessageClient) services.Service {
 	return &RegistryService{
-		cfg: cfg,
+		cfg:       cfg,
+		msgClient: msgClient,
 	}
 }
 
 // Start starts the registry service.
 func (rs *RegistryService) Start() error {
-	messaging.Publish(messaging.SubjectAgentsVersionsLatest, rs.cfg.Agents)
+	rs.msgClient.Publish(messaging.SubjectAgentsVersionsLatest, rs.cfg.Agents)
 	return nil
 }
 

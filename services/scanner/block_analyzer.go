@@ -16,7 +16,6 @@ import (
 	"OpenZeppelin/fortify-node/clients"
 	"OpenZeppelin/fortify-node/domain"
 	"OpenZeppelin/fortify-node/protocol"
-	"OpenZeppelin/fortify-node/services/scanner/agentpool"
 	"OpenZeppelin/fortify-node/store"
 )
 
@@ -30,10 +29,10 @@ type BlockAnalyzerService struct {
 type BlockAnalyzerServiceConfig struct {
 	BlockChannel <-chan *domain.BlockEvent
 	AlertSender  clients.AlertSender
-	AgentPool    *agentpool.AgentPool
+	AgentPool    AgentPool
 }
 
-func (t *BlockAnalyzerService) calculateAlertID(result *agentpool.BlockResult, f *protocol.Finding) (string, error) {
+func (t *BlockAnalyzerService) calculateAlertID(result *BlockResult, f *protocol.Finding) (string, error) {
 	findingBytes, err := proto.Marshal(f)
 	if err != nil {
 		return "", err
@@ -42,7 +41,7 @@ func (t *BlockAnalyzerService) calculateAlertID(result *agentpool.BlockResult, f
 	return base58.Encode(sha3.New256().Sum([]byte(idStr))), nil
 }
 
-func (t *BlockAnalyzerService) findingToAlert(result *agentpool.BlockResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
+func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
 	alertID, err := t.calculateAlertID(result, f)
 	if err != nil {
 		return nil, err

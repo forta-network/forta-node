@@ -27,12 +27,13 @@ proto:
 	protoc -I=protocol --go-grpc_out=protocol/. --go_out=protocol/. protocol/query.proto
 
 mocks:
-	mockgen -source ethereum/client.go > ethereum/mocks/mock_client.go
+	mockgen -source ethereum/client.go -destination ethereum/mocks/mock_client.go
+	mockgen -source clients/interfaces.go -destination clients/mocks/mock_clients.go
 
 build: proto main containers
 
 test:
-	go test ./...
+	go test -v -count=1 ./...
 
 run:
 	go build -o build/fortify . && ./build/fortify --passphrase 123

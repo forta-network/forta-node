@@ -1,15 +1,15 @@
 package agentpool
 
 import (
+	"OpenZeppelin/fortify-node/clients"
 	"OpenZeppelin/fortify-node/config"
 	"OpenZeppelin/fortify-node/protocol"
+	"OpenZeppelin/fortify-node/services/scanner"
 	"context"
-	"fmt"
 	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 )
 
 // Constants
@@ -22,17 +22,16 @@ type Agent struct {
 	config config.AgentConfig
 
 	evalTxCh     chan *protocol.EvaluateTxRequest
-	txResults    chan<- *TxResult
+	txResults    chan<- *scanner.TxResult
 	evalBlockCh  chan *protocol.EvaluateBlockRequest
-	blockResults chan<- *BlockResult
+	blockResults chan<- *scanner.BlockResult
 
-	client protocol.AgentClient
-	conn   *grpc.ClientConn
+	client clients.AgentClient
 	ready  bool
 }
 
 // NewAgent creates a new agent.
-func NewAgent(agentCfg config.AgentConfig, txResults chan<- *TxResult, blockResults chan<- *BlockResult) *Agent {
+func NewAgent(agentCfg config.AgentConfig, txResults chan<- *scanner.TxResult, blockResults chan<- *scanner.BlockResult) *Agent {
 	return &Agent{
 		config:       agentCfg,
 		evalTxCh:     make(chan *protocol.EvaluateTxRequest, DefaultBufferSize),
@@ -51,34 +50,12 @@ func (agent *Agent) Config() config.AgentConfig {
 func (agent *Agent) Close() error {
 	close(agent.evalTxCh)
 	close(agent.evalBlockCh)
-	if agent.conn != nil {
-		return agent.conn.Close()
-	}
+	agent.client.Close()
 	return nil
 }
 
-func (agent *Agent) connect() error {
-	cfg := agent.config
-	var (
-		conn *grpc.ClientConn
-		err  error
-	)
-	for i := 0; i < 10; i++ {
-		conn, err = grpc.Dial(fmt.Sprintf("%s:%s", cfg.ContainerName(), cfg.GrpcPort()), grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(10*time.Second))
-		if err == nil {
-			break
-		}
-		err = fmt.Errorf("failed to connect to agent '%s': %v", cfg.ContainerName(), err)
-		log.Debug(err)
-		time.Sleep(time.Second * 2)
-	}
-	if err != nil {
-		log.Panic(err)
-	}
-	agent.client = protocol.NewAgentClient(conn)
-	agent.conn = conn
-	log.Debugf("connected to agent: %s", cfg.ContainerName())
-	return nil
+func (agent *Agent) setClient(agentClient clients.AgentClient) {
+	agent.client = agentClient
 }
 
 func (agent *Agent) processTransactions() {
@@ -93,7 +70,7 @@ func (agent *Agent) processTransactions() {
 			continue
 		}
 		resp.Metadata["imageHash"] = agent.config.ImageHash
-		agent.txResults <- &TxResult{
+		agent.txResults <- &scanner.TxResult{
 			AgentConfig: agent.config,
 			Request:     request,
 			Response:    resp,
@@ -113,7 +90,7 @@ func (agent *Agent) processBlocks() {
 			continue
 		}
 		resp.Metadata["imageHash"] = agent.config.ImageHash
-		agent.blockResults <- &BlockResult{
+		agent.blockResults <- &scanner.BlockResult{
 			AgentConfig: agent.config,
 			Request:     request,
 			Response:    resp,

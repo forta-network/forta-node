@@ -1,40 +1,37 @@
 package agentpool
 
 import (
+	"OpenZeppelin/fortify-node/clients"
+	"OpenZeppelin/fortify-node/clients/agentgrpc"
 	"OpenZeppelin/fortify-node/clients/messaging"
 	"OpenZeppelin/fortify-node/config"
 	"OpenZeppelin/fortify-node/protocol"
+	"OpenZeppelin/fortify-node/services/scanner"
 	"sync"
 )
-
-// TxResult contains request and response data.
-type TxResult struct {
-	AgentConfig config.AgentConfig
-	Request     *protocol.EvaluateTxRequest
-	Response    *protocol.EvaluateTxResponse
-}
-
-// BlockResult contains request and response data.
-type BlockResult struct {
-	AgentConfig config.AgentConfig
-	Request     *protocol.EvaluateBlockRequest
-	Response    *protocol.EvaluateBlockResponse
-}
 
 // AgentPool maintains the pool of agents that the scanner should
 // interact with.
 type AgentPool struct {
 	agents       []*Agent
-	txResults    chan *TxResult
-	blockResults chan *BlockResult
+	txResults    chan *scanner.TxResult
+	blockResults chan *scanner.BlockResult
+	msgClient    clients.MessageClient
+	dialer       func(config.AgentConfig) clients.AgentClient
 	mu           sync.RWMutex
 }
 
 // NewAgentPool creates a new agent pool.
-func NewAgentPool() *AgentPool {
+func NewAgentPool(msgClient clients.MessageClient) *AgentPool {
 	agentPool := &AgentPool{
-		txResults:    make(chan *TxResult, DefaultBufferSize),
-		blockResults: make(chan *BlockResult, DefaultBufferSize),
+		txResults:    make(chan *scanner.TxResult, DefaultBufferSize),
+		blockResults: make(chan *scanner.BlockResult, DefaultBufferSize),
+		msgClient:    msgClient,
+		dialer: func(ac config.AgentConfig) clients.AgentClient {
+			client := agentgrpc.NewClient()
+			client.MustDial(ac)
+			return client
+		},
 	}
 	agentPool.registerMessageHandlers()
 	return agentPool
@@ -55,7 +52,7 @@ func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 }
 
 // TxResults returns the receive-only tx results channel.
-func (ap *AgentPool) TxResults() <-chan *TxResult {
+func (ap *AgentPool) TxResults() <-chan *scanner.TxResult {
 	return ap.txResults
 }
 
@@ -74,7 +71,7 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 }
 
 // BlockResults returns the receive-only tx results channel.
-func (ap *AgentPool) BlockResults() <-chan *BlockResult {
+func (ap *AgentPool) BlockResults() <-chan *scanner.BlockResult {
 	return ap.blockResults
 }
 
@@ -113,6 +110,8 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 			}
 		}
 		if !found {
+			agent.Close()
+			agent.ready = false
 			agentsToStop = append(agentsToStop, agent.config)
 		} else {
 			newAgents = append(newAgents, agent)
@@ -122,10 +121,10 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 	ap.agents = newAgents
 	ap.manageReadinessUnsafe()
 	if len(agentsToRun) > 0 {
-		messaging.DefaultClient().Publish(messaging.SubjectAgentsActionRun, agentsToRun)
+		ap.msgClient.Publish(messaging.SubjectAgentsActionRun, agentsToRun)
 	}
 	if len(agentsToStop) > 0 {
-		messaging.DefaultClient().Publish(messaging.SubjectAgentsActionStop, agentsToStop)
+		ap.msgClient.Publish(messaging.SubjectAgentsActionStop, agentsToStop)
 	}
 	return nil
 }
@@ -138,9 +137,7 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	for _, agentCfg := range payload {
 		for _, agent := range ap.agents {
 			if agent.config.ContainerName() == agentCfg.ContainerName() {
-				if err := agent.connect(); err != nil {
-					return err
-				}
+				agent.setClient(ap.dialer(agent.config))
 				agent.ready = true
 				go agent.processTransactions()
 				go agent.processBlocks()
@@ -159,8 +156,9 @@ func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
 		var stopped bool
 		for _, agentCfg := range payload {
 			if agent.config.ContainerName() == agentCfg.ContainerName() {
-				stopped = true
 				agent.Close()
+				agent.ready = false
+				stopped = true
 				break
 			}
 		}
@@ -186,7 +184,7 @@ func (ap *AgentPool) manageReadinessUnsafe() {
 }
 
 func (ap *AgentPool) registerMessageHandlers() {
-	messaging.Subscribe(messaging.SubjectAgentsVersionsLatest, messaging.AgentsHandler(ap.handleAgentVersionsUpdate))
-	messaging.Subscribe(messaging.SubjectAgentsStatusRunning, messaging.AgentsHandler(ap.handleStatusRunning))
-	messaging.Subscribe(messaging.SubjectAgentsStatusStopped, messaging.AgentsHandler(ap.handleStatusStopped))
+	ap.msgClient.Subscribe(messaging.SubjectAgentsVersionsLatest, messaging.AgentsHandler(ap.handleAgentVersionsUpdate))
+	ap.msgClient.Subscribe(messaging.SubjectAgentsStatusRunning, messaging.AgentsHandler(ap.handleStatusRunning))
+	ap.msgClient.Subscribe(messaging.SubjectAgentsStatusStopped, messaging.AgentsHandler(ap.handleStatusStopped))
 }

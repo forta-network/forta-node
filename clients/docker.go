@@ -60,17 +60,6 @@ func (dcl DockerContainerList) FindByID(id string) (*types.Container, bool) {
 	return nil, false
 }
 
-// DockerClient is a client interface for interacting with docker
-type DockerClient interface {
-	CreatePublicNetwork(ctx context.Context, name string) (string, error)
-	CreateInternalNetwork(ctx context.Context, name string) (string, error)
-	AttachNetwork(ctx context.Context, containerID string, networkID string) error
-	GetContainers(ctx context.Context) (DockerContainerList, error)
-	StartContainer(ctx context.Context, config DockerContainerConfig) (*DockerContainer, error)
-	StopContainer(ctx context.Context, ID string) error
-	Prune(ctx context.Context) error
-}
-
 type dockerClient struct {
 	cli *client.Client
 }

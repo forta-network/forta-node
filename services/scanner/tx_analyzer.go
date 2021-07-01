@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"OpenZeppelin/fortify-node/services/scanner/agentpool"
 	"context"
 	"fmt"
 	"time"
@@ -29,10 +28,10 @@ type TxAnalyzerService struct {
 type TxAnalyzerServiceConfig struct {
 	TxChannel   <-chan *domain.TransactionEvent
 	AlertSender clients.AlertSender
-	AgentPool   *agentpool.AgentPool
+	AgentPool   AgentPool
 }
 
-func (t *TxAnalyzerService) calculateAlertID(result *agentpool.TxResult, f *protocol.Finding) (string, error) {
+func (t *TxAnalyzerService) calculateAlertID(result *TxResult, f *protocol.Finding) (string, error) {
 	findingBytes, err := proto.Marshal(f)
 	if err != nil {
 		return "", err
@@ -41,7 +40,7 @@ func (t *TxAnalyzerService) calculateAlertID(result *agentpool.TxResult, f *prot
 	return base58.Encode(sha3.New256().Sum([]byte(idStr))), nil
 }
 
-func (t *TxAnalyzerService) findingToAlert(result *agentpool.TxResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
+func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
 	alertID, err := t.calculateAlertID(result, f)
 	if err != nil {
 		return nil, err

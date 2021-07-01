@@ -18,6 +18,7 @@ import (
 type TxNodeService struct {
 	ctx         context.Context
 	client      clients.DockerClient
+	msgClient   clients.MessageClient
 	config      TxNodeServiceConfig
 	maxLogSize  string
 	maxLogFiles int
@@ -34,6 +35,19 @@ type TxNodeServiceConfig struct {
 }
 
 func (t *TxNodeService) Start() error {
+	if err := t.start(); err != nil {
+		return err
+	}
+
+	t.msgClient = messaging.NewClient("cli", ":"+config.DefaultNatsPort) // accessible from localhost
+	t.registerMessageHandlers()
+
+	go t.healthCheck()
+
+	return nil
+}
+
+func (t *TxNodeService) start() error {
 	log.Infof("Starting %s", t.Name())
 	_, err := log.ParseLevel(t.config.Config.Log.Level)
 	if err != nil {
@@ -73,10 +87,6 @@ func (t *TxNodeService) Start() error {
 	if err != nil {
 		return err
 	}
-
-	// Start the messaging client and register handlers.
-	messaging.Start("cli", ":"+config.DefaultNatsPort) // accessible from localhost
-	t.registerMessageHandlers()
 
 	queryContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerQueryContainerName,
@@ -140,8 +150,6 @@ func (t *TxNodeService) Start() error {
 	}
 
 	t.addContainerUnsafe(natsContainer, queryContainer, t.jsonRpcContainer, t.scannerContainer)
-
-	go t.healthCheck()
 
 	return nil
 }
