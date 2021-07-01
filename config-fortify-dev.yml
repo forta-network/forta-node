@@ -7,7 +7,7 @@ scanner:
   #endBlock: 11792184
   #disableTracing: true
   ethereum:
-    jsonRpcUrl: "http://eth.fortify-dev.com:8545"
+    jsonRpcUrl: "ALCHEMY_URL"
 
 query:
   queryImage: "ECR_REGISTRY/fortify-query:GITHUB_HASH"
@@ -18,7 +18,7 @@ query:
 json-rpc-proxy:
   jsonRpcImage: "ECR_REGISTRY/fortify-json-rpc:GITHUB_HASH"
   ethereum:
-    jsonRpcUrl: "http://eth.fortify-dev.com:8545"
+    jsonRpcUrl: "ALCHEMY_URL"
 
 agents:
   - name: "high-gas"
