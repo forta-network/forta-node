@@ -19,13 +19,14 @@ type BlockFeed interface {
 }
 
 type blockFeed struct {
-	start   *big.Int
-	end     *big.Int
-	ctx     context.Context
-	client  ethereum.Client
-	cache   utils.Cache
-	chainID *big.Int
-	tracing bool
+	start       *big.Int
+	end         *big.Int
+	ctx         context.Context
+	client      ethereum.Client
+	traceClient ethereum.Client
+	cache       utils.Cache
+	chainID     *big.Int
+	tracing     bool
 }
 
 type BlockFeedConfig struct {
@@ -87,7 +88,7 @@ func (bf *blockFeed) processReorg(parentHash string, handler func(evt *domain.Bl
 
 		var traces []domain.Trace
 		if bf.tracing {
-			traces, err = bf.client.TraceBlock(bf.ctx, blockNum)
+			traces, err = bf.traceClient.TraceBlock(bf.ctx, blockNum)
 			if err != nil {
 				log.Errorf("error tracing block: %s", err.Error())
 				return err
@@ -143,13 +144,7 @@ func (bf *blockFeed) ForEachBlock(handler func(evt *domain.BlockEvent) error) er
 			return err
 		}
 
-		logs, err := bf.client.GetLogs(bf.ctx, block.Hash)
-		if err != nil {
-			log.Errorf("error getting logs for block: %s", err.Error())
-			return err
-		}
-
-		evt := &domain.BlockEvent{EventType: domain.EventTypeBlock, Block: block, ChainID: bf.chainID, Traces: traces, Logs: logs}
+		evt := &domain.BlockEvent{EventType: domain.EventTypeBlock, Block: block, ChainID: bf.chainID, Traces: traces}
 		if err := handler(evt); err != nil {
 			return err
 		}
@@ -164,15 +159,16 @@ func (bf *blockFeed) ForEachBlock(handler func(evt *domain.BlockEvent) error) er
 	}
 }
 
-func NewBlockFeed(ctx context.Context, client ethereum.Client, cfg BlockFeedConfig) (*blockFeed, error) {
+func NewBlockFeed(ctx context.Context, client ethereum.Client, traceClient ethereum.Client, cfg BlockFeedConfig) (*blockFeed, error) {
 	bf := &blockFeed{
-		start:   cfg.Start,
-		end:     cfg.End,
-		ctx:     ctx,
-		client:  client,
-		cache:   utils.NewCache(10000),
-		chainID: cfg.ChainID,
-		tracing: cfg.Tracing,
+		start:       cfg.Start,
+		end:         cfg.End,
+		ctx:         ctx,
+		client:      client,
+		traceClient: traceClient,
+		cache:       utils.NewCache(10000),
+		chainID:     cfg.ChainID,
+		tracing:     cfg.Tracing,
 	}
 	if err := bf.initialize(); err != nil {
 		return nil, err

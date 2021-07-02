@@ -24,7 +24,6 @@ type BlockEvent struct {
 	ChainID   *big.Int
 	Block     *Block
 	Traces    []Trace
-	Logs      []LogEntry
 }
 
 func (t *BlockEvent) ToMessage() (*protocol.BlockEvent, error) {
@@ -45,7 +44,7 @@ func (t *BlockEvent) ToMessage() (*protocol.BlockEvent, error) {
 type TransactionEvent struct {
 	BlockEvt    *BlockEvent
 	Transaction *Transaction
-	Logs        []*LogEntry
+	Receipt     *TransactionReceipt
 }
 
 func safeAddStrValueToMap(addresses map[string]bool, addr string) {
@@ -114,23 +113,24 @@ func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 	}
 
 	// convert receipt domain model to proto
-	var logs []*protocol.TransactionEvent_Log
-
-	for _, l := range t.Logs {
-		var evtLog protocol.TransactionEvent_Log
-		logJson, err := json.Marshal(l)
+	var receipt protocol.TransactionEvent_EthReceipt
+	if t.Receipt != nil {
+		receiptJson, err := json.Marshal(t.Receipt)
 		if err != nil {
 			return nil, err
 		}
-		err = um.Unmarshal(bytes.NewReader(logJson), &evtLog)
+		err = um.Unmarshal(bytes.NewReader(receiptJson), &receipt)
 
 		if err != nil {
-			log.Errorf("cannot unmarshal logJson: %s", err.Error())
-			log.Errorf("JSON: %s", string(logJson))
+			log.Errorf("cannot unmarshal receiptJson: %s", err.Error())
+			log.Errorf("JSON: %s", string(receiptJson))
 			return nil, err
 		}
-		safeAddStrToMap(addresses, l.Address)
-		logs = append(logs, &evtLog)
+
+		safeAddStrValueToMap(addresses, receipt.ContractAddress)
+		for _, l := range receipt.Logs {
+			safeAddStrValueToMap(addresses, l.Address)
+		}
 	}
 
 	nw := &protocol.TransactionEvent_Network{}
@@ -138,28 +138,13 @@ func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 		nw.ChainId = utils.BigIntToHex(t.BlockEvt.ChainID)
 	}
 
-	fakeReceipt := &protocol.TransactionEvent_EthReceipt{
-		Root:              "",
-		Status:            "0x1",
-		CumulativeGasUsed: "0x0",
-		LogsBloom:         "0x0",
-		Logs:              logs,
-		TransactionHash:   t.Transaction.Hash,
-		ContractAddress:   "",
-		GasUsed:           "0x0",
-		BlockHash:         t.BlockEvt.Block.Hash,
-		BlockNumber:       t.BlockEvt.Block.Number,
-		TransactionIndex:  t.Transaction.TransactionIndex,
-	}
-
 	return &protocol.TransactionEvent{
 		Type:        evtType,
 		Transaction: &tx,
-		Logs:        logs,
 		Network:     nw,
 		Traces:      traces,
 		Addresses:   addresses,
-		Receipt:     fakeReceipt,
+		Receipt:     &receipt,
 		Block: &protocol.TransactionEvent_EthBlock{
 			BlockHash:      t.BlockEvt.Block.Hash,
 			BlockNumber:    t.BlockEvt.Block.Number,
