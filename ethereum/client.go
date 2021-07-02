@@ -133,6 +133,7 @@ func (e streamEthClient) BlockByHash(ctx context.Context, hash string) (*domain.
 		}
 		return nil
 	}, RetryOptions{
+		MinBackoff:     pointDur(5 * time.Second),
 		MaxElapsedTime: pointDur(12 * time.Hour),
 		MaxBackoff:     pointDur(15 * time.Second),
 	})
@@ -147,6 +148,7 @@ func (e streamEthClient) TraceBlock(ctx context.Context, number *big.Int) ([]dom
 	err := withBackoff(ctx, name, func(ctx context.Context) error {
 		return e.rpcClient.CallContext(ctx, &result, traceBlock, utils.BigIntToHex(number))
 	}, RetryOptions{
+		MinBackoff:     pointDur(5 * time.Second),
 		MaxElapsedTime: pointDur(12 * time.Hour),
 		MaxBackoff:     pointDur(15 * time.Second),
 	})
@@ -173,6 +175,7 @@ func (e streamEthClient) BlockByNumber(ctx context.Context, number *big.Int) (*d
 		}
 		return nil
 	}, RetryOptions{
+		MinBackoff:     pointDur(5 * time.Second),
 		MaxElapsedTime: pointDur(12 * time.Hour),
 		MaxBackoff:     pointDur(15 * time.Second),
 	})
