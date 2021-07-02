@@ -118,7 +118,7 @@ func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 
 	for _, l := range t.Logs {
 		var evtLog protocol.TransactionEvent_Log
-		logJson, err := json.Marshal(t.Logs)
+		logJson, err := json.Marshal(l)
 		if err != nil {
 			return nil, err
 		}
