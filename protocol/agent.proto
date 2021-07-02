@@ -191,5 +191,4 @@ message TransactionEvent {
   repeated Trace traces = 5;
   map<string, bool> addresses = 6;
   EthBlock block = 7;
-  repeated Log logs = 8;
 }

@@ -7,6 +7,16 @@ scanner:
   #endBlock: 11792184
   #disableTracing: true
   ethereum:
+    jsonRpcUrl: "https://cloudflare-eth.com"
+
+json-rpc-proxy:
+  jsonRpcImage: "ECR_REGISTRY/fortify-json-rpc:GITHUB_HASH"
+  ethereum:
+    jsonRpcUrl: "https://cloudflare-eth.com"
+
+trace:
+  enabled: true
+  ethereum:
     jsonRpcUrl: "ALCHEMY_URL"
 
 query:
@@ -14,11 +24,6 @@ query:
   port: 8778
   db:
     path: "/tmp/fortify-alerts"
-
-json-rpc-proxy:
-  jsonRpcImage: "ECR_REGISTRY/fortify-json-rpc:GITHUB_HASH"
-  ethereum:
-    jsonRpcUrl: "ALCHEMY_URL"
 
 agents:
   - name: "high-gas"

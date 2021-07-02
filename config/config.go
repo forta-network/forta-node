@@ -62,12 +62,16 @@ type QueryConfig struct {
 }
 
 type ScannerConfig struct {
-	ChainID        int            `yaml:"chainId" json:"chainId"`
-	ScannerImage   string         `yaml:"scannerImage" json:"scannerImage"`
-	StartBlock     int            `yaml:"startBlock" json:"startBlock"`
-	EndBlock       int            `yaml:"endBlock" json:"endBlock"`
-	Ethereum       EthereumConfig `yaml:"ethereum" json:"ethereum"`
-	DisableTracing bool           `yaml:"disableTracing" json:"disableTracing"`
+	ChainID      int            `yaml:"chainId" json:"chainId"`
+	ScannerImage string         `yaml:"scannerImage" json:"scannerImage"`
+	StartBlock   int            `yaml:"startBlock" json:"startBlock"`
+	EndBlock     int            `yaml:"endBlock" json:"endBlock"`
+	Ethereum     EthereumConfig `yaml:"ethereum" json:"ethereum"`
+}
+
+type TraceConfig struct {
+	Ethereum EthereumConfig `yaml:"ethereum" json:"ethereum"`
+	Enabled  bool           `yaml:"enabled" json:"enabled"`
 }
 
 type JsonRpcProxyConfig struct {
@@ -92,6 +96,7 @@ func (ac AgentConfig) GrpcPort() string {
 type Config struct {
 	Scanner      ScannerConfig      `yaml:"scanner" json:"scanner"`
 	Query        QueryConfig        `yaml:"query" json:"query"`
+	Trace        TraceConfig        `yaml:"trace" json:"trace"`
 	JsonRpcProxy JsonRpcProxyConfig `yaml:"json-rpc-proxy" json:"jsonRpcProxy"`
 	Agents       []AgentConfig      `yaml:"agents" json:"agents"`
 	Log          LogConfig          `yaml:"log" json:"log"`

@@ -1,10 +1,12 @@
 package scanner
 
 import (
+	"context"
+
+	"OpenZeppelin/fortify-node/config"
 	"OpenZeppelin/fortify-node/domain"
 	"OpenZeppelin/fortify-node/ethereum"
 	"OpenZeppelin/fortify-node/feeds"
-	"context"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -19,8 +21,9 @@ type TxStreamService struct {
 }
 
 type TxStreamServiceConfig struct {
-	Url             string
-	BlockFeedConfig feeds.BlockFeedConfig
+	JsonRpcConfig      config.EthereumConfig
+	TraceJsonRpcConfig config.EthereumConfig
+	BlockFeedConfig    feeds.BlockFeedConfig
 }
 
 func (t *TxStreamService) ReadOnlyBlockStream() <-chan *domain.BlockEvent {
@@ -63,12 +66,22 @@ func NewTxStreamService(ctx context.Context, cfg TxStreamServiceConfig) (*TxStre
 	txOutput := make(chan *domain.TransactionEvent)
 	blockOutput := make(chan *domain.BlockEvent)
 
-	ethClient, err := ethereum.NewStreamEthClient(ctx, cfg.Url)
+	ethClient, err := ethereum.NewStreamEthClient(ctx, cfg.JsonRpcConfig.JsonRpcUrl)
 	if err != nil {
 		return nil, err
 	}
 
-	txFeed, err := feeds.NewTransactionFeed(ctx, ethClient, cfg.BlockFeedConfig, 10)
+	traceClient, err := ethereum.NewStreamEthClient(ctx, cfg.TraceJsonRpcConfig.JsonRpcUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	blockFeed, err := feeds.NewBlockFeed(ctx, ethClient, traceClient, cfg.BlockFeedConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	txFeed, err := feeds.NewTransactionFeed(ctx, ethClient, blockFeed, 10)
 	if err != nil {
 		return nil, err
 	}

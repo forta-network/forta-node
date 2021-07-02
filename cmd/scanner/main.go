@@ -59,19 +59,18 @@ func initTxStream(ctx context.Context, cfg config.Config) (*scanner.TxStreamServ
 	if url == "" {
 		return nil, fmt.Errorf("ethereum.jsonRpcUrl is required")
 	}
-
-	tracing := true
-	if cfg.Scanner.DisableTracing {
-		tracing = false
+	if cfg.Trace.Enabled && cfg.Trace.Ethereum.JsonRpcUrl == "" {
+		return nil, fmt.Errorf("trace requires a JsonRpcUrl if enabled")
 	}
 
 	return scanner.NewTxStreamService(ctx, scanner.TxStreamServiceConfig{
-		Url: url,
+		JsonRpcConfig:      cfg.Scanner.Ethereum,
+		TraceJsonRpcConfig: cfg.Trace.Ethereum,
 		BlockFeedConfig: feeds.BlockFeedConfig{
 			Start:   startBlock,
 			End:     endBlock,
 			ChainID: chainID,
-			Tracing: tracing,
+			Tracing: cfg.Trace.Enabled,
 		},
 	})
 }

@@ -18,6 +18,11 @@ json-rpc-proxy:
   ethereum:
     jsonRpcUrl: "http://eth.fortify-dev.com:8545"
 
+trace:
+  enabled: true
+  ethereum:
+    jsonRpcUrl: "http://eth.fortify-dev.com:8545"
+
 agents:
   - name: "example-agent"
     image: "openzeppelin/fortify-agent:latest"
