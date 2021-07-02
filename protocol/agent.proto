@@ -139,6 +139,20 @@ message TransactionEvent {
     bool removed = 9;
   }
 
+  message EthReceipt {
+    string root = 1;
+    string status = 2;
+    string cumulativeGasUsed = 3;
+    string logsBloom = 4;
+    repeated Log logs = 5;
+    string transactionHash = 6;
+    string contractAddress = 7;
+    string gasUsed = 8;
+    string blockHash = 9;
+    string blockNumber = 10;
+    string transactionIndex = 11;
+  }
+
   message TraceAction {
    string callType = 1;
    string to = 2;
@@ -172,7 +186,7 @@ message TransactionEvent {
 
   EventType type = 1;
   EthTransaction transaction = 2;
-  reserved 3;
+  EthReceipt receipt = 3;
   Network network = 4;
   repeated Trace traces = 5;
   map<string, bool> addresses = 6;

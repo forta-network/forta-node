@@ -138,6 +138,20 @@ func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 		nw.ChainId = utils.BigIntToHex(t.BlockEvt.ChainID)
 	}
 
+	fakeReceipt := &protocol.TransactionEvent_EthReceipt{
+		Root:              "",
+		Status:            "0x1",
+		CumulativeGasUsed: "0x0",
+		LogsBloom:         "0x0",
+		Logs:              logs,
+		TransactionHash:   t.Transaction.Hash,
+		ContractAddress:   "",
+		GasUsed:           "0x0",
+		BlockHash:         t.BlockEvt.Block.Hash,
+		BlockNumber:       t.BlockEvt.Block.Number,
+		TransactionIndex:  t.Transaction.TransactionIndex,
+	}
+
 	return &protocol.TransactionEvent{
 		Type:        evtType,
 		Transaction: &tx,
@@ -145,6 +159,7 @@ func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 		Network:     nw,
 		Traces:      traces,
 		Addresses:   addresses,
+		Receipt:     fakeReceipt,
 		Block: &protocol.TransactionEvent_EthBlock{
 			BlockHash:      t.BlockEvt.Block.Hash,
 			BlockNumber:    t.BlockEvt.Block.Number,
