@@ -1,13 +1,14 @@
 package scanner
 
 import (
+	"context"
+	"fmt"
+	"time"
+
 	"OpenZeppelin/fortify-node/clients"
 	"OpenZeppelin/fortify-node/domain"
 	"OpenZeppelin/fortify-node/protocol"
 	"OpenZeppelin/fortify-node/store"
-	"context"
-	"fmt"
-	"time"
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/jsonpb"
@@ -56,9 +57,9 @@ func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *pr
 		},
 		Tags: map[string]string{
 			"chainId":     result.Request.Event.Network.ChainId,
-			"blockHash":   result.Request.Event.Receipt.BlockHash,
-			"blockNumber": result.Request.Event.Receipt.BlockNumber,
-			"txHash":      result.Request.Event.Receipt.TransactionHash,
+			"blockHash":   result.Request.Event.Block.BlockHash,
+			"blockNumber": result.Request.Event.Block.BlockNumber,
+			"txHash":      result.Request.Event.Transaction.Hash,
 		},
 	}, nil
 }

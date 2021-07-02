@@ -98,12 +98,15 @@ func TestBlockFeed_ForEachBlock(t *testing.T) {
 	//TODO: actually test that the trace part matters (this returns nil for now)
 	client.EXPECT().BlockByNumber(ctx, big.NewInt(1)).Return(block1, nil).Times(1)
 	client.EXPECT().TraceBlock(ctx, hexToBigInt(block1.Number)).Return(nil, nil).Times(1)
+	client.EXPECT().GetLogs(ctx, block1.Hash).Return(nil, nil).Times(1)
 
 	client.EXPECT().BlockByNumber(ctx, big.NewInt(2)).Return(block2, nil).Times(1)
 	client.EXPECT().TraceBlock(ctx, hexToBigInt(block2.Number)).Return(nil, nil).Times(1)
+	client.EXPECT().GetLogs(ctx, block2.Hash).Return(nil, nil).Times(1)
 
 	client.EXPECT().BlockByNumber(ctx, big.NewInt(3)).Return(block3, nil).Times(1)
 	client.EXPECT().TraceBlock(ctx, hexToBigInt(block3.Number)).Return(nil, nil).Times(1)
+	client.EXPECT().GetLogs(ctx, block3.Hash).Return(nil, nil).Times(1)
 
 	count := 0
 	var evts []*domain.BlockEvent
@@ -128,6 +131,7 @@ func TestBlockFeed_ForEachBlock_Cancelled(t *testing.T) {
 
 	client.EXPECT().BlockByNumber(ctx, big.NewInt(1)).Return(block1, nil).Times(1)
 	client.EXPECT().TraceBlock(ctx, hexToBigInt(block1.Number)).Return(nil, nil).Times(1)
+	client.EXPECT().GetLogs(ctx, block1.Hash).Return(nil, nil).Times(1)
 
 	count := 0
 	var evts []*domain.BlockEvent
@@ -157,16 +161,20 @@ func TestBlockFeed_ForEachBlock_Reorg(t *testing.T) {
 
 	client.EXPECT().TraceBlock(ctx, big.NewInt(1)).Return(nil, nil).Times(1)
 	client.EXPECT().BlockByNumber(ctx, big.NewInt(1)).Return(block1, nil).Times(1)
+	client.EXPECT().GetLogs(ctx, block1.Hash).Return(nil, nil).Times(1)
 
 	client.EXPECT().TraceBlock(ctx, big.NewInt(2)).Return(nil, nil).Times(1)
 	client.EXPECT().BlockByNumber(ctx, big.NewInt(2)).Return(reorg, nil).Times(1)
+	client.EXPECT().GetLogs(ctx, reorg.Hash).Return(nil, nil).Times(1)
 
 	client.EXPECT().BlockByHash(ctx, reorg.ParentHash).Return(block2, nil).Times(1)
 	client.EXPECT().TraceBlock(ctx, big.NewInt(2)).Return(nil, nil).Times(1)
+	client.EXPECT().GetLogs(ctx, reorg.ParentHash).Return(nil, nil).Times(1)
 
 	client.EXPECT().TraceBlock(ctx, big.NewInt(3)).Return(nil, nil).Times(1)
 	client.EXPECT().BlockByNumber(ctx, big.NewInt(3)).Return(block3, nil).Times(1)
 	client.EXPECT().TraceBlock(ctx, hexToBigInt(block3.Number)).Return(nil, nil).Times(1)
+	client.EXPECT().GetLogs(ctx, block3.Hash).Return(nil, nil).Times(1)
 
 	count := 0
 	var evts []*domain.BlockEvent

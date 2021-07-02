@@ -143,7 +143,13 @@ func (bf *blockFeed) ForEachBlock(handler func(evt *domain.BlockEvent) error) er
 			return err
 		}
 
-		evt := &domain.BlockEvent{EventType: domain.EventTypeBlock, Block: block, ChainID: bf.chainID, Traces: traces}
+		logs, err := bf.client.GetLogs(bf.ctx, block.Hash)
+		if err != nil {
+			log.Errorf("error getting logs for block: %s", err.Error())
+			return err
+		}
+
+		evt := &domain.BlockEvent{EventType: domain.EventTypeBlock, Block: block, ChainID: bf.chainID, Traces: traces, Logs: logs}
 		if err := handler(evt); err != nil {
 			return err
 		}

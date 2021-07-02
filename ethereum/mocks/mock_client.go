@@ -162,6 +162,21 @@ func (mr *MockClientMockRecorder) Close() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockClient)(nil).Close))
 }
 
+// GetLogs mocks base method.
+func (m *MockClient) GetLogs(ctx context.Context, hash string) ([]domain.LogEntry, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLogs", ctx, hash)
+	ret0, _ := ret[0].([]domain.LogEntry)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetLogs indicates an expected call of GetLogs.
+func (mr *MockClientMockRecorder) GetLogs(ctx, hash interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLogs", reflect.TypeOf((*MockClient)(nil).GetLogs), ctx, hash)
+}
+
 // TraceBlock mocks base method.
 func (m *MockClient) TraceBlock(ctx context.Context, number *big.Int) ([]domain.Trace, error) {
 	m.ctrl.T.Helper()

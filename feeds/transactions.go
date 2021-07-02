@@ -49,9 +49,20 @@ func (tf *transactionFeed) streamTransactions() error {
 			default:
 				if !tf.cache.ExistsAndAdd(tx.Hash) {
 					log.Infof("tx-iterator: block(%s), txs <- %s", evt.Block.Number, tx.Hash)
+
+					var txLogs []*domain.LogEntry
+
+					// filter for transaction hash
+					for _, l := range evt.Logs {
+						if l.TransactionHash != nil && tx.Hash == *l.TransactionHash {
+							txLogs = append(txLogs, &l)
+						}
+					}
+
 					tf.txCh <- &domain.TransactionEvent{
 						BlockEvt:    blockEvt,
 						Transaction: &txTemp,
+						Logs:        txLogs,
 					}
 				}
 			}
@@ -69,12 +80,6 @@ func (tf *transactionFeed) getWorker(workerID int, handler func(evt *domain.Tran
 				log.Debugf("tx-processor(%d): context cancelled", workerID)
 				return tf.ctx.Err()
 			default:
-				receipt, err := tf.client.TransactionReceipt(tf.ctx, tx.Transaction.Hash)
-				if err != nil {
-					log.Debugf("tx-processor(%d): block(%s) tx(%s) get receipt failed (skipping): %s", workerID, tx.BlockEvt.Block.Number, tx.Transaction.Hash, err.Error())
-					continue
-				}
-				tx.Receipt = receipt
 				log.Debugf("tx-processor(%d): block(%s) tx(%s) invoking handler", workerID, tx.BlockEvt.Block.Number, tx.Transaction.Hash)
 				if err := handler(tx); err != nil {
 					log.Debugf("tx-processor(%d): block(%s) tx(%s) handler returned error, cancelling: %s", workerID, tx.BlockEvt.Block.Number, tx.Transaction.Hash, err.Error())
