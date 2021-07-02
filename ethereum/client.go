@@ -29,11 +29,13 @@ type Client interface {
 	TransactionReceipt(ctx context.Context, txHash string) (*domain.TransactionReceipt, error)
 	ChainID(ctx context.Context) (*big.Int, error)
 	TraceBlock(ctx context.Context, number *big.Int) ([]domain.Trace, error)
+	GetLogs(ctx context.Context, hash string) ([]domain.LogEntry, error)
 }
 
 const blocksByNumber = "eth_getBlockByNumber"
 const blocksByHash = "eth_getBlockByHash"
 const blockNumber = "eth_blockNumber"
+const getLogs = "eth_getLogs"
 const transactionReceipt = "eth_getTransactionReceipt"
 const traceBlock = "trace_block"
 const chainId = "eth_chainId"
@@ -147,6 +149,23 @@ func (e streamEthClient) TraceBlock(ctx context.Context, number *big.Int) ([]dom
 	var result []domain.Trace
 	err := withBackoff(ctx, name, func(ctx context.Context) error {
 		return e.rpcClient.CallContext(ctx, &result, traceBlock, utils.BigIntToHex(number))
+	}, RetryOptions{
+		MinBackoff:     pointDur(5 * time.Second),
+		MaxElapsedTime: pointDur(12 * time.Hour),
+		MaxBackoff:     pointDur(15 * time.Second),
+	})
+	return result, err
+}
+
+// GetLogs returns the set of logs for a block
+func (e streamEthClient) GetLogs(ctx context.Context, hash string) ([]domain.LogEntry, error) {
+	name := fmt.Sprintf("%s(%s)", getLogs, hash)
+	log.Debugf(name)
+	var result []domain.LogEntry
+	err := withBackoff(ctx, name, func(ctx context.Context) error {
+		return e.rpcClient.CallContext(ctx, &result, getLogs, map[string]string{
+			"blockHash": hash,
+		})
 	}, RetryOptions{
 		MinBackoff:     pointDur(5 * time.Second),
 		MaxElapsedTime: pointDur(12 * time.Hour),

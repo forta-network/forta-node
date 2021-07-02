@@ -24,6 +24,7 @@ type BlockEvent struct {
 	ChainID   *big.Int
 	Block     *Block
 	Traces    []Trace
+	Logs      []LogEntry
 }
 
 func (t *BlockEvent) ToMessage() (*protocol.BlockEvent, error) {
@@ -44,7 +45,7 @@ func (t *BlockEvent) ToMessage() (*protocol.BlockEvent, error) {
 type TransactionEvent struct {
 	BlockEvt    *BlockEvent
 	Transaction *Transaction
-	Receipt     *TransactionReceipt
+	Logs        []*LogEntry
 }
 
 func safeAddStrValueToMap(addresses map[string]bool, addr string) {
@@ -113,24 +114,23 @@ func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 	}
 
 	// convert receipt domain model to proto
-	var receipt protocol.TransactionEvent_EthReceipt
-	if t.Receipt != nil {
-		receiptJson, err := json.Marshal(t.Receipt)
+	var logs []*protocol.TransactionEvent_Log
+
+	for _, l := range t.Logs {
+		var evtLog protocol.TransactionEvent_Log
+		logJson, err := json.Marshal(t.Logs)
 		if err != nil {
 			return nil, err
 		}
-		err = um.Unmarshal(bytes.NewReader(receiptJson), &receipt)
+		err = um.Unmarshal(bytes.NewReader(logJson), &evtLog)
 
 		if err != nil {
-			log.Errorf("cannot unmarshal receiptJson: %s", err.Error())
-			log.Errorf("JSON: %s", string(receiptJson))
+			log.Errorf("cannot unmarshal logJson: %s", err.Error())
+			log.Errorf("JSON: %s", string(logJson))
 			return nil, err
 		}
-
-		safeAddStrValueToMap(addresses, receipt.ContractAddress)
-		for _, l := range receipt.Logs {
-			safeAddStrValueToMap(addresses, l.Address)
-		}
+		safeAddStrToMap(addresses, l.Address)
+		logs = append(logs, &evtLog)
 	}
 
 	nw := &protocol.TransactionEvent_Network{}
@@ -141,7 +141,7 @@ func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 	return &protocol.TransactionEvent{
 		Type:        evtType,
 		Transaction: &tx,
-		Receipt:     &receipt,
+		Logs:        logs,
 		Network:     nw,
 		Traces:      traces,
 		Addresses:   addresses,
