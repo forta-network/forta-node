@@ -124,7 +124,7 @@ func (bf *blockFeed) ForEachBlock(handler func(evt *domain.BlockEvent) error) er
 		var err error
 		var traces []domain.Trace
 		if bf.tracing {
-			traces, err = bf.client.TraceBlock(bf.ctx, blockNum)
+			traces, err = bf.traceClient.TraceBlock(bf.ctx, blockNum)
 			if err != nil {
 				log.Errorf("error tracing block: %s", err.Error())
 				return err
