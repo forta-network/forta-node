@@ -5,6 +5,8 @@ import (
 	"OpenZeppelin/fortify-node/domain"
 	"OpenZeppelin/fortify-node/protocol"
 	"OpenZeppelin/fortify-node/store"
+	"OpenZeppelin/fortify-node/utils"
+
 	"context"
 	"fmt"
 	"time"
@@ -45,6 +47,14 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 	if err != nil {
 		return nil, err
 	}
+	blockNumber, err := utils.HexToBigInt(result.Request.Event.BlockNumber)
+	if err != nil {
+		return nil, err
+	}
+	chainId, err := utils.HexToBigInt(result.Request.Event.Network.ChainId)
+	if err != nil {
+		return nil, err
+	}
 	return &protocol.Alert{
 		Id:        alertID,
 		Finding:   f,
@@ -57,7 +67,8 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 		},
 		Tags: map[string]string{
 			"blockHash":   result.Request.Event.BlockHash,
-			"blockNumber": result.Request.Event.BlockNumber,
+			"blockNumber": blockNumber.String(),
+			"chainId":     chainId.String(),
 		},
 	}, nil
 }
