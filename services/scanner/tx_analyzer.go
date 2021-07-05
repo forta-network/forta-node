@@ -9,6 +9,7 @@ import (
 	"OpenZeppelin/fortify-node/domain"
 	"OpenZeppelin/fortify-node/protocol"
 	"OpenZeppelin/fortify-node/store"
+	"OpenZeppelin/fortify-node/utils"
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/jsonpb"
@@ -45,6 +46,14 @@ func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *pr
 	if err != nil {
 		return nil, err
 	}
+	blockNumber, err := utils.HexToBigInt(result.Request.Event.Block.BlockNumber)
+	if err != nil {
+		return nil, err
+	}
+	chainId, err := utils.HexToBigInt(result.Request.Event.Network.ChainId)
+	if err != nil {
+		return nil, err
+	}
 	return &protocol.Alert{
 		Id:        alertID,
 		Finding:   f,
@@ -56,9 +65,9 @@ func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *pr
 			ImageHash: result.AgentConfig.ImageHash,
 		},
 		Tags: map[string]string{
-			"chainId":     result.Request.Event.Network.ChainId,
+			"chainId":     chainId.String(),
 			"blockHash":   result.Request.Event.Block.BlockHash,
-			"blockNumber": result.Request.Event.Block.BlockNumber,
+			"blockNumber": blockNumber.String(),
 			"txHash":      result.Request.Event.Transaction.Hash,
 		},
 	}, nil
