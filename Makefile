@@ -37,3 +37,6 @@ test:
 
 run:
 	go build -o build/fortify . && ./build/fortify --passphrase 123
+
+abigen:
+	abigen --sol ./contracts/AgentRegistry.sol --out ./contracts/agent_registry.go --pkg contracts --type AgentRegistry

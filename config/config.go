@@ -46,6 +46,14 @@ type AgentConfig struct {
 	StopBlock  *uint64 `yaml:"stopBlock" json:"stopBlock,omitempty"`
 }
 
+func (ac AgentConfig) ContainerName() string {
+	return fmt.Sprintf("%s-agent-%s", FortifyPrefix, ac.Name)
+}
+
+func (ac AgentConfig) GrpcPort() string {
+	return "50051"
+}
+
 type DBConfig struct {
 	Path string `yaml:"path" json:"path"`
 }
@@ -85,15 +93,15 @@ type LogConfig struct {
 	MaxLogFiles int    `yaml:"maxLogFiles" json:"maxLogFiles"`
 }
 
-func (ac AgentConfig) ContainerName() string {
-	return fmt.Sprintf("%s-agent-%s", FortifyPrefix, ac.Name)
-}
-
-func (ac AgentConfig) GrpcPort() string {
-	return "50051"
+type RegistryConfig struct {
+	JSONRPCURL        string `yaml:"jsonRpcUrl" json:"jsonRpcUrl"`
+	ContractAddress   string `yaml:"contractAddress" json:"contractAddress"`
+	ContainerRegistry string `yaml:"containerRegistry" json:"containerRegistry"`
+	PoolID            string `yaml:"poolId" json:"poolId"`
 }
 
 type Config struct {
+	Registry     RegistryConfig     `yaml:"registry" json:"registry"`
 	Scanner      ScannerConfig      `yaml:"scanner" json:"scanner"`
 	Query        QueryConfig        `yaml:"query" json:"query"`
 	Trace        TraceConfig        `yaml:"trace" json:"trace"`

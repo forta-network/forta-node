@@ -10,6 +10,8 @@ import (
 )
 
 func (t *TxNodeService) startAgent(agent config.AgentConfig) error {
+	// TODO: Pull the container first.
+
 	nwID, err := t.client.CreatePublicNetwork(t.ctx, agent.Name)
 	if err != nil {
 		return err
