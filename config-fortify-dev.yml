@@ -3,7 +3,7 @@
 scanner:
   scannerImage: "ECR_REGISTRY/fortify-scanner:GITHUB_HASH"
   chainId: 1
-  startBlock: 12752475
+  startBlock: 12825965
   #endBlock: 11792184
   #disableTracing: true
   ethereum:
