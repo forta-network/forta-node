@@ -34,6 +34,6 @@ agents:
     image: "ECR_REGISTRY/fortify-agent-lab:compound-governance-84d0fb97dbd7443c3f19b05c84a582289e8a5074"
    
 log:
-  level: debug
-  maxLogSize: 10m
+  level: info
+  maxLogSize: 50m
   maxLogFiles: 10
