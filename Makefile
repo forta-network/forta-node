@@ -1,5 +1,5 @@
 containers:
-	docker pull nats:latest
+	docker pull nats:2.3.2
 	docker build -t openzeppelin/fortify-scanner -f Dockerfile-scanner .
 	docker build -t openzeppelin/fortify-query -f Dockerfile-query .
 	docker build -t openzeppelin/fortify-json-rpc -f Dockerfile-json-rpc .
@@ -39,4 +39,4 @@ run:
 	go build -o build/fortify . && ./build/fortify --passphrase 123
 
 abigen:
-	abigen --sol ./contracts/AgentRegistry.sol --out ./contracts/agent_registry.go --pkg contracts --type AgentRegistry
+	abigen --abi ./contracts/agent_registry.json --out ./contracts/agent_registry.go --pkg contracts --type AgentRegistry

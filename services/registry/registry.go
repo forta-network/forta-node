@@ -5,31 +5,72 @@ import (
 	"OpenZeppelin/fortify-node/clients/messaging"
 	"OpenZeppelin/fortify-node/config"
 	"OpenZeppelin/fortify-node/contracts"
+	"OpenZeppelin/fortify-node/feeds"
 	"OpenZeppelin/fortify-node/services"
 	"fmt"
+	"io"
 	"math/big"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+	ipfsapi "github.com/ipfs/go-ipfs-api"
 )
 
-// RegistryService listens to the agent pool changes so the node
-// can stay in sync.
-// TODO: Instead of publishing messages for the static config,
-// check or listen to an actively maintained resource (e.g. a smart contract).
-// TODO: The registry service or the config should construct unique names for the agents.
+type agentUpdate struct {
+	Config     config.AgentConfig
+	IsCreation bool
+	IsUpdate   bool
+	IsRemoval  bool
+}
+
+// RegistryService listens to the agent pool changes so the node can stay in sync.
 type RegistryService struct {
 	cfg       config.Config
+	poolID    common.Hash
 	client    *ethclient.Client
 	msgClient clients.MessageClient
+	txFeed    feeds.TransactionFeed
+
+	logUnpacker LogUnpacker
+	ipfsClient  IPFSClient
+
+	agentsConfigs  []config.AgentConfig
+	agentUpdates   chan *agentUpdate
+	agentUpdatesWg sync.WaitGroup
+}
+
+// LogUnpacker unpacks agent events from logs.
+type LogUnpacker interface {
+	UnpackAgentRegistryAgentAdded(log *types.Log) (*contracts.AgentRegistryAgentAdded, error)
+	UnpackAgentRegistryAgentUpdated(log *types.Log) (*contracts.AgentRegistryAgentUpdated, error)
+	UnpackAgentRegistryAgentRemoved(log *types.Log) (*contracts.AgentRegistryAgentRemoved, error)
+}
+
+// IPFSClient interacts with an IPFS API/Gateway.
+type IPFSClient interface {
+	Cat(path string) (io.ReadCloser, error)
 }
 
 // New creates a new service.
-func New(cfg config.Config, msgClient clients.MessageClient) services.Service {
+func New(cfg config.Config, msgClient clients.MessageClient, txFeed feeds.TransactionFeed) services.Service {
+	var ipfsURL string
+	if cfg.Registry.IPFS != nil {
+		ipfsURL = *cfg.Registry.IPFS
+	} else {
+		ipfsURL = config.DefaultIPFSGateway
+	}
+
 	return &RegistryService{
-		cfg:       cfg,
-		msgClient: msgClient,
+		cfg:          cfg,
+		poolID:       common.HexToHash(cfg.Registry.PoolID),
+		msgClient:    msgClient,
+		txFeed:       txFeed,
+		logUnpacker:  contracts.NewAgentLogUnpacker(common.HexToAddress(cfg.Registry.ContractAddress)),
+		ipfsClient:   ipfsapi.NewShell(ipfsURL),
+		agentUpdates: make(chan *agentUpdate, 100),
 	}
 }
 
@@ -41,18 +82,29 @@ func (rs *RegistryService) Start() error {
 	}
 	rs.client = ethclient.NewClient(rpcClient)
 
-	// TODO: Meanwhile we read the contract, agent updates can happen
-	// so we need to start by listening to new events first and buffer them.
-	return rs.publishLatestAgents()
+	// Start detecting and buffering events.
+	go rs.txFeed.ForEachTransaction(nil, rs.detectAgentEvents)
+
+	// Start to handle agent updates but wait until initialization is complete.
+	rs.agentUpdatesWg.Add(1)
+	go rs.listenToAgentUpdates()
+
+	if err := rs.publishLatestAgents(); err != nil {
+		return fmt.Errorf("failed to publish the latest agents: %v", err)
+	}
+
+	// Continue by processing buffered updates.
+	rs.agentUpdatesWg.Done()
+	return nil
 }
 
-func (rs *RegistryService) publishLatestAgents() error {
-	agents, err := rs.getLatestAgents()
+func (rs *RegistryService) publishLatestAgents() (err error) {
+	rs.agentsConfigs, err = rs.getLatestAgents()
 	if err != nil {
-		return err
+		return
 	}
-	rs.msgClient.Publish(messaging.SubjectAgentsVersionsLatest, agents)
-	return nil
+	rs.msgClient.Publish(messaging.SubjectAgentsVersionsLatest, rs.agentsConfigs)
+	return
 }
 
 func (rs *RegistryService) getLatestAgents() ([]config.AgentConfig, error) {
@@ -60,30 +112,30 @@ func (rs *RegistryService) getLatestAgents() ([]config.AgentConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the agent registry caller: %v", err)
 	}
-	poolID := common.BytesToHash([]byte(rs.cfg.Registry.PoolID))
-	lengthBig, err := contract.AgentLength(nil, poolID)
+	lengthBig, err := contract.AgentLength(nil, rs.poolID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the pool agents length: %v", err)
 	}
-	// TODO: If we are going to get 100s of agents, we need to batch the calls here.
+	// TODO: If we are going to get 100s of agents, we probably need to batch the calls here.
 	var agentConfigs []config.AgentConfig
 	length := int(lengthBig.Int64())
 	for i := 0; i < length; i++ {
-		_, agentRef, err := contract.AgentAt(nil, poolID, big.NewInt(int64(i)))
+		agentID, agentRef, err := contract.AgentAt(nil, rs.poolID, big.NewInt(int64(i)))
 		if err != nil {
-			return nil, fmt.Errorf("failed to get agent at index '%d' in pool '%s': %v", i, poolID.String(), err)
+			return nil, fmt.Errorf("failed to get agent at index '%d' in pool '%s': %v", i, rs.poolID.String(), err)
 		}
-		// TODO: Maybe we can just use single reference?
-		agentConfigs = append(agentConfigs, config.AgentConfig{
-			Name:  agentRef,
-			Image: agentRef,
-		})
+		agentCfg, err := rs.makeAgentConfig(agentID, agentRef)
+		if err != nil {
+			return nil, fmt.Errorf("failed to make agent config: %v", err)
+		}
+		agentConfigs = append(agentConfigs, agentCfg)
 	}
 	return agentConfigs, nil
 }
 
 // Stop stops the registry service.
 func (rs *RegistryService) Stop() error {
+	close(rs.agentUpdates)
 	return nil
 }
 

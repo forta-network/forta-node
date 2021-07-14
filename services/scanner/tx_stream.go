@@ -23,7 +23,6 @@ type TxStreamService struct {
 type TxStreamServiceConfig struct {
 	JsonRpcConfig      config.EthereumConfig
 	TraceJsonRpcConfig config.EthereumConfig
-	BlockFeedConfig    feeds.BlockFeedConfig
 }
 
 func (t *TxStreamService) ReadOnlyBlockStream() <-chan *domain.BlockEvent {
@@ -62,24 +61,9 @@ func (t *TxStreamService) Name() string {
 	return "TxStream"
 }
 
-func NewTxStreamService(ctx context.Context, cfg TxStreamServiceConfig) (*TxStreamService, error) {
+func NewTxStreamService(ctx context.Context, ethClient ethereum.Client, blockFeed feeds.BlockFeed, cfg TxStreamServiceConfig) (*TxStreamService, error) {
 	txOutput := make(chan *domain.TransactionEvent)
 	blockOutput := make(chan *domain.BlockEvent)
-
-	ethClient, err := ethereum.NewStreamEthClient(ctx, cfg.JsonRpcConfig.JsonRpcUrl)
-	if err != nil {
-		return nil, err
-	}
-
-	traceClient, err := ethereum.NewStreamEthClient(ctx, cfg.TraceJsonRpcConfig.JsonRpcUrl)
-	if err != nil {
-		return nil, err
-	}
-
-	blockFeed, err := feeds.NewBlockFeed(ctx, ethClient, traceClient, cfg.BlockFeedConfig)
-	if err != nil {
-		return nil, err
-	}
 
 	txFeed, err := feeds.NewTransactionFeed(ctx, ethClient, blockFeed, 10)
 	if err != nil {

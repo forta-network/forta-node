@@ -27,14 +27,16 @@ type mockBlockFeed struct {
 }
 
 // ForEachBlock is a test method that iterates over mocked blocks
-func (bf *mockBlockFeed) ForEachBlock(handler func(evt *domain.BlockEvent) error) error {
+func (bf *mockBlockFeed) Subscribe(handler func(evt *domain.BlockEvent) error) {
 	for _, b := range bf.blocks {
 		if err := handler(b); err != nil {
-			return err
+			return
 		}
 	}
-	return endOfBlocks
 }
+
+// Start implements the BlockFeed interface.
+func (bf *mockBlockFeed) Start() {}
 
 // NewMockBlockFeed returns a new mockBlockFeed for tests
 func NewMockBlockFeed(blocks []*domain.BlockEvent) *mockBlockFeed {
@@ -109,7 +111,7 @@ func TestBlockFeed_ForEachBlock(t *testing.T) {
 
 	count := 0
 	var evts []*domain.BlockEvent
-	res := bf.ForEachBlock(func(evt *domain.BlockEvent) error {
+	bf.Subscribe(func(evt *domain.BlockEvent) error {
 		count++
 		evts = append(evts, evt)
 		if count == 3 {
@@ -117,6 +119,7 @@ func TestBlockFeed_ForEachBlock(t *testing.T) {
 		}
 		return nil
 	})
+	res := bf.forEachBlock()
 	assert.Error(t, testErr, res)
 	assert.Equal(t, 3, len(evts))
 	assertEvts(t, evts, blockEvent(block1), blockEvent(block2), blockEvent(block3))
@@ -133,12 +136,13 @@ func TestBlockFeed_ForEachBlock_Cancelled(t *testing.T) {
 
 	count := 0
 	var evts []*domain.BlockEvent
-	res := bf.ForEachBlock(func(evt *domain.BlockEvent) error {
+	bf.Subscribe(func(evt *domain.BlockEvent) error {
 		count++
 		evts = append(evts, evt)
 		cancel()
 		return nil
 	})
+	res := bf.forEachBlock()
 	assert.Error(t, context.Canceled, res)
 	assert.Equal(t, 1, len(evts))
 	assertEvts(t, evts, blockEvent(block1))
@@ -172,7 +176,7 @@ func TestBlockFeed_ForEachBlock_Reorg(t *testing.T) {
 
 	count := 0
 	var evts []*domain.BlockEvent
-	res := bf.ForEachBlock(func(evt *domain.BlockEvent) error {
+	bf.Subscribe(func(evt *domain.BlockEvent) error {
 		count++
 		evts = append(evts, evt)
 		if count == 4 {
@@ -180,6 +184,7 @@ func TestBlockFeed_ForEachBlock_Reorg(t *testing.T) {
 		}
 		return nil
 	})
+	res := bf.forEachBlock()
 	assert.Error(t, testErr, res)
 	assert.Equal(t, 4, count)
 	assertEvts(t, evts, blockEvent(block1), blockEvent(reorg), reorgEvent(block2), blockEvent(block3))

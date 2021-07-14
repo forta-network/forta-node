@@ -27,15 +27,6 @@ type transactionFeed struct {
 	txCh      chan *domain.TransactionEvent
 }
 
-func (tf *transactionFeed) streamBlocks() error {
-	defer close(tf.blockCh)
-	return tf.blockFeed.ForEachBlock(func(evt *domain.BlockEvent) error {
-		log.Debugf("block-iterator: blocks <- %s", evt.Block.Number)
-		tf.blockCh <- evt
-		return nil
-	})
-}
-
 func (tf *transactionFeed) streamTransactions() error {
 	defer close(tf.txCh)
 	for evt := range tf.blockCh {
@@ -94,12 +85,16 @@ func (tf *transactionFeed) ForEachTransaction(blockHandler func(evt *domain.Bloc
 
 	// iterate over blocks
 	grp.Go(func() error {
-		defer close(tf.blockCh)
-		return tf.blockFeed.ForEachBlock(func(evt *domain.BlockEvent) error {
+		tf.blockFeed.Subscribe(func(evt *domain.BlockEvent) error {
 			log.Debugf("block-iterator: blocks <- %s", evt.Block.Number)
 			tf.blockCh <- evt
-			return blockHandler(evt)
+			var blockHandlerErr error
+			if blockHandler != nil {
+				blockHandlerErr = blockHandler(evt)
+			}
+			return blockHandlerErr
 		})
+		return nil
 	})
 
 	// iterate over transactions, check for duplicates

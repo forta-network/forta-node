@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	testAgentName  = "test-agent"
+	testAgentID    = "test-agent"
 	testRequestID  = "test-request-id"
 	testResponseID = "test-response-id"
 )
@@ -56,7 +56,7 @@ func (s *Suite) SetupTest() {
 // TestStartProcessStop tests the starting, processing and stopping flow for an agent.
 func (s *Suite) TestStartProcessStop() {
 	agentConfig := config.AgentConfig{
-		Name: testAgentName,
+		ID: testAgentID,
 	}
 	agentPayload := messaging.AgentPayload{
 		agentConfig,

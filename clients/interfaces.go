@@ -9,6 +9,7 @@ import (
 
 // DockerClient is a client interface for interacting with docker
 type DockerClient interface {
+	PullImage(ctx context.Context, refStr string) error
 	CreatePublicNetwork(ctx context.Context, name string) (string, error)
 	CreateInternalNetwork(ctx context.Context, name string) (string, error)
 	AttachNetwork(ctx context.Context, containerID string, networkID string) error

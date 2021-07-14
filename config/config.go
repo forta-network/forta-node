@@ -1,6 +1,7 @@
 package config
 
 import (
+	"OpenZeppelin/fortify-node/utils"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -35,19 +36,24 @@ var (
 
 // Global constant values
 var (
-	DefaultNatsPort = "4222"
+	DefaultNatsPort    = "4222"
+	DefaultIPFSGateway = "https://cloudflare-ipfs.com"
 )
 
 type AgentConfig struct {
-	Name       string  `yaml:"name" json:"name"`
+	ID         string  `yaml:"id" json:"id"`
 	Image      string  `yaml:"image" json:"image"`
-	ImageHash  string  `yaml:"imageHash" json:"imageHash"`
 	StartBlock *uint64 `yaml:"startBlock" json:"startBlock,omitempty"`
 	StopBlock  *uint64 `yaml:"stopBlock" json:"stopBlock,omitempty"`
 }
 
+func (ac AgentConfig) ImageHash() string {
+	_, digest := utils.SplitImageRef(ac.Image)
+	return digest
+}
+
 func (ac AgentConfig) ContainerName() string {
-	return fmt.Sprintf("%s-agent-%s", FortifyPrefix, ac.Name)
+	return fmt.Sprintf("fortify-agent-%s", ac.ID)
 }
 
 func (ac AgentConfig) GrpcPort() string {
@@ -94,10 +100,11 @@ type LogConfig struct {
 }
 
 type RegistryConfig struct {
-	JSONRPCURL        string `yaml:"jsonRpcUrl" json:"jsonRpcUrl"`
-	ContractAddress   string `yaml:"contractAddress" json:"contractAddress"`
-	ContainerRegistry string `yaml:"containerRegistry" json:"containerRegistry"`
-	PoolID            string `yaml:"poolId" json:"poolId"`
+	JSONRPCURL        string  `yaml:"jsonRpcUrl" json:"jsonRpcUrl"`
+	IPFS              *string `yaml:"ipfs" json:"ipfs,omitempty"`
+	ContractAddress   string  `yaml:"contractAddress" json:"contractAddress"`
+	ContainerRegistry string  `yaml:"containerRegistry" json:"containerRegistry"`
+	PoolID            string  `yaml:"poolId" json:"poolId"`
 }
 
 type Config struct {

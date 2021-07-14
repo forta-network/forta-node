@@ -18,7 +18,7 @@ const (
 	testNodeNetworkID      = "node-network-id"
 	testScannerContainerID = "test-scanner-container-id"
 	testProxyContainerID   = "test-proxy-container-id"
-	testAgentName          = "test-agent"
+	testAgentID            = "test-agent"
 	testAgentNetworkID     = "test-agent-network-id"
 	testAgentContainerID   = "test-agent-container-id"
 )
@@ -93,14 +93,14 @@ func (s *Suite) SetupTest() {
 // TestAgentRun tests running the agent.
 func (s *Suite) TestAgentRun() {
 	agentConfig := config.AgentConfig{
-		Name: testAgentName,
+		ID: testAgentID,
 	}
 	agentPayload := messaging.AgentPayload{
 		agentConfig,
 	}
 	// Creates the agent network, starts the agent container, attaches the scanner and the proxy to the
 	// agent network, publishes a "running" message.
-	s.dockerClient.EXPECT().CreatePublicNetwork(s.service.ctx, testAgentName).Return(testAgentNetworkID, nil)
+	s.dockerClient.EXPECT().CreatePublicNetwork(s.service.ctx, testAgentID).Return(testAgentNetworkID, nil)
 	s.dockerClient.EXPECT().StartContainer(s.service.ctx, (configMatcher)(clients.DockerContainerConfig{
 		Name: agentConfig.ContainerName(),
 	})).Return(&clients.DockerContainer{Name: agentConfig.ContainerName(), ID: testAgentContainerID}, nil)
@@ -116,7 +116,7 @@ func (s *Suite) TestAgentRunAgain() {
 	s.TestAgentRun()
 
 	agentConfig := config.AgentConfig{
-		Name: testAgentName,
+		ID: testAgentID,
 	}
 	agentPayload := messaging.AgentPayload{
 		agentConfig,
