@@ -101,13 +101,13 @@ func (rs *RegistryService) makeAgentConfig(agentID [32]byte, ref string) (agentC
 
 func transformLog(log *domain.LogEntry) *types.Log {
 	transformed := &types.Log{
-		Address:     common.HexToAddress(*log.Address),
-		Data:        common.FromHex(*log.Data),
-		BlockHash:   common.HexToHash(*log.BlockHash),
-		BlockNumber: hexutil.MustDecodeBig(*log.BlockNumber).Uint64(),
-		TxHash:      common.HexToHash(*log.TransactionHash),
-		TxIndex:     uint(hexutil.MustDecodeBig(*log.TransactionIndex).Uint64()),
-		Index:       uint(hexutil.MustDecodeBig(*log.LogIndex).Uint64()),
+		Address:     common.HexToAddress(utils.String(log.Address)),
+		Data:        common.FromHex(utils.String(log.Data)),
+		BlockHash:   common.HexToHash(utils.String(log.BlockHash)),
+		BlockNumber: hexutil.MustDecodeBig(utils.String(log.BlockNumber)).Uint64(),
+		TxHash:      common.HexToHash(utils.String(log.TransactionHash)),
+		TxIndex:     uint(hexutil.MustDecodeBig(utils.String(log.TransactionIndex)).Uint64()),
+		Index:       uint(hexutil.MustDecodeBig(utils.String(log.LogIndex)).Uint64()),
 	}
 	for _, topic := range log.Topics {
 		transformed.Topics = append(transformed.Topics, common.HexToHash(*topic))
@@ -139,7 +139,6 @@ func (rs *RegistryService) handleAgentUpdate(update *agentUpdate) {
 		for _, agent := range rs.agentsConfigs {
 			if agent.ID == update.Config.ID {
 				agent.Image = update.Config.Image
-				// TODO: Also update start and stop block when this data is available.
 				return
 			}
 		}

@@ -9,42 +9,49 @@ import (
 	mock_feeds "OpenZeppelin/fortify-node/feeds/mocks"
 	mock_registry "OpenZeppelin/fortify-node/services/registry/mocks"
 	"OpenZeppelin/fortify-node/services/registry/regtypes"
+	"OpenZeppelin/fortify-node/utils"
 	"errors"
 	"fmt"
 	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
 const (
-	testPoolIDStr  = "0x1000000000000000000000000000000000000000000000000000000000000000"
-	testAgentIDStr = "0x2000000000000000000000000000000000000000000000000000000000000000"
-	testAgentRef   = "QmWacxPov5FVCyvnpXroDJ76urakzN4ckpFhhRzpsAkRek"
-	testImageRef   = "bafybeide7cspdmxqjcpa3qvrayvfpiix2it4v6mjejjc22q72zbq7rm4re@sha256:cdd4ddccf5e9c740eb4144bcc68e3ea3a056789ec7453e94a6416dcfc80937a4"
+	testPoolIDStr         = "0x1000000000000000000000000000000000000000000000000000000000000000"
+	testAgentIDStr        = "0x2000000000000000000000000000000000000000000000000000000000000000"
+	testAgentRef          = "QmWacxPov5FVCyvnpXroDJ76urakzN4ckpFhhRzpsAkRek"
+	testImageRef          = "bafybeide7cspdmxqjcpa3qvrayvfpiix2it4v6mjejjc22q72zbq7rm4re@sha256:cdd4ddccf5e9c740eb4144bcc68e3ea3a056789ec7453e94a6416dcfc80937a4"
+	testImageRefAlt       = "bafybeidc7cspdmxqjcpa3qvrayvfpiix2it4v6mjejjc22q72zbq7rm4re@sha256:add4ddccf5e9c740eb4144bcc68e3ea3a056789ec7453e94a6416dcfc80937a4"
+	testContainerRegistry = "some.reg.io"
 )
 
 var (
 	testPoolID  = common.HexToHash(testPoolIDStr)
 	testAgentID = common.HexToHash(testAgentIDStr)
-	testLog     = &types.Log{}
 	testTx      = &domain.TransactionEvent{
 		Receipt: &domain.TransactionReceipt{
 			Logs: []domain.LogEntry{
-				{},
+				{
+					BlockNumber:      utils.StringPtr("0x1000000000000000000000000000000000000000000000000000000000000000"),
+					TransactionIndex: utils.StringPtr("0x1000000000000000000000000000000000000000000000000000000000000000"),
+					LogIndex:         utils.StringPtr("0x1000000000000000000000000000000000000000000000000000000000000000"),
+				},
 			},
 		},
 	}
-	testAgentFile = &regtypes.AgentFile{}
+	testAgentFile    = &regtypes.AgentFile{}
+	testAgentFileAlt = &regtypes.AgentFile{}
 )
 
 // TestSuite runs the test suite.
 func TestSuite(t *testing.T) {
 	testAgentFile.Manifest.ImageReference = testImageRef
+	testAgentFileAlt.Manifest.ImageReference = testImageRefAlt
 
 	suite.Run(t, &Suite{})
 }
@@ -82,16 +89,17 @@ func (s *Suite) SetupTest() {
 		agentUpdates: make(chan *agentUpdate, 100),
 		done:         make(chan struct{}),
 	}
+	s.service.cfg.Registry.ContainerRegistry = testContainerRegistry
 	s.txFeed.EXPECT().ForEachTransaction(nil, gomock.Any()).AnyTimes()
 	s.contract.EXPECT().AgentLength(nil, gomock.Any()).Return(big.NewInt(0), nil)
-	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, (agentConfigs)([]config.AgentConfig{}))
+	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, (agentConfigs)([]*config.AgentConfig{}))
 	s.r.NoError(s.service.start())
 }
 
-type agentConfigs []config.AgentConfig
+type agentConfigs []*config.AgentConfig
 
 func (ac agentConfigs) Matches(x interface{}) bool {
-	acx, ok := x.([]config.AgentConfig)
+	acx, ok := x.([]*config.AgentConfig)
 	if !ok {
 		return false
 	}
@@ -110,48 +118,69 @@ func (ac agentConfigs) Matches(x interface{}) bool {
 }
 
 func (ac agentConfigs) String() string {
-	return fmt.Sprintf("%+v", ([]config.AgentConfig)(ac))
+	return fmt.Sprintf("%+v", ([]*config.AgentConfig)(ac))
 }
 
-func (s *Suite) TestAgentAddRemove() {
-	s.service.agentUpdatesWg.Add(2)
+func (s *Suite) TestAgentAddUpdateRemove() {
+	s.service.agentUpdatesWg.Add(1)
 
 	// Add agent
 
-	s.logUnpacker.EXPECT().UnpackAgentRegistryAgentAdded(testLog).Return(&contracts.AgentRegistryAgentAdded{
+	s.logUnpacker.EXPECT().UnpackAgentRegistryAgentAdded(gomock.Any()).Return(&contracts.AgentRegistryAgentAdded{
 		PoolId:  common.HexToHash(testPoolIDStr),
 		AgentId: common.HexToHash(testAgentIDStr),
 		Ref:     testAgentRef,
 	}, nil)
 	s.ipfsClient.EXPECT().GetAgentFile(testAgentRef).Return(testAgentFile, nil)
 	// Final state: One agent
-	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, (agentConfigs)([]config.AgentConfig{
+	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, (agentConfigs)([]*config.AgentConfig{
 		{
 			ID:    testAgentIDStr,
-			Image: testImageRef,
+			Image: fmt.Sprintf("%s/%s", testContainerRegistry, testImageRef),
 		},
 	}))
 
 	update, agentID, ref, err := s.service.detectAgentEvent(testTx)
 	s.r.NoError(err)
 	s.r.NoError(s.service.sendAgentUpdate(update, agentID, ref))
-	s.service.agentUpdatesWg.Done()
+
+	// Update agent
+
+	s.logUnpacker.EXPECT().UnpackAgentRegistryAgentAdded(gomock.Any()).Return(nil, errors.New("some error"))
+	s.logUnpacker.EXPECT().UnpackAgentRegistryAgentUpdated(gomock.Any()).Return(&contracts.AgentRegistryAgentUpdated{
+		PoolId:  common.HexToHash(testPoolIDStr),
+		AgentId: common.HexToHash(testAgentIDStr),
+		Ref:     testAgentRef,
+	}, nil)
+	s.ipfsClient.EXPECT().GetAgentFile(testAgentRef).Return(testAgentFileAlt, nil)
+	// Final state: One agent (updated)
+	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, (agentConfigs)([]*config.AgentConfig{
+		{
+			ID:    testAgentIDStr,
+			Image: fmt.Sprintf("%s/%s", testContainerRegistry, testImageRefAlt),
+		},
+	}))
+
+	update, agentID, ref, err = s.service.detectAgentEvent(testTx)
+	s.r.NoError(err)
+	s.r.NoError(s.service.sendAgentUpdate(update, agentID, ref))
 
 	// Remove agent
 
-	s.logUnpacker.EXPECT().UnpackAgentRegistryAgentAdded(testLog).Return(nil, errors.New("some error"))
-	s.logUnpacker.EXPECT().UnpackAgentRegistryAgentUpdated(testLog).Return(nil, errors.New("some error"))
-	s.logUnpacker.EXPECT().UnpackAgentRegistryAgentRemoved(testLog).Return(&contracts.AgentRegistryAgentRemoved{
+	s.logUnpacker.EXPECT().UnpackAgentRegistryAgentAdded(gomock.Any()).Return(nil, errors.New("some error"))
+	s.logUnpacker.EXPECT().UnpackAgentRegistryAgentUpdated(gomock.Any()).Return(nil, errors.New("some error"))
+	s.logUnpacker.EXPECT().UnpackAgentRegistryAgentRemoved(gomock.Any()).Return(&contracts.AgentRegistryAgentRemoved{
 		PoolId:  common.HexToHash(testPoolIDStr),
 		AgentId: common.HexToHash(testAgentIDStr),
 	}, nil)
 	s.ipfsClient.EXPECT().GetAgentFile(testAgentRef).Return(testAgentFile, nil)
 	// Final state: No agents
-	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, (agentConfigs)([]config.AgentConfig{}))
+	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, (agentConfigs)([]*config.AgentConfig{}))
 
 	update, agentID, ref, err = s.service.detectAgentEvent(testTx)
 	s.r.NoError(err)
 	s.r.NoError(s.service.sendAgentUpdate(update, agentID, ref))
+
 	close(s.service.agentUpdates)
 	s.service.agentUpdatesWg.Done()
 	<-s.service.done
