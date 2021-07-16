@@ -114,7 +114,6 @@ type Config struct {
 	Query        QueryConfig        `yaml:"query" json:"query"`
 	Trace        TraceConfig        `yaml:"trace" json:"trace"`
 	JsonRpcProxy JsonRpcProxyConfig `yaml:"json-rpc-proxy" json:"jsonRpcProxy"`
-	Agents       []AgentConfig      `yaml:"agents" json:"agents"`
 	Log          LogConfig          `yaml:"log" json:"log"`
 }
 
@@ -140,14 +139,6 @@ func ParseBigInt(num int) *big.Int {
 		val = big.NewInt(int64(num))
 	}
 	return val
-}
-
-func (c Config) AgentContainerNames() []string {
-	var agents []string
-	for _, agt := range c.Agents {
-		agents = append(agents, agt.ContainerName())
-	}
-	return agents
 }
 
 func InitLogLevel(cfg Config) error {
