@@ -53,7 +53,8 @@ func (ac AgentConfig) ImageHash() string {
 }
 
 func (ac AgentConfig) ContainerName() string {
-	return fmt.Sprintf("fortify-agent-%s", ac.ID)
+	_, digest := utils.SplitImageRef(ac.Image)
+	return fmt.Sprintf("fortify-agent-%s-%s", utils.ShortenString(ac.ID, 8), utils.ShortenString(digest, 4))
 }
 
 func (ac AgentConfig) GrpcPort() string {
@@ -101,7 +102,7 @@ type LogConfig struct {
 
 type RegistryConfig struct {
 	JSONRPCURL        string  `yaml:"jsonRpcUrl" json:"jsonRpcUrl"`
-	IPFS              *string `yaml:"ipfs" json:"ipfs,omitempty"`
+	IPFSGateway       *string `yaml:"ipfsGateway" json:"ipfs,omitempty"`
 	ContractAddress   string  `yaml:"contractAddress" json:"contractAddress"`
 	ContainerRegistry string  `yaml:"containerRegistry" json:"containerRegistry"`
 	PoolID            string  `yaml:"poolId" json:"poolId"`

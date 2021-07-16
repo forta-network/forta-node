@@ -11,16 +11,17 @@ import (
 	"io"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	log "github.com/sirupsen/logrus"
 )
 
 func (rs *RegistryService) detectAgentEvents(evt *domain.TransactionEvent) (err error) {
 	for _, logEntry := range evt.Receipt.Logs {
-		log := transformLog(&logEntry)
+		ethLog := transformLog(&logEntry)
 
 		var addedEvent *contracts.AgentRegistryAgentAdded
-		addedEvent, err = rs.logUnpacker.UnpackAgentRegistryAgentAdded(log)
+		addedEvent, err = rs.logUnpacker.UnpackAgentRegistryAgentAdded(ethLog)
 		if err == nil {
 			if (common.Hash)(addedEvent.PoolId).String() != rs.poolID.String() {
 				continue
@@ -29,7 +30,7 @@ func (rs *RegistryService) detectAgentEvents(evt *domain.TransactionEvent) (err 
 		}
 
 		var updatedEvent *contracts.AgentRegistryAgentUpdated
-		updatedEvent, err = rs.logUnpacker.UnpackAgentRegistryAgentUpdated(log)
+		updatedEvent, err = rs.logUnpacker.UnpackAgentRegistryAgentUpdated(ethLog)
 		if err == nil {
 			if (common.Hash)(updatedEvent.PoolId).String() != rs.poolID.String() {
 				continue
@@ -38,7 +39,7 @@ func (rs *RegistryService) detectAgentEvents(evt *domain.TransactionEvent) (err 
 		}
 
 		var removedEvent *contracts.AgentRegistryAgentRemoved
-		removedEvent, err = rs.logUnpacker.UnpackAgentRegistryAgentRemoved(log)
+		removedEvent, err = rs.logUnpacker.UnpackAgentRegistryAgentRemoved(ethLog)
 		if err == nil {
 			if (common.Hash)(removedEvent.PoolId).String() != rs.poolID.String() {
 				continue
@@ -62,6 +63,7 @@ func (rs *RegistryService) sendAgentUpdate(update *agentUpdate, agentID [32]byte
 	}
 
 	update.Config = agentCfg
+	log.Infof("sending agent update: %+v", update)
 	rs.agentUpdates <- update
 	return nil
 }
@@ -76,7 +78,7 @@ func (rs *RegistryService) makeAgentConfig(agentID [32]byte, ref string) (agentC
 		r io.ReadCloser
 	)
 	for i := 0; i < 10; i++ {
-		r, err = rs.ipfsClient.Cat(fmt.Sprintf("/ipfs/%s", ref))
+		r, err = rs.ipfsClient.Get(ref)
 		if err == nil {
 			break
 		}
@@ -104,7 +106,13 @@ func (rs *RegistryService) makeAgentConfig(agentID [32]byte, ref string) (agentC
 
 func transformLog(log *domain.LogEntry) *types.Log {
 	transformed := &types.Log{
-		Data: []byte(*log.Data),
+		Address:     common.HexToAddress(*log.Address),
+		Data:        common.FromHex(*log.Data),
+		BlockHash:   common.HexToHash(*log.BlockHash),
+		BlockNumber: hexutil.MustDecodeBig(*log.BlockNumber).Uint64(),
+		TxHash:      common.HexToHash(*log.TransactionHash),
+		TxIndex:     uint(hexutil.MustDecodeBig(*log.TransactionIndex).Uint64()),
+		Index:       uint(hexutil.MustDecodeBig(*log.LogIndex).Uint64()),
 	}
 	for _, topic := range log.Topics {
 		transformed.Topics = append(transformed.Topics, common.HexToHash(*topic))
@@ -129,7 +137,7 @@ func (rs *RegistryService) handleAgentUpdate(update *agentUpdate) {
 				return
 			}
 		}
-		rs.agentsConfigs = append(rs.agentsConfigs, update.Config)
+		rs.agentsConfigs = append(rs.agentsConfigs, &update.Config)
 
 	case update.IsUpdate:
 		for _, agent := range rs.agentsConfigs {
@@ -141,7 +149,7 @@ func (rs *RegistryService) handleAgentUpdate(update *agentUpdate) {
 		}
 
 	case update.IsRemoval:
-		var newAgents []config.AgentConfig
+		var newAgents []*config.AgentConfig
 		for _, agent := range rs.agentsConfigs {
 			if agent.ID != update.Config.ID {
 				newAgents = append(newAgents, agent)

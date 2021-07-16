@@ -20,7 +20,10 @@ require (
 	github.com/google/uuid v1.2.0
 	github.com/gorilla/mux v1.8.0
 	github.com/ipfs/go-cid v0.0.7
-	github.com/ipfs/go-ipfs-api v0.2.0
+	github.com/minio/sha256-simd v0.1.1 // indirect
+	github.com/mr-tron/base58 v1.2.0 // indirect
+	github.com/multiformats/go-multihash v0.0.14 // indirect
+	github.com/multiformats/go-varint v0.0.6 // indirect
 	github.com/nats-io/nats-server/v2 v2.3.2 // indirect
 	github.com/nats-io/nats.go v1.11.1-0.20210623165838-4b75fc59ae30
 	github.com/opencontainers/go-digest v1.0.0 // indirect

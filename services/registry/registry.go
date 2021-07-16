@@ -16,7 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	ipfsapi "github.com/ipfs/go-ipfs-api"
 )
 
 type agentUpdate struct {
@@ -37,7 +36,7 @@ type RegistryService struct {
 	logUnpacker LogUnpacker
 	ipfsClient  IPFSClient
 
-	agentsConfigs  []config.AgentConfig
+	agentsConfigs  []*config.AgentConfig
 	agentUpdates   chan *agentUpdate
 	agentUpdatesWg sync.WaitGroup
 }
@@ -49,16 +48,16 @@ type LogUnpacker interface {
 	UnpackAgentRegistryAgentRemoved(log *types.Log) (*contracts.AgentRegistryAgentRemoved, error)
 }
 
-// IPFSClient interacts with an IPFS API/Gateway.
+// IPFSClient interacts with an IPFS Gateway.
 type IPFSClient interface {
-	Cat(path string) (io.ReadCloser, error)
+	Get(cid string) (io.ReadCloser, error)
 }
 
 // New creates a new service.
 func New(cfg config.Config, msgClient clients.MessageClient, txFeed feeds.TransactionFeed) services.Service {
 	var ipfsURL string
-	if cfg.Registry.IPFS != nil {
-		ipfsURL = *cfg.Registry.IPFS
+	if cfg.Registry.IPFSGateway != nil {
+		ipfsURL = *cfg.Registry.IPFSGateway
 	} else {
 		ipfsURL = config.DefaultIPFSGateway
 	}
@@ -69,7 +68,7 @@ func New(cfg config.Config, msgClient clients.MessageClient, txFeed feeds.Transa
 		msgClient:    msgClient,
 		txFeed:       txFeed,
 		logUnpacker:  contracts.NewAgentLogUnpacker(common.HexToAddress(cfg.Registry.ContractAddress)),
-		ipfsClient:   ipfsapi.NewShell(ipfsURL),
+		ipfsClient:   &ipfsClient{ipfsURL},
 		agentUpdates: make(chan *agentUpdate, 100),
 	}
 }
@@ -107,7 +106,7 @@ func (rs *RegistryService) publishLatestAgents() (err error) {
 	return
 }
 
-func (rs *RegistryService) getLatestAgents() ([]config.AgentConfig, error) {
+func (rs *RegistryService) getLatestAgents() ([]*config.AgentConfig, error) {
 	contract, err := contracts.NewAgentRegistryCaller(common.HexToAddress(rs.cfg.Registry.ContractAddress), rs.client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the agent registry caller: %v", err)
@@ -117,7 +116,7 @@ func (rs *RegistryService) getLatestAgents() ([]config.AgentConfig, error) {
 		return nil, fmt.Errorf("failed to get the pool agents length: %v", err)
 	}
 	// TODO: If we are going to get 100s of agents, we probably need to batch the calls here.
-	var agentConfigs []config.AgentConfig
+	var agentConfigs []*config.AgentConfig
 	length := int(lengthBig.Int64())
 	for i := 0; i < length; i++ {
 		agentID, agentRef, err := contract.AgentAt(nil, rs.poolID, big.NewInt(int64(i)))
@@ -128,7 +127,7 @@ func (rs *RegistryService) getLatestAgents() ([]config.AgentConfig, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to make agent config: %v", err)
 		}
-		agentConfigs = append(agentConfigs, agentCfg)
+		agentConfigs = append(agentConfigs, &agentCfg)
 	}
 	return agentConfigs, nil
 }
