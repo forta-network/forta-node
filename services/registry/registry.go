@@ -7,11 +7,12 @@ import (
 	"OpenZeppelin/fortify-node/contracts"
 	"OpenZeppelin/fortify-node/feeds"
 	"OpenZeppelin/fortify-node/services"
+	"OpenZeppelin/fortify-node/services/registry/regtypes"
 	"fmt"
-	"io"
 	"math/big"
 	"sync"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -29,16 +30,17 @@ type agentUpdate struct {
 type RegistryService struct {
 	cfg       config.Config
 	poolID    common.Hash
-	client    *ethclient.Client
 	msgClient clients.MessageClient
 	txFeed    feeds.TransactionFeed
 
+	contract    ContractRegistryCaller
 	logUnpacker LogUnpacker
 	ipfsClient  IPFSClient
 
 	agentsConfigs  []*config.AgentConfig
 	agentUpdates   chan *agentUpdate
 	agentUpdatesWg sync.WaitGroup
+	done           chan struct{}
 }
 
 // LogUnpacker unpacks agent events from logs.
@@ -48,9 +50,15 @@ type LogUnpacker interface {
 	UnpackAgentRegistryAgentRemoved(log *types.Log) (*contracts.AgentRegistryAgentRemoved, error)
 }
 
+// ContractRegistryCaller calls the contract registry.
+type ContractRegistryCaller interface {
+	AgentLength(opts *bind.CallOpts, _poolId [32]byte) (*big.Int, error)
+	AgentAt(opts *bind.CallOpts, _poolId [32]byte, index *big.Int) ([32]byte, string, error)
+}
+
 // IPFSClient interacts with an IPFS Gateway.
 type IPFSClient interface {
-	Get(cid string) (io.ReadCloser, error)
+	GetAgentFile(cid string) (*regtypes.AgentFile, error)
 }
 
 // New creates a new service.
@@ -70,6 +78,7 @@ func New(cfg config.Config, msgClient clients.MessageClient, txFeed feeds.Transa
 		logUnpacker:  contracts.NewAgentLogUnpacker(common.HexToAddress(cfg.Registry.ContractAddress)),
 		ipfsClient:   &ipfsClient{ipfsURL},
 		agentUpdates: make(chan *agentUpdate, 100),
+		done:         make(chan struct{}),
 	}
 }
 
@@ -79,8 +88,14 @@ func (rs *RegistryService) Start() error {
 	if err != nil {
 		return err
 	}
-	rs.client = ethclient.NewClient(rpcClient)
+	rs.contract, err = contracts.NewAgentRegistryCaller(common.HexToAddress(rs.cfg.Registry.ContractAddress), ethclient.NewClient(rpcClient))
+	if err != nil {
+		return fmt.Errorf("failed to create the agent registry caller: %v", err)
+	}
+	return rs.start()
+}
 
+func (rs *RegistryService) start() error {
 	// Start detecting and buffering events.
 	go rs.txFeed.ForEachTransaction(nil, rs.detectAgentEvents)
 
@@ -94,6 +109,7 @@ func (rs *RegistryService) Start() error {
 
 	// Continue by processing buffered updates.
 	rs.agentUpdatesWg.Done()
+
 	return nil
 }
 
@@ -107,11 +123,7 @@ func (rs *RegistryService) publishLatestAgents() (err error) {
 }
 
 func (rs *RegistryService) getLatestAgents() ([]*config.AgentConfig, error) {
-	contract, err := contracts.NewAgentRegistryCaller(common.HexToAddress(rs.cfg.Registry.ContractAddress), rs.client)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create the agent registry caller: %v", err)
-	}
-	lengthBig, err := contract.AgentLength(nil, rs.poolID)
+	lengthBig, err := rs.contract.AgentLength(nil, rs.poolID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the pool agents length: %v", err)
 	}
@@ -119,7 +131,7 @@ func (rs *RegistryService) getLatestAgents() ([]*config.AgentConfig, error) {
 	var agentConfigs []*config.AgentConfig
 	length := int(lengthBig.Int64())
 	for i := 0; i < length; i++ {
-		agentID, agentRef, err := contract.AgentAt(nil, rs.poolID, big.NewInt(int64(i)))
+		agentID, agentRef, err := rs.contract.AgentAt(nil, rs.poolID, big.NewInt(int64(i)))
 		if err != nil {
 			return nil, fmt.Errorf("failed to get agent at index '%d' in pool '%s': %v", i, rs.poolID.String(), err)
 		}

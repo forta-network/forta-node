@@ -14,11 +14,6 @@ import (
 
 var ErrEndBlockReached = errors.New("end block reached")
 
-type BlockFeed interface {
-	Start()
-	Subscribe(handler func(evt *domain.BlockEvent) error) <-chan error
-}
-
 type bfHandler struct {
 	Handler func(evt *domain.BlockEvent) error
 	ErrCh   chan<- error

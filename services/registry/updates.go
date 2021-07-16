@@ -5,10 +5,9 @@ import (
 	"OpenZeppelin/fortify-node/config"
 	"OpenZeppelin/fortify-node/contracts"
 	"OpenZeppelin/fortify-node/domain"
+	"OpenZeppelin/fortify-node/services/registry/regtypes"
 	"OpenZeppelin/fortify-node/utils"
-	"encoding/json"
 	"fmt"
-	"io"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -16,7 +15,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (rs *RegistryService) detectAgentEvents(evt *domain.TransactionEvent) (err error) {
+func (rs *RegistryService) detectAgentEvents(evt *domain.TransactionEvent) error {
+	update, agentID, ref, err := rs.detectAgentEvent(evt)
+	if err != nil {
+		return err
+	}
+	return rs.sendAgentUpdate(update, agentID, ref)
+}
+
+func (rs *RegistryService) detectAgentEvent(evt *domain.TransactionEvent) (update *agentUpdate, agentID [32]byte, ref string, err error) {
 	for _, logEntry := range evt.Receipt.Logs {
 		ethLog := transformLog(&logEntry)
 
@@ -26,7 +33,7 @@ func (rs *RegistryService) detectAgentEvents(evt *domain.TransactionEvent) (err 
 			if (common.Hash)(addedEvent.PoolId).String() != rs.poolID.String() {
 				continue
 			}
-			return rs.sendAgentUpdate(&agentUpdate{IsCreation: true}, addedEvent.AgentId, addedEvent.Ref)
+			return &agentUpdate{IsCreation: true}, addedEvent.AgentId, addedEvent.Ref, nil
 		}
 
 		var updatedEvent *contracts.AgentRegistryAgentUpdated
@@ -35,7 +42,7 @@ func (rs *RegistryService) detectAgentEvents(evt *domain.TransactionEvent) (err 
 			if (common.Hash)(updatedEvent.PoolId).String() != rs.poolID.String() {
 				continue
 			}
-			return rs.sendAgentUpdate(&agentUpdate{IsUpdate: true}, updatedEvent.AgentId, updatedEvent.Ref)
+			return &agentUpdate{IsUpdate: true}, updatedEvent.AgentId, updatedEvent.Ref, nil
 		}
 
 		var removedEvent *contracts.AgentRegistryAgentRemoved
@@ -44,16 +51,12 @@ func (rs *RegistryService) detectAgentEvents(evt *domain.TransactionEvent) (err 
 			if (common.Hash)(removedEvent.PoolId).String() != rs.poolID.String() {
 				continue
 			}
-			return rs.sendAgentUpdate(&agentUpdate{IsRemoval: true}, removedEvent.AgentId, "")
+			return &agentUpdate{IsRemoval: true}, removedEvent.AgentId, "", nil
 		}
 	}
-	return nil
-}
-
-type agentFile struct {
-	Manifest struct {
-		ImageReference string `json:"imageReference"`
-	} `json:"manifest"`
+	update = nil
+	err = nil
+	return
 }
 
 func (rs *RegistryService) sendAgentUpdate(update *agentUpdate, agentID [32]byte, ref string) error {
@@ -61,7 +64,6 @@ func (rs *RegistryService) sendAgentUpdate(update *agentUpdate, agentID [32]byte
 	if err != nil {
 		return err
 	}
-
 	update.Config = agentCfg
 	log.Infof("sending agent update: %+v", update)
 	rs.agentUpdates <- update
@@ -75,23 +77,16 @@ func (rs *RegistryService) makeAgentConfig(agentID [32]byte, ref string) (agentC
 	}
 
 	var (
-		r io.ReadCloser
+		agentData *regtypes.AgentFile
 	)
 	for i := 0; i < 10; i++ {
-		r, err = rs.ipfsClient.Get(ref)
+		agentData, err = rs.ipfsClient.GetAgentFile(ref)
 		if err == nil {
 			break
 		}
 	}
 	if err != nil {
 		err = fmt.Errorf("failed to load the agent file using ipfs ref: %v", err)
-		return
-	}
-	defer r.Close()
-
-	var agentData agentFile
-	if err = json.NewDecoder(r).Decode(&agentData); err != nil {
-		err = fmt.Errorf("failed to decode the agent file: %v", err)
 		return
 	}
 
@@ -126,6 +121,7 @@ func (rs *RegistryService) listenToAgentUpdates() {
 		rs.handleAgentUpdate(update)
 		rs.msgClient.Publish(messaging.SubjectAgentsVersionsLatest, rs.agentsConfigs)
 	}
+	close(rs.done)
 }
 
 func (rs *RegistryService) handleAgentUpdate(update *agentUpdate) {

@@ -12,10 +12,6 @@ import (
 	"OpenZeppelin/fortify-node/utils"
 )
 
-type TransactionFeed interface {
-	ForEachTransaction(blockHandler func(evt *domain.BlockEvent) error, txHandler func(evt *domain.TransactionEvent) error) error
-}
-
 type transactionFeed struct {
 	ctx       context.Context
 	cache     utils.Cache

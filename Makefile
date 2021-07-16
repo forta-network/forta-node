@@ -29,6 +29,8 @@ proto:
 mocks:
 	mockgen -source ethereum/client.go -destination ethereum/mocks/mock_client.go
 	mockgen -source clients/interfaces.go -destination clients/mocks/mock_clients.go
+	mockgen -source feeds/interfaces.go -destination feeds/mocks/mock_feeds.go
+	mockgen -source services/registry/registry.go -destination services/registry/mocks/mock_registry.go
 
 build: proto main containers
 
