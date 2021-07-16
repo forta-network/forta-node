@@ -16,7 +16,12 @@ var ErrEndBlockReached = errors.New("end block reached")
 
 type BlockFeed interface {
 	Start()
-	Subscribe(handler func(evt *domain.BlockEvent) error)
+	Subscribe(handler func(evt *domain.BlockEvent) error) <-chan error
+}
+
+type bfHandler struct {
+	Handler func(evt *domain.BlockEvent) error
+	ErrCh   chan<- error
 }
 
 type blockFeed struct {
@@ -25,7 +30,7 @@ type blockFeed struct {
 	ctx         context.Context
 	client      ethereum.Client
 	traceClient ethereum.Client
-	handlers    []func(evt *domain.BlockEvent) error
+	handlers    []*bfHandler
 	cache       utils.Cache
 	chainID     *big.Int
 	tracing     bool
@@ -71,15 +76,15 @@ func (bf *blockFeed) Start() {
 }
 
 func (bf *blockFeed) loop() {
-	for {
-		err := bf.forEachBlock()
-		if err == ErrEndBlockReached {
-			return
-		}
-		if err == nil {
-			return
-		}
+	err := bf.forEachBlock()
+	if err == nil {
+		return
+	}
+	if err != ErrEndBlockReached {
 		log.Warnf("failed while processing blocks: %v", err)
+	}
+	for _, handler := range bf.handlers {
+		handler.ErrCh <- err
 	}
 }
 
@@ -120,7 +125,7 @@ func (bf *blockFeed) processReorg(parentHash string) error {
 		}
 		evt := &domain.BlockEvent{EventType: domain.EventTypeReorg, Block: block, ChainID: bf.chainID, Traces: traces}
 		for _, handler := range bf.handlers {
-			if err := handler(evt); err != nil {
+			if err := handler.Handler(evt); err != nil {
 				return err
 			}
 		}
@@ -130,8 +135,13 @@ func (bf *blockFeed) processReorg(parentHash string) error {
 	}
 }
 
-func (bf *blockFeed) Subscribe(handler func(evt *domain.BlockEvent) error) {
-	bf.handlers = append(bf.handlers, handler)
+func (bf *blockFeed) Subscribe(handler func(evt *domain.BlockEvent) error) <-chan error {
+	errCh := make(chan error)
+	bf.handlers = append(bf.handlers, &bfHandler{
+		Handler: handler,
+		ErrCh:   errCh,
+	})
+	return errCh
 }
 
 func (bf *blockFeed) forEachBlock() error {
@@ -171,7 +181,7 @@ func (bf *blockFeed) forEachBlock() error {
 
 		evt := &domain.BlockEvent{EventType: domain.EventTypeBlock, Block: block, ChainID: bf.chainID, Traces: traces}
 		for _, handler := range bf.handlers {
-			if err := handler(evt); err != nil {
+			if err := handler.Handler(evt); err != nil {
 				return err
 			}
 		}

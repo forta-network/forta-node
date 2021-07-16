@@ -27,12 +27,16 @@ type mockBlockFeed struct {
 }
 
 // ForEachBlock is a test method that iterates over mocked blocks
-func (bf *mockBlockFeed) Subscribe(handler func(evt *domain.BlockEvent) error) {
+func (bf *mockBlockFeed) Subscribe(handler func(evt *domain.BlockEvent) error) <-chan error {
+	errCh := make(chan error, 1)
 	for _, b := range bf.blocks {
 		if err := handler(b); err != nil {
-			return
+			errCh <- err
+			return errCh
 		}
 	}
+	errCh <- endOfBlocks
+	return errCh
 }
 
 // Start implements the BlockFeed interface.

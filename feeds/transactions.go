@@ -23,23 +23,26 @@ type transactionFeed struct {
 	blockFeed BlockFeed
 	workers   int
 	blockCh   chan *domain.BlockEvent
-	blocksOut chan *domain.BlockEvent
 	txCh      chan *domain.TransactionEvent
 }
 
 func (tf *transactionFeed) streamTransactions() error {
 	defer close(tf.txCh)
-	for evt := range tf.blockCh {
-		blockEvt := evt
-		log.Debugf("tx-iterator: block(%s) processing", evt.Block.Number)
-		for _, tx := range evt.Block.Transactions {
+	for {
+		blockEvt, ok := <-tf.blockCh
+		if !ok {
+			return nil
+		}
+
+		log.Debugf("tx-iterator: block(%s) processing", blockEvt.Block.Number)
+		for _, tx := range blockEvt.Block.Transactions {
 			txTemp := tx
 			select {
 			case <-tf.ctx.Done():
 				return tf.ctx.Err()
 			default:
 				if !tf.cache.ExistsAndAdd(tx.Hash) {
-					log.Infof("tx-iterator: block(%s), txs <- %s", evt.Block.Number, tx.Hash)
+					log.Infof("tx-iterator: block(%s), txs <- %s", blockEvt.Block.Number, tx.Hash)
 					tf.txCh <- &domain.TransactionEvent{
 						BlockEvt:    blockEvt,
 						Transaction: &txTemp,
@@ -48,7 +51,6 @@ func (tf *transactionFeed) streamTransactions() error {
 			}
 		}
 	}
-	return nil
 }
 
 func (tf *transactionFeed) getWorker(workerID int, handler func(evt *domain.TransactionEvent) error) func() error {
@@ -85,7 +87,7 @@ func (tf *transactionFeed) ForEachTransaction(blockHandler func(evt *domain.Bloc
 
 	// iterate over blocks
 	grp.Go(func() error {
-		tf.blockFeed.Subscribe(func(evt *domain.BlockEvent) error {
+		errCh := tf.blockFeed.Subscribe(func(evt *domain.BlockEvent) error {
 			log.Debugf("block-iterator: blocks <- %s", evt.Block.Number)
 			tf.blockCh <- evt
 			var blockHandlerErr error
@@ -94,7 +96,12 @@ func (tf *transactionFeed) ForEachTransaction(blockHandler func(evt *domain.Bloc
 			}
 			return blockHandlerErr
 		})
-		return nil
+		err := <-errCh
+		close(tf.blockCh)
+		if err == ErrEndBlockReached {
+			return nil
+		}
+		return err
 	})
 
 	// iterate over transactions, check for duplicates
@@ -117,10 +124,9 @@ func (tf *transactionFeed) ForEachTransaction(blockHandler func(evt *domain.Bloc
 
 func NewTransactionFeed(ctx context.Context, client ethereum.Client, blockFeed BlockFeed, workers int) (*transactionFeed, error) {
 	blocks := make(chan *domain.BlockEvent, 10)
-	blocksOut := make(chan *domain.BlockEvent)
 	txs := make(chan *domain.TransactionEvent, 100)
 	cache := utils.NewCache(1000000)
 	return &transactionFeed{
-		ctx: ctx, cache: cache, client: client, blockFeed: blockFeed, workers: workers, blockCh: blocks, blocksOut: blocksOut, txCh: txs,
+		ctx: ctx, cache: cache, client: client, blockFeed: blockFeed, workers: workers, blockCh: blocks, txCh: txs,
 	}, nil
 }
