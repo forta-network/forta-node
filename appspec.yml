@@ -9,7 +9,7 @@ hooks:
   BeforeInstall:
     - location: scripts/stop-server.sh
       timeout: 300
-      runas: fortify
+      runas: forta
   AfterInstall:
     - location: scripts/set-permissions.sh
       timeout: 300
@@ -19,12 +19,12 @@ hooks:
       runas: root
     - location: scripts/load-images.sh
       timeout: 300
-      runas: fortify
+      runas: forta
   ApplicationStart:
     - location: scripts/start-server.sh
       timeout: 300
-      runas: fortify
+      runas: forta
   AfterAllowTraffic:
     - location: scripts/after-start.sh
       timeout: 300
-      runas: fortify
+      runas: forta
