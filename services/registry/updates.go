@@ -1,13 +1,14 @@
 package registry
 
 import (
+	"fmt"
+
 	"OpenZeppelin/fortify-node/clients/messaging"
 	"OpenZeppelin/fortify-node/config"
 	"OpenZeppelin/fortify-node/contracts"
 	"OpenZeppelin/fortify-node/domain"
 	"OpenZeppelin/fortify-node/services/registry/regtypes"
 	"OpenZeppelin/fortify-node/utils"
-	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -20,7 +21,10 @@ func (rs *RegistryService) detectAgentEvents(evt *domain.TransactionEvent) error
 	if err != nil {
 		return err
 	}
-	return rs.sendAgentUpdate(update, agentID, ref)
+	if update != nil {
+		return rs.sendAgentUpdate(update, agentID, ref)
+	}
+	return nil
 }
 
 func (rs *RegistryService) detectAgentEvent(evt *domain.TransactionEvent) (update *agentUpdate, agentID [32]byte, ref string, err error) {

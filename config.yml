@@ -1,8 +1,14 @@
 registry:
-  jsonRpcUrl: "http://localhost:8545"
-  contractAddress: "0x5fbdb2315678afecb367f032d93f642f64180aa3"
-  containerRegistry: localhost:1970 # Local Disco
-  poolId: "123"
+  jsonRpcUrl: "https://arb-rinkeby.g.alchemy.com/v2/YxokkWMvqmvGoOgc0XqnJXpZ5pz7pPgf"
+  contractAddress: "0xd5180d374b6d1961BA24D0a4Dbf26d696fda4cad"
+  containerRegistry: disco-dev.forta.network
+  poolId: "0xe95fb42f3bcc321b535f505adf41f27f2f7edbce3f4febeffc1b38c4f8adbc64"
+
+#registry:
+#  jsonRpcUrl: "http://localhost:8545"
+#  contractAddress: "0x5fbdb2315678afecb367f032d93f642f64180aa3"
+#  containerRegistry: localhost:1970 # Local Disco
+#  poolId: "123"
 
 scanner:
   scannerImage: "openzeppelin/fortify-scanner:latest"
@@ -28,15 +34,6 @@ trace:
   enabled: true
   ethereum:
     jsonRpcUrl: "http://eth.fortify-dev.com:8545"
-
-agents:
-  - name: "example-agent"
-    image: "openzeppelin/fortify-agent:latest"
-    imageHash: "sha256:af480655d5f64955f5c579469d20fdc26540cd262f19f804c66a5618b5f07e25"
-#  - name: "flash-loans"
-#    image: "openzeppelin/lab-flash-loans:latest"
-#    imageHash: "sha256:b33c53cbbf29faa3511d4e339288e3d86d290771535d3dcd15f8ba23d7c91a99"
-
 log:
   level: debug
   maxLogSize: 10m
