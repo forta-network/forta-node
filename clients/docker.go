@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/docker/docker/api/types"
@@ -70,6 +71,23 @@ func (cfg DockerContainerConfig) envVars() []string {
 		results = append(results, fmt.Sprintf("%s=%s", k, v))
 	}
 	return results
+}
+
+func (d *dockerClient) PullImage(ctx context.Context, refStr string) error {
+	r, err := d.cli.ImagePull(ctx, refStr, types.ImagePullOptions{})
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+	b, err := io.ReadAll(r)
+	if err != nil {
+		return err
+	}
+	respStr := strings.ToLower(string(b))
+	if strings.Contains(respStr, "downloaded") || strings.Contains(respStr, "up to date") {
+		return nil
+	}
+	return fmt.Errorf("unexpected image pull response: %s", string(b))
 }
 
 func (d *dockerClient) Prune(ctx context.Context) error {

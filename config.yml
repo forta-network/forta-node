@@ -1,3 +1,9 @@
+registry:
+  jsonRpcUrl: "http://localhost:8545"
+  contractAddress: "0x5fbdb2315678afecb367f032d93f642f64180aa3"
+  containerRegistry: localhost:1970 # Local Disco
+  poolId: "123"
+
 scanner:
   scannerImage: "openzeppelin/fortify-scanner:latest"
   chainId: 1

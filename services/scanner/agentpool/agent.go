@@ -69,7 +69,7 @@ func (agent *Agent) processTransactions() {
 			log.Error("error invoking agent", err)
 			continue
 		}
-		resp.Metadata["imageHash"] = agent.config.ImageHash
+		resp.Metadata["imageHash"] = agent.config.ImageHash()
 		agent.txResults <- &scanner.TxResult{
 			AgentConfig: agent.config,
 			Request:     request,
@@ -89,7 +89,7 @@ func (agent *Agent) processBlocks() {
 			log.Error("error invoking agent", err)
 			continue
 		}
-		resp.Metadata["imageHash"] = agent.config.ImageHash
+		resp.Metadata["imageHash"] = agent.config.ImageHash()
 		agent.blockResults <- &scanner.BlockResult{
 			AgentConfig: agent.config,
 			Request:     request,

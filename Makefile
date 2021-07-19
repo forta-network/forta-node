@@ -1,5 +1,5 @@
 containers:
-	docker pull nats:latest
+	docker pull nats:2.3.2
 	docker build -t openzeppelin/fortify-scanner -f Dockerfile-scanner .
 	docker build -t openzeppelin/fortify-query -f Dockerfile-query .
 	docker build -t openzeppelin/fortify-json-rpc -f Dockerfile-json-rpc .
@@ -29,6 +29,8 @@ proto:
 mocks:
 	mockgen -source ethereum/client.go -destination ethereum/mocks/mock_client.go
 	mockgen -source clients/interfaces.go -destination clients/mocks/mock_clients.go
+	mockgen -source feeds/interfaces.go -destination feeds/mocks/mock_feeds.go
+	mockgen -source services/registry/registry.go -destination services/registry/mocks/mock_registry.go
 
 build: proto main containers
 
@@ -37,3 +39,6 @@ test:
 
 run:
 	go build -o build/fortify . && ./build/fortify --passphrase 123
+
+abigen:
+	abigen --abi ./contracts/agent_registry.json --out ./contracts/agent_registry.go --pkg contracts --type AgentRegistry

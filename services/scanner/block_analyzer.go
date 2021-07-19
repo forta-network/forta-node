@@ -61,9 +61,9 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 		Timestamp: ts.Format(store.AlertTimeFormat),
 		Type:      protocol.AlertType_BLOCK,
 		Agent: &protocol.AgentInfo{
-			Name:      result.AgentConfig.Name,
+			Name:      result.AgentConfig.ID,
 			Image:     result.AgentConfig.Image,
-			ImageHash: result.AgentConfig.ImageHash,
+			ImageHash: result.AgentConfig.ImageHash(),
 		},
 		Tags: map[string]string{
 			"blockHash":   result.Request.Event.BlockHash,

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"OpenZeppelin/fortify-node/utils"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -35,15 +36,29 @@ var (
 
 // Global constant values
 var (
-	DefaultNatsPort = "4222"
+	DefaultNatsPort    = "4222"
+	DefaultIPFSGateway = "https://cloudflare-ipfs.com"
 )
 
 type AgentConfig struct {
-	Name       string  `yaml:"name" json:"name"`
+	ID         string  `yaml:"id" json:"id"`
 	Image      string  `yaml:"image" json:"image"`
-	ImageHash  string  `yaml:"imageHash" json:"imageHash"`
 	StartBlock *uint64 `yaml:"startBlock" json:"startBlock,omitempty"`
 	StopBlock  *uint64 `yaml:"stopBlock" json:"stopBlock,omitempty"`
+}
+
+func (ac AgentConfig) ImageHash() string {
+	_, digest := utils.SplitImageRef(ac.Image)
+	return digest
+}
+
+func (ac AgentConfig) ContainerName() string {
+	_, digest := utils.SplitImageRef(ac.Image)
+	return fmt.Sprintf("fortify-agent-%s-%s", utils.ShortenString(ac.ID, 8), utils.ShortenString(digest, 4))
+}
+
+func (ac AgentConfig) GrpcPort() string {
+	return "50051"
 }
 
 type DBConfig struct {
@@ -85,20 +100,20 @@ type LogConfig struct {
 	MaxLogFiles int    `yaml:"maxLogFiles" json:"maxLogFiles"`
 }
 
-func (ac AgentConfig) ContainerName() string {
-	return fmt.Sprintf("%s-agent-%s", FortifyPrefix, ac.Name)
-}
-
-func (ac AgentConfig) GrpcPort() string {
-	return "50051"
+type RegistryConfig struct {
+	JSONRPCURL        string  `yaml:"jsonRpcUrl" json:"jsonRpcUrl"`
+	IPFSGateway       *string `yaml:"ipfsGateway" json:"ipfs,omitempty"`
+	ContractAddress   string  `yaml:"contractAddress" json:"contractAddress"`
+	ContainerRegistry string  `yaml:"containerRegistry" json:"containerRegistry"`
+	PoolID            string  `yaml:"poolId" json:"poolId"`
 }
 
 type Config struct {
+	Registry     RegistryConfig     `yaml:"registry" json:"registry"`
 	Scanner      ScannerConfig      `yaml:"scanner" json:"scanner"`
 	Query        QueryConfig        `yaml:"query" json:"query"`
 	Trace        TraceConfig        `yaml:"trace" json:"trace"`
 	JsonRpcProxy JsonRpcProxyConfig `yaml:"json-rpc-proxy" json:"jsonRpcProxy"`
-	Agents       []AgentConfig      `yaml:"agents" json:"agents"`
 	Log          LogConfig          `yaml:"log" json:"log"`
 }
 
@@ -124,14 +139,6 @@ func ParseBigInt(num int) *big.Int {
 		val = big.NewInt(int64(num))
 	}
 	return val
-}
-
-func (c Config) AgentContainerNames() []string {
-	var agents []string
-	for _, agt := range c.Agents {
-		agents = append(agents, agt.ContainerName())
-	}
-	return agents
 }
 
 func InitLogLevel(cfg Config) error {
