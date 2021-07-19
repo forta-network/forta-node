@@ -12,5 +12,5 @@ region=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/documen
 envPrefix=$(aws ec2 describe-tags --region $region --filters "Name=resource-id,Values=$instanceId" "Name=key,Values=Environment" |jq -r '.Tags[0].Value')
 
 # pull agents by parsing config file
-cat "/etc/fortify/config-fortify-${envPrefix}.yml" | grep image | sed -e 's/.* //g'|xargs -I {} docker pull {}
+cat "/etc/fortify/config-fortify.yml" | grep image | sed -e 's/.* //g'|xargs -I {} docker pull {}
 docker pull nats:latest

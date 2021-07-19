@@ -9,4 +9,4 @@ secretId="${envPrefix}_alchemy_api_url"
 apiUrlUnsafe=$(aws secretsmanager --region $region get-secret-value --secret-id $secretId |jq -r '.SecretString')
 apiUrl=$(printf '%s\n' "$apiUrlUnsafe" | sed -e 's/[]\/$*.^[]/\\&/g');
 
-sed -i "s/ALCHEMY_URL/$apiUrl/g" /etc/fortify/config-fortify-$envPrefix.yml
+sed -i "s/ALCHEMY_URL/$apiUrl/g" /etc/fortify/config-fortify.yml

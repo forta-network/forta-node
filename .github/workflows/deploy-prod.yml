@@ -83,7 +83,7 @@ jobs:
         run: |
           mkdir dist
           cp fortify dist/
-          cp config-fortify-prod.yml dist/
+          cp config-fortify-prod.yml dist/config-fortify.yml
           cp appspec.yml dist/
           cp -R scripts dist/
       - name: Zip Distribution

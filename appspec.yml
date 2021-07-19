@@ -3,7 +3,7 @@ os: linux
 files:
   - source: fortify
     destination: /usr/local/bin/
-  - source: config-fortify-dev.yml
+  - source: config-fortify.yml
     destination: /etc/fortify/
 hooks:
   BeforeInstall:
