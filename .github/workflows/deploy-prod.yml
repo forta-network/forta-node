@@ -42,8 +42,8 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           GITHUB_HASH: ${{ github.sha }}
         run: |
-          sed -i "s/GITHUB_HASH/$GITHUB_HASH/g" config-fortify-dev.yml
-          sed -i "s/ECR_REGISTRY/$ECR_REGISTRY/g" config-fortify-dev.yml
+          sed -i "s/GITHUB_HASH/$GITHUB_HASH/g" config-fortify-prod.yml
+          sed -i "s/ECR_REGISTRY/$ECR_REGISTRY/g" config-fortify-prod.yml
           sed -i "s/GITHUB_HASH/$GITHUB_HASH/g" scripts/load-images.sh
           sed -i "s/ECR_REGISTRY/$ECR_REGISTRY/g" scripts/load-images.sh
       - name: Build and Tag ECR images
@@ -83,7 +83,7 @@ jobs:
         run: |
           mkdir dist
           cp fortify dist/
-          cp config-fortify-dev.yml dist/
+          cp config-fortify-prod.yml dist/
           cp appspec.yml dist/
           cp -R scripts dist/
       - name: Zip Distribution
@@ -104,5 +104,5 @@ jobs:
           codedeploy_name: ${{ secrets.PROD_CODEDEPLOY_APP }}
           codedeploy_group: ${{ secrets.PROD_CODEDEPLOY_GROUP }}
           s3_bucket: ${{ secrets.PROD_DEPLOY_BUCKET }}
-          s3_folder: dev
+          s3_folder: prod
           directory: ./dist/
