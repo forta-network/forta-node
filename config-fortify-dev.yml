@@ -1,5 +1,12 @@
 # This file is used by the development server (on AWS)
 # GITHUB_HASH is replaced on the server at deploy time
+
+registry:
+  jsonRpcUrl: "https://arb-rinkeby.g.alchemy.com/v2/YxokkWMvqmvGoOgc0XqnJXpZ5pz7pPgf"
+  contractAddress: "0xd5180d374b6d1961BA24D0a4Dbf26d696fda4cad"
+  containerRegistry: DISCO_URL
+  poolId: "0xe95fb42f3bcc321b535f505adf41f27f2f7edbce3f4febeffc1b38c4f8adbc64"
+
 scanner:
   scannerImage: "ECR_REGISTRY/fortify-scanner:GITHUB_HASH"
   chainId: 1
@@ -25,14 +32,6 @@ query:
   db:
     path: "/tmp/fortify-alerts"
 
-agents:
-  - name: "high-gas"
-    image: "ECR_REGISTRY/fortify-agent-lab:high-gas-609e0c238f298c5bf7feb356edec6d80e6e5a8be"
-  - name: "ownership-change"
-    image: "ECR_REGISTRY/fortify-agent-lab:ownership-change-609e0c238f298c5bf7feb356edec6d80e6e5a8be"
-  - name: "compound-governance"
-    image: "ECR_REGISTRY/fortify-agent-lab:compound-governance-84d0fb97dbd7443c3f19b05c84a582289e8a5074"
-   
 log:
   level: debug
   maxLogSize: 10m

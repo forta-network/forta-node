@@ -9,4 +9,10 @@ secretId="${envPrefix}_alchemy_api_url"
 apiUrlUnsafe=$(aws secretsmanager --region $region get-secret-value --secret-id $secretId |jq -r '.SecretString')
 apiUrl=$(printf '%s\n' "$apiUrlUnsafe" | sed -e 's/[]\/$*.^[]/\\&/g');
 
+disco="disco.forta.network"
+if [ $envPrefix = "dev" ]; then
+   disco="disco-dev.forta.network"
+fi
+
 sed -i "s/ALCHEMY_URL/$apiUrl/g" /etc/fortify/config-fortify-dev.yml
+sed -i "s/DISCO_URL/$disco/g" /etc/fortify/config-fortify-dev.yml
