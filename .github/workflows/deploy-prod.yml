@@ -1,7 +1,7 @@
 name: Deploy Prod
 
 on:
-  workflow_dispatch: 
+  workflow_dispatch:
 
 jobs:
   deploy:
