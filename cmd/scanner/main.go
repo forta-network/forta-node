@@ -14,6 +14,7 @@ import (
 	"OpenZeppelin/fortify-node/clients"
 	"OpenZeppelin/fortify-node/clients/messaging"
 	"OpenZeppelin/fortify-node/config"
+	"OpenZeppelin/fortify-node/ethereum"
 	"OpenZeppelin/fortify-node/feeds"
 	"OpenZeppelin/fortify-node/services"
 	"OpenZeppelin/fortify-node/services/registry"
@@ -50,29 +51,38 @@ func loadKey() (*keystore.Key, error) {
 	return keystore.DecryptKey(keyBytes, passphrase)
 }
 
-func initTxStream(ctx context.Context, cfg config.Config) (*scanner.TxStreamService, error) {
+func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, cfg config.Config) (*scanner.TxStreamService, feeds.BlockFeed, error) {
 	url := cfg.Scanner.Ethereum.JsonRpcUrl
 	startBlock := config.ParseBigInt(cfg.Scanner.StartBlock)
 	endBlock := config.ParseBigInt(cfg.Scanner.EndBlock)
 	chainID := config.ParseBigInt(cfg.Scanner.ChainID)
 
 	if url == "" {
-		return nil, fmt.Errorf("ethereum.jsonRpcUrl is required")
+		return nil, nil, fmt.Errorf("ethereum.jsonRpcUrl is required")
 	}
 	if cfg.Trace.Enabled && cfg.Trace.Ethereum.JsonRpcUrl == "" {
-		return nil, fmt.Errorf("trace requires a JsonRpcUrl if enabled")
+		return nil, nil, fmt.Errorf("trace requires a JsonRpcUrl if enabled")
 	}
 
-	return scanner.NewTxStreamService(ctx, scanner.TxStreamServiceConfig{
+	blockFeed, err := feeds.NewBlockFeed(ctx, ethClient, traceClient, feeds.BlockFeedConfig{
+		Start:   startBlock,
+		End:     endBlock,
+		ChainID: chainID,
+		Tracing: cfg.Trace.Enabled,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	txStream, err := scanner.NewTxStreamService(ctx, ethClient, blockFeed, scanner.TxStreamServiceConfig{
 		JsonRpcConfig:      cfg.Scanner.Ethereum,
 		TraceJsonRpcConfig: cfg.Trace.Ethereum,
-		BlockFeedConfig: feeds.BlockFeedConfig{
-			Start:   startBlock,
-			End:     endBlock,
-			ChainID: chainID,
-			Tracing: cfg.Trace.Enabled,
-		},
 	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create the tx stream service: %v", err)
+	}
+
+	return txStream, blockFeed, nil
 }
 
 func initTxAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.TxStreamService, ap *agentpool.AgentPool) (*scanner.TxAnalyzerService, error) {
@@ -125,7 +135,18 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	if err != nil {
 		return nil, err
 	}
-	txStream, err := initTxStream(ctx, cfg)
+
+	ethClient, err := ethereum.NewStreamEthClient(ctx, cfg.Scanner.Ethereum.JsonRpcUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	traceClient, err := ethereum.NewStreamEthClient(ctx, cfg.Trace.Ethereum.JsonRpcUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	txStream, blockFeed, err := initTxStream(ctx, ethClient, traceClient, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +162,14 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	}
 
 	// Finally start the registry service so we know what agents we are running and receive updates.
-	registryService := registry.New(cfg, msgClient)
+	txFeed, err := feeds.NewTransactionFeed(ctx, ethClient, blockFeed, 10)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create tx feed for the registry service: %v", err)
+	}
+	registryService := registry.New(cfg, msgClient, txFeed)
+
+	// Start the main block feed so all transaction feeds can start consuming.
+	blockFeed.Start()
 
 	return []services.Service{
 		txStream,

@@ -15,10 +15,12 @@ import (
 )
 
 const (
+	testImageRef           = "some.docker.registry.io/foobar@sha256:cdd4ddccf5e9c740eb4144bcc68e3ea3a056789ec7453e94a6416dcfc80937a4"
 	testNodeNetworkID      = "node-network-id"
 	testScannerContainerID = "test-scanner-container-id"
 	testProxyContainerID   = "test-proxy-container-id"
-	testAgentName          = "test-agent"
+	testAgentID            = "test-agent"
+	testAgentContainerName = "fortify-agent-test-age-cdd4" // This is a result
 	testAgentNetworkID     = "test-agent-network-id"
 	testAgentContainerID   = "test-agent-container-id"
 )
@@ -93,14 +95,16 @@ func (s *Suite) SetupTest() {
 // TestAgentRun tests running the agent.
 func (s *Suite) TestAgentRun() {
 	agentConfig := config.AgentConfig{
-		Name: testAgentName,
+		ID:    testAgentID,
+		Image: testImageRef,
 	}
 	agentPayload := messaging.AgentPayload{
 		agentConfig,
 	}
 	// Creates the agent network, starts the agent container, attaches the scanner and the proxy to the
 	// agent network, publishes a "running" message.
-	s.dockerClient.EXPECT().CreatePublicNetwork(s.service.ctx, testAgentName).Return(testAgentNetworkID, nil)
+	s.dockerClient.EXPECT().PullImage(s.service.ctx, testImageRef)
+	s.dockerClient.EXPECT().CreatePublicNetwork(s.service.ctx, testAgentContainerName).Return(testAgentNetworkID, nil)
 	s.dockerClient.EXPECT().StartContainer(s.service.ctx, (configMatcher)(clients.DockerContainerConfig{
 		Name: agentConfig.ContainerName(),
 	})).Return(&clients.DockerContainer{Name: agentConfig.ContainerName(), ID: testAgentContainerID}, nil)
@@ -116,7 +120,8 @@ func (s *Suite) TestAgentRunAgain() {
 	s.TestAgentRun()
 
 	agentConfig := config.AgentConfig{
-		Name: testAgentName,
+		ID:    testAgentID,
+		Image: testImageRef,
 	}
 	agentPayload := messaging.AgentPayload{
 		agentConfig,

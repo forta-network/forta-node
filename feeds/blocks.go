@@ -14,8 +14,9 @@ import (
 
 var ErrEndBlockReached = errors.New("end block reached")
 
-type BlockFeed interface {
-	ForEachBlock(handler func(evt *domain.BlockEvent) error) error
+type bfHandler struct {
+	Handler func(evt *domain.BlockEvent) error
+	ErrCh   chan<- error
 }
 
 type blockFeed struct {
@@ -24,6 +25,7 @@ type blockFeed struct {
 	ctx         context.Context
 	client      ethereum.Client
 	traceClient ethereum.Client
+	handlers    []*bfHandler
 	cache       utils.Cache
 	chainID     *big.Int
 	tracing     bool
@@ -64,7 +66,24 @@ func (bf *blockFeed) initialize() error {
 	return nil
 }
 
-func (bf *blockFeed) processReorg(parentHash string, handler func(evt *domain.BlockEvent) error) error {
+func (bf *blockFeed) Start() {
+	go bf.loop()
+}
+
+func (bf *blockFeed) loop() {
+	err := bf.forEachBlock()
+	if err == nil {
+		return
+	}
+	if err != ErrEndBlockReached {
+		log.Warnf("failed while processing blocks: %v", err)
+	}
+	for _, handler := range bf.handlers {
+		handler.ErrCh <- err
+	}
+}
+
+func (bf *blockFeed) processReorg(parentHash string) error {
 	// don't process anything before start index
 	currentHash := parentHash
 	for {
@@ -100,8 +119,10 @@ func (bf *blockFeed) processReorg(parentHash string, handler func(evt *domain.Bl
 			return nil
 		}
 		evt := &domain.BlockEvent{EventType: domain.EventTypeReorg, Block: block, ChainID: bf.chainID, Traces: traces}
-		if err := handler(evt); err != nil {
-			return err
+		for _, handler := range bf.handlers {
+			if err := handler.Handler(evt); err != nil {
+				return err
+			}
 		}
 
 		bf.cache.Add(currentHash)
@@ -109,7 +130,16 @@ func (bf *blockFeed) processReorg(parentHash string, handler func(evt *domain.Bl
 	}
 }
 
-func (bf *blockFeed) ForEachBlock(handler func(evt *domain.BlockEvent) error) error {
+func (bf *blockFeed) Subscribe(handler func(evt *domain.BlockEvent) error) <-chan error {
+	errCh := make(chan error)
+	bf.handlers = append(bf.handlers, &bfHandler{
+		Handler: handler,
+		ErrCh:   errCh,
+	})
+	return errCh
+}
+
+func (bf *blockFeed) forEachBlock() error {
 	increment := big.NewInt(1)
 	blockNum := big.NewInt(bf.start.Int64())
 
@@ -145,12 +175,14 @@ func (bf *blockFeed) ForEachBlock(handler func(evt *domain.BlockEvent) error) er
 		}
 
 		evt := &domain.BlockEvent{EventType: domain.EventTypeBlock, Block: block, ChainID: bf.chainID, Traces: traces}
-		if err := handler(evt); err != nil {
-			return err
+		for _, handler := range bf.handlers {
+			if err := handler.Handler(evt); err != nil {
+				return err
+			}
 		}
 		bf.cache.Add(block.Hash)
 		if blockNum.Uint64() > bf.start.Uint64() {
-			if err := bf.processReorg(block.ParentHash, handler); err != nil {
+			if err := bf.processReorg(block.ParentHash); err != nil {
 				log.Errorf("ForEachBlock: err from processReorg: %s", err.Error())
 				return err
 			}

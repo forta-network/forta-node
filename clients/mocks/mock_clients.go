@@ -111,6 +111,20 @@ func (mr *MockDockerClientMockRecorder) Prune(ctx interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Prune", reflect.TypeOf((*MockDockerClient)(nil).Prune), ctx)
 }
 
+// PullImage mocks base method.
+func (m *MockDockerClient) PullImage(ctx context.Context, refStr string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PullImage", ctx, refStr)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PullImage indicates an expected call of PullImage.
+func (mr *MockDockerClientMockRecorder) PullImage(ctx, refStr interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PullImage", reflect.TypeOf((*MockDockerClient)(nil).PullImage), ctx, refStr)
+}
+
 // StartContainer mocks base method.
 func (m *MockDockerClient) StartContainer(ctx context.Context, config clients.DockerContainerConfig) (*clients.DockerContainer, error) {
 	m.ctrl.T.Helper()
