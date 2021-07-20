@@ -2,7 +2,8 @@
 # GITHUB_HASH is replaced on the server at deploy time
 
 registry:
-  jsonRpcUrl: "https://arb-rinkeby.g.alchemy.com/v2/YxokkWMvqmvGoOgc0XqnJXpZ5pz7pPgf"
+  ethereum:
+    jsonRpcUrl: "https://arb-rinkeby.g.alchemy.com/v2/YxokkWMvqmvGoOgc0XqnJXpZ5pz7pPgf"
   contractAddress: "0xd5180d374b6d1961BA24D0a4Dbf26d696fda4cad"
   containerRegistry: DISCO_URL
   poolId: "0x9d3d1df113ae5f4ff7fb542439229d50a384f4c2162c4fe4e298beefc872ddf2"
