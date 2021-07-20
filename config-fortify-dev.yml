@@ -34,6 +34,6 @@ query:
     path: "/tmp/fortify-alerts"
 
 log:
-  level: info
+  level: debug
   maxLogSize: 50m
   maxLogFiles: 10
