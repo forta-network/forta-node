@@ -33,10 +33,11 @@ func (rs *RegistryService) detectAgentEvents(evt *domain.TransactionEvent) error
 		log.Debugf("registry skipping event (not for contract): %s", evt.Transaction.Hash)
 		return nil
 	}
-	log.Infof("agent event: %s", evt.Transaction.Hash)
+	log.Infof("registry agent event: %s", evt.Transaction.Hash)
 	update, agentID, ref, err := rs.detectAgentEvent(evt)
 	if err != nil {
-		return err
+		log.Errorf("registry agent error (ignoring): %s", err.Error())
+		return nil
 	}
 	if update != nil {
 		return rs.sendAgentUpdate(update, agentID, ref)

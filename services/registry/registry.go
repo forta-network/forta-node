@@ -112,13 +112,17 @@ func (rs *RegistryService) start() error {
 
 	// Start to handle agent updates but wait until initialization is complete.
 	rs.agentUpdatesWg.Add(1)
-	log.Info("registry: listenToAgentUpdates")
-	go rs.listenToAgentUpdates()
+
+	go func() {
+		log.Info("registry: listenToAgentUpdates")
+		rs.listenToAgentUpdates()
+		log.Warn("registry: listenToAgentUpdates is DONE!")
+	}()
 
 	if err := rs.publishLatestAgents(); err != nil {
 		return fmt.Errorf("failed to publish the latest agents: %v", err)
 	}
-	log.Info("registry: publishLatestAgents")
+	log.Info("registry: publishLatestAgents complete")
 
 	// Continue by processing buffered updates.
 	rs.agentUpdatesWg.Done()
