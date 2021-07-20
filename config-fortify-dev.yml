@@ -11,7 +11,7 @@ registry:
 scanner:
   scannerImage: "ECR_REGISTRY/fortify-scanner:GITHUB_HASH"
   chainId: 1
-  startBlock: 12825965
+  startBlock: 12860865
   #endBlock: 11792184
   #disableTracing: true
   ethereum:
