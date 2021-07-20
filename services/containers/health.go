@@ -2,6 +2,8 @@ package containers
 
 import (
 	"OpenZeppelin/fortify-node/clients"
+	"OpenZeppelin/fortify-node/utils"
+
 	"fmt"
 	"time"
 
@@ -35,10 +37,20 @@ func (t *TxNodeService) doHealthCheck() error {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	for _, knownContainer := range t.containers {
-		foundContainer, ok := containersList.FindByID(knownContainer.ID)
-		if !ok {
+		var foundContainer *types.Container
+		var ok bool
+		// give it some times to avoid a race condition with a newly-started container
+		err := utils.TryTimes(func() error {
+			foundContainer, ok = containersList.FindByID(knownContainer.ID)
+			if !ok {
+				return fmt.Errorf("container '%s' with id '%s' was not found", knownContainer.Name, knownContainer.ID)
+			}
+			return nil
+		}, 5, 1*time.Second)
+		if err != nil {
 			// If this ever happens, then we have a critical gap in our logic.
-			log.Panicf("container '%s' with id '%s' was not found", knownContainer.Name, knownContainer.ID)
+			log.Error(err.Error())
+			continue
 		}
 		if err := t.ensureUp(knownContainer, foundContainer); err != nil {
 			return err
