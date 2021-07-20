@@ -1,11 +1,12 @@
 package config
 
 import (
-	"OpenZeppelin/fortify-node/utils"
 	"encoding/json"
 	"fmt"
 	"math/big"
 	"os"
+
+	"OpenZeppelin/fortify-node/utils"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -101,11 +102,11 @@ type LogConfig struct {
 }
 
 type RegistryConfig struct {
-	JSONRPCURL        string  `yaml:"jsonRpcUrl" json:"jsonRpcUrl"`
-	IPFSGateway       *string `yaml:"ipfsGateway" json:"ipfs,omitempty"`
-	ContractAddress   string  `yaml:"contractAddress" json:"contractAddress"`
-	ContainerRegistry string  `yaml:"containerRegistry" json:"containerRegistry"`
-	PoolID            string  `yaml:"poolId" json:"poolId"`
+	Ethereum          EthereumConfig `yaml:"ethereum" json:"ethereum"`
+	IPFSGateway       *string        `yaml:"ipfsGateway" json:"ipfs,omitempty"`
+	ContractAddress   string         `yaml:"contractAddress" json:"contractAddress"`
+	ContainerRegistry string         `yaml:"containerRegistry" json:"containerRegistry"`
+	PoolID            string         `yaml:"poolId" json:"poolId"`
 }
 
 type Config struct {

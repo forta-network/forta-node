@@ -1,6 +1,10 @@
 package registry
 
 import (
+	"fmt"
+	"math/big"
+	"sync"
+
 	"OpenZeppelin/fortify-node/clients"
 	"OpenZeppelin/fortify-node/clients/messaging"
 	"OpenZeppelin/fortify-node/config"
@@ -8,9 +12,6 @@ import (
 	"OpenZeppelin/fortify-node/feeds"
 	"OpenZeppelin/fortify-node/services"
 	"OpenZeppelin/fortify-node/services/registry/regtypes"
-	"fmt"
-	"math/big"
-	"sync"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -84,7 +85,7 @@ func New(cfg config.Config, msgClient clients.MessageClient, txFeed feeds.Transa
 
 // Start starts the registry service.
 func (rs *RegistryService) Start() error {
-	rpcClient, err := rpc.Dial(rs.cfg.Registry.JSONRPCURL)
+	rpcClient, err := rpc.Dial(rs.cfg.Registry.Ethereum.JsonRpcUrl)
 	if err != nil {
 		return err
 	}
@@ -97,7 +98,12 @@ func (rs *RegistryService) Start() error {
 
 func (rs *RegistryService) start() error {
 	// Start detecting and buffering events.
-	go rs.txFeed.ForEachTransaction(nil, rs.detectAgentEvents)
+	go func() {
+		err := rs.txFeed.ForEachTransaction(nil, rs.detectAgentEvents)
+		if err != nil {
+			panic(err)
+		}
+	}()
 
 	// Start to handle agent updates but wait until initialization is complete.
 	rs.agentUpdatesWg.Add(1)
