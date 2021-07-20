@@ -33,18 +33,23 @@ func BindAgentRegistry(address common.Address, caller bind.ContractCaller, trans
 
 // AgentLogUnpacker unpacks logs using the bound contract.
 type AgentLogUnpacker struct {
+	address  common.Address
 	contract *bind.BoundContract
 }
 
 func NewAgentLogUnpacker(address common.Address) *AgentLogUnpacker {
 	contract, _ := BindAgentRegistry(address, nil, nil, nil)
 	return &AgentLogUnpacker{
+		address:  address,
 		contract: contract,
 	}
 }
 
 // UnpackAgentRegistryAgentAdded unpacks the event.
 func (alu *AgentLogUnpacker) UnpackAgentRegistryAgentAdded(log *types.Log) (*AgentRegistryAgentAdded, error) {
+	if log.Address.Hex() != alu.address.Hex() {
+		return nil, errors.New("the log is for a different contract")
+	}
 	if !hasTopic(log.Topics, agentAddedTopicHash) {
 		return nil, ErrNoEvents
 	}
@@ -54,6 +59,9 @@ func (alu *AgentLogUnpacker) UnpackAgentRegistryAgentAdded(log *types.Log) (*Age
 
 // UnpackAgentRegistryAgentUpdated unpacks the event.
 func (alu *AgentLogUnpacker) UnpackAgentRegistryAgentUpdated(log *types.Log) (*AgentRegistryAgentUpdated, error) {
+	if log.Address.Hex() != alu.address.Hex() {
+		return nil, errors.New("the log is for a different contract")
+	}
 	if !hasTopic(log.Topics, agentUpdatedTopicHash) {
 		return nil, ErrNoEvents
 	}
@@ -63,6 +71,9 @@ func (alu *AgentLogUnpacker) UnpackAgentRegistryAgentUpdated(log *types.Log) (*A
 
 // UnpackAgentRegistryAgentRemoved unpacks the event.
 func (alu *AgentLogUnpacker) UnpackAgentRegistryAgentRemoved(log *types.Log) (*AgentRegistryAgentRemoved, error) {
+	if log.Address.Hex() != alu.address.Hex() {
+		return nil, errors.New("the log is for a different contract")
+	}
 	if !hasTopic(log.Topics, agentRemovedTopicHash) {
 		return nil, ErrNoEvents
 	}
