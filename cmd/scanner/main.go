@@ -124,6 +124,23 @@ func initAlertSender(ctx context.Context) (clients.AlertSender, error) {
 	})
 }
 
+func initRegistry(ctx context.Context, msgClient clients.MessageClient, cfg config.Config) (services.Service, error) {
+	ethClient, err := ethereum.NewStreamEthClient(ctx, cfg.Registry.Ethereum.JsonRpcUrl)
+	if err != nil {
+		return nil, err
+	}
+	blockFeed, err := feeds.NewBlockFeed(ctx, ethClient, nil, feeds.BlockFeedConfig{
+		Tracing: false,
+	})
+	if err != nil {
+		return nil, err
+	}
+	txFeed, err := feeds.NewTransactionFeed(ctx, ethClient, blockFeed, 1)
+
+	blockFeed.Start()
+	return registry.New(cfg, msgClient, txFeed), nil
+}
+
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
 	natsHost := os.Getenv(config.EnvNatsHost)
 	if natsHost == "" {
@@ -151,6 +168,11 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 
+	registryService, err := initRegistry(ctx, msgClient, cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	agentPool := agentpool.NewAgentPool(msgClient)
 	txAnalyzer, err := initTxAnalyzer(ctx, cfg, as, txStream, agentPool)
 	if err != nil {
@@ -160,13 +182,6 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	if err != nil {
 		return nil, err
 	}
-
-	// Finally start the registry service so we know what agents we are running and receive updates.
-	txFeed, err := feeds.NewTransactionFeed(ctx, ethClient, blockFeed, 10)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create tx feed for the registry service: %v", err)
-	}
-	registryService := registry.New(cfg, msgClient, txFeed)
 
 	// Start the main block feed so all transaction feeds can start consuming.
 	blockFeed.Start()
