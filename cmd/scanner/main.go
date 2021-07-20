@@ -137,6 +137,7 @@ func initRegistry(ctx context.Context, msgClient clients.MessageClient, cfg conf
 	}
 	txFeed, err := feeds.NewTransactionFeed(ctx, ethClient, blockFeed, 1)
 
+	blockFeed.Start()
 	return registry.New(cfg, msgClient, txFeed), nil
 }
 

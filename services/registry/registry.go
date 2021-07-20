@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"sync"
 
+	log "github.com/sirupsen/logrus"
+
 	"OpenZeppelin/fortify-node/clients"
 	"OpenZeppelin/fortify-node/clients/messaging"
 	"OpenZeppelin/fortify-node/config"
@@ -85,10 +87,12 @@ func New(cfg config.Config, msgClient clients.MessageClient, txFeed feeds.Transa
 
 // Start starts the registry service.
 func (rs *RegistryService) Start() error {
+	log.Infof("Starting %s", rs.Name())
 	rpcClient, err := rpc.Dial(rs.cfg.Registry.Ethereum.JsonRpcUrl)
 	if err != nil {
 		return err
 	}
+	log.Infof("Creating Caller: %s", rs.Name())
 	rs.contract, err = contracts.NewAgentRegistryCaller(common.HexToAddress(rs.cfg.Registry.ContractAddress), ethclient.NewClient(rpcClient))
 	if err != nil {
 		return fmt.Errorf("failed to create the agent registry caller: %v", err)
@@ -99,6 +103,7 @@ func (rs *RegistryService) Start() error {
 func (rs *RegistryService) start() error {
 	// Start detecting and buffering events.
 	go func() {
+		log.Info("registry: ForEachTransaction")
 		err := rs.txFeed.ForEachTransaction(nil, rs.detectAgentEvents)
 		if err != nil {
 			panic(err)
@@ -107,11 +112,13 @@ func (rs *RegistryService) start() error {
 
 	// Start to handle agent updates but wait until initialization is complete.
 	rs.agentUpdatesWg.Add(1)
+	log.Info("registry: listenToAgentUpdates")
 	go rs.listenToAgentUpdates()
 
 	if err := rs.publishLatestAgents(); err != nil {
 		return fmt.Errorf("failed to publish the latest agents: %v", err)
 	}
+	log.Info("registry: publishLatestAgents")
 
 	// Continue by processing buffered updates.
 	rs.agentUpdatesWg.Done()
@@ -129,10 +136,12 @@ func (rs *RegistryService) publishLatestAgents() (err error) {
 }
 
 func (rs *RegistryService) getLatestAgents() ([]*config.AgentConfig, error) {
+
 	lengthBig, err := rs.contract.AgentLength(nil, rs.poolID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the pool agents length: %v", err)
 	}
+	log.Infof("registry: getLatestAgents(%s) = %s", rs.poolID.Hex(), lengthBig.Text(10))
 	// TODO: If we are going to get 100s of agents, we probably need to batch the calls here.
 	var agentConfigs []*config.AgentConfig
 	length := int(lengthBig.Int64())

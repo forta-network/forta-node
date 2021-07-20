@@ -2,6 +2,7 @@ package registry
 
 import (
 	"fmt"
+	"strings"
 
 	"OpenZeppelin/fortify-node/clients/messaging"
 	"OpenZeppelin/fortify-node/config"
@@ -16,7 +17,23 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func (rs *RegistryService) isForContractAddress(evt *domain.TransactionEvent) bool {
+	addr := strings.ToLower(rs.cfg.Registry.ContractAddress)
+	msg, err := evt.ToMessage()
+	if err != nil {
+		log.Warn("registry: could not convert tx event to message, ignoring")
+		return false
+	}
+	_, ok := msg.Addresses[addr]
+	return ok
+}
+
 func (rs *RegistryService) detectAgentEvents(evt *domain.TransactionEvent) error {
+	if !rs.isForContractAddress(evt) {
+		log.Debugf("registry skipping event (not for contract): %s", evt.Transaction.Hash)
+		return nil
+	}
+	log.Infof("agent event: %s", evt.Transaction.Hash)
 	update, agentID, ref, err := rs.detectAgentEvent(evt)
 	if err != nil {
 		return err

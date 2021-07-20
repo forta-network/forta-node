@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"math/big"
+	"strings"
 
 	"github.com/golang/protobuf/jsonpb"
 	log "github.com/sirupsen/logrus"
@@ -49,13 +50,13 @@ type TransactionEvent struct {
 
 func safeAddStrValueToMap(addresses map[string]bool, addr string) {
 	if addr != "" {
-		addresses[addr] = true
+		addresses[strings.ToLower(addr)] = true
 	}
 }
 
 func safeAddStrToMap(addresses map[string]bool, addr *string) {
 	if addr != nil {
-		addresses[*addr] = true
+		safeAddStrValueToMap(addresses, *addr)
 	}
 }
 
