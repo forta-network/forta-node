@@ -8,6 +8,7 @@ import (
 	domain "OpenZeppelin/fortify-node/domain"
 	reflect "reflect"
 
+	types "github.com/ethereum/go-ethereum/core/types"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -95,4 +96,41 @@ func (m *MockTransactionFeed) ForEachTransaction(blockHandler func(*domain.Block
 func (mr *MockTransactionFeedMockRecorder) ForEachTransaction(blockHandler, txHandler interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForEachTransaction", reflect.TypeOf((*MockTransactionFeed)(nil).ForEachTransaction), blockHandler, txHandler)
+}
+
+// MockLogFeed is a mock of LogFeed interface.
+type MockLogFeed struct {
+	ctrl     *gomock.Controller
+	recorder *MockLogFeedMockRecorder
+}
+
+// MockLogFeedMockRecorder is the mock recorder for MockLogFeed.
+type MockLogFeedMockRecorder struct {
+	mock *MockLogFeed
+}
+
+// NewMockLogFeed creates a new mock instance.
+func NewMockLogFeed(ctrl *gomock.Controller) *MockLogFeed {
+	mock := &MockLogFeed{ctrl: ctrl}
+	mock.recorder = &MockLogFeedMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockLogFeed) EXPECT() *MockLogFeedMockRecorder {
+	return m.recorder
+}
+
+// ForEachLog mocks base method.
+func (m *MockLogFeed) ForEachLog(handler func(types.Log) error) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ForEachLog", handler)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ForEachLog indicates an expected call of ForEachLog.
+func (mr *MockLogFeedMockRecorder) ForEachLog(handler interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForEachLog", reflect.TypeOf((*MockLogFeed)(nil).ForEachLog), handler)
 }
