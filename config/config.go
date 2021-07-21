@@ -72,10 +72,6 @@ type EthereumConfig struct {
 	Headers      map[string]string `yaml:"headers" json:"headers"`
 }
 
-type WSSConfig struct {
-	WssURL string `yaml:"wssUrl" json:"wssUrl"`
-}
-
 type QueryConfig struct {
 	QueryImage string   `yaml:"queryImage" json:"queryImage"`
 	Port       int      `yaml:"port" json:"port"`
