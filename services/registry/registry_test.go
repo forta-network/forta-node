@@ -1,19 +1,20 @@
 package registry
 
 import (
-	"OpenZeppelin/fortify-node/clients/messaging"
-	mock_clients "OpenZeppelin/fortify-node/clients/mocks"
-	"OpenZeppelin/fortify-node/config"
-	"OpenZeppelin/fortify-node/contracts"
-	"OpenZeppelin/fortify-node/domain"
-	mock_feeds "OpenZeppelin/fortify-node/feeds/mocks"
-	mock_registry "OpenZeppelin/fortify-node/services/registry/mocks"
-	"OpenZeppelin/fortify-node/services/registry/regtypes"
-	"OpenZeppelin/fortify-node/utils"
 	"errors"
 	"fmt"
 	"math/big"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/core/types"
+
+	"OpenZeppelin/fortify-node/clients/messaging"
+	mock_clients "OpenZeppelin/fortify-node/clients/mocks"
+	"OpenZeppelin/fortify-node/config"
+	"OpenZeppelin/fortify-node/contracts"
+	mock_feeds "OpenZeppelin/fortify-node/feeds/mocks"
+	mock_registry "OpenZeppelin/fortify-node/services/registry/mocks"
+	"OpenZeppelin/fortify-node/services/registry/regtypes"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/mock/gomock"
@@ -33,16 +34,10 @@ const (
 var (
 	testPoolID  = common.HexToHash(testPoolIDStr)
 	testAgentID = common.HexToHash(testAgentIDStr)
-	testTx      = &domain.TransactionEvent{
-		Receipt: &domain.TransactionReceipt{
-			Logs: []domain.LogEntry{
-				{
-					BlockNumber:      utils.StringPtr("0x1000000000000000000000000000000000000000000000000000000000000000"),
-					TransactionIndex: utils.StringPtr("0x1000000000000000000000000000000000000000000000000000000000000000"),
-					LogIndex:         utils.StringPtr("0x1000000000000000000000000000000000000000000000000000000000000000"),
-				},
-			},
-		},
+	testLog     = &types.Log{
+		BlockNumber: 1,
+		TxIndex:     1,
+		Index:       1,
 	}
 	testAgentFile    = &regtypes.AgentFile{}
 	testAgentFileAlt = &regtypes.AgentFile{}
@@ -60,7 +55,7 @@ func TestSuite(t *testing.T) {
 type Suite struct {
 	r *require.Assertions
 
-	txFeed      *mock_feeds.MockTransactionFeed
+	logFeed     *mock_feeds.MockLogFeed
 	contract    *mock_registry.MockContractRegistryCaller
 	logUnpacker *mock_registry.MockLogUnpacker
 	ipfsClient  *mock_registry.MockIPFSClient
@@ -74,7 +69,7 @@ type Suite struct {
 // SetupTest sets up the test.
 func (s *Suite) SetupTest() {
 	s.r = require.New(s.T())
-	s.txFeed = mock_feeds.NewMockTransactionFeed(gomock.NewController(s.T()))
+	s.logFeed = mock_feeds.NewMockLogFeed(gomock.NewController(s.T()))
 	s.contract = mock_registry.NewMockContractRegistryCaller(gomock.NewController(s.T()))
 	s.logUnpacker = mock_registry.NewMockLogUnpacker(gomock.NewController(s.T()))
 	s.ipfsClient = mock_registry.NewMockIPFSClient(gomock.NewController(s.T()))
@@ -82,7 +77,7 @@ func (s *Suite) SetupTest() {
 	s.service = &RegistryService{
 		poolID:       common.HexToHash(testPoolIDStr),
 		msgClient:    s.msgClient,
-		txFeed:       s.txFeed,
+		logFeed:      s.logFeed,
 		contract:     s.contract,
 		logUnpacker:  s.logUnpacker,
 		ipfsClient:   s.ipfsClient,
@@ -90,7 +85,7 @@ func (s *Suite) SetupTest() {
 		done:         make(chan struct{}),
 	}
 	s.service.cfg.Registry.ContainerRegistry = testContainerRegistry
-	s.txFeed.EXPECT().ForEachTransaction(nil, gomock.Any()).AnyTimes()
+	s.logFeed.EXPECT().ForEachLog(gomock.Any()).AnyTimes()
 	s.contract.EXPECT().AgentLength(nil, gomock.Any()).Return(big.NewInt(0), nil)
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, (agentConfigs)([]*config.AgentConfig{}))
 	s.r.NoError(s.service.start())
@@ -140,7 +135,7 @@ func (s *Suite) TestAgentAddUpdateRemove() {
 		},
 	}))
 
-	update, agentID, ref, err := s.service.detectAgentEvent(testTx)
+	update, agentID, ref, err := s.service.detectAgentEvent(testLog)
 	s.r.NoError(err)
 	s.r.NoError(s.service.sendAgentUpdate(update, agentID, ref))
 
@@ -161,7 +156,7 @@ func (s *Suite) TestAgentAddUpdateRemove() {
 		},
 	}))
 
-	update, agentID, ref, err = s.service.detectAgentEvent(testTx)
+	update, agentID, ref, err = s.service.detectAgentEvent(testLog)
 	s.r.NoError(err)
 	s.r.NoError(s.service.sendAgentUpdate(update, agentID, ref))
 
@@ -177,7 +172,7 @@ func (s *Suite) TestAgentAddUpdateRemove() {
 	// Final state: No agents
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, (agentConfigs)([]*config.AgentConfig{}))
 
-	update, agentID, ref, err = s.service.detectAgentEvent(testTx)
+	update, agentID, ref, err = s.service.detectAgentEvent(testLog)
 	s.r.NoError(err)
 	s.r.NoError(s.service.sendAgentUpdate(update, agentID, ref))
 
