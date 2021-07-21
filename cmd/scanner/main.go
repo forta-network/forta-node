@@ -125,20 +125,11 @@ func initAlertSender(ctx context.Context) (clients.AlertSender, error) {
 }
 
 func initRegistry(ctx context.Context, msgClient clients.MessageClient, cfg config.Config) (services.Service, error) {
-	ethClient, err := ethereum.NewStreamEthClient(ctx, cfg.Registry.Ethereum.JsonRpcUrl)
+	logFeed, err := feeds.NewLogFeed(ctx, cfg.Registry.Ethereum.WebsocketUrl, []string{cfg.Registry.ContractAddress})
 	if err != nil {
 		return nil, err
 	}
-	blockFeed, err := feeds.NewBlockFeed(ctx, ethClient, nil, feeds.BlockFeedConfig{
-		Tracing: false,
-	})
-	if err != nil {
-		return nil, err
-	}
-	txFeed, err := feeds.NewTransactionFeed(ctx, ethClient, blockFeed, 1)
-
-	blockFeed.Start()
-	return registry.New(cfg, msgClient, txFeed), nil
+	return registry.New(cfg, msgClient, logFeed), nil
 }
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {

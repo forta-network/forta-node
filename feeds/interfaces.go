@@ -1,6 +1,10 @@
 package feeds
 
-import "OpenZeppelin/fortify-node/domain"
+import (
+	"github.com/ethereum/go-ethereum/core/types"
+
+	"OpenZeppelin/fortify-node/domain"
+)
 
 // BlockFeed is a subscribable feed of blocks.
 type BlockFeed interface {
@@ -11,4 +15,9 @@ type BlockFeed interface {
 // TransactionFeed is a subscribable feed of transactions.
 type TransactionFeed interface {
 	ForEachTransaction(blockHandler func(evt *domain.BlockEvent) error, txHandler func(evt *domain.TransactionEvent) error) error
+}
+
+// LogFeed is a feed of logs
+type LogFeed interface {
+	ForEachLog(handler func(log types.Log) error) error
 }

@@ -34,7 +34,7 @@ type RegistryService struct {
 	cfg       config.Config
 	poolID    common.Hash
 	msgClient clients.MessageClient
-	txFeed    feeds.TransactionFeed
+	logFeed   feeds.LogFeed
 
 	contract    ContractRegistryCaller
 	logUnpacker LogUnpacker
@@ -65,7 +65,7 @@ type IPFSClient interface {
 }
 
 // New creates a new service.
-func New(cfg config.Config, msgClient clients.MessageClient, txFeed feeds.TransactionFeed) services.Service {
+func New(cfg config.Config, msgClient clients.MessageClient, logFeed feeds.LogFeed) services.Service {
 	var ipfsURL string
 	if cfg.Registry.IPFSGateway != nil {
 		ipfsURL = *cfg.Registry.IPFSGateway
@@ -77,7 +77,7 @@ func New(cfg config.Config, msgClient clients.MessageClient, txFeed feeds.Transa
 		cfg:          cfg,
 		poolID:       common.HexToHash(cfg.Registry.PoolID),
 		msgClient:    msgClient,
-		txFeed:       txFeed,
+		logFeed:      logFeed,
 		logUnpacker:  contracts.NewAgentLogUnpacker(common.HexToAddress(cfg.Registry.ContractAddress)),
 		ipfsClient:   &ipfsClient{ipfsURL},
 		agentUpdates: make(chan *agentUpdate, 100),
@@ -104,7 +104,7 @@ func (rs *RegistryService) start() error {
 	// Start detecting and buffering events.
 	go func() {
 		log.Info("registry: ForEachTransaction")
-		err := rs.txFeed.ForEachTransaction(nil, rs.detectAgentEvents)
+		err := rs.logFeed.ForEachLog(rs.detectAgentEvents)
 		if err != nil {
 			panic(err)
 		}

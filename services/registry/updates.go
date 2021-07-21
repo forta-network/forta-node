@@ -2,39 +2,21 @@ package registry
 
 import (
 	"fmt"
-	"strings"
 
 	"OpenZeppelin/fortify-node/clients/messaging"
 	"OpenZeppelin/fortify-node/config"
 	"OpenZeppelin/fortify-node/contracts"
-	"OpenZeppelin/fortify-node/domain"
 	"OpenZeppelin/fortify-node/services/registry/regtypes"
 	"OpenZeppelin/fortify-node/utils"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	log "github.com/sirupsen/logrus"
 )
 
-func (rs *RegistryService) isForContractAddress(evt *domain.TransactionEvent) bool {
-	addr := strings.ToLower(rs.cfg.Registry.ContractAddress)
-	msg, err := evt.ToMessage()
-	if err != nil {
-		log.Warn("registry: could not convert tx event to message, ignoring")
-		return false
-	}
-	_, ok := msg.Addresses[addr]
-	return ok
-}
-
-func (rs *RegistryService) detectAgentEvents(evt *domain.TransactionEvent) error {
-	if !rs.isForContractAddress(evt) {
-		log.Debugf("registry skipping event (not for contract): %s", evt.Transaction.Hash)
-		return nil
-	}
-	log.Infof("registry agent event: %s", evt.Transaction.Hash)
-	update, agentID, ref, err := rs.detectAgentEvent(evt)
+func (rs *RegistryService) detectAgentEvents(ethLog types.Log) error {
+	log.Infof("registry agent event: tx=%s", ethLog.TxHash.Hex())
+	update, agentID, ref, err := rs.detectAgentEvent(&ethLog)
 	if err != nil {
 		log.Errorf("registry agent error (ignoring): %s", err.Error())
 		return nil
@@ -45,37 +27,35 @@ func (rs *RegistryService) detectAgentEvents(evt *domain.TransactionEvent) error
 	return nil
 }
 
-func (rs *RegistryService) detectAgentEvent(evt *domain.TransactionEvent) (update *agentUpdate, agentID [32]byte, ref string, err error) {
-	for _, logEntry := range evt.Receipt.Logs {
-		ethLog := transformLog(&logEntry)
+func (rs *RegistryService) detectAgentEvent(ethLog *types.Log) (update *agentUpdate, agentID [32]byte, ref string, err error) {
 
-		var addedEvent *contracts.AgentRegistryAgentAdded
-		addedEvent, err = rs.logUnpacker.UnpackAgentRegistryAgentAdded(ethLog)
-		if err == nil {
-			if (common.Hash)(addedEvent.PoolId).String() != rs.poolID.String() {
-				continue
-			}
-			return &agentUpdate{IsCreation: true}, addedEvent.AgentId, addedEvent.Ref, nil
+	var addedEvent *contracts.AgentRegistryAgentAdded
+	addedEvent, err = rs.logUnpacker.UnpackAgentRegistryAgentAdded(ethLog)
+	if err == nil {
+		if (common.Hash)(addedEvent.PoolId).String() != rs.poolID.String() {
+			return
 		}
-
-		var updatedEvent *contracts.AgentRegistryAgentUpdated
-		updatedEvent, err = rs.logUnpacker.UnpackAgentRegistryAgentUpdated(ethLog)
-		if err == nil {
-			if (common.Hash)(updatedEvent.PoolId).String() != rs.poolID.String() {
-				continue
-			}
-			return &agentUpdate{IsUpdate: true}, updatedEvent.AgentId, updatedEvent.Ref, nil
-		}
-
-		var removedEvent *contracts.AgentRegistryAgentRemoved
-		removedEvent, err = rs.logUnpacker.UnpackAgentRegistryAgentRemoved(ethLog)
-		if err == nil {
-			if (common.Hash)(removedEvent.PoolId).String() != rs.poolID.String() {
-				continue
-			}
-			return &agentUpdate{IsRemoval: true}, removedEvent.AgentId, "", nil
-		}
+		return &agentUpdate{IsCreation: true}, addedEvent.AgentId, addedEvent.Ref, nil
 	}
+
+	var updatedEvent *contracts.AgentRegistryAgentUpdated
+	updatedEvent, err = rs.logUnpacker.UnpackAgentRegistryAgentUpdated(ethLog)
+	if err == nil {
+		if (common.Hash)(updatedEvent.PoolId).String() != rs.poolID.String() {
+			return
+		}
+		return &agentUpdate{IsUpdate: true}, updatedEvent.AgentId, updatedEvent.Ref, nil
+	}
+
+	var removedEvent *contracts.AgentRegistryAgentRemoved
+	removedEvent, err = rs.logUnpacker.UnpackAgentRegistryAgentRemoved(ethLog)
+	if err == nil {
+		if (common.Hash)(removedEvent.PoolId).String() != rs.poolID.String() {
+			return
+		}
+		return &agentUpdate{IsRemoval: true}, removedEvent.AgentId, "", nil
+	}
+
 	update = nil
 	err = nil
 	return
@@ -119,22 +99,6 @@ func (rs *RegistryService) makeAgentConfig(agentID [32]byte, ref string) (agentC
 	}
 
 	return
-}
-
-func transformLog(log *domain.LogEntry) *types.Log {
-	transformed := &types.Log{
-		Address:     common.HexToAddress(utils.String(log.Address)),
-		Data:        common.FromHex(utils.String(log.Data)),
-		BlockHash:   common.HexToHash(utils.String(log.BlockHash)),
-		BlockNumber: hexutil.MustDecodeBig(utils.String(log.BlockNumber)).Uint64(),
-		TxHash:      common.HexToHash(utils.String(log.TransactionHash)),
-		TxIndex:     uint(hexutil.MustDecodeBig(utils.String(log.TransactionIndex)).Uint64()),
-		Index:       uint(hexutil.MustDecodeBig(utils.String(log.LogIndex)).Uint64()),
-	}
-	for _, topic := range log.Topics {
-		transformed.Topics = append(transformed.Topics, common.HexToHash(*topic))
-	}
-	return transformed
 }
 
 func (rs *RegistryService) listenToAgentUpdates() {

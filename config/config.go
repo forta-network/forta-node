@@ -67,8 +67,13 @@ type DBConfig struct {
 }
 
 type EthereumConfig struct {
-	JsonRpcUrl string            `yaml:"jsonRpcUrl" json:"jsonRpcUrl"`
-	Headers    map[string]string `yaml:"headers" json:"headers"`
+	JsonRpcUrl   string            `yaml:"jsonRpcUrl" json:"jsonRpcUrl"`
+	WebsocketUrl string            `yaml:"websocketUrl" json:"websocketUrl"`
+	Headers      map[string]string `yaml:"headers" json:"headers"`
+}
+
+type WSSConfig struct {
+	WssURL string `yaml:"wssUrl" json:"wssUrl"`
 }
 
 type QueryConfig struct {

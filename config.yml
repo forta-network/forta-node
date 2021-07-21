@@ -1,5 +1,6 @@
 registry:
   ethereum:
+    websocketUrl: "wss://arb-rinkeby.g.alchemy.com/v2/YxokkWMvqmvGoOgc0XqnJXpZ5pz7pPgf"
     jsonRpcUrl: "https://arb-rinkeby.g.alchemy.com/v2/YxokkWMvqmvGoOgc0XqnJXpZ5pz7pPgf"
   contractAddress: "0xd5180d374b6d1961BA24D0a4Dbf26d696fda4cad"
   containerRegistry: disco-dev.forta.network
