@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package com.openzeppelin.fortify;
+package network.forta;
 
 option go_package = "./;protocol";
 
