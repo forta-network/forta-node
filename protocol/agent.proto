@@ -65,6 +65,7 @@ message Finding {
   string alertId = 5;
   string name = 6;
   string description = 7;
+  string everestId = 8;
 }
 
 message EvaluateTxResponse {
