@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -22,7 +23,7 @@ type logFeed struct {
 	query  ethereum.FilterQuery
 }
 
-func (l *logFeed) ForEachLog(handler func(log types.Log) error) error {
+func (l *logFeed) ForEachLog(handler func(logEntry types.Log) error) error {
 	logs := make(chan types.Log)
 	client, err := ethclient.Dial(l.wssUrl)
 	if err != nil {
@@ -35,7 +36,7 @@ func (l *logFeed) ForEachLog(handler func(log types.Log) error) error {
 	}
 
 	eg, ctx := errgroup.WithContext(l.ctx)
-	ticker := time.NewTicker(1000 * time.Millisecond)
+	ticker := time.NewTicker(500 * time.Millisecond)
 
 	eg.Go(func() error {
 		defer client.Close()
@@ -52,13 +53,17 @@ func (l *logFeed) ForEachLog(handler func(log types.Log) error) error {
 
 	eg.Go(func() error {
 		for ethLog := range logs {
+			log.Infof("received an event from agent registry (tx=%s)", ethLog.TxHash.Hex())
 			if err := handler(ethLog); err != nil {
 				return err
 			}
 		}
 		return nil
 	})
-
+	log.Info("subscribed to agent registry updates")
+	defer func() {
+		log.Warn("stopped subscribing to agent registry updates")
+	}()
 	return eg.Wait()
 }
 

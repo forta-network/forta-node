@@ -58,17 +58,15 @@ func (tf *transactionFeed) getWorker(workerID int, handler func(evt *domain.Tran
 				log.Debugf("tx-processor(%d): context cancelled", workerID)
 				return tf.ctx.Err()
 			default:
-				log.Debugf("tx-processor(%d): block(%s) tx(%s) invoking handler", workerID, tx.BlockEvt.Block.Number, tx.Transaction.Hash)
-
 				r, err := tf.client.TransactionReceipt(tf.ctx, tx.Transaction.Hash)
 				if err != nil {
-					log.Debugf("tx-processor(%d): block(%s) tx(%s) get receipt failed (skipping): %s", workerID, tx.BlockEvt.Block.Number, tx.Transaction.Hash, err.Error())
+					log.Warnf("tx-processor(%d): block(%s) tx(%s) get receipt failed (skipping): %s", workerID, tx.BlockEvt.Block.Number, tx.Transaction.Hash, err.Error())
 					continue
 				}
 				tx.Receipt = r
 
 				if err := handler(tx); err != nil {
-					log.Debugf("tx-processor(%d): block(%s) tx(%s) handler returned error, cancelling: %s", workerID, tx.BlockEvt.Block.Number, tx.Transaction.Hash, err.Error())
+					log.Errorf("tx-processor(%d): block(%s) tx(%s) handler returned error, cancelling: %s", workerID, tx.BlockEvt.Block.Number, tx.Transaction.Hash, err.Error())
 					return err
 				}
 			}

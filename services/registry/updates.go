@@ -15,15 +15,16 @@ import (
 )
 
 func (rs *RegistryService) detectAgentEvents(ethLog types.Log) error {
-	log.Infof("registry agent event: tx=%s", ethLog.TxHash.Hex())
+	log.Infof("registry: agent event: tx=%s", ethLog.TxHash.Hex())
 	update, agentID, ref, err := rs.detectAgentEvent(&ethLog)
 	if err != nil {
-		log.Errorf("registry agent error (ignoring): %s", err.Error())
+		log.Errorf("registry: agent error (ignoring): %s", err.Error())
 		return nil
 	}
 	if update != nil {
 		return rs.sendAgentUpdate(update, agentID, ref)
 	}
+	log.Warnf("registry: update was nil, ignoring update")
 	return nil
 }
 
@@ -67,7 +68,7 @@ func (rs *RegistryService) sendAgentUpdate(update *agentUpdate, agentID [32]byte
 		return err
 	}
 	update.Config = agentCfg
-	log.Infof("sending agent update: %+v", update)
+	log.Infof("registry: sending agent update: %+v", update)
 	rs.agentUpdates <- update
 	return nil
 }

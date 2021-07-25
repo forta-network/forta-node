@@ -70,7 +70,9 @@ func (client *Client) Subscribe(subject string, handler interface{}) {
 		}
 
 		if err != nil {
-			m.Nak()
+			if err := m.Nak(); err != nil {
+				logger.Errorf("failed to send nak: %v", err)
+			}
 			logger.Errorf("failed to handle msg: %v", err)
 		}
 	})

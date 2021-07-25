@@ -34,13 +34,11 @@ func (t *TxStreamService) ReadOnlyTxStream() <-chan *domain.TransactionEvent {
 }
 
 func (t *TxStreamService) handleBlock(evt *domain.BlockEvent) error {
-	log.Debug("<- TxStream putting block in stream")
 	t.blockOutput <- evt
 	return nil
 }
 
 func (t *TxStreamService) handleTx(evt *domain.TransactionEvent) error {
-	log.Debug("<- TxStream putting tx in stream")
 	t.txOutput <- evt
 	return nil
 }
