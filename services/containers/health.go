@@ -47,6 +47,11 @@ func (t *TxNodeService) doHealthCheck() error {
 			if !ok {
 				notFoundErr := fmt.Errorf("healthcheck: container '%s' with id '%s' was not found (attempt=%d/%d)", knownContainer.Name, knownContainer.ID, attempt+1, maxAttempts)
 				log.Warnf(notFoundErr.Error())
+				// get containers again, so that we can get updated info
+				containersList, err = t.client.GetContainers(t.ctx)
+				if err != nil {
+					return fmt.Errorf("failed to get containers list: %v", err)
+				}
 				return notFoundErr
 			}
 			return nil
