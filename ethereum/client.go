@@ -41,6 +41,8 @@ const traceBlock = "trace_block"
 const chainId = "eth_chainId"
 
 var ErrNotFound = fmt.Errorf("not found")
+
+//any non-retriable failure errors can be listed here
 var permanentErrors = []string{"method not found"}
 
 var minBackoff = 1 * time.Second
@@ -97,16 +99,17 @@ func withBackoff(ctx context.Context, name string, operation func(ctx context.Co
 		defer cancel()
 		err := operation(tCtx)
 
-		//any non-retriable failure errors can be listed here
-		if ctx.Err() != nil {
-			log.Debugf("%s context cancelled", name)
-			return backoff.Permanent(ctx.Err())
-		}
-		if err != nil && isPermanentError(err) {
+		if err == nil {
+			//success, returning now avoids failing on context timeouts in certain edge cases
+			return nil
+		} else if isPermanentError(err) {
 			log.Errorf("backoff permanent error: %s", err.Error())
 			return backoff.Permanent(err)
-		} else if err != nil {
-			log.Debugf("%s failed...retrying: %s", name, err.Error())
+		} else if ctx.Err() != nil {
+			log.Errorf("%s context err found: %s", name, ctx.Err())
+			return backoff.Permanent(ctx.Err())
+		} else {
+			log.Warnf("%s failed...retrying: %s", name, err.Error())
 		}
 		return err
 	}, bo)
