@@ -56,7 +56,6 @@ func (t *TxNodeService) doHealthCheck() error {
 			log.Error(err.Error())
 			continue
 		}
-		log.Infof("found container '%s' with id '%s'", knownContainer.Name, foundContainer.ID)
 		if err := t.ensureUp(knownContainer, foundContainer); err != nil {
 			return err
 		}
