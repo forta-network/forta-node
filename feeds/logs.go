@@ -18,22 +18,27 @@ type EthClient interface {
 
 type logFeed struct {
 	ctx    context.Context
-	client EthClient
+	wssUrl string
 	query  ethereum.FilterQuery
 }
 
 func (l *logFeed) ForEachLog(handler func(log types.Log) error) error {
 	logs := make(chan types.Log)
-	sub, err := l.client.SubscribeFilterLogs(l.ctx, l.query, logs)
+	client, err := ethclient.Dial(l.wssUrl)
+	if err != nil {
+		return err
+	}
+
+	sub, err := client.SubscribeFilterLogs(l.ctx, l.query, logs)
 	if err != nil {
 		return err
 	}
 
 	eg, ctx := errgroup.WithContext(l.ctx)
-	ticker := time.NewTicker(100 * time.Millisecond)
+	ticker := time.NewTicker(1000 * time.Millisecond)
 
 	eg.Go(func() error {
-		defer l.client.Close()
+		defer client.Close()
 		for {
 			<-ticker.C
 			select {
@@ -58,11 +63,6 @@ func (l *logFeed) ForEachLog(handler func(log types.Log) error) error {
 }
 
 func NewLogFeed(ctx context.Context, wssUrl string, contractAddrs []string) (*logFeed, error) {
-	client, err := ethclient.Dial(wssUrl)
-	if err != nil {
-		return nil, err
-	}
-
 	addrs := make([]common.Address, 0, len(contractAddrs))
 	for _, addr := range contractAddrs {
 		addrs = append(addrs, common.HexToAddress(addr))
@@ -70,7 +70,7 @@ func NewLogFeed(ctx context.Context, wssUrl string, contractAddrs []string) (*lo
 
 	return &logFeed{
 		ctx:    ctx,
-		client: client,
+		wssUrl: wssUrl,
 		query: ethereum.FilterQuery{
 			Addresses: addrs,
 		},

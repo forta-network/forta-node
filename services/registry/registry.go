@@ -103,10 +103,11 @@ func (rs *RegistryService) Start() error {
 func (rs *RegistryService) start() error {
 	// Start detecting and buffering events.
 	go func() {
-		log.Info("registry: ForEachTransaction")
-		err := rs.logFeed.ForEachLog(rs.detectAgentEvents)
-		if err != nil {
-			panic(err)
+		log.Info("registry: subscribing to Agent Registry")
+		for {
+			if err := rs.logFeed.ForEachLog(rs.detectAgentEvents); err != nil {
+				log.Errorf("error while subscribing to agent registry (re-subscribing): %s", err.Error())
+			}
 		}
 	}()
 
