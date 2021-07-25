@@ -19,7 +19,7 @@ scanner:
   #endBlock: 11792184
   #disableTracing: true
   ethereum:
-    jsonRpcUrl: "https://cloudflare-eth.com"
+    jsonRpcUrl: "http://eth.fortify-dev.com:8545"
 
 query:
   queryImage: "openzeppelin/fortify-query:latest"
@@ -30,12 +30,12 @@ query:
 json-rpc-proxy:
   jsonRpcImage: "openzeppelin/fortify-json-rpc:latest"
   ethereum:
-    jsonRpcUrl: "https://cloudflare-eth.com"
+    jsonRpcUrl: "http://eth.fortify-dev.com:8545"
 
 trace:
-  enabled: false
+  enabled: true
   ethereum:
-    jsonRpcUrl: "https://cloudflare-eth.com"
+    jsonRpcUrl: "http://eth.fortify-dev.com:8545"
 log:
   level: debug
   maxLogSize: 10m
