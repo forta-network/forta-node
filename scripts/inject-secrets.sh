@@ -11,11 +11,11 @@ apiUrl=$(printf '%s\n' "$apiUrlUnsafe" | sed -e 's/[]\/$*.^[]/\\&/g');
 
 registryApiUrlId="${envPrefix}_agent_registry_api_url"
 registryApiUrlUnsafe=$(aws secretsmanager --region $region get-secret-value --secret-id registryApiUrlId |jq -r '.SecretString')
-registryApiUrl=$(printf '%s\n' "registryApiUrlUnsafe" | sed -e 's/[]\/$*.^[]/\\&/g');
+registryApiUrl=$(printf '%s\n' "$registryApiUrlUnsafe" | sed -e 's/[]\/$*.^[]/\\&/g');
 
 registryWssUrlId="${envPrefix}_agent_registry_wss_url"
 registryWssUrlUnsafe=$(aws secretsmanager --region $region get-secret-value --secret-id registryWssUrlId |jq -r '.SecretString')
-registryWssUrl=$(printf '%s\n' "registryWssUrlUnsafe" | sed -e 's/[]\/$*.^[]/\\&/g');
+registryWssUrl=$(printf '%s\n' "$registryWssUrlUnsafe" | sed -e 's/[]\/$*.^[]/\\&/g');
 
 sed -i "s/ALCHEMY_URL/$apiUrl/g" /etc/fortify/config-fortify.yml
 sed -i "s/REGISTRY_API_URL/$registryApiUrl/g" /etc/fortify/config-fortify.yml
