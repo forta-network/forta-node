@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	gethlog "github.com/ethereum/go-ethereum/log"
 
 	"OpenZeppelin/fortify-node/clients"
 	"OpenZeppelin/fortify-node/clients/messaging"
@@ -187,5 +188,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 }
 
 func main() {
+	gethlog.Root().SetHandler(gethlog.StdoutHandler)
+
 	services.ContainerMain("scanner", initServices)
 }
