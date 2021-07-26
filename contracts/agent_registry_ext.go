@@ -36,8 +36,8 @@ type AgentLogUnpacker struct {
 	contract *bind.BoundContract
 }
 
-func NewAgentLogUnpacker(address common.Address) *AgentLogUnpacker {
-	contract, _ := BindAgentRegistry(address, nil, nil, nil)
+func NewAgentLogUnpacker() *AgentLogUnpacker {
+	contract, _ := BindAgentRegistry(common.Address{}, nil, nil, nil)
 	return &AgentLogUnpacker{
 		contract: contract,
 	}
