@@ -14,7 +14,7 @@ hooks:
     - location: scripts/set-permissions.sh
       timeout: 300
       runas: root
-    - location: scripts/inject-alchemy-url.sh
+    - location: scripts/inject-secrets.sh
       timeout: 300
       runas: root
     - location: scripts/load-images.sh
