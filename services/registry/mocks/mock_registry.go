@@ -137,6 +137,21 @@ func (mr *MockContractRegistryCallerMockRecorder) AgentLength(opts, _poolId inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AgentLength", reflect.TypeOf((*MockContractRegistryCaller)(nil).AgentLength), opts, _poolId)
 }
 
+// PoolVersion mocks base method.
+func (m *MockContractRegistryCaller) PoolVersion(ops *bind.CallOpts, _poolId [32]byte) (*big.Int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PoolVersion", ops, _poolId)
+	ret0, _ := ret[0].(*big.Int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PoolVersion indicates an expected call of PoolVersion.
+func (mr *MockContractRegistryCallerMockRecorder) PoolVersion(ops, _poolId interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PoolVersion", reflect.TypeOf((*MockContractRegistryCaller)(nil).PoolVersion), ops, _poolId)
+}
+
 // MockIPFSClient is a mock of IPFSClient interface.
 type MockIPFSClient struct {
 	ctrl     *gomock.Controller
