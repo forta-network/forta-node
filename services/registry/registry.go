@@ -78,7 +78,7 @@ func New(cfg config.Config, msgClient clients.MessageClient, logFeed feeds.LogFe
 		poolID:       common.HexToHash(cfg.Registry.PoolID),
 		msgClient:    msgClient,
 		logFeed:      logFeed,
-		logUnpacker:  contracts.NewAgentLogUnpacker(common.HexToAddress(cfg.Registry.ContractAddress)),
+		logUnpacker:  contracts.NewAgentLogUnpacker(),
 		ipfsClient:   &ipfsClient{ipfsURL},
 		agentUpdates: make(chan *agentUpdate, 100),
 		done:         make(chan struct{}),
