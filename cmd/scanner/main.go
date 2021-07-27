@@ -125,14 +125,6 @@ func initAlertSender(ctx context.Context) (clients.AlertSender, error) {
 	})
 }
 
-func initRegistry(ctx context.Context, msgClient clients.MessageClient, cfg config.Config) (services.Service, error) {
-	logFeed, err := feeds.NewLogFeed(ctx, cfg.Registry.Ethereum.WebsocketUrl, []string{cfg.Registry.ContractAddress})
-	if err != nil {
-		return nil, err
-	}
-	return registry.New(cfg, msgClient, logFeed), nil
-}
-
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
 	natsHost := os.Getenv(config.EnvNatsHost)
 	if natsHost == "" {
@@ -160,11 +152,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 
-	registryService, err := initRegistry(ctx, msgClient, cfg)
-	if err != nil {
-		return nil, err
-	}
-
+	registryService := registry.New(cfg, msgClient)
 	agentPool := agentpool.NewAgentPool(msgClient)
 	txAnalyzer, err := initTxAnalyzer(ctx, cfg, as, txStream, agentPool)
 	if err != nil {
