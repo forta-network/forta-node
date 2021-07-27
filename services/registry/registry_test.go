@@ -76,9 +76,6 @@ func (s *Suite) SetupTest() {
 		sem:        semaphore.NewWeighted(1),
 	}
 	s.service.cfg.Registry.ContainerRegistry = testContainerRegistry
-	s.contract.EXPECT().AgentLength(nil, gomock.Any()).Return(big.NewInt(0), nil)
-	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, (agentConfigs)([]*config.AgentConfig{}))
-	s.r.NoError(s.service.start())
 }
 
 type agentConfigs []*config.AgentConfig
