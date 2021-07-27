@@ -5,83 +5,13 @@
 package mock_registry
 
 import (
-	contracts "OpenZeppelin/fortify-node/contracts"
 	regtypes "OpenZeppelin/fortify-node/services/registry/regtypes"
 	big "math/big"
 	reflect "reflect"
 
 	bind "github.com/ethereum/go-ethereum/accounts/abi/bind"
-	types "github.com/ethereum/go-ethereum/core/types"
 	gomock "github.com/golang/mock/gomock"
 )
-
-// MockLogUnpacker is a mock of LogUnpacker interface.
-type MockLogUnpacker struct {
-	ctrl     *gomock.Controller
-	recorder *MockLogUnpackerMockRecorder
-}
-
-// MockLogUnpackerMockRecorder is the mock recorder for MockLogUnpacker.
-type MockLogUnpackerMockRecorder struct {
-	mock *MockLogUnpacker
-}
-
-// NewMockLogUnpacker creates a new mock instance.
-func NewMockLogUnpacker(ctrl *gomock.Controller) *MockLogUnpacker {
-	mock := &MockLogUnpacker{ctrl: ctrl}
-	mock.recorder = &MockLogUnpackerMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockLogUnpacker) EXPECT() *MockLogUnpackerMockRecorder {
-	return m.recorder
-}
-
-// UnpackAgentRegistryAgentAdded mocks base method.
-func (m *MockLogUnpacker) UnpackAgentRegistryAgentAdded(log *types.Log) (*contracts.AgentRegistryAgentAdded, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UnpackAgentRegistryAgentAdded", log)
-	ret0, _ := ret[0].(*contracts.AgentRegistryAgentAdded)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UnpackAgentRegistryAgentAdded indicates an expected call of UnpackAgentRegistryAgentAdded.
-func (mr *MockLogUnpackerMockRecorder) UnpackAgentRegistryAgentAdded(log interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnpackAgentRegistryAgentAdded", reflect.TypeOf((*MockLogUnpacker)(nil).UnpackAgentRegistryAgentAdded), log)
-}
-
-// UnpackAgentRegistryAgentRemoved mocks base method.
-func (m *MockLogUnpacker) UnpackAgentRegistryAgentRemoved(log *types.Log) (*contracts.AgentRegistryAgentRemoved, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UnpackAgentRegistryAgentRemoved", log)
-	ret0, _ := ret[0].(*contracts.AgentRegistryAgentRemoved)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UnpackAgentRegistryAgentRemoved indicates an expected call of UnpackAgentRegistryAgentRemoved.
-func (mr *MockLogUnpackerMockRecorder) UnpackAgentRegistryAgentRemoved(log interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnpackAgentRegistryAgentRemoved", reflect.TypeOf((*MockLogUnpacker)(nil).UnpackAgentRegistryAgentRemoved), log)
-}
-
-// UnpackAgentRegistryAgentUpdated mocks base method.
-func (m *MockLogUnpacker) UnpackAgentRegistryAgentUpdated(log *types.Log) (*contracts.AgentRegistryAgentUpdated, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UnpackAgentRegistryAgentUpdated", log)
-	ret0, _ := ret[0].(*contracts.AgentRegistryAgentUpdated)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UnpackAgentRegistryAgentUpdated indicates an expected call of UnpackAgentRegistryAgentUpdated.
-func (mr *MockLogUnpackerMockRecorder) UnpackAgentRegistryAgentUpdated(log interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnpackAgentRegistryAgentUpdated", reflect.TypeOf((*MockLogUnpacker)(nil).UnpackAgentRegistryAgentUpdated), log)
-}
 
 // MockContractRegistryCaller is a mock of ContractRegistryCaller interface.
 type MockContractRegistryCaller struct {
