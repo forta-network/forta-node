@@ -30,16 +30,15 @@ type RegistryService struct {
 	poolID    common.Hash
 	msgClient clients.MessageClient
 
-	contract    ContractRegistryCaller
-	ipfsClient  IPFSClient
-	ethClient ethereum.Client
+	contract   ContractRegistryCaller
+	ipfsClient IPFSClient
+	ethClient  EthClient
 
-	agentsConfigs  []*config.AgentConfig
-	done           chan struct{}
-	version *big.Int
-	sem *semaphore.Weighted
+	agentsConfigs []*config.AgentConfig
+	done          chan struct{}
+	version       *big.Int
+	sem           *semaphore.Weighted
 }
-
 
 // ContractRegistryCaller calls the contract registry.
 type ContractRegistryCaller interface {
@@ -53,6 +52,11 @@ type IPFSClient interface {
 	GetAgentFile(cid string) (*regtypes.AgentFile, error)
 }
 
+// EthClient interacts with the Ethereum API.
+type EthClient interface {
+	ethereum.Client
+}
+
 // New creates a new service.
 func New(cfg config.Config, msgClient clients.MessageClient) services.Service {
 	var ipfsURL string
@@ -63,11 +67,11 @@ func New(cfg config.Config, msgClient clients.MessageClient) services.Service {
 	}
 
 	return &RegistryService{
-		cfg:          cfg,
-		poolID:       common.HexToHash(cfg.Registry.PoolID),
-		msgClient:    msgClient,
-		ipfsClient:   &ipfsClient{ipfsURL},
-		done:         make(chan struct{}),
+		cfg:        cfg,
+		poolID:     common.HexToHash(cfg.Registry.PoolID),
+		msgClient:  msgClient,
+		ipfsClient: &ipfsClient{ipfsURL},
+		done:       make(chan struct{}),
 	}
 }
 
@@ -81,7 +85,7 @@ func (rs *RegistryService) Start() error {
 	log.Infof("Creating Caller: %s", rs.Name())
 
 	// used for getting the latest block number so that we can query consistent state
-	ethClient, err :=  ethereum.NewStreamEthClient(context.Background(), rs.cfg.Registry.Ethereum.JsonRpcUrl)
+	ethClient, err := ethereum.NewStreamEthClient(context.Background(), rs.cfg.Registry.Ethereum.JsonRpcUrl)
 	if err != nil {
 		return err
 	}
@@ -97,10 +101,10 @@ func (rs *RegistryService) Start() error {
 }
 
 func (rs *RegistryService) start() error {
-	go func () {
+	go func() {
 		//TODO: possibly make this configurable, but 15s per block is normal
 		ticker := time.NewTicker(15 * time.Second)
-		for{
+		for {
 			if err := rs.publishLatestAgents(); err != nil {
 				log.Errorf("failed to publish the latest agents: %v", err)
 			}
@@ -137,9 +141,8 @@ func (rs *RegistryService) publishLatestAgents() error {
 }
 
 func (rs *RegistryService) getLatestAgents() ([]*config.AgentConfig, error) {
-
 	var agentConfigs []*config.AgentConfig
-	blk, err := rs.ethClient.BlockByNumber(context.Background(), nil);
+	blk, err := rs.ethClient.BlockByNumber(context.Background(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the block for agents: %v", err)
 	}
