@@ -39,6 +39,9 @@ func stringVal(fieldName string, alert *protocol.Alert) (string, bool) {
 	if fieldName == "protocol" {
 		return alert.Finding.Protocol, true
 	}
+	if fieldName == "everestId" {
+		return alert.Finding.EverestId, true
+	}
 	if fieldName == "type" {
 		return alert.Finding.Type.String(), true
 	}
