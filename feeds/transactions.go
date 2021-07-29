@@ -30,7 +30,7 @@ func (tf *transactionFeed) streamTransactions() error {
 			return nil
 		}
 
-		log.Debugf("tx-iterator: block(%s) processing", blockEvt.Block.Number)
+		log.Infof("tx-iterator: block(%s) processing %d transactions", blockEvt.Block.Number, len(blockEvt.Block.Transactions))
 		for _, tx := range blockEvt.Block.Transactions {
 			txTemp := tx
 			select {
