@@ -2,7 +2,7 @@ registry:
   ethereum:
     websocketUrl: "wss://goerli.infura.io/ws/v3/e5f21a755c534a9fa469f8c4268bc4fb"
     jsonRpcUrl: "https://goerli.infura.io/v3/e5f21a755c534a9fa469f8c4268bc4fb"
-  contractAddress: "0xe283a1781Bb075D4fE7Ab5A96D77Afb14e949C53"
+  contractAddress: "0x40EC0E5FB2d22C1Bbf00662635eF8D20E22E8560"
   containerRegistry: disco-dev.forta.network
   poolId: "0x9d3d1df113ae5f4ff7fb542439229d50a384f4c2162c4fe4e298beefc872ddf2"
 
