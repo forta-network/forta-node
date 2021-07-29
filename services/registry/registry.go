@@ -36,15 +36,15 @@ type RegistryService struct {
 
 	agentsConfigs []*config.AgentConfig
 	done          chan struct{}
-	version       *big.Int
+	version       string
 	sem           *semaphore.Weighted
 }
 
 // ContractRegistryCaller calls the contract registry.
 type ContractRegistryCaller interface {
 	AgentLength(opts *bind.CallOpts, _poolId [32]byte) (*big.Int, error)
-	AgentAt(opts *bind.CallOpts, _poolId [32]byte, index *big.Int) ([32]byte, string, error)
-	PoolVersion(ops *bind.CallOpts, _poolId [32]byte) (*big.Int, error)
+	AgentAt(opts *bind.CallOpts, _poolId [32]byte, index *big.Int) ([32]byte, *big.Int, bool, string, bool, error)
+	GetPoolHash(opts *bind.CallOpts, _poolId [32]byte) ([32]byte, error)
 }
 
 // IPFSClient interacts with an IPFS Gateway.
@@ -92,7 +92,7 @@ func (rs *RegistryService) Start() error {
 	rs.ethClient = ethClient
 
 	// init registry contract
-	rs.contract, err = contracts.NewAgentRegistryCaller(common.HexToAddress(rs.cfg.Registry.ContractAddress), ethclient.NewClient(rpcClient))
+	rs.contract, err = contracts.NewPoolRegistryCaller(common.HexToAddress(rs.cfg.Registry.ContractAddress), ethclient.NewClient(rpcClient))
 	if err != nil {
 		return fmt.Errorf("failed to create the agent registry caller: %v", err)
 	}
@@ -120,14 +120,15 @@ func (rs *RegistryService) publishLatestAgents() error {
 	if rs.sem.TryAcquire(1) {
 		defer rs.sem.Release(1)
 		// opts is nil so we get the latest pool version
-		version, err := rs.contract.PoolVersion(nil, rs.poolID)
+		version, err := rs.contract.GetPoolHash(nil, rs.poolID)
 		if err != nil {
 			return fmt.Errorf("failed to get the pool agents version: %v", err)
 		}
+		versionStr := string(version[:])
 		// if versions change, then get the full list of agents
-		if rs.version == nil || version.Cmp(rs.version) != 0 {
-			log.Infof("registry: agent version changed %s->%s", rs.version.String(), version.String())
-			rs.version = version
+		if rs.version == "" || rs.version != versionStr {
+			log.Infof("registry: agent version changed %s->%s", rs.version, versionStr)
+			rs.version = versionStr
 			rs.agentsConfigs, err = rs.getLatestAgents()
 			if err != nil {
 				return fmt.Errorf("failed to get latest agents: %v", err)
@@ -160,15 +161,18 @@ func (rs *RegistryService) getLatestAgents() ([]*config.AgentConfig, error) {
 	// TODO: If we are going to get 100s of agents, we probably need to batch the calls here.
 	length := int(lengthBig.Int64())
 	for i := 0; i < length; i++ {
-		agentID, agentRef, err := rs.contract.AgentAt(opts, rs.poolID, big.NewInt(int64(i)))
+		agentID, _, _, agentRef, disabled, err := rs.contract.AgentAt(opts, rs.poolID, big.NewInt(int64(i)))
 		if err != nil {
 			return nil, fmt.Errorf("failed to get agent at index '%d' in pool '%s': %v", i, rs.poolID.String(), err)
 		}
-		agentCfg, err := rs.makeAgentConfig(agentID, agentRef)
-		if err != nil {
-			return nil, fmt.Errorf("failed to make agent config: %v", err)
+		// if agent dev disables agent, this will prevent it from running
+		if !disabled {
+			agentCfg, err := rs.makeAgentConfig(agentID, agentRef)
+			if err != nil {
+				return nil, fmt.Errorf("failed to make agent config: %v", err)
+			}
+			agentConfigs = append(agentConfigs, &agentCfg)
 		}
-		agentConfigs = append(agentConfigs, &agentCfg)
 	}
 
 	return agentConfigs, nil

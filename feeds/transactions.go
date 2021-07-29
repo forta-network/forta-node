@@ -30,7 +30,7 @@ func (tf *transactionFeed) streamTransactions() error {
 			return nil
 		}
 
-		log.Debugf("tx-iterator: block(%s) processing", blockEvt.Block.Number)
+		log.Infof("tx-iterator: block(%s) processing %d transactions", blockEvt.Block.Number, len(blockEvt.Block.Transactions))
 		for _, tx := range blockEvt.Block.Transactions {
 			txTemp := tx
 			select {
@@ -38,7 +38,7 @@ func (tf *transactionFeed) streamTransactions() error {
 				return tf.ctx.Err()
 			default:
 				if !tf.cache.ExistsAndAdd(tx.Hash) {
-					log.Infof("tx-iterator: block(%s), txs <- %s", blockEvt.Block.Number, tx.Hash)
+					log.Debugf("tx-iterator: block(%s), txs <- %s", blockEvt.Block.Number, tx.Hash)
 					tf.txCh <- &domain.TransactionEvent{
 						BlockEvt:    blockEvt,
 						Transaction: &txTemp,

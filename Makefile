@@ -41,4 +41,4 @@ run:
 	go build -o build/fortify . && ./build/fortify --passphrase 123
 
 abigen:
-	abigen --abi ./contracts/agent_registry.json --out ./contracts/agent_registry.go --pkg contracts --type AgentRegistry
+	abigen --abi ./contracts/pool_registry.json --out ./contracts/pool_registry.go --pkg contracts --type PoolRegistry

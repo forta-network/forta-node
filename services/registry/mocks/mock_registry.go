@@ -39,13 +39,16 @@ func (m *MockContractRegistryCaller) EXPECT() *MockContractRegistryCallerMockRec
 }
 
 // AgentAt mocks base method.
-func (m *MockContractRegistryCaller) AgentAt(opts *bind.CallOpts, _poolId [32]byte, index *big.Int) ([32]byte, string, error) {
+func (m *MockContractRegistryCaller) AgentAt(opts *bind.CallOpts, _poolId [32]byte, index *big.Int) ([32]byte, *big.Int, bool, string, bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AgentAt", opts, _poolId, index)
 	ret0, _ := ret[0].([32]byte)
-	ret1, _ := ret[1].(string)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret1, _ := ret[1].(*big.Int)
+	ret2, _ := ret[2].(bool)
+	ret3, _ := ret[3].(string)
+	ret4, _ := ret[4].(bool)
+	ret5, _ := ret[5].(error)
+	return ret0, ret1, ret2, ret3, ret4, ret5
 }
 
 // AgentAt indicates an expected call of AgentAt.
@@ -69,19 +72,19 @@ func (mr *MockContractRegistryCallerMockRecorder) AgentLength(opts, _poolId inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AgentLength", reflect.TypeOf((*MockContractRegistryCaller)(nil).AgentLength), opts, _poolId)
 }
 
-// PoolVersion mocks base method.
-func (m *MockContractRegistryCaller) PoolVersion(ops *bind.CallOpts, _poolId [32]byte) (*big.Int, error) {
+// GetPoolHash mocks base method.
+func (m *MockContractRegistryCaller) GetPoolHash(opts *bind.CallOpts, _poolId [32]byte) ([32]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PoolVersion", ops, _poolId)
-	ret0, _ := ret[0].(*big.Int)
+	ret := m.ctrl.Call(m, "GetPoolHash", opts, _poolId)
+	ret0, _ := ret[0].([32]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// PoolVersion indicates an expected call of PoolVersion.
-func (mr *MockContractRegistryCallerMockRecorder) PoolVersion(ops, _poolId interface{}) *gomock.Call {
+// GetPoolHash indicates an expected call of GetPoolHash.
+func (mr *MockContractRegistryCallerMockRecorder) GetPoolHash(opts, _poolId interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PoolVersion", reflect.TypeOf((*MockContractRegistryCaller)(nil).PoolVersion), ops, _poolId)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPoolHash", reflect.TypeOf((*MockContractRegistryCaller)(nil).GetPoolHash), opts, _poolId)
 }
 
 // MockIPFSClient is a mock of IPFSClient interface.
