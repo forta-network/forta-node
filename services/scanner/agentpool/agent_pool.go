@@ -42,8 +42,8 @@ func NewAgentPool(msgClient clients.MessageClient) *AgentPool {
 // should be processing the block.
 func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 	ap.mu.RLock()
+	defer ap.mu.RUnlock()
 	agents := ap.agents
-	ap.mu.RUnlock()
 	for _, agent := range agents {
 		if !agent.ready || !agent.shouldProcessBlock(req.Event.Block.BlockNumber) {
 			continue
@@ -60,8 +60,8 @@ func (ap *AgentPool) TxResults() <-chan *scanner.TxResult {
 // SendEvaluateBlockRequest sends the request to all of the active agents which
 // should be processing the block.
 func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest) {
-	ap.mu.Lock()
-	defer ap.mu.Unlock()
+	ap.mu.RLock()
+	defer ap.mu.RUnlock()
 	agents := ap.agents
 	for _, agent := range agents {
 		if !agent.ready || !agent.shouldProcessBlock(req.Event.BlockNumber) {
