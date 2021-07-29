@@ -33,8 +33,8 @@ var (
 	testPoolID         = common.HexToHash(testPoolIDStr)
 	testAgentID        = common.HexToHash(testAgentIDStr)
 	testAgentFile      = &regtypes.AgentFile{}
-	testVersion1       = big.NewInt(1)
-	testVersion2       = big.NewInt(2)
+	testVersion1       = [32]byte{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+	testVersion2       = [32]byte{1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
 	testAgentLengthBig = big.NewInt(testAgentLength)
 )
 
@@ -109,9 +109,9 @@ func eqBytes(h common.Hash) gomock.Matcher {
 
 func (s *Suite) TestDifferentVersion() {
 	// Given that the last known version is 1
-	s.service.version = testVersion1
+	s.service.version = string(testVersion1[:])
 	// When the last version is returned as 2 at the time of checking
-	s.contract.EXPECT().PoolVersion(nil, eqBytes(s.service.poolID)).Return(testVersion2, nil)
+	s.contract.EXPECT().GetPoolHash(nil, eqBytes(s.service.poolID)).Return(testVersion2, nil)
 	// Then
 	s.shouldUpdateAgents()
 
@@ -122,7 +122,7 @@ func (s *Suite) shouldUpdateAgents() {
 	s.ethClient.EXPECT().BlockByNumber(gomock.Any(), gomock.Any()).Return(&domain.Block{Number: "0x1"}, nil)
 	s.contract.EXPECT().AgentLength(gomock.Any(), eqBytes(testPoolID)).Return(testAgentLengthBig, nil)
 	s.contract.EXPECT().AgentAt(gomock.Any(), eqBytes(testPoolID), big.NewInt(testAgentLength-1)).
-		Return(testAgentID, testAgentRef, nil)
+		Return(testAgentID, big.NewInt(0), false, testAgentRef, false, nil)
 	s.ipfsClient.EXPECT().GetAgentFile(testAgentRef).Return(testAgentFile, nil)
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, (agentConfigs)([]*config.AgentConfig{
 		{
@@ -134,9 +134,9 @@ func (s *Suite) shouldUpdateAgents() {
 
 func (s *Suite) TestFirstTime() {
 	// Given that there is no last known version
-	s.service.version = nil
+	s.service.version = ""
 	// When the last version is returned as anything
-	s.contract.EXPECT().PoolVersion(nil, eqBytes(s.service.poolID)).Return(testVersion2, nil)
+	s.contract.EXPECT().GetPoolHash(nil, eqBytes(s.service.poolID)).Return(testVersion2, nil)
 	// Then
 	s.shouldUpdateAgents()
 
@@ -145,9 +145,9 @@ func (s *Suite) TestFirstTime() {
 
 func (s *Suite) TestSameVersion() {
 	// Given that the last known version is 1
-	s.service.version = testVersion1
+	s.service.version = string(testVersion1[:])
 	// When the last version is returned as the same
-	s.contract.EXPECT().PoolVersion(nil, eqBytes(s.service.poolID)).Return(testVersion1, nil)
+	s.contract.EXPECT().GetPoolHash(nil, eqBytes(s.service.poolID)).Return(testVersion1, nil)
 	// Then it should silently skip
 
 	s.NoError(s.service.publishLatestAgents())
