@@ -5,7 +5,7 @@ registry:
   ethereum:
     websocketUrl: "REGISTRY_WSS_URL"
     jsonRpcUrl: "REGISTRY_API_URL"
-  contractAddress: "0x30dB6Af76Ff4A9A30d7f927eFab235a7ea600e22"
+  contractAddress: "0xe283a1781Bb075D4fE7Ab5A96D77Afb14e949C53"
   containerRegistry: disco-dev.forta.network
   poolId: "0x9d3d1df113ae5f4ff7fb542439229d50a384f4c2162c4fe4e298beefc872ddf2"
 
