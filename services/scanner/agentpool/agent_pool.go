@@ -1,13 +1,14 @@
 package agentpool
 
 import (
+	"sync"
+
 	"OpenZeppelin/fortify-node/clients"
 	"OpenZeppelin/fortify-node/clients/agentgrpc"
 	"OpenZeppelin/fortify-node/clients/messaging"
 	"OpenZeppelin/fortify-node/config"
 	"OpenZeppelin/fortify-node/protocol"
 	"OpenZeppelin/fortify-node/services/scanner"
-	"sync"
 )
 
 // AgentPool maintains the pool of agents that the scanner should
@@ -59,9 +60,9 @@ func (ap *AgentPool) TxResults() <-chan *scanner.TxResult {
 // SendEvaluateBlockRequest sends the request to all of the active agents which
 // should be processing the block.
 func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest) {
-	ap.mu.RLock()
+	ap.mu.Lock()
+	defer ap.mu.Unlock()
 	agents := ap.agents
-	ap.mu.RUnlock()
 	for _, agent := range agents {
 		if !agent.ready || !agent.shouldProcessBlock(req.Event.BlockNumber) {
 			continue
