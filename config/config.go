@@ -108,6 +108,8 @@ type RegistryConfig struct {
 	ContractAddress   string         `yaml:"contractAddress" json:"contractAddress"`
 	ContainerRegistry string         `yaml:"containerRegistry" json:"containerRegistry"`
 	PoolID            string         `yaml:"poolId" json:"poolId"`
+	Username string `yaml:"username" json:"username"`
+	Password string `yaml:"password" json:"password"`
 }
 
 type Config struct {

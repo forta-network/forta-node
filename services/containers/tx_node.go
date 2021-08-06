@@ -18,6 +18,8 @@ import (
 type TxNodeService struct {
 	ctx         context.Context
 	client      clients.DockerClient
+	agentClient      clients.DockerClient
+
 	msgClient   clients.MessageClient
 	config      TxNodeServiceConfig
 	maxLogSize  string
@@ -174,6 +176,10 @@ func (t *TxNodeService) Name() string {
 }
 
 func NewTxNodeService(ctx context.Context, cfg TxNodeServiceConfig) (*TxNodeService, error) {
+	agentDockerClient, err := clients.NewAuthDockerClient(cfg.Config.Registry.Username, cfg.Config.Registry.Password)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create the agent docker client: %v", err)
+	}
 	dockerClient, err := clients.NewDockerClient()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the docker client: %v", err)
@@ -181,6 +187,7 @@ func NewTxNodeService(ctx context.Context, cfg TxNodeServiceConfig) (*TxNodeServ
 	return &TxNodeService{
 		ctx:    ctx,
 		client: dockerClient,
+		agentClient: agentDockerClient,
 		config: cfg,
 	}, nil
 }

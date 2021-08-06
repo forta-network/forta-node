@@ -57,6 +57,9 @@ func stringVal(fieldName string, alert *protocol.Alert) (string, bool) {
 	if val, ok := alert.Tags[fieldName]; ok {
 		return val, true
 	}
+	if val, ok := alert.Finding.Metadata[fieldName]; ok {
+		return val, true
+	}
 	return "", false
 }
 
