@@ -1,13 +1,14 @@
 package containers
 
 import (
+	"context"
+	"fmt"
+	"testing"
+
 	"OpenZeppelin/fortify-node/clients"
 	"OpenZeppelin/fortify-node/clients/messaging"
 	mock_clients "OpenZeppelin/fortify-node/clients/mocks"
 	"OpenZeppelin/fortify-node/config"
-	"context"
-	"fmt"
-	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -35,6 +36,8 @@ type Suite struct {
 	r *require.Assertions
 
 	dockerClient *mock_clients.MockDockerClient
+	agentClient *mock_clients.MockDockerClient
+
 	msgClient    *mock_clients.MockMessageClient
 
 	service *TxNodeService
@@ -65,11 +68,14 @@ func (m configMatcher) String() string {
 func (s *Suite) SetupTest() {
 	s.r = require.New(s.T())
 	s.dockerClient = mock_clients.NewMockDockerClient(gomock.NewController(s.T()))
+	s.agentClient = mock_clients.NewMockDockerClient(gomock.NewController(s.T()))
+
 	s.msgClient = mock_clients.NewMockMessageClient(gomock.NewController(s.T()))
 	service := &TxNodeService{
 		ctx:       context.Background(),
 		client:    s.dockerClient,
 		msgClient: s.msgClient,
+		agentClient: s.agentClient,
 	}
 	service.config.Config.Log.Level = "debug"
 
@@ -103,7 +109,7 @@ func (s *Suite) TestAgentRun() {
 	}
 	// Creates the agent network, starts the agent container, attaches the scanner and the proxy to the
 	// agent network, publishes a "running" message.
-	s.dockerClient.EXPECT().PullImage(s.service.ctx, testImageRef)
+	s.agentClient.EXPECT().PullImage(s.service.ctx, testImageRef)
 	s.dockerClient.EXPECT().CreatePublicNetwork(s.service.ctx, testAgentContainerName).Return(testAgentNetworkID, nil)
 	s.dockerClient.EXPECT().StartContainer(s.service.ctx, (configMatcher)(clients.DockerContainerConfig{
 		Name: agentConfig.ContainerName(),
