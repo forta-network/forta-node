@@ -64,7 +64,7 @@ func (dcl DockerContainerList) FindByID(id string) (*types.Container, bool) {
 }
 
 type dockerClient struct {
-	cli *client.Client
+	cli      *client.Client
 	username string
 	password string
 }
@@ -82,10 +82,10 @@ func registryAuthValue(username, password string) string {
 		return ""
 	}
 	jsonBytes, _ := json.Marshal(map[string]string{
-		"username":  username,
+		"username": username,
 		"password": password,
 	})
-	return base64.StdEncoding.EncodeToString(jsonBytes);
+	return base64.StdEncoding.EncodeToString(jsonBytes)
 }
 
 func (d *dockerClient) PullImage(ctx context.Context, refStr string) error {
@@ -333,9 +333,8 @@ func NewAuthDockerClient(username, password string) (*dockerClient, error) {
 		return nil, err
 	}
 	return &dockerClient{
-		cli: cli,
+		cli:      cli,
 		username: username,
 		password: password,
 	}, nil
 }
-

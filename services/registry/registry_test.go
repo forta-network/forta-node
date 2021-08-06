@@ -33,8 +33,8 @@ var (
 	testPoolID         = common.HexToHash(testPoolIDStr)
 	testAgentID        = common.HexToHash(testAgentIDStr)
 	testAgentFile      = &regtypes.AgentFile{}
-	testVersion1       = [32]byte{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
-	testVersion2       = [32]byte{1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+	testVersion1       = [32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	testVersion2       = [32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	testAgentLengthBig = big.NewInt(testAgentLength)
 )
 

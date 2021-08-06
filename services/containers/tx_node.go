@@ -18,7 +18,7 @@ import (
 type TxNodeService struct {
 	ctx         context.Context
 	client      clients.DockerClient
-	agentClient      clients.DockerClient
+	agentClient clients.DockerClient
 
 	msgClient   clients.MessageClient
 	config      TxNodeServiceConfig
@@ -185,9 +185,9 @@ func NewTxNodeService(ctx context.Context, cfg TxNodeServiceConfig) (*TxNodeServ
 		return nil, fmt.Errorf("failed to create the docker client: %v", err)
 	}
 	return &TxNodeService{
-		ctx:    ctx,
-		client: dockerClient,
+		ctx:         ctx,
+		client:      dockerClient,
 		agentClient: agentDockerClient,
-		config: cfg,
+		config:      cfg,
 	}, nil
 }
