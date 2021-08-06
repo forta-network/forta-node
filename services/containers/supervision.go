@@ -1,10 +1,11 @@
 package containers
 
 import (
+	"fmt"
+
 	"OpenZeppelin/fortify-node/clients"
 	"OpenZeppelin/fortify-node/clients/messaging"
 	"OpenZeppelin/fortify-node/config"
-	"fmt"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -12,7 +13,7 @@ import (
 func (t *TxNodeService) startAgent(agent config.AgentConfig) error {
 	// TODO: Verify the manifest (and the config?)
 
-	if err := t.client.PullImage(t.ctx, agent.Image); err != nil {
+	if err := t.agentClient.PullImage(t.ctx, agent.Image); err != nil {
 		return fmt.Errorf("failed to pull the image: %v", err)
 	}
 

@@ -4,6 +4,8 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -62,7 +64,9 @@ func (dcl DockerContainerList) FindByID(id string) (*types.Container, bool) {
 }
 
 type dockerClient struct {
-	cli *client.Client
+	cli      *client.Client
+	username string
+	password string
 }
 
 func (cfg DockerContainerConfig) envVars() []string {
@@ -73,8 +77,21 @@ func (cfg DockerContainerConfig) envVars() []string {
 	return results
 }
 
+func registryAuthValue(username, password string) string {
+	if username == "" && password == "" {
+		return ""
+	}
+	jsonBytes, _ := json.Marshal(map[string]string{
+		"username": username,
+		"password": password,
+	})
+	return base64.StdEncoding.EncodeToString(jsonBytes)
+}
+
 func (d *dockerClient) PullImage(ctx context.Context, refStr string) error {
-	r, err := d.cli.ImagePull(ctx, refStr, types.ImagePullOptions{})
+	r, err := d.cli.ImagePull(ctx, refStr, types.ImagePullOptions{
+		RegistryAuth: registryAuthValue(d.username, d.password),
+	})
 	if err != nil {
 		return err
 	}
@@ -306,5 +323,18 @@ func NewDockerClient() (*dockerClient, error) {
 	}
 	return &dockerClient{
 		cli: cli,
+	}, nil
+}
+
+// NewAuthDockerClient creates a new docker client with credentials
+func NewAuthDockerClient(username, password string) (*dockerClient, error) {
+	cli, err := client.NewClientWithOpts()
+	if err != nil {
+		return nil, err
+	}
+	return &dockerClient{
+		cli:      cli,
+		username: username,
+		password: password,
 	}, nil
 }
