@@ -48,6 +48,9 @@ func NewClient(name, natsURL string) *Client {
 // AgentsHandler handles agents.* subjects.
 type AgentsHandler func(AgentPayload) error
 
+// AlertsHandler handles alerts.* subjects.
+type AlertsHandler func(AlertsPayload) error
+
 // Subscribe subscribes the consumer to this client.
 func (client *Client) Subscribe(subject string, handler interface{}) {
 	// TODO: Configure redelivery options somehow.
@@ -59,6 +62,14 @@ func (client *Client) Subscribe(subject string, handler interface{}) {
 		switch h := handler.(type) {
 		case AgentsHandler:
 			var payload AgentPayload
+			err = json.Unmarshal(m.Data, &payload)
+			if err != nil {
+				break
+			}
+			err = h(payload)
+
+		case AlertsHandler:
+			var payload AlertsPayload
 			err = json.Unmarshal(m.Data, &payload)
 			if err != nil {
 				break

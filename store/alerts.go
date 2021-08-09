@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/dgraph-io/badger/v3"
@@ -53,6 +54,9 @@ func stringVal(fieldName string, alert *protocol.Alert) (string, bool) {
 	}
 	if fieldName == "agentImageHash" {
 		return alert.Agent.ImageHash, true
+	}
+	if fieldName == "published" {
+		return strconv.FormatBool(alert.Published), true
 	}
 	if val, ok := alert.Tags[fieldName]; ok {
 		return val, true

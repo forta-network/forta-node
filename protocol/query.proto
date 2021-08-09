@@ -45,6 +45,7 @@ message Alert {
   AgentInfo agent = 6;
   map<string, string> tags = 7;
   ScannerInfo scanner = 8;
+  bool published = 9;
 }
 
 message SignedAlert {

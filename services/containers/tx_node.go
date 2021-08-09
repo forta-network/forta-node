@@ -95,6 +95,7 @@ func (t *TxNodeService) start() error {
 		Image: t.config.Config.Query.QueryImage,
 		Env: map[string]string{
 			config.EnvFortifyConfig: cfgJson,
+			config.EnvNatsHost:      config.DockerNatsContainerName,
 		},
 		Ports: map[string]string{
 			fmt.Sprintf("%d", t.config.Config.Query.Port): "80",

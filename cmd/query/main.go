@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"os"
 
+	"OpenZeppelin/fortify-node/clients/messaging"
 	"OpenZeppelin/fortify-node/config"
 	"OpenZeppelin/fortify-node/services"
 	"OpenZeppelin/fortify-node/services/query"
@@ -14,7 +17,12 @@ func initApi(ctx context.Context, as store.AlertStore, cfg config.Config) (*quer
 }
 
 func initListener(ctx context.Context, as store.AlertStore, cfg config.Config) (*query.AlertListener, error) {
-	return query.NewAlertListener(ctx, as, query.AlertListenerConfig{Port: 8770})
+	natsHost := os.Getenv(config.EnvNatsHost)
+	if natsHost == "" {
+		return nil, fmt.Errorf("%s is a required env var", config.EnvNatsHost)
+	}
+	msgClient := messaging.NewClient("query", fmt.Sprintf("%s:%s", natsHost, config.DefaultNatsPort))
+	return query.NewAlertListener(ctx, as, query.AlertListenerConfig{Port: 8770}, msgClient)
 }
 
 func initPruner(ctx context.Context, as store.AlertStore, cfg config.Config) (*query.DBPruner, error) {
