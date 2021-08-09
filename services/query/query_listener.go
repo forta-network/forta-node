@@ -66,6 +66,7 @@ func (al *AlertListener) broadcastAlerts(ctx context.Context) {
 
 func (al *AlertListener) handleAlertsPublished(payload messaging.AlertsPayload) error {
 	for _, alert := range payload {
+		alert.Alert.Published = true // enforce
 		if err := al.store.AddAlert(alert); err != nil {
 			return fmt.Errorf("failed to update published alert: %v", err)
 		}
