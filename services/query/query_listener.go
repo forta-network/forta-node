@@ -65,7 +65,7 @@ func (al *AlertListener) publishAlerts() {
 	var err error
 	for {
 		if err != nil {
-			log.Errorf("failed to publish alert '%s': %v", notif.SignedAlert.Alert.Id)
+			log.Errorf("failed to publish alert '%s': %v", notif.SignedAlert.Alert.Id, err)
 			time.Sleep(time.Second * 10)
 		}
 
