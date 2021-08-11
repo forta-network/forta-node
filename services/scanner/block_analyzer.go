@@ -100,7 +100,7 @@ func (t *BlockAnalyzerService) Start() error {
 				if err != nil {
 					return err
 				}
-				if err := t.cfg.AlertSender.SignAndNotify(alert); err != nil {
+				if err := t.cfg.AlertSender.SignAndNotify(alert, result.Request.Event.Network.ChainId, result.Request.Event.BlockNumber); err != nil {
 					return err
 				}
 			}

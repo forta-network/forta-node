@@ -50,7 +50,9 @@ message Alert {
 message SignedAlert {
   Alert alert = 1;
   Signature signature = 2;
-  string txHash = 3;
+  string chainId = 3;
+  string blockNumber = 4;
+  string txHash = 5;
 }
 
 message NotifyRequest {

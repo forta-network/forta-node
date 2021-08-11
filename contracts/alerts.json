@@ -3,37 +3,6 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": false,
-        "internalType": "address",
-        "name": "from",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "by",
-        "type": "address"
-      }
-    ],
-    "name": "AgentRegistryChanged",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "poolId",
-        "type": "bytes32"
-      },
-      {
         "indexed": true,
         "internalType": "address",
         "name": "scanner",
@@ -41,49 +10,42 @@
       },
       {
         "indexed": true,
-        "internalType": "bytes32",
-        "name": "agentId",
-        "type": "bytes32"
+        "internalType": "uint256",
+        "name": "chainId",
+        "type": "uint256"
       },
       {
         "indexed": false,
-        "internalType": "bytes32",
-        "name": "alertId",
-        "type": "bytes32"
+        "internalType": "uint256",
+        "name": "blockStart",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "blockEnd",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "alertCount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "maxSeverity",
+        "type": "uint256"
       },
       {
         "indexed": false,
         "internalType": "string",
-        "name": "alertRef",
+        "name": "ref",
         "type": "string"
       }
     ],
-    "name": "Alert",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "from",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "by",
-        "type": "address"
-      }
-    ],
-    "name": "PoolRegistryChanged",
+    "name": "AlertBatch",
     "type": "event"
   },
   {
@@ -162,6 +124,31 @@
     "type": "event"
   },
   {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "from",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "by",
+        "type": "address"
+      }
+    ],
+    "name": "ScannerRegistryChanged",
+    "type": "event"
+  },
+  {
     "inputs": [],
     "name": "ADMIN_ROLE",
     "outputs": [
@@ -188,32 +175,42 @@
     "type": "function"
   },
   {
-    "type": "function",
     "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "_poolId",
-        "type": "bytes32"
+        "internalType": "uint256",
+        "name": "_chainId",
+        "type": "uint256"
       },
       {
-        "internalType": "bytes32",
-        "name": "_agentId",
-        "type": "bytes32"
+        "internalType": "uint256",
+        "name": "_blockStart",
+        "type": "uint256"
       },
       {
-        "internalType": "bytes32",
-        "name": "_alertId",
-        "type": "bytes32"
+        "internalType": "uint256",
+        "name": "_blockEnd",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_alertCount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_maxSeverity",
+        "type": "uint256"
       },
       {
         "internalType": "string",
-        "name": "_alertRef",
+        "name": "_ref",
         "type": "string"
       }
     ],
-    "name": "addAlert",
+    "name": "addAlertBatch",
     "outputs": [],
-    "stateMutability": "nonpayable"
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
     "inputs": [
@@ -284,13 +281,8 @@
         "type": "address"
       },
       {
-        "internalType": "contract PoolRegistry",
-        "name": "_poolRegistry",
-        "type": "address"
-      },
-      {
-        "internalType": "contract AgentRegistry",
-        "name": "_agentRegistry",
+        "internalType": "contract ScannerRegistry",
+        "name": "_scannerRegistry",
         "type": "address"
       }
     ],
@@ -357,17 +349,12 @@
   {
     "inputs": [
       {
-        "internalType": "contract PoolRegistry",
-        "name": "_poolRegistry",
-        "type": "address"
-      },
-      {
-        "internalType": "contract AgentRegistry",
-        "name": "_agentRegistry",
+        "internalType": "contract ScannerRegistry",
+        "name": "_scannerRegistry",
         "type": "address"
       }
     ],
-    "name": "setRegistries",
+    "name": "setScannerRegistry",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

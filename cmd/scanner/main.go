@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	gethlog "github.com/ethereum/go-ethereum/log"
 
 	"OpenZeppelin/fortify-node/clients"
@@ -77,11 +78,7 @@ func initBlockAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertS
 	})
 }
 
-func initAlertSender(ctx context.Context) (clients.AlertSender, error) {
-	key, err := security.LoadKey()
-	if err != nil {
-		return nil, err
-	}
+func initAlertSender(ctx context.Context, key *keystore.Key) (clients.AlertSender, error) {
 	qn := os.Getenv(config.EnvQueryNode)
 	if qn == "" {
 		return nil, fmt.Errorf("%s is a required env var", config.EnvQueryNode)
@@ -99,7 +96,12 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	}
 	msgClient := messaging.NewClient("scanner", fmt.Sprintf("%s:%s", natsHost, config.DefaultNatsPort))
 
-	as, err := initAlertSender(ctx)
+	key, err := security.LoadKey()
+	if err != nil {
+		return nil, err
+	}
+
+	as, err := initAlertSender(ctx, key)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +121,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 
-	registryService := registry.New(cfg, msgClient)
+	registryService := registry.New(cfg, key.Address, msgClient)
 	agentPool := agentpool.NewAgentPool(msgClient)
 	txAnalyzer, err := initTxAnalyzer(ctx, cfg, as, txStream, agentPool)
 	if err != nil {

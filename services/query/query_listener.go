@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"net"
 	"net/http"
 	"time"
@@ -19,6 +20,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -27,21 +29,37 @@ import (
 	"google.golang.org/grpc"
 )
 
+const (
+	defaultInterval   = time.Second * 15
+	defaultBatchLimit = 500
+)
+
 // AlertListener allows retrieval of alerts from the database
 type AlertListener struct {
 	protocol.UnimplementedQueryNodeServer
-	ctx      context.Context
-	store    store.AlertStore
-	cfg      AlertListenerConfig
-	contract AlertsContract
-	ipfs     IPFS
+	ctx       context.Context
+	store     store.AlertStore
+	cfg       AlertListenerConfig
+	contract  AlertsContract
+	ipfs      IPFS
+	ethClient EthClient
 
-	notifCh chan *protocol.NotifyRequest
+	skipEmpty     bool
+	batchInterval time.Duration
+	batchLimit    int
+	latestBlock   uint64
+	latestChainID uint64
+	notifCh       chan *protocol.NotifyRequest
+}
+
+// EthClient interacts with the Ethereum API.
+type EthClient interface {
+	BlockNumber(ctx context.Context) (uint64, error)
 }
 
 // AlertsContract stores alerts.
 type AlertsContract interface {
-	AddAlert(_poolId [32]byte, _agentId [32]byte, _alertId [32]byte, _alertRef string) (*types.Transaction, error)
+	AddAlertBatch(_chainId *big.Int, _blockStart *big.Int, _blockEnd *big.Int, _alertCount *big.Int, _maxSeverity *big.Int, _ref string) (*types.Transaction, error)
 }
 
 // IPFS interacts with an IPFS node/gateway.
@@ -61,18 +79,20 @@ func (al *AlertListener) Notify(ctx context.Context, req *protocol.NotifyRequest
 }
 
 func (al *AlertListener) publishAlerts() {
-	notif := <-al.notifCh
+	ticker := time.NewTicker(al.batchInterval)
 	var err error
 	for {
 		if err != nil {
-			log.Errorf("failed to publish alert '%s': %v", notif.SignedAlert.Alert.Id, err)
-			time.Sleep(time.Second * 10)
+			log.Errorf("failed to publish alert batch: %v", err)
+			// Sleep
+			ticker.Reset(al.batchInterval)
+			<-ticker.C
 		}
 
-		log.Infof("alert: %s", notif.SignedAlert.Alert.Id)
+		batch := al.getLatestBatch()
 
 		var buf bytes.Buffer
-		if err = json.NewEncoder(&buf).Encode(notif.SignedAlert); err != nil {
+		if err = json.NewEncoder(&buf).Encode(batch); err != nil {
 			err = fmt.Errorf("failed to encode the signed alert: %v", err)
 			continue
 		}
@@ -82,17 +102,103 @@ func (al *AlertListener) publishAlerts() {
 			continue
 		}
 
-		// TODO: We won't have pools. Update/remove pool ID argument.
-		tx, err := al.contract.AddAlert(([32]byte)(common.Hash{}), ([32]byte)(common.HexToHash(notif.SignedAlert.Alert.Agent.Name)), common.HexToHash(notif.SignedAlert.Alert.Id), cid)
+		tx, err := al.contract.AddAlertBatch(
+			big.NewInt(0).SetUint64(batch.ChainID),
+			big.NewInt(0).SetUint64(batch.BlockStart),
+			big.NewInt(0).SetUint64(batch.BlockEnd),
+			big.NewInt(int64(batch.AlertCount)),
+			big.NewInt(0).SetUint64(batch.MaxSeverity),
+			cid,
+		)
 		if err != nil {
 			err = fmt.Errorf("failed to send the alert tx: %v", err)
 			continue
 		}
-		notif.SignedAlert.TxHash = tx.Hash().Hex()
-		if err = al.store.AddAlert(notif.SignedAlert); err != nil {
-			continue
+
+		for _, alert := range batch.Alerts {
+			alert.TxHash = tx.Hash().Hex()
+			if err = al.store.AddAlert(alert); err != nil {
+				continue
+			}
+		}
+
+		<-ticker.C
+	}
+}
+
+// AlertBatch contains a batch of alerts along with some extra data.
+type AlertBatch struct {
+	ChainID     uint64                  `json:"chainId"`
+	BlockStart  uint64                  `json:"blockStart"`
+	BlockEnd    uint64                  `json:"blockEnd"`
+	AlertCount  int                     `json:"alertCount"`
+	MaxSeverity uint64                  `json:"maxSeverity"`
+	Alerts      []*protocol.SignedAlert `json:"alerts"`
+}
+
+func (al *AlertListener) getLatestBatch() (batch AlertBatch) {
+	var done bool
+	for i := 0; i < defaultBatchLimit; i++ {
+		select {
+		case notif := <-al.notifCh:
+			alert := notif.SignedAlert
+			log.Infof("alert: %s", alert.Alert.Id)
+
+			// TODO: Separate batches by chain ID later?
+			chainID, err := hexutil.DecodeUint64(alert.ChainId)
+			if err != nil {
+				log.Errorf("failed to parse alert chain id: %v", err)
+				continue
+			}
+			batch.ChainID = chainID
+
+			alertBlockNum, err := hexutil.DecodeUint64(alert.BlockNumber)
+			if err != nil {
+				log.Errorf("failed to parse alert block number: %v", err)
+				continue
+			}
+			if batch.BlockStart == 0 || (batch.BlockStart > 0 && alertBlockNum < batch.BlockStart) {
+				batch.BlockStart = alertBlockNum
+			}
+			if batch.BlockEnd == 0 || (batch.BlockEnd > 0 && alertBlockNum > batch.BlockEnd) {
+				batch.BlockEnd = alertBlockNum
+			}
+
+			if uint64(alert.Alert.Finding.Severity) > batch.MaxSeverity {
+				batch.MaxSeverity = uint64(alert.Alert.Finding.Severity)
+			}
+
+			batch.Alerts = append(batch.Alerts, alert)
+
+		default:
+			done = true // If we don't receive anymore notifs
+		}
+		if done {
+			break
 		}
 	}
+
+	batch.AlertCount = len(batch.Alerts)
+
+	// We use single chain ID for now.
+	if batch.ChainID > 0 {
+		al.latestChainID = batch.ChainID
+	} else {
+		batch.ChainID = al.latestChainID
+	}
+
+	if batch.BlockStart == 0 {
+		latestBlock, err := al.ethClient.BlockNumber(al.ctx)
+		if err != nil {
+			log.Errorf("failed to get the latest block for batch: %v", err)
+			return
+		}
+		batch.BlockStart = al.latestBlock
+		batch.BlockEnd = latestBlock
+		al.latestBlock = latestBlock
+	}
+
+	return
 }
 
 func (al *AlertListener) Start() error {
@@ -102,6 +208,9 @@ func (al *AlertListener) Start() error {
 	}
 	grpcServer := grpc.NewServer()
 	protocol.RegisterQueryNodeServer(grpcServer, al)
+
+	go al.publishAlerts()
+
 	return grpcServer.Serve(lis)
 }
 
@@ -139,11 +248,33 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertList
 		ipfsClient = ipfsapi.NewShellWithClient(cfg.PublisherConfig.Ethereum.JsonRpcUrl, http.DefaultClient)
 	}
 
+	latestBlock, err := ethClient.BlockNumber(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get the latest block: %v", err)
+	}
+
+	batchInterval := defaultInterval
+	if cfg.PublisherConfig.Batch.IntervalSeconds != nil {
+		batchInterval = (time.Duration)(*cfg.PublisherConfig.Batch.IntervalSeconds) * time.Second
+	}
+
+	batchLimit := defaultBatchLimit
+	if cfg.PublisherConfig.Batch.MaxAlerts != nil {
+		batchLimit = *cfg.PublisherConfig.Batch.MaxAlerts
+	}
+
 	return &AlertListener{
-		ctx:      ctx,
-		store:    store,
-		cfg:      cfg,
-		contract: ats,
-		ipfs:     ipfsClient,
+		ctx:       ctx,
+		store:     store,
+		cfg:       cfg,
+		contract:  ats,
+		ipfs:      ipfsClient,
+		ethClient: ethClient,
+
+		skipEmpty:     cfg.PublisherConfig.Batch.SkipEmpty,
+		batchInterval: batchInterval,
+		batchLimit:    batchLimit,
+		latestBlock:   latestBlock,
+		notifCh:       make(chan *protocol.NotifyRequest),
 	}, nil
 }

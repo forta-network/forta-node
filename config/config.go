@@ -113,6 +113,12 @@ type RegistryConfig struct {
 	Password          string         `yaml:"password" json:"password"`
 }
 
+type BatchConfig struct {
+	SkipEmpty       bool `yaml:"sendEmpty" json:"sendEmpty"`
+	IntervalSeconds *int `yaml:"intervalSeconds" json:"intervalSeconds"`
+	MaxAlerts       *int `yaml:"maxAlerts" json:"maxAlerts"`
+}
+
 type PublisherConfig struct {
 	Ethereum        EthereumConfig `yaml:"ethereum" json:"ethereum"`
 	ContractAddress string         `yaml:"contractAddress" json:"contractAddress"`
@@ -121,6 +127,7 @@ type PublisherConfig struct {
 		Username   string `yaml:"username" json:"username"`
 		Password   string `yaml:"password" json:"password"`
 	} `yaml:"ipfs" json:"ipfs"`
+	Batch BatchConfig `yaml:"batch" json:"batch"`
 }
 
 type Config struct {

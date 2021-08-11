@@ -4,9 +4,9 @@
     "inputs": [
       {
         "indexed": false,
-        "internalType": "bytes32",
-        "name": "poolId",
-        "type": "bytes32"
+        "internalType": "address",
+        "name": "scanner",
+        "type": "address"
       },
       {
         "indexed": false,
@@ -16,9 +16,15 @@
       },
       {
         "indexed": false,
-        "internalType": "string",
-        "name": "ref",
-        "type": "string"
+        "internalType": "uint256",
+        "name": "version",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "latest",
+        "type": "bool"
       },
       {
         "indexed": false,
@@ -35,9 +41,9 @@
     "inputs": [
       {
         "indexed": false,
-        "internalType": "bytes32",
-        "name": "poolId",
-        "type": "bytes32"
+        "internalType": "address",
+        "name": "scanner",
+        "type": "address"
       },
       {
         "indexed": false,
@@ -66,9 +72,9 @@
     "inputs": [
       {
         "indexed": false,
-        "internalType": "bytes32",
-        "name": "poolId",
-        "type": "bytes32"
+        "internalType": "address",
+        "name": "scanner",
+        "type": "address"
       },
       {
         "indexed": false,
@@ -116,9 +122,9 @@
     "inputs": [
       {
         "indexed": false,
-        "internalType": "bytes32",
-        "name": "poolId",
-        "type": "bytes32"
+        "internalType": "address",
+        "name": "scanner",
+        "type": "address"
       },
       {
         "indexed": false,
@@ -141,9 +147,9 @@
     "inputs": [
       {
         "indexed": false,
-        "internalType": "bytes32",
-        "name": "poolId",
-        "type": "bytes32"
+        "internalType": "address",
+        "name": "scanner",
+        "type": "address"
       },
       {
         "indexed": false,
@@ -153,9 +159,15 @@
       },
       {
         "indexed": false,
-        "internalType": "string",
-        "name": "ref",
-        "type": "string"
+        "internalType": "uint256",
+        "name": "version",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "latest",
+        "type": "bool"
       },
       {
         "indexed": false,
@@ -171,10 +183,85 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": false,
+        "indexed": true,
         "internalType": "bytes32",
-        "name": "poolId",
+        "name": "role",
         "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "previousAdminRole",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "newAdminRole",
+        "type": "bytes32"
+      }
+    ],
+    "name": "RoleAdminChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
+      }
+    ],
+    "name": "RoleGranted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
+      }
+    ],
+    "name": "RoleRevoked",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "scanner",
+        "type": "address"
       },
       {
         "indexed": false,
@@ -183,7 +270,7 @@
         "type": "address"
       }
     ],
-    "name": "PoolAdded",
+    "name": "ScannerAdded",
     "type": "event"
   },
   {
@@ -191,9 +278,9 @@
     "inputs": [
       {
         "indexed": false,
-        "internalType": "bytes32",
-        "name": "poolId",
-        "type": "bytes32"
+        "internalType": "address",
+        "name": "scanner",
+        "type": "address"
       },
       {
         "indexed": false,
@@ -202,7 +289,7 @@
         "type": "address"
       }
     ],
-    "name": "PoolAdminAdded",
+    "name": "ScannerAdminAdded",
     "type": "event"
   },
   {
@@ -210,9 +297,9 @@
     "inputs": [
       {
         "indexed": false,
-        "internalType": "bytes32",
-        "name": "poolId",
-        "type": "bytes32"
+        "internalType": "address",
+        "name": "scanner",
+        "type": "address"
       },
       {
         "indexed": false,
@@ -221,7 +308,7 @@
         "type": "address"
       }
     ],
-    "name": "PoolAdminRemoved",
+    "name": "ScannerAdminRemoved",
     "type": "event"
   },
   {
@@ -229,9 +316,9 @@
     "inputs": [
       {
         "indexed": false,
-        "internalType": "bytes32",
-        "name": "poolId",
-        "type": "bytes32"
+        "internalType": "address",
+        "name": "scanner",
+        "type": "address"
       },
       {
         "indexed": false,
@@ -246,15 +333,41 @@
         "type": "address"
       }
     ],
-    "name": "PoolOwnershipTransfered",
+    "name": "ScannerOwnershipTransfered",
     "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "ADMIN_ROLE",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "DEFAULT_ADMIN_ROLE",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
   },
   {
     "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "_poolId",
-        "type": "bytes32"
+        "internalType": "address",
+        "name": "_scanner",
+        "type": "address"
       },
       {
         "internalType": "bytes32",
@@ -280,9 +393,9 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "_poolId",
-        "type": "bytes32"
+        "internalType": "address",
+        "name": "_scanner",
+        "type": "address"
       },
       {
         "internalType": "bytes32",
@@ -303,12 +416,12 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "_poolId",
-        "type": "bytes32"
+        "internalType": "address",
+        "name": "_owner",
+        "type": "address"
       }
     ],
-    "name": "addPool",
+    "name": "addScanner",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -316,9 +429,9 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "_poolId",
-        "type": "bytes32"
+        "internalType": "address",
+        "name": "_scanner",
+        "type": "address"
       },
       {
         "internalType": "address",
@@ -326,7 +439,7 @@
         "type": "address"
       }
     ],
-    "name": "addPoolAdmin",
+    "name": "addScannerAdmin",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -334,9 +447,9 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "_poolId",
-        "type": "bytes32"
+        "internalType": "address",
+        "name": "_scanner",
+        "type": "address"
       },
       {
         "internalType": "bytes32",
@@ -363,9 +476,9 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "_poolId",
-        "type": "bytes32"
+        "internalType": "address",
+        "name": "_scanner",
+        "type": "address"
       },
       {
         "internalType": "bytes32",
@@ -387,9 +500,9 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "_poolId",
-        "type": "bytes32"
+        "internalType": "address",
+        "name": "_scanner",
+        "type": "address"
       },
       {
         "internalType": "uint256",
@@ -431,9 +544,9 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "_poolId",
-        "type": "bytes32"
+        "internalType": "address",
+        "name": "_scanner",
+        "type": "address"
       },
       {
         "internalType": "bytes32",
@@ -455,9 +568,9 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "_poolId",
-        "type": "bytes32"
+        "internalType": "address",
+        "name": "_scanner",
+        "type": "address"
       }
     ],
     "name": "agentLength",
@@ -474,9 +587,9 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "_poolId",
-        "type": "bytes32"
+        "internalType": "address",
+        "name": "_scanner",
+        "type": "address"
       },
       {
         "internalType": "bytes32",
@@ -498,9 +611,9 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32",
+        "internalType": "address",
         "name": "",
-        "type": "bytes32"
+        "type": "address"
       },
       {
         "internalType": "bytes32",
@@ -522,9 +635,9 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32",
+        "internalType": "address",
         "name": "",
-        "type": "bytes32"
+        "type": "address"
       },
       {
         "internalType": "bytes32",
@@ -546,17 +659,78 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "_poolId",
-        "type": "bytes32"
+        "internalType": "address",
+        "name": "_scanner",
+        "type": "address"
       }
     ],
-    "name": "getPoolHash",
+    "name": "getAgentListHash",
     "outputs": [
       {
         "internalType": "bytes32",
         "name": "",
         "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      }
+    ],
+    "name": "getRoleAdmin",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "grantRole",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "hasRole",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
       }
     ],
     "stateMutability": "view",
@@ -597,90 +771,9 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "_poolId",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "uint256",
-        "name": "index",
-        "type": "uint256"
-      }
-    ],
-    "name": "poolAdminAt",
-    "outputs": [
-      {
         "internalType": "address",
-        "name": "",
+        "name": "_scanner",
         "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "_poolId",
-        "type": "bytes32"
-      }
-    ],
-    "name": "poolAdminLength",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "name": "poolExistsMap",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "name": "poolOwners",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "_poolId",
-        "type": "bytes32"
       },
       {
         "internalType": "bytes32",
@@ -696,9 +789,9 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "_poolId",
-        "type": "bytes32"
+        "internalType": "address",
+        "name": "_scanner",
+        "type": "address"
       },
       {
         "internalType": "bytes32",
@@ -719,9 +812,9 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "_poolId",
-        "type": "bytes32"
+        "internalType": "address",
+        "name": "_scanner",
+        "type": "address"
       },
       {
         "internalType": "address",
@@ -729,9 +822,126 @@
         "type": "address"
       }
     ],
-    "name": "removePoolAdmin",
+    "name": "removeScannerAdmin",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "renounceRole",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "revokeRole",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_scanner",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "index",
+        "type": "uint256"
+      }
+    ],
+    "name": "scannerAdminAt",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_scanner",
+        "type": "address"
+      }
+    ],
+    "name": "scannerAdminLength",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "scannerExists",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "scannerOwners",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -750,9 +960,28 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "_poolId",
-        "type": "bytes32"
+        "internalType": "bytes4",
+        "name": "interfaceId",
+        "type": "bytes4"
+      }
+    ],
+    "name": "supportsInterface",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_scanner",
+        "type": "address"
       },
       {
         "internalType": "address",
@@ -760,7 +989,7 @@
         "type": "address"
       }
     ],
-    "name": "transferPoolOwnership",
+    "name": "transferScannerOwnership",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -768,9 +997,9 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "_poolId",
-        "type": "bytes32"
+        "internalType": "address",
+        "name": "_scanner",
+        "type": "address"
       },
       {
         "internalType": "bytes32",

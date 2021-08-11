@@ -27,7 +27,7 @@ var (
 )
 
 // AlertsABI is the input ABI used to generate the binding from.
-const AlertsABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"by\",\"type\":\"address\"}],\"name\":\"AgentRegistryChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"poolId\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"scanner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"agentId\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"alertId\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"alertRef\",\"type\":\"string\"}],\"name\":\"Alert\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"by\",\"type\":\"address\"}],\"name\":\"PoolRegistryChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"type\":\"function\",\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_poolId\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_agentId\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_alertId\",\"type\":\"bytes32\"},{\"internalType\":\"string\",\"name\":\"_alertRef\",\"type\":\"string\"}],\"name\":\"addAlert\",\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractMinimalForwarderUpgradeable\",\"name\":\"_forwarder\",\"type\":\"address\"},{\"internalType\":\"contractPoolRegistry\",\"name\":\"_poolRegistry\",\"type\":\"address\"},{\"internalType\":\"contractAgentRegistry\",\"name\":\"_agentRegistry\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"forwarder\",\"type\":\"address\"}],\"name\":\"isTrustedForwarder\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractPoolRegistry\",\"name\":\"_poolRegistry\",\"type\":\"address\"},{\"internalType\":\"contractAgentRegistry\",\"name\":\"_agentRegistry\",\"type\":\"address\"}],\"name\":\"setRegistries\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const AlertsABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"scanner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"blockStart\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"blockEnd\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"alertCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"maxSeverity\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"ref\",\"type\":\"string\"}],\"name\":\"AlertBatch\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"by\",\"type\":\"address\"}],\"name\":\"ScannerRegistryChanged\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_chainId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_blockStart\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_blockEnd\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_alertCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_maxSeverity\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"_ref\",\"type\":\"string\"}],\"name\":\"addAlertBatch\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractMinimalForwarderUpgradeable\",\"name\":\"_forwarder\",\"type\":\"address\"},{\"internalType\":\"contractScannerRegistry\",\"name\":\"_scannerRegistry\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"forwarder\",\"type\":\"address\"}],\"name\":\"isTrustedForwarder\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractScannerRegistry\",\"name\":\"_scannerRegistry\",\"type\":\"address\"}],\"name\":\"setScannerRegistry\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // Alerts is an auto generated Go binding around an Ethereum contract.
 type Alerts struct {
@@ -357,25 +357,25 @@ func (_Alerts *AlertsCallerSession) SupportsInterface(interfaceId [4]byte) (bool
 	return _Alerts.Contract.SupportsInterface(&_Alerts.CallOpts, interfaceId)
 }
 
-// AddAlert is a paid mutator transaction binding the contract method 0x1a8e12b8.
+// AddAlertBatch is a paid mutator transaction binding the contract method 0x8defd825.
 //
-// Solidity: function addAlert(bytes32 _poolId, bytes32 _agentId, bytes32 _alertId, string _alertRef) returns()
-func (_Alerts *AlertsTransactor) AddAlert(opts *bind.TransactOpts, _poolId [32]byte, _agentId [32]byte, _alertId [32]byte, _alertRef string) (*types.Transaction, error) {
-	return _Alerts.contract.Transact(opts, "addAlert", _poolId, _agentId, _alertId, _alertRef)
+// Solidity: function addAlertBatch(uint256 _chainId, uint256 _blockStart, uint256 _blockEnd, uint256 _alertCount, uint256 _maxSeverity, string _ref) returns()
+func (_Alerts *AlertsTransactor) AddAlertBatch(opts *bind.TransactOpts, _chainId *big.Int, _blockStart *big.Int, _blockEnd *big.Int, _alertCount *big.Int, _maxSeverity *big.Int, _ref string) (*types.Transaction, error) {
+	return _Alerts.contract.Transact(opts, "addAlertBatch", _chainId, _blockStart, _blockEnd, _alertCount, _maxSeverity, _ref)
 }
 
-// AddAlert is a paid mutator transaction binding the contract method 0x1a8e12b8.
+// AddAlertBatch is a paid mutator transaction binding the contract method 0x8defd825.
 //
-// Solidity: function addAlert(bytes32 _poolId, bytes32 _agentId, bytes32 _alertId, string _alertRef) returns()
-func (_Alerts *AlertsSession) AddAlert(_poolId [32]byte, _agentId [32]byte, _alertId [32]byte, _alertRef string) (*types.Transaction, error) {
-	return _Alerts.Contract.AddAlert(&_Alerts.TransactOpts, _poolId, _agentId, _alertId, _alertRef)
+// Solidity: function addAlertBatch(uint256 _chainId, uint256 _blockStart, uint256 _blockEnd, uint256 _alertCount, uint256 _maxSeverity, string _ref) returns()
+func (_Alerts *AlertsSession) AddAlertBatch(_chainId *big.Int, _blockStart *big.Int, _blockEnd *big.Int, _alertCount *big.Int, _maxSeverity *big.Int, _ref string) (*types.Transaction, error) {
+	return _Alerts.Contract.AddAlertBatch(&_Alerts.TransactOpts, _chainId, _blockStart, _blockEnd, _alertCount, _maxSeverity, _ref)
 }
 
-// AddAlert is a paid mutator transaction binding the contract method 0x1a8e12b8.
+// AddAlertBatch is a paid mutator transaction binding the contract method 0x8defd825.
 //
-// Solidity: function addAlert(bytes32 _poolId, bytes32 _agentId, bytes32 _alertId, string _alertRef) returns()
-func (_Alerts *AlertsTransactorSession) AddAlert(_poolId [32]byte, _agentId [32]byte, _alertId [32]byte, _alertRef string) (*types.Transaction, error) {
-	return _Alerts.Contract.AddAlert(&_Alerts.TransactOpts, _poolId, _agentId, _alertId, _alertRef)
+// Solidity: function addAlertBatch(uint256 _chainId, uint256 _blockStart, uint256 _blockEnd, uint256 _alertCount, uint256 _maxSeverity, string _ref) returns()
+func (_Alerts *AlertsTransactorSession) AddAlertBatch(_chainId *big.Int, _blockStart *big.Int, _blockEnd *big.Int, _alertCount *big.Int, _maxSeverity *big.Int, _ref string) (*types.Transaction, error) {
+	return _Alerts.Contract.AddAlertBatch(&_Alerts.TransactOpts, _chainId, _blockStart, _blockEnd, _alertCount, _maxSeverity, _ref)
 }
 
 // GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
@@ -399,25 +399,25 @@ func (_Alerts *AlertsTransactorSession) GrantRole(role [32]byte, account common.
 	return _Alerts.Contract.GrantRole(&_Alerts.TransactOpts, role, account)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0xc0c53b8b.
+// Initialize is a paid mutator transaction binding the contract method 0x485cc955.
 //
-// Solidity: function initialize(address _forwarder, address _poolRegistry, address _agentRegistry) returns()
-func (_Alerts *AlertsTransactor) Initialize(opts *bind.TransactOpts, _forwarder common.Address, _poolRegistry common.Address, _agentRegistry common.Address) (*types.Transaction, error) {
-	return _Alerts.contract.Transact(opts, "initialize", _forwarder, _poolRegistry, _agentRegistry)
+// Solidity: function initialize(address _forwarder, address _scannerRegistry) returns()
+func (_Alerts *AlertsTransactor) Initialize(opts *bind.TransactOpts, _forwarder common.Address, _scannerRegistry common.Address) (*types.Transaction, error) {
+	return _Alerts.contract.Transact(opts, "initialize", _forwarder, _scannerRegistry)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0xc0c53b8b.
+// Initialize is a paid mutator transaction binding the contract method 0x485cc955.
 //
-// Solidity: function initialize(address _forwarder, address _poolRegistry, address _agentRegistry) returns()
-func (_Alerts *AlertsSession) Initialize(_forwarder common.Address, _poolRegistry common.Address, _agentRegistry common.Address) (*types.Transaction, error) {
-	return _Alerts.Contract.Initialize(&_Alerts.TransactOpts, _forwarder, _poolRegistry, _agentRegistry)
+// Solidity: function initialize(address _forwarder, address _scannerRegistry) returns()
+func (_Alerts *AlertsSession) Initialize(_forwarder common.Address, _scannerRegistry common.Address) (*types.Transaction, error) {
+	return _Alerts.Contract.Initialize(&_Alerts.TransactOpts, _forwarder, _scannerRegistry)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0xc0c53b8b.
+// Initialize is a paid mutator transaction binding the contract method 0x485cc955.
 //
-// Solidity: function initialize(address _forwarder, address _poolRegistry, address _agentRegistry) returns()
-func (_Alerts *AlertsTransactorSession) Initialize(_forwarder common.Address, _poolRegistry common.Address, _agentRegistry common.Address) (*types.Transaction, error) {
-	return _Alerts.Contract.Initialize(&_Alerts.TransactOpts, _forwarder, _poolRegistry, _agentRegistry)
+// Solidity: function initialize(address _forwarder, address _scannerRegistry) returns()
+func (_Alerts *AlertsTransactorSession) Initialize(_forwarder common.Address, _scannerRegistry common.Address) (*types.Transaction, error) {
+	return _Alerts.Contract.Initialize(&_Alerts.TransactOpts, _forwarder, _scannerRegistry)
 }
 
 // RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
@@ -462,30 +462,30 @@ func (_Alerts *AlertsTransactorSession) RevokeRole(role [32]byte, account common
 	return _Alerts.Contract.RevokeRole(&_Alerts.TransactOpts, role, account)
 }
 
-// SetRegistries is a paid mutator transaction binding the contract method 0x399bdf2a.
+// SetScannerRegistry is a paid mutator transaction binding the contract method 0x6b254492.
 //
-// Solidity: function setRegistries(address _poolRegistry, address _agentRegistry) returns()
-func (_Alerts *AlertsTransactor) SetRegistries(opts *bind.TransactOpts, _poolRegistry common.Address, _agentRegistry common.Address) (*types.Transaction, error) {
-	return _Alerts.contract.Transact(opts, "setRegistries", _poolRegistry, _agentRegistry)
+// Solidity: function setScannerRegistry(address _scannerRegistry) returns()
+func (_Alerts *AlertsTransactor) SetScannerRegistry(opts *bind.TransactOpts, _scannerRegistry common.Address) (*types.Transaction, error) {
+	return _Alerts.contract.Transact(opts, "setScannerRegistry", _scannerRegistry)
 }
 
-// SetRegistries is a paid mutator transaction binding the contract method 0x399bdf2a.
+// SetScannerRegistry is a paid mutator transaction binding the contract method 0x6b254492.
 //
-// Solidity: function setRegistries(address _poolRegistry, address _agentRegistry) returns()
-func (_Alerts *AlertsSession) SetRegistries(_poolRegistry common.Address, _agentRegistry common.Address) (*types.Transaction, error) {
-	return _Alerts.Contract.SetRegistries(&_Alerts.TransactOpts, _poolRegistry, _agentRegistry)
+// Solidity: function setScannerRegistry(address _scannerRegistry) returns()
+func (_Alerts *AlertsSession) SetScannerRegistry(_scannerRegistry common.Address) (*types.Transaction, error) {
+	return _Alerts.Contract.SetScannerRegistry(&_Alerts.TransactOpts, _scannerRegistry)
 }
 
-// SetRegistries is a paid mutator transaction binding the contract method 0x399bdf2a.
+// SetScannerRegistry is a paid mutator transaction binding the contract method 0x6b254492.
 //
-// Solidity: function setRegistries(address _poolRegistry, address _agentRegistry) returns()
-func (_Alerts *AlertsTransactorSession) SetRegistries(_poolRegistry common.Address, _agentRegistry common.Address) (*types.Transaction, error) {
-	return _Alerts.Contract.SetRegistries(&_Alerts.TransactOpts, _poolRegistry, _agentRegistry)
+// Solidity: function setScannerRegistry(address _scannerRegistry) returns()
+func (_Alerts *AlertsTransactorSession) SetScannerRegistry(_scannerRegistry common.Address) (*types.Transaction, error) {
+	return _Alerts.Contract.SetScannerRegistry(&_Alerts.TransactOpts, _scannerRegistry)
 }
 
-// AlertsAgentRegistryChangedIterator is returned from FilterAgentRegistryChanged and is used to iterate over the raw logs and unpacked data for AgentRegistryChanged events raised by the Alerts contract.
-type AlertsAgentRegistryChangedIterator struct {
-	Event *AlertsAgentRegistryChanged // Event containing the contract specifics and raw log
+// AlertsAlertBatchIterator is returned from FilterAlertBatch and is used to iterate over the raw logs and unpacked data for AlertBatch events raised by the Alerts contract.
+type AlertsAlertBatchIterator struct {
+	Event *AlertsAlertBatch // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -499,7 +499,7 @@ type AlertsAgentRegistryChangedIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *AlertsAgentRegistryChangedIterator) Next() bool {
+func (it *AlertsAlertBatchIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -508,7 +508,7 @@ func (it *AlertsAgentRegistryChangedIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(AlertsAgentRegistryChanged)
+			it.Event = new(AlertsAlertBatch)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -523,7 +523,7 @@ func (it *AlertsAgentRegistryChangedIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(AlertsAgentRegistryChanged)
+		it.Event = new(AlertsAlertBatch)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -539,207 +539,65 @@ func (it *AlertsAgentRegistryChangedIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *AlertsAgentRegistryChangedIterator) Error() error {
+func (it *AlertsAlertBatchIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *AlertsAgentRegistryChangedIterator) Close() error {
+func (it *AlertsAlertBatchIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// AlertsAgentRegistryChanged represents a AgentRegistryChanged event raised by the Alerts contract.
-type AlertsAgentRegistryChanged struct {
-	From common.Address
-	To   common.Address
-	By   common.Address
-	Raw  types.Log // Blockchain specific contextual infos
+// AlertsAlertBatch represents a AlertBatch event raised by the Alerts contract.
+type AlertsAlertBatch struct {
+	Scanner     common.Address
+	ChainId     *big.Int
+	BlockStart  *big.Int
+	BlockEnd    *big.Int
+	AlertCount  *big.Int
+	MaxSeverity *big.Int
+	Ref         string
+	Raw         types.Log // Blockchain specific contextual infos
 }
 
-// FilterAgentRegistryChanged is a free log retrieval operation binding the contract event 0x9258ae620f73184170c242afd2d6549360b80d3615dcdb0caeb30f369bc45d28.
+// FilterAlertBatch is a free log retrieval operation binding the contract event 0x36cde681f44e056b0e848fa24ffca3217ac9323460feeacf1a8ad8da28daf924.
 //
-// Solidity: event AgentRegistryChanged(address from, address to, address by)
-func (_Alerts *AlertsFilterer) FilterAgentRegistryChanged(opts *bind.FilterOpts) (*AlertsAgentRegistryChangedIterator, error) {
+// Solidity: event AlertBatch(address indexed scanner, uint256 indexed chainId, uint256 blockStart, uint256 blockEnd, uint256 alertCount, uint256 maxSeverity, string ref)
+func (_Alerts *AlertsFilterer) FilterAlertBatch(opts *bind.FilterOpts, scanner []common.Address, chainId []*big.Int) (*AlertsAlertBatchIterator, error) {
 
-	logs, sub, err := _Alerts.contract.FilterLogs(opts, "AgentRegistryChanged")
-	if err != nil {
-		return nil, err
-	}
-	return &AlertsAgentRegistryChangedIterator{contract: _Alerts.contract, event: "AgentRegistryChanged", logs: logs, sub: sub}, nil
-}
-
-// WatchAgentRegistryChanged is a free log subscription operation binding the contract event 0x9258ae620f73184170c242afd2d6549360b80d3615dcdb0caeb30f369bc45d28.
-//
-// Solidity: event AgentRegistryChanged(address from, address to, address by)
-func (_Alerts *AlertsFilterer) WatchAgentRegistryChanged(opts *bind.WatchOpts, sink chan<- *AlertsAgentRegistryChanged) (event.Subscription, error) {
-
-	logs, sub, err := _Alerts.contract.WatchLogs(opts, "AgentRegistryChanged")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AlertsAgentRegistryChanged)
-				if err := _Alerts.contract.UnpackLog(event, "AgentRegistryChanged", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseAgentRegistryChanged is a log parse operation binding the contract event 0x9258ae620f73184170c242afd2d6549360b80d3615dcdb0caeb30f369bc45d28.
-//
-// Solidity: event AgentRegistryChanged(address from, address to, address by)
-func (_Alerts *AlertsFilterer) ParseAgentRegistryChanged(log types.Log) (*AlertsAgentRegistryChanged, error) {
-	event := new(AlertsAgentRegistryChanged)
-	if err := _Alerts.contract.UnpackLog(event, "AgentRegistryChanged", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AlertsAlertIterator is returned from FilterAlert and is used to iterate over the raw logs and unpacked data for Alert events raised by the Alerts contract.
-type AlertsAlertIterator struct {
-	Event *AlertsAlert // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AlertsAlertIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AlertsAlert)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AlertsAlert)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AlertsAlertIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AlertsAlertIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AlertsAlert represents a Alert event raised by the Alerts contract.
-type AlertsAlert struct {
-	PoolId   [32]byte
-	Scanner  common.Address
-	AgentId  [32]byte
-	AlertId  [32]byte
-	AlertRef string
-	Raw      types.Log // Blockchain specific contextual infos
-}
-
-// FilterAlert is a free log retrieval operation binding the contract event 0xd097506e69e86a46632e8e4d68ffc302eaeb63dfe08ffc44ed924f03fcd1a039.
-//
-// Solidity: event Alert(bytes32 indexed poolId, address indexed scanner, bytes32 indexed agentId, bytes32 alertId, string alertRef)
-func (_Alerts *AlertsFilterer) FilterAlert(opts *bind.FilterOpts, poolId [][32]byte, scanner []common.Address, agentId [][32]byte) (*AlertsAlertIterator, error) {
-
-	var poolIdRule []interface{}
-	for _, poolIdItem := range poolId {
-		poolIdRule = append(poolIdRule, poolIdItem)
-	}
 	var scannerRule []interface{}
 	for _, scannerItem := range scanner {
 		scannerRule = append(scannerRule, scannerItem)
 	}
-	var agentIdRule []interface{}
-	for _, agentIdItem := range agentId {
-		agentIdRule = append(agentIdRule, agentIdItem)
+	var chainIdRule []interface{}
+	for _, chainIdItem := range chainId {
+		chainIdRule = append(chainIdRule, chainIdItem)
 	}
 
-	logs, sub, err := _Alerts.contract.FilterLogs(opts, "Alert", poolIdRule, scannerRule, agentIdRule)
+	logs, sub, err := _Alerts.contract.FilterLogs(opts, "AlertBatch", scannerRule, chainIdRule)
 	if err != nil {
 		return nil, err
 	}
-	return &AlertsAlertIterator{contract: _Alerts.contract, event: "Alert", logs: logs, sub: sub}, nil
+	return &AlertsAlertBatchIterator{contract: _Alerts.contract, event: "AlertBatch", logs: logs, sub: sub}, nil
 }
 
-// WatchAlert is a free log subscription operation binding the contract event 0xd097506e69e86a46632e8e4d68ffc302eaeb63dfe08ffc44ed924f03fcd1a039.
+// WatchAlertBatch is a free log subscription operation binding the contract event 0x36cde681f44e056b0e848fa24ffca3217ac9323460feeacf1a8ad8da28daf924.
 //
-// Solidity: event Alert(bytes32 indexed poolId, address indexed scanner, bytes32 indexed agentId, bytes32 alertId, string alertRef)
-func (_Alerts *AlertsFilterer) WatchAlert(opts *bind.WatchOpts, sink chan<- *AlertsAlert, poolId [][32]byte, scanner []common.Address, agentId [][32]byte) (event.Subscription, error) {
+// Solidity: event AlertBatch(address indexed scanner, uint256 indexed chainId, uint256 blockStart, uint256 blockEnd, uint256 alertCount, uint256 maxSeverity, string ref)
+func (_Alerts *AlertsFilterer) WatchAlertBatch(opts *bind.WatchOpts, sink chan<- *AlertsAlertBatch, scanner []common.Address, chainId []*big.Int) (event.Subscription, error) {
 
-	var poolIdRule []interface{}
-	for _, poolIdItem := range poolId {
-		poolIdRule = append(poolIdRule, poolIdItem)
-	}
 	var scannerRule []interface{}
 	for _, scannerItem := range scanner {
 		scannerRule = append(scannerRule, scannerItem)
 	}
-	var agentIdRule []interface{}
-	for _, agentIdItem := range agentId {
-		agentIdRule = append(agentIdRule, agentIdItem)
+	var chainIdRule []interface{}
+	for _, chainIdItem := range chainId {
+		chainIdRule = append(chainIdRule, chainIdItem)
 	}
 
-	logs, sub, err := _Alerts.contract.WatchLogs(opts, "Alert", poolIdRule, scannerRule, agentIdRule)
+	logs, sub, err := _Alerts.contract.WatchLogs(opts, "AlertBatch", scannerRule, chainIdRule)
 	if err != nil {
 		return nil, err
 	}
@@ -749,8 +607,8 @@ func (_Alerts *AlertsFilterer) WatchAlert(opts *bind.WatchOpts, sink chan<- *Ale
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(AlertsAlert)
-				if err := _Alerts.contract.UnpackLog(event, "Alert", log); err != nil {
+				event := new(AlertsAlertBatch)
+				if err := _Alerts.contract.UnpackLog(event, "AlertBatch", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -771,148 +629,12 @@ func (_Alerts *AlertsFilterer) WatchAlert(opts *bind.WatchOpts, sink chan<- *Ale
 	}), nil
 }
 
-// ParseAlert is a log parse operation binding the contract event 0xd097506e69e86a46632e8e4d68ffc302eaeb63dfe08ffc44ed924f03fcd1a039.
+// ParseAlertBatch is a log parse operation binding the contract event 0x36cde681f44e056b0e848fa24ffca3217ac9323460feeacf1a8ad8da28daf924.
 //
-// Solidity: event Alert(bytes32 indexed poolId, address indexed scanner, bytes32 indexed agentId, bytes32 alertId, string alertRef)
-func (_Alerts *AlertsFilterer) ParseAlert(log types.Log) (*AlertsAlert, error) {
-	event := new(AlertsAlert)
-	if err := _Alerts.contract.UnpackLog(event, "Alert", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AlertsPoolRegistryChangedIterator is returned from FilterPoolRegistryChanged and is used to iterate over the raw logs and unpacked data for PoolRegistryChanged events raised by the Alerts contract.
-type AlertsPoolRegistryChangedIterator struct {
-	Event *AlertsPoolRegistryChanged // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AlertsPoolRegistryChangedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AlertsPoolRegistryChanged)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AlertsPoolRegistryChanged)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AlertsPoolRegistryChangedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AlertsPoolRegistryChangedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AlertsPoolRegistryChanged represents a PoolRegistryChanged event raised by the Alerts contract.
-type AlertsPoolRegistryChanged struct {
-	From common.Address
-	To   common.Address
-	By   common.Address
-	Raw  types.Log // Blockchain specific contextual infos
-}
-
-// FilterPoolRegistryChanged is a free log retrieval operation binding the contract event 0xf4f63f049796a39f99b6d5c64f26eae479cf9a51dfce0b3db21f69bf5d6c5829.
-//
-// Solidity: event PoolRegistryChanged(address from, address to, address by)
-func (_Alerts *AlertsFilterer) FilterPoolRegistryChanged(opts *bind.FilterOpts) (*AlertsPoolRegistryChangedIterator, error) {
-
-	logs, sub, err := _Alerts.contract.FilterLogs(opts, "PoolRegistryChanged")
-	if err != nil {
-		return nil, err
-	}
-	return &AlertsPoolRegistryChangedIterator{contract: _Alerts.contract, event: "PoolRegistryChanged", logs: logs, sub: sub}, nil
-}
-
-// WatchPoolRegistryChanged is a free log subscription operation binding the contract event 0xf4f63f049796a39f99b6d5c64f26eae479cf9a51dfce0b3db21f69bf5d6c5829.
-//
-// Solidity: event PoolRegistryChanged(address from, address to, address by)
-func (_Alerts *AlertsFilterer) WatchPoolRegistryChanged(opts *bind.WatchOpts, sink chan<- *AlertsPoolRegistryChanged) (event.Subscription, error) {
-
-	logs, sub, err := _Alerts.contract.WatchLogs(opts, "PoolRegistryChanged")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AlertsPoolRegistryChanged)
-				if err := _Alerts.contract.UnpackLog(event, "PoolRegistryChanged", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParsePoolRegistryChanged is a log parse operation binding the contract event 0xf4f63f049796a39f99b6d5c64f26eae479cf9a51dfce0b3db21f69bf5d6c5829.
-//
-// Solidity: event PoolRegistryChanged(address from, address to, address by)
-func (_Alerts *AlertsFilterer) ParsePoolRegistryChanged(log types.Log) (*AlertsPoolRegistryChanged, error) {
-	event := new(AlertsPoolRegistryChanged)
-	if err := _Alerts.contract.UnpackLog(event, "PoolRegistryChanged", log); err != nil {
+// Solidity: event AlertBatch(address indexed scanner, uint256 indexed chainId, uint256 blockStart, uint256 blockEnd, uint256 alertCount, uint256 maxSeverity, string ref)
+func (_Alerts *AlertsFilterer) ParseAlertBatch(log types.Log) (*AlertsAlertBatch, error) {
+	event := new(AlertsAlertBatch)
+	if err := _Alerts.contract.UnpackLog(event, "AlertBatch", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -1399,6 +1121,142 @@ func (_Alerts *AlertsFilterer) WatchRoleRevoked(opts *bind.WatchOpts, sink chan<
 func (_Alerts *AlertsFilterer) ParseRoleRevoked(log types.Log) (*AlertsRoleRevoked, error) {
 	event := new(AlertsRoleRevoked)
 	if err := _Alerts.contract.UnpackLog(event, "RoleRevoked", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AlertsScannerRegistryChangedIterator is returned from FilterScannerRegistryChanged and is used to iterate over the raw logs and unpacked data for ScannerRegistryChanged events raised by the Alerts contract.
+type AlertsScannerRegistryChangedIterator struct {
+	Event *AlertsScannerRegistryChanged // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AlertsScannerRegistryChangedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AlertsScannerRegistryChanged)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AlertsScannerRegistryChanged)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AlertsScannerRegistryChangedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AlertsScannerRegistryChangedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AlertsScannerRegistryChanged represents a ScannerRegistryChanged event raised by the Alerts contract.
+type AlertsScannerRegistryChanged struct {
+	From common.Address
+	To   common.Address
+	By   common.Address
+	Raw  types.Log // Blockchain specific contextual infos
+}
+
+// FilterScannerRegistryChanged is a free log retrieval operation binding the contract event 0x86d76b9fe0c8674850798bf28a78d85728ea9754f9272989d85d53d4622d7952.
+//
+// Solidity: event ScannerRegistryChanged(address from, address to, address by)
+func (_Alerts *AlertsFilterer) FilterScannerRegistryChanged(opts *bind.FilterOpts) (*AlertsScannerRegistryChangedIterator, error) {
+
+	logs, sub, err := _Alerts.contract.FilterLogs(opts, "ScannerRegistryChanged")
+	if err != nil {
+		return nil, err
+	}
+	return &AlertsScannerRegistryChangedIterator{contract: _Alerts.contract, event: "ScannerRegistryChanged", logs: logs, sub: sub}, nil
+}
+
+// WatchScannerRegistryChanged is a free log subscription operation binding the contract event 0x86d76b9fe0c8674850798bf28a78d85728ea9754f9272989d85d53d4622d7952.
+//
+// Solidity: event ScannerRegistryChanged(address from, address to, address by)
+func (_Alerts *AlertsFilterer) WatchScannerRegistryChanged(opts *bind.WatchOpts, sink chan<- *AlertsScannerRegistryChanged) (event.Subscription, error) {
+
+	logs, sub, err := _Alerts.contract.WatchLogs(opts, "ScannerRegistryChanged")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AlertsScannerRegistryChanged)
+				if err := _Alerts.contract.UnpackLog(event, "ScannerRegistryChanged", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseScannerRegistryChanged is a log parse operation binding the contract event 0x86d76b9fe0c8674850798bf28a78d85728ea9754f9272989d85d53d4622d7952.
+//
+// Solidity: event ScannerRegistryChanged(address from, address to, address by)
+func (_Alerts *AlertsFilterer) ParseScannerRegistryChanged(log types.Log) (*AlertsScannerRegistryChanged, error) {
+	event := new(AlertsScannerRegistryChanged)
+	if err := _Alerts.contract.UnpackLog(event, "ScannerRegistryChanged", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

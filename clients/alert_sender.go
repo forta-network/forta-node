@@ -13,7 +13,7 @@ import (
 )
 
 type AlertSender interface {
-	SignAndNotify(alert *protocol.Alert) error
+	SignAndNotify(alert *protocol.Alert, chainID, blockNumber string) error
 }
 
 type alertSender struct {
@@ -27,7 +27,7 @@ type AlertSenderConfig struct {
 	QueryNodeAddr string
 }
 
-func (a *alertSender) SignAndNotify(alert *protocol.Alert) error {
+func (a *alertSender) SignAndNotify(alert *protocol.Alert, chainID, blockNumber string) error {
 	alert.Scanner = &protocol.ScannerInfo{
 		Address: a.cfg.Key.Address.Hex(),
 	}
@@ -36,6 +36,8 @@ func (a *alertSender) SignAndNotify(alert *protocol.Alert) error {
 		log.Errorf("could not sign alert (id=%s), skipping", alert.Id)
 		return err
 	}
+	signedAlert.ChainId = chainID
+	signedAlert.BlockNumber = blockNumber
 	_, err = a.qClient.Notify(a.ctx, &protocol.NotifyRequest{
 		SignedAlert: signedAlert,
 	})
