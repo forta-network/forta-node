@@ -73,9 +73,10 @@ type EthereumConfig struct {
 }
 
 type QueryConfig struct {
-	QueryImage string   `yaml:"queryImage" json:"queryImage"`
-	Port       int      `yaml:"port" json:"port"`
-	DB         DBConfig `yaml:"db" json:"db"`
+	QueryImage string          `yaml:"queryImage" json:"queryImage"`
+	Port       int             `yaml:"port" json:"port"`
+	DB         DBConfig        `yaml:"db" json:"db"`
+	PublishTo  PublisherConfig `yaml:"publishTo" json:"publishTo"`
 }
 
 type ScannerConfig struct {
@@ -110,6 +111,16 @@ type RegistryConfig struct {
 	PoolID            string         `yaml:"poolId" json:"poolId"`
 	Username          string         `yaml:"username" json:"username"`
 	Password          string         `yaml:"password" json:"password"`
+}
+
+type PublisherConfig struct {
+	JSONRPCURL      string `yaml:"jsonRpcUrl" json:"jsonRpcUrl"`
+	ContractAddress string `yaml:"contractAddress" json:"contractAddress"`
+	IPFS            struct {
+		GatewayURL string `yaml:"gatewayUrl" json:"gatewayUrl"`
+		Username   string `yaml:"username" json:"username"`
+		Password   string `yaml:"password" json:"password"`
+	} `yaml:"ipfs" json:"ipfs"`
 }
 
 type Config struct {

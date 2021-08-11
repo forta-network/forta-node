@@ -42,3 +42,4 @@ run:
 
 abigen:
 	abigen --abi ./contracts/pool_registry.json --out ./contracts/pool_registry.go --pkg contracts --type PoolRegistry
+	abigen --abi ./contracts/alerts.json --out ./contracts/alerts.go --pkg contracts --type Alerts

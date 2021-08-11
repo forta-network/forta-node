@@ -67,6 +67,11 @@ func (t *TxNodeService) start() error {
 	}
 	cfgJson := string(cfgBytes)
 
+	keyPath, err := config.GetKeyStorePath()
+	if err != nil {
+		return err
+	}
+
 	if err := t.client.Prune(t.ctx); err != nil {
 		return err
 	}
@@ -102,6 +107,10 @@ func (t *TxNodeService) start() error {
 		},
 		Volumes: map[string]string{
 			t.config.Config.Query.DB.Path: store.DBPath,
+			keyPath:                       "/.keys",
+		},
+		Files: map[string][]byte{
+			"passphrase": []byte(t.config.Passphrase),
 		},
 		NetworkID:   nodeNetwork,
 		MaxLogFiles: t.maxLogFiles,
@@ -121,11 +130,6 @@ func (t *TxNodeService) start() error {
 		MaxLogFiles: t.maxLogFiles,
 		MaxLogSize:  t.maxLogSize,
 	})
-	if err != nil {
-		return err
-	}
-
-	keyPath, err := config.GetKeyStorePath()
 	if err != nil {
 		return err
 	}

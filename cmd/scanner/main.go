@@ -1,15 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"context"
-	"errors"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"os"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	gethlog "github.com/ethereum/go-ethereum/log"
 
 	"OpenZeppelin/fortify-node/clients"
@@ -17,40 +12,12 @@ import (
 	"OpenZeppelin/fortify-node/config"
 	"OpenZeppelin/fortify-node/ethereum"
 	"OpenZeppelin/fortify-node/feeds"
+	"OpenZeppelin/fortify-node/security"
 	"OpenZeppelin/fortify-node/services"
 	"OpenZeppelin/fortify-node/services/registry"
 	"OpenZeppelin/fortify-node/services/scanner"
 	"OpenZeppelin/fortify-node/services/scanner/agentpool"
 )
-
-func loadKey() (*keystore.Key, error) {
-	f, err := os.OpenFile("/passphrase", os.O_RDONLY, 400)
-	if err != nil {
-		return nil, err
-	}
-
-	pw, err := io.ReadAll(bufio.NewReader(f))
-	if err != nil {
-		return nil, err
-	}
-	passphrase := string(pw)
-
-	files, err := ioutil.ReadDir("/.keys")
-	if err != nil {
-		return nil, err
-	}
-
-	if len(files) != 1 {
-		return nil, errors.New("there must be only one key in key directory")
-	}
-
-	keyBytes, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", "/.keys", files[0].Name()))
-	if err != nil {
-		return nil, err
-	}
-
-	return keystore.DecryptKey(keyBytes, passphrase)
-}
 
 func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, cfg config.Config) (*scanner.TxStreamService, feeds.BlockFeed, error) {
 	url := cfg.Scanner.Ethereum.JsonRpcUrl
@@ -111,7 +78,7 @@ func initBlockAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertS
 }
 
 func initAlertSender(ctx context.Context) (clients.AlertSender, error) {
-	key, err := loadKey()
+	key, err := security.LoadKey()
 	if err != nil {
 		return nil, err
 	}
