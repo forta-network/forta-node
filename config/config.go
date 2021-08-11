@@ -114,8 +114,8 @@ type RegistryConfig struct {
 }
 
 type PublisherConfig struct {
-	JSONRPCURL      string `yaml:"jsonRpcUrl" json:"jsonRpcUrl"`
-	ContractAddress string `yaml:"contractAddress" json:"contractAddress"`
+	Ethereum        EthereumConfig `yaml:"ethereum" json:"ethereum"`
+	ContractAddress string         `yaml:"contractAddress" json:"contractAddress"`
 	IPFS            struct {
 		GatewayURL string `yaml:"gatewayUrl" json:"gatewayUrl"`
 		Username   string `yaml:"username" json:"username"`

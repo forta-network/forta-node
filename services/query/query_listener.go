@@ -115,7 +115,7 @@ func (al *AlertListener) Name() string {
 }
 
 func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertListenerConfig) (*AlertListener, error) {
-	rpcClient, err := rpc.Dial(cfg.PublisherConfig.JSONRPCURL)
+	rpcClient, err := rpc.Dial(cfg.PublisherConfig.Ethereum.JsonRpcUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -132,11 +132,11 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertList
 
 	var ipfsClient IPFS
 	if len(cfg.PublisherConfig.IPFS.Username) > 0 && len(cfg.PublisherConfig.IPFS.Password) > 0 {
-		ipfsClient = ipfsapi.NewShellWithClient(cfg.PublisherConfig.JSONRPCURL, &http.Client{
+		ipfsClient = ipfsapi.NewShellWithClient(cfg.PublisherConfig.Ethereum.JsonRpcUrl, &http.Client{
 			Transport: utils.NewBasicAuthTransport(cfg.PublisherConfig.IPFS.Username, cfg.PublisherConfig.IPFS.Password),
 		})
 	} else {
-		ipfsClient = ipfsapi.NewShellWithClient(cfg.PublisherConfig.JSONRPCURL, http.DefaultClient)
+		ipfsClient = ipfsapi.NewShellWithClient(cfg.PublisherConfig.Ethereum.JsonRpcUrl, http.DefaultClient)
 	}
 
 	return &AlertListener{
