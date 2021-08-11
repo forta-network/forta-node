@@ -275,6 +275,6 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertList
 		batchInterval: batchInterval,
 		batchLimit:    batchLimit,
 		latestBlock:   latestBlock,
-		notifCh:       make(chan *protocol.NotifyRequest),
+		notifCh:       make(chan *protocol.NotifyRequest, batchLimit),
 	}, nil
 }
