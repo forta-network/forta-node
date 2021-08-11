@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"time"
 
-	"OpenZeppelin/fortify-node/clients"
 	"OpenZeppelin/fortify-node/config"
 	"OpenZeppelin/fortify-node/contracts"
 	"OpenZeppelin/fortify-node/protocol"
@@ -115,7 +114,7 @@ func (al *AlertListener) Name() string {
 	return "AlertListener"
 }
 
-func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertListenerConfig, msgClient clients.MessageClient) (*AlertListener, error) {
+func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertListenerConfig) (*AlertListener, error) {
 	rpcClient, err := rpc.Dial(cfg.PublisherConfig.JSONRPCURL)
 	if err != nil {
 		return nil, err
