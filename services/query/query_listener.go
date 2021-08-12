@@ -3,7 +3,6 @@ package query
 import (
 	"bytes"
 	"context"
-	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,10 +14,12 @@ import (
 	"OpenZeppelin/fortify-node/config"
 	"OpenZeppelin/fortify-node/contracts"
 	"OpenZeppelin/fortify-node/protocol"
+	"OpenZeppelin/fortify-node/security"
 	"OpenZeppelin/fortify-node/store"
 	"OpenZeppelin/fortify-node/utils"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -69,7 +70,7 @@ type IPFS interface {
 
 type AlertListenerConfig struct {
 	Port            int
-	PrivateKey      *ecdsa.PrivateKey
+	Key             *keystore.Key
 	PublisherConfig config.PublisherConfig
 }
 
@@ -80,10 +81,10 @@ func (al *AlertListener) Notify(ctx context.Context, req *protocol.NotifyRequest
 
 func (al *AlertListener) publishAlerts() {
 	ticker := time.NewTicker(al.batchInterval)
-	var err error
+	var batchErr error
 	for {
-		if err != nil {
-			log.Errorf("failed to publish alert batch: %v", err)
+		if batchErr != nil {
+			log.Errorf("failed to publish alert batch: %v", batchErr)
 			// Sleep
 			ticker.Reset(al.batchInterval)
 			<-ticker.C
@@ -91,52 +92,164 @@ func (al *AlertListener) publishAlerts() {
 
 		batch := al.getLatestBatch()
 
+		signature, err := security.SignProtoMessage(al.cfg.Key, (*protocol.SignedAlertBatch)(batch))
+		if err != nil {
+			batchErr = fmt.Errorf("failed to sign alert batch: %v", err)
+			continue
+		}
+		batch.Signature = signature
+
 		var buf bytes.Buffer
 		if err = json.NewEncoder(&buf).Encode(batch); err != nil {
-			err = fmt.Errorf("failed to encode the signed alert: %v", err)
+			batchErr = fmt.Errorf("failed to encode the signed alert: %v", err)
 			continue
 		}
 		cid, err := al.ipfs.Add(&buf, ipfsapi.Pin(true))
 		if err != nil {
-			err = fmt.Errorf("failed to store alert data to ipfs: %v", err)
+			batchErr = fmt.Errorf("failed to store alert data to ipfs: %v", err)
 			continue
 		}
 
 		tx, err := al.contract.AddAlertBatch(
-			big.NewInt(0).SetUint64(batch.ChainID),
-			big.NewInt(0).SetUint64(batch.BlockStart),
-			big.NewInt(0).SetUint64(batch.BlockEnd),
-			big.NewInt(int64(batch.AlertCount)),
-			big.NewInt(0).SetUint64(batch.MaxSeverity),
+			big.NewInt(0).SetUint64(batch.Data.ChainId),
+			big.NewInt(0).SetUint64(batch.Data.BlockStart),
+			big.NewInt(0).SetUint64(batch.Data.BlockEnd),
+			big.NewInt(int64(batch.Data.AlertCount)),
+			big.NewInt(0).SetUint64(uint64(batch.Data.MaxSeverity)),
 			cid,
 		)
 		if err != nil {
-			err = fmt.Errorf("failed to send the alert tx: %v", err)
+			batchErr = fmt.Errorf("failed to send the alert tx: %v", err)
 			continue
 		}
 
-		for _, alert := range batch.Alerts {
-			alert.TxHash = tx.Hash().Hex()
-			if err = al.store.AddAlert(alert); err != nil {
-				continue
-			}
-		}
+		// Store all block and transaction alerts.
+		al.storeBatchWithTxHash(batch.Data, tx.Hash().Hex())
 
+		batchErr = nil
 		<-ticker.C
 	}
 }
 
-// AlertBatch contains a batch of alerts along with some extra data.
-type AlertBatch struct {
-	ChainID     uint64                  `json:"chainId"`
-	BlockStart  uint64                  `json:"blockStart"`
-	BlockEnd    uint64                  `json:"blockEnd"`
-	AlertCount  int                     `json:"alertCount"`
-	MaxSeverity uint64                  `json:"maxSeverity"`
-	Alerts      []*protocol.SignedAlert `json:"alerts"`
+func (al *AlertListener) storeBatchWithTxHash(batch *protocol.AlertBatch, txHash string) {
+	for _, result := range batch.Results {
+		for _, blockRes := range result.Results {
+			for _, alert := range blockRes.Alerts {
+				al.storeAlertWithTxHash(alert, txHash)
+			}
+		}
+		for _, txs := range result.Transactions {
+			for _, txRes := range txs.Results {
+				for _, alert := range txRes.Alerts {
+					al.storeAlertWithTxHash(alert, txHash)
+				}
+			}
+		}
+	}
 }
 
-func (al *AlertListener) getLatestBatch() (batch AlertBatch) {
+func (al *AlertListener) storeAlertWithTxHash(alert *protocol.SignedAlert, txHash string) {
+	alert.PublishedWithTx = txHash
+	if err := al.store.AddAlert(alert); err != nil {
+		log.Errorf("failed to store the alert: %v", err)
+	}
+}
+
+// TransactionResults contains the results for a transaction.
+type TransactionResults protocol.TransactionResults
+
+// BlockResults contains the results for a block.
+type BlockResults protocol.BlockResults
+
+// AlertBatch contains the actual batch data.
+type AlertBatch protocol.AlertBatch
+
+// BatchData is a parent wrapper that contains all batch info.
+type BatchData protocol.SignedAlertBatch
+
+// AppendAlert adds the alert to the relevant list.
+func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
+	alertBatch := (*AlertBatch)(bd.Data)
+	isBlockAlert := notif.EvalBlockRequest != nil
+
+	var agentAlerts *protocol.AgentAlerts
+	if isBlockAlert {
+		blockNum := hexutil.MustDecodeUint64(notif.EvalBlockRequest.Event.BlockNumber)
+		blockRes := alertBatch.GetBlockResults(notif.EvalBlockRequest.Event.BlockHash, blockNum)
+		agentAlerts = (*BlockResults)(blockRes).GetAgentAlerts(notif.SignedAlert.Alert.Agent)
+	} else {
+		blockNum := hexutil.MustDecodeUint64(notif.EvalTxRequest.Event.Block.BlockNumber)
+		blockRes := alertBatch.GetBlockResults(notif.EvalTxRequest.Event.Block.BlockHash, blockNum)
+		txRes := (*BlockResults)(blockRes).GetTransactionResults(notif.EvalTxRequest.Event)
+		agentAlerts = (*TransactionResults)(txRes).GetAgentAlerts(notif.SignedAlert.Alert.Agent)
+	}
+
+	agentAlerts.Alerts = append(agentAlerts.Alerts, notif.SignedAlert)
+	bd.Data.AlertCount++
+}
+
+// GetBlockResults returns an existing or a new aggregation object for the block.
+func (ab *AlertBatch) GetBlockResults(blockHash string, blockNumber uint64) *protocol.BlockResults {
+	for _, blockRes := range ab.Results {
+		if blockRes.Block.BlockNumber == blockNumber {
+			return blockRes
+		}
+	}
+	br := &protocol.BlockResults{
+		Block: &protocol.Block{
+			BlockHash:   blockHash,
+			BlockNumber: blockNumber,
+		},
+	}
+	ab.Results = append(ab.Results, br)
+	return br
+}
+
+// GetTransactionResults returns an existing or a new aggregation object for the transaction.
+func (br *BlockResults) GetTransactionResults(tx *protocol.TransactionEvent) *protocol.TransactionResults {
+	for _, txRes := range br.Transactions {
+		if txRes.Transaction.Transaction.Hash == tx.Transaction.Hash {
+			return txRes
+		}
+	}
+	tr := &protocol.TransactionResults{
+		Transaction: tx,
+	}
+	br.Transactions = append(br.Transactions, tr)
+	return tr
+}
+
+// GetAgentAlerts returns an existing or a new aggregation object for the agent alerts.
+func (br *BlockResults) GetAgentAlerts(agent *protocol.AgentInfo) *protocol.AgentAlerts {
+	for _, agentAlerts := range br.Results {
+		if agentAlerts.Agent.Name == agent.Name {
+			return agentAlerts
+		}
+	}
+	aa := &protocol.AgentAlerts{
+		Agent: agent,
+	}
+	br.Results = append(br.Results, aa)
+	return aa
+}
+
+// GetAgentAlerts returns an existing or a new aggregation object for the agent alerts.
+func (tr *TransactionResults) GetAgentAlerts(agent *protocol.AgentInfo) *protocol.AgentAlerts {
+	for _, agentAlerts := range tr.Results {
+		if agentAlerts.Agent.Name == agent.Name {
+			return agentAlerts
+		}
+	}
+	aa := &protocol.AgentAlerts{
+		Agent: agent,
+	}
+	tr.Results = append(tr.Results, aa)
+	return aa
+}
+
+func (al *AlertListener) getLatestBatch() (batch *BatchData) {
+	batch = &BatchData{}
+
 	var done bool
 	for i := 0; i < defaultBatchLimit; i++ {
 		select {
@@ -150,25 +263,25 @@ func (al *AlertListener) getLatestBatch() (batch AlertBatch) {
 				log.Errorf("failed to parse alert chain id: %v", err)
 				continue
 			}
-			batch.ChainID = chainID
+			batch.Data.ChainId = chainID
 
 			alertBlockNum, err := hexutil.DecodeUint64(alert.BlockNumber)
 			if err != nil {
 				log.Errorf("failed to parse alert block number: %v", err)
 				continue
 			}
-			if batch.BlockStart == 0 || (batch.BlockStart > 0 && alertBlockNum < batch.BlockStart) {
-				batch.BlockStart = alertBlockNum
+			if batch.Data.BlockStart == 0 || (batch.Data.BlockStart > 0 && alertBlockNum < batch.Data.BlockStart) {
+				batch.Data.BlockStart = alertBlockNum
 			}
-			if batch.BlockEnd == 0 || (batch.BlockEnd > 0 && alertBlockNum > batch.BlockEnd) {
-				batch.BlockEnd = alertBlockNum
-			}
-
-			if uint64(alert.Alert.Finding.Severity) > batch.MaxSeverity {
-				batch.MaxSeverity = uint64(alert.Alert.Finding.Severity)
+			if batch.Data.BlockEnd == 0 || (batch.Data.BlockEnd > 0 && alertBlockNum > batch.Data.BlockEnd) {
+				batch.Data.BlockEnd = alertBlockNum
 			}
 
-			batch.Alerts = append(batch.Alerts, alert)
+			if alert.Alert.Finding.Severity > batch.Data.MaxSeverity {
+				batch.Data.MaxSeverity = alert.Alert.Finding.Severity
+			}
+
+			batch.AppendAlert(notif)
 
 		default:
 			done = true // If we don't receive anymore notifs
@@ -178,23 +291,21 @@ func (al *AlertListener) getLatestBatch() (batch AlertBatch) {
 		}
 	}
 
-	batch.AlertCount = len(batch.Alerts)
-
 	// We use single chain ID for now.
-	if batch.ChainID > 0 {
-		al.latestChainID = batch.ChainID
+	if batch.Data.ChainId > 0 {
+		al.latestChainID = batch.Data.ChainId
 	} else {
-		batch.ChainID = al.latestChainID
+		batch.Data.ChainId = al.latestChainID
 	}
 
-	if batch.BlockStart == 0 {
+	if batch.Data.BlockStart == 0 {
 		latestBlock, err := al.ethClient.BlockNumber(al.ctx)
 		if err != nil {
 			log.Errorf("failed to get the latest block for batch: %v", err)
 			return
 		}
-		batch.BlockStart = al.latestBlock
-		batch.BlockEnd = latestBlock
+		batch.Data.BlockStart = al.latestBlock
+		batch.Data.BlockEnd = latestBlock
 		al.latestBlock = latestBlock
 	}
 
@@ -229,7 +340,7 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertList
 		return nil, err
 	}
 	ethClient := ethclient.NewClient(rpcClient)
-	txOpts := bind.NewKeyedTransactor(cfg.PrivateKey)
+	txOpts := bind.NewKeyedTransactor(cfg.Key.PrivateKey)
 	contract, err := contracts.NewAlertsTransactor(common.HexToAddress(cfg.PublisherConfig.ContractAddress), ethClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize the alerts contract: %v", err)

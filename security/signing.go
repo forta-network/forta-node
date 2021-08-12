@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/runtime/protoiface"
 
 	"OpenZeppelin/fortify-node/protocol"
 )
@@ -47,8 +48,21 @@ func LoadKey() (*keystore.Key, error) {
 	return keystore.DecryptKey(keyBytes, passphrase)
 }
 
+// SignAlert signs the alert.
 func SignAlert(key *keystore.Key, alert *protocol.Alert) (*protocol.SignedAlert, error) {
-	b, err := proto.Marshal(alert)
+	signature, err := SignProtoMessage(key, alert)
+	if err != nil {
+		return nil, err
+	}
+	return &protocol.SignedAlert{
+		Alert:     alert,
+		Signature: signature,
+	}, nil
+}
+
+// SignProtoMessage marshals a message and signs.
+func SignProtoMessage(key *keystore.Key, m protoiface.MessageV1) (*protocol.Signature, error) {
+	b, err := proto.Marshal(m)
 	if err != nil {
 		return nil, err
 	}
@@ -57,13 +71,10 @@ func SignAlert(key *keystore.Key, alert *protocol.Alert) (*protocol.SignedAlert,
 	if err != nil {
 		return nil, err
 	}
-	signature := fmt.Sprintf("0x%s", hex.EncodeToString(sig))
-	return &protocol.SignedAlert{
-		Alert: alert,
-		Signature: &protocol.Signature{
-			Signature: signature,
-			Algorithm: "ECDSA",
-		},
+	return &protocol.Signature{
+		Signature: fmt.Sprintf("0x%s", hex.EncodeToString(sig)),
+		Algorithm: "ECDSA",
+		Signer:    key.Address.Hex(),
 	}, nil
 }
 

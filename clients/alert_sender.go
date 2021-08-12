@@ -12,8 +12,16 @@ import (
 	"OpenZeppelin/fortify-node/security"
 )
 
+// AgentRoundTrip contains
+type AgentRoundTrip struct {
+	EvalBlockRequest  *protocol.EvaluateBlockRequest
+	EvalBlockResponse *protocol.EvaluateBlockResponse
+	EvalTxRequest     *protocol.EvaluateTxRequest
+	EvalTxResponse    *protocol.EvaluateTxResponse
+}
+
 type AlertSender interface {
-	SignAndNotify(alert *protocol.Alert, chainID, blockNumber string) error
+	SignAndNotify(rt *AgentRoundTrip, alert *protocol.Alert, chainID, blockNumber string) error
 }
 
 type alertSender struct {
@@ -27,7 +35,7 @@ type AlertSenderConfig struct {
 	QueryNodeAddr string
 }
 
-func (a *alertSender) SignAndNotify(alert *protocol.Alert, chainID, blockNumber string) error {
+func (a *alertSender) SignAndNotify(rt *AgentRoundTrip, alert *protocol.Alert, chainID, blockNumber string) error {
 	alert.Scanner = &protocol.ScannerInfo{
 		Address: a.cfg.Key.Address.Hex(),
 	}
@@ -39,7 +47,11 @@ func (a *alertSender) SignAndNotify(alert *protocol.Alert, chainID, blockNumber 
 	signedAlert.ChainId = chainID
 	signedAlert.BlockNumber = blockNumber
 	_, err = a.qClient.Notify(a.ctx, &protocol.NotifyRequest{
-		SignedAlert: signedAlert,
+		SignedAlert:       signedAlert,
+		EvalBlockRequest:  rt.EvalBlockRequest,
+		EvalBlockResponse: rt.EvalBlockResponse,
+		EvalTxRequest:     rt.EvalTxRequest,
+		EvalTxResponse:    rt.EvalTxResponse,
 	})
 	return err
 }

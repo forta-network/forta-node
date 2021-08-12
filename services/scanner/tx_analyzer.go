@@ -101,7 +101,13 @@ func (t *TxAnalyzerService) Start() error {
 				if err != nil {
 					return err
 				}
-				if err := t.cfg.AlertSender.SignAndNotify(alert, result.Request.Event.Network.ChainId, result.Request.Event.Block.BlockNumber); err != nil {
+				if err := t.cfg.AlertSender.SignAndNotify(
+					&clients.AgentRoundTrip{
+						EvalTxRequest:  result.Request,
+						EvalTxResponse: result.Response,
+					},
+					alert, result.Request.Event.Network.ChainId, result.Request.Event.Block.BlockNumber,
+				); err != nil {
 					return err
 				}
 			}

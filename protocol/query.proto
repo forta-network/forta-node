@@ -28,6 +28,7 @@ message AgentInfo {
 message Signature {
   string signature = 1;
   string algorithm = 2;
+  string signer = 3;
 }
 
 enum AlertType {
@@ -52,11 +53,15 @@ message SignedAlert {
   Signature signature = 2;
   string chainId = 3;
   string blockNumber = 4;
-  string txHash = 5;
+  string publishedWithTx = 5;
 }
 
 message NotifyRequest {
   SignedAlert signedAlert = 1;
+  EvaluateTxRequest evalTxRequest = 2;
+  EvaluateTxResponse evalTxResponse = 3;
+  EvaluateBlockRequest evalBlockRequest = 4;
+  EvaluateBlockResponse evalBlockResponse = 5;
 }
 
 message NotifyResponse {}

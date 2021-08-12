@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package network.forta;
+
+import public "query.proto";
+import public "agent.proto";
+
+option go_package = "./;protocol";
+
+message SignedAlertBatch {
+  AlertBatch data = 1;
+  Signature signature = 2;
+}
+
+message AlertBatch {
+  uint64 chainId = 1;
+  uint64 blockStart = 2;
+  uint64 blockEnd = 3;
+  uint32 alertCount = 4;
+  Finding.Severity maxSeverity = 5;
+  repeated BlockResults results = 6;
+}
+
+message BlockResults {
+  Block block = 1;
+  repeated AgentAlerts results = 2;
+  repeated TransactionResults transactions = 3;
+}
+
+message TransactionResults {
+  TransactionEvent transaction = 1;
+  repeated AgentAlerts results = 2;
+}
+
+message AgentAlerts {
+  AgentInfo agent = 1;
+  repeated SignedAlert alerts = 2;
+}
+
+message Block {
+  string blockHash = 1;
+  uint64 blockNumber = 2;
+}
