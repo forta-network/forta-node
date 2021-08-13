@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"OpenZeppelin/fortify-node/config"
+	"OpenZeppelin/fortify-node/security"
 	"OpenZeppelin/fortify-node/services"
 	"OpenZeppelin/fortify-node/services/query"
 	"OpenZeppelin/fortify-node/store"
@@ -14,7 +15,16 @@ func initApi(ctx context.Context, as store.AlertStore, cfg config.Config) (*quer
 }
 
 func initListener(ctx context.Context, as store.AlertStore, cfg config.Config) (*query.AlertListener, error) {
-	return query.NewAlertListener(ctx, as, query.AlertListenerConfig{Port: 8770})
+	key, err := security.LoadKey()
+	if err != nil {
+		return nil, err
+	}
+	return query.NewAlertListener(ctx, as, query.AlertListenerConfig{
+		Port:            8770,
+		ChainID:         cfg.Scanner.ChainID,
+		Key:             key,
+		PublisherConfig: cfg.Query.PublishTo,
+	})
 }
 
 func initPruner(ctx context.Context, as store.AlertStore, cfg config.Config) (*query.DBPruner, error) {

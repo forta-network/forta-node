@@ -108,7 +108,6 @@ type RegistryConfig struct {
 	IPFSGateway       *string        `yaml:"ipfsGateway" json:"ipfs,omitempty"`
 	ContractAddress   string         `yaml:"contractAddress" json:"contractAddress"`
 	ContainerRegistry string         `yaml:"containerRegistry" json:"containerRegistry"`
-	PoolID            string         `yaml:"poolId" json:"poolId"`
 	Username          string         `yaml:"username" json:"username"`
 	Password          string         `yaml:"password" json:"password"`
 }

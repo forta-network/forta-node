@@ -70,6 +70,7 @@ type IPFS interface {
 
 type AlertListenerConfig struct {
 	Port            int
+	ChainID         int
 	Key             *keystore.Key
 	PublisherConfig config.PublisherConfig
 }
@@ -104,11 +105,13 @@ func (al *AlertListener) publishAlerts() {
 			batchErr = fmt.Errorf("failed to encode the signed alert: %v", err)
 			continue
 		}
+		log.Infof("new alert batch: %s", string(buf.Bytes()))
 		cid, err := al.ipfs.Add(&buf, ipfsapi.Pin(true))
 		if err != nil {
 			batchErr = fmt.Errorf("failed to store alert data to ipfs: %v", err)
 			continue
 		}
+		log.Infof("stored the batch to ipfs: %s", cid)
 
 		tx, err := al.contract.AddAlertBatch(
 			big.NewInt(0).SetUint64(batch.Data.ChainId),
@@ -257,7 +260,7 @@ func (tr *TransactionResults) GetAgentAlerts(agent *protocol.AgentInfo) *protoco
 }
 
 func (al *AlertListener) getLatestBatch() (batch *BatchData) {
-	batch = &BatchData{}
+	batch = &BatchData{Data: &protocol.AlertBatch{ChainId: uint64(al.cfg.ChainID)}}
 
 	var done bool
 	for i := 0; i < defaultBatchLimit; i++ {
@@ -361,11 +364,11 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertList
 
 	var ipfsClient IPFS
 	if len(cfg.PublisherConfig.IPFS.Username) > 0 && len(cfg.PublisherConfig.IPFS.Password) > 0 {
-		ipfsClient = ipfsapi.NewShellWithClient(cfg.PublisherConfig.Ethereum.JsonRpcUrl, &http.Client{
+		ipfsClient = ipfsapi.NewShellWithClient(cfg.PublisherConfig.IPFS.GatewayURL, &http.Client{
 			Transport: utils.NewBasicAuthTransport(cfg.PublisherConfig.IPFS.Username, cfg.PublisherConfig.IPFS.Password),
 		})
 	} else {
-		ipfsClient = ipfsapi.NewShellWithClient(cfg.PublisherConfig.Ethereum.JsonRpcUrl, http.DefaultClient)
+		ipfsClient = ipfsapi.NewShellWithClient(cfg.PublisherConfig.IPFS.GatewayURL, http.DefaultClient)
 	}
 
 	latestBlock, err := ethClient.BlockNumber(ctx)
