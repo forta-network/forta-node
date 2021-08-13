@@ -21,7 +21,8 @@ type AgentRoundTrip struct {
 }
 
 type AlertSender interface {
-	SignAndNotify(rt *AgentRoundTrip, alert *protocol.Alert, chainID, blockNumber string) error
+	SignAlertAndNotify(rt *AgentRoundTrip, alert *protocol.Alert, chainID, blockNumber string) error
+	NotifyWithoutAlert(rt *AgentRoundTrip, chainID, blockNumber string) error
 }
 
 type alertSender struct {
@@ -35,7 +36,7 @@ type AlertSenderConfig struct {
 	QueryNodeAddr string
 }
 
-func (a *alertSender) SignAndNotify(rt *AgentRoundTrip, alert *protocol.Alert, chainID, blockNumber string) error {
+func (a *alertSender) SignAlertAndNotify(rt *AgentRoundTrip, alert *protocol.Alert, chainID, blockNumber string) error {
 	alert.Scanner = &protocol.ScannerInfo{
 		Address: a.cfg.Key.Address.Hex(),
 	}
@@ -48,6 +49,16 @@ func (a *alertSender) SignAndNotify(rt *AgentRoundTrip, alert *protocol.Alert, c
 	signedAlert.BlockNumber = blockNumber
 	_, err = a.qClient.Notify(a.ctx, &protocol.NotifyRequest{
 		SignedAlert:       signedAlert,
+		EvalBlockRequest:  rt.EvalBlockRequest,
+		EvalBlockResponse: rt.EvalBlockResponse,
+		EvalTxRequest:     rt.EvalTxRequest,
+		EvalTxResponse:    rt.EvalTxResponse,
+	})
+	return err
+}
+
+func (a *alertSender) NotifyWithoutAlert(rt *AgentRoundTrip, chainID, blockNumber string) error {
+	_, err := a.qClient.Notify(a.ctx, &protocol.NotifyRequest{
 		EvalBlockRequest:  rt.EvalBlockRequest,
 		EvalBlockResponse: rt.EvalBlockResponse,
 		EvalTxRequest:     rt.EvalTxRequest,

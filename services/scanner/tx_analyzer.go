@@ -101,7 +101,7 @@ func (t *TxAnalyzerService) Start() error {
 				if err != nil {
 					return err
 				}
-				if err := t.cfg.AlertSender.SignAndNotify(
+				if err := t.cfg.AlertSender.SignAlertAndNotify(
 					&clients.AgentRoundTrip{
 						EvalTxRequest:  result.Request,
 						EvalTxResponse: result.Response,

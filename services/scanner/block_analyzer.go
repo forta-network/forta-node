@@ -95,17 +95,27 @@ func (t *BlockAnalyzerService) Start() error {
 			}
 			log.Debugf(resStr)
 
+			rt := &clients.AgentRoundTrip{
+				EvalBlockRequest:  result.Request,
+				EvalBlockResponse: result.Response,
+			}
+
+			if len(result.Response.Findings) == 0 {
+				if err := t.cfg.AlertSender.NotifyWithoutAlert(
+					rt, result.Request.Event.Network.ChainId, result.Request.Event.BlockNumber,
+				); err != nil {
+					return err
+				}
+				continue
+			}
+
 			for _, f := range result.Response.Findings {
 				alert, err := t.findingToAlert(result, ts, f)
 				if err != nil {
 					return err
 				}
-				if err := t.cfg.AlertSender.SignAndNotify(
-					&clients.AgentRoundTrip{
-						EvalBlockRequest:  result.Request,
-						EvalBlockResponse: result.Response,
-					},
-					alert, result.Request.Event.Network.ChainId, result.Request.Event.BlockNumber,
+				if err := t.cfg.AlertSender.SignAlertAndNotify(
+					rt, alert, result.Request.Event.Network.ChainId, result.Request.Event.BlockNumber,
 				); err != nil {
 					return err
 				}
