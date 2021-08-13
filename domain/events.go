@@ -27,10 +27,30 @@ type BlockEvent struct {
 	Traces    []Trace
 }
 
+func str(val *string) string {
+	if val == nil {
+		return ""
+	}
+	return *val
+}
+
+func strArr(vals []*string) []string {
+	result := make([]string, 0, len(vals))
+	for _, v := range vals {
+		result = append(result, str(v))
+	}
+	return result
+}
+
 func (t *BlockEvent) ToMessage() (*protocol.BlockEvent, error) {
 	evtType := protocol.BlockEvent_BLOCK
 	if t.EventType == "reorg" {
 		evtType = protocol.BlockEvent_REORG
+	}
+
+	txs := make([]string, 0, len(t.Block.Transactions))
+	for _, tx := range t.Block.Transactions {
+		txs = append(txs, tx.Hash)
 	}
 	return &protocol.BlockEvent{
 		Type:        evtType,
@@ -38,6 +58,28 @@ func (t *BlockEvent) ToMessage() (*protocol.BlockEvent, error) {
 		BlockNumber: t.Block.Number,
 		Network: &protocol.BlockEvent_Network{
 			ChainId: utils.BigIntToHex(t.ChainID),
+		},
+		Block: &protocol.BlockEvent_EthBlock{
+			Difficulty: str(t.Block.Difficulty),
+			Hash: t.Block.Hash,
+			Number: t.Block.Number,
+			ParentHash: t.Block.ParentHash,
+			Timestamp: t.Block.Timestamp,
+			Nonce: str(t.Block.Nonce),
+			ExtraData: str(t.Block.ExtraData),
+			GasLimit: str(t.Block.GasLimit),
+			GasUsed: str(t.Block.GasUsed),
+			LogsBloom: str(t.Block.LogsBloom),
+			Miner: str(t.Block.Miner),
+			MixHash: str(t.Block.MixHash),
+			Size: str(t.Block.Size),
+			StateRoot: str(t.Block.StateRoot),
+			ReceiptsRoot: str(t.Block.ReceiptsRoot),
+			TotalDifficulty: str(t.Block.TotalDifficulty),
+			Sha3Uncles: str(t.Block.Sha3Uncles),
+			Uncles: strArr(t.Block.Uncles),
+			TransactionsRoot: str(t.Block.TransactionsRoot),
+			Transactions: txs,
 		},
 	}, nil
 }

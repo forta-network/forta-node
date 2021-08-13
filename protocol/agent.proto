@@ -90,10 +90,35 @@ message BlockEvent {
   message Network {
     string chainId = 1;
   }
+
+  message EthBlock {
+      string difficulty = 1;
+      string extraData = 2;
+      string gasLimit = 3;
+      string gasUsed = 4;
+      string hash = 5;
+      string logsBloom = 6;
+      string miner = 7;
+      string mixHash = 8;
+      string nonce = 9;
+      string number = 10;
+      string parentHash = 11;
+      string receiptsRoot = 12;
+      string sha3Uncles = 13;
+      string size = 14;
+      string stateRoot =15;
+      string timestamp = 16;
+      string totalDifficulty = 17;
+      repeated string transactions = 18;
+      string transactionsRoot = 19;
+      repeated string uncles = 20;
+  }
+
   EventType type = 1;
   string blockHash = 2;
   string blockNumber = 3;
   Network network = 4;
+  EthBlock block = 5;
 }
 
 message TransactionEvent {
