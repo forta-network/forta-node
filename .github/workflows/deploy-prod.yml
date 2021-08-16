@@ -56,16 +56,16 @@ jobs:
           # be deployed to ECS.
 
           # scanner
-          docker tag openzeppelin/forta-scanner:latest $ECR_REGISTRY/forta-scanner:latest
-          docker tag openzeppelin/forta-scanner:latest $ECR_REGISTRY/forta-scanner:$IMAGE_TAG
+          docker tag forta-network/forta-scanner:latest $ECR_REGISTRY/forta-scanner:latest
+          docker tag forta-network/forta-scanner:latest $ECR_REGISTRY/forta-scanner:$IMAGE_TAG
 
           # query
-          docker tag openzeppelin/forta-query:latest $ECR_REGISTRY/forta-query:latest
-          docker tag openzeppelin/forta-query:latest $ECR_REGISTRY/forta-query:$IMAGE_TAG
+          docker tag forta-network/forta-query:latest $ECR_REGISTRY/forta-query:latest
+          docker tag forta-network/forta-query:latest $ECR_REGISTRY/forta-query:$IMAGE_TAG
 
           # json-rpc
-          docker tag openzeppelin/forta-json-rpc:latest $ECR_REGISTRY/forta-json-rpc:latest
-          docker tag openzeppelin/forta-json-rpc:latest $ECR_REGISTRY/forta-json-rpc:$IMAGE_TAG
+          docker tag forta-network/forta-json-rpc:latest $ECR_REGISTRY/forta-json-rpc:latest
+          docker tag forta-network/forta-json-rpc:latest $ECR_REGISTRY/forta-json-rpc:$IMAGE_TAG
 
           echo "::set-output name=image::$IMAGE_TAG"
       - name: Push to ECR
