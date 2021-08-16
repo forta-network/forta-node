@@ -81,64 +81,60 @@ func (al *AlertListener) Notify(ctx context.Context, req *protocol.NotifyRequest
 	return &protocol.NotifyResponse{}, nil
 }
 
+func (al *AlertListener) publishNextBatch() error {
+	batch := al.getLatestBatch()
+
+	signature, err := security.SignProtoMessage(al.cfg.Key, (*protocol.SignedAlertBatch)(batch))
+	if err != nil {
+		return fmt.Errorf("failed to sign alert batch: %v", err)
+	}
+	batch.Signature = signature
+
+	var buf bytes.Buffer
+	if err = json.NewEncoder(&buf).Encode(batch); err != nil {
+		return fmt.Errorf("failed to encode the signed alert: %v", err)
+	}
+	log.Infof("new alert batch: %s", string(buf.Bytes()))
+
+	// if no alerts, and skipEmpty is true, then save with blank txHash
+	if al.skipEmpty && batch.Data.AlertCount == uint32(0) {
+		log.Info("skipping batch, because there are no alerts and skipEmpty is enabled")
+		al.storeBatchWithTxHash(batch.Data, "")
+		return nil
+	}
+
+	cid, err := al.ipfs.Add(&buf, ipfsapi.Pin(true))
+	if err != nil {
+		return fmt.Errorf("failed to store alert data to ipfs: %v", err)
+	}
+	log.Infof("stored the batch to ipfs: %s", cid)
+
+	tx, err := al.contract.AddAlertBatch(
+		big.NewInt(0).SetUint64(batch.Data.ChainId),
+		big.NewInt(0).SetUint64(batch.Data.BlockStart),
+		big.NewInt(0).SetUint64(batch.Data.BlockEnd),
+		big.NewInt(int64(batch.Data.AlertCount)),
+		big.NewInt(0).SetUint64(uint64(batch.Data.MaxSeverity)),
+		cid,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to send the alert tx: %v", err)
+	}
+
+	// Store all block and transaction alerts.
+	al.storeBatchWithTxHash(batch.Data, tx.Hash().Hex())
+	return nil
+}
+
 func (al *AlertListener) publishAlerts() {
 	ticker := time.NewTicker(al.batchInterval)
 	var batchErr error
 	for {
-		if batchErr != nil {
+		if err := al.publishNextBatch(); err != nil {
 			log.Errorf("failed to publish alert batch: %v", batchErr)
 			// Sleep
 			ticker.Reset(al.batchInterval)
-			<-ticker.C
 		}
-
-		batch := al.getLatestBatch()
-
-		signature, err := security.SignProtoMessage(al.cfg.Key, (*protocol.SignedAlertBatch)(batch))
-		if err != nil {
-			batchErr = fmt.Errorf("failed to sign alert batch: %v", err)
-			continue
-		}
-		batch.Signature = signature
-
-		var buf bytes.Buffer
-		if err = json.NewEncoder(&buf).Encode(batch); err != nil {
-			batchErr = fmt.Errorf("failed to encode the signed alert: %v", err)
-			continue
-		}
-		log.Infof("new alert batch: %s", string(buf.Bytes()))
-
-		// if no alerts, and skipEmpty is true, then save with blank txHash
-		if al.skipEmpty && batch.Data.AlertCount == uint32(0) {
-			log.Info("not sending batch, because there are no alerts")
-			al.storeBatchWithTxHash(batch.Data, "")
-			continue
-		}
-
-		cid, err := al.ipfs.Add(&buf, ipfsapi.Pin(true))
-		if err != nil {
-			batchErr = fmt.Errorf("failed to store alert data to ipfs: %v", err)
-			continue
-		}
-		log.Infof("stored the batch to ipfs: %s", cid)
-
-		tx, err := al.contract.AddAlertBatch(
-			big.NewInt(0).SetUint64(batch.Data.ChainId),
-			big.NewInt(0).SetUint64(batch.Data.BlockStart),
-			big.NewInt(0).SetUint64(batch.Data.BlockEnd),
-			big.NewInt(int64(batch.Data.AlertCount)),
-			big.NewInt(0).SetUint64(uint64(batch.Data.MaxSeverity)),
-			cid,
-		)
-		if err != nil {
-			batchErr = fmt.Errorf("failed to send the alert tx: %v", err)
-			continue
-		}
-
-		// Store all block and transaction alerts.
-		al.storeBatchWithTxHash(batch.Data, tx.Hash().Hex())
-
-		batchErr = nil
 		<-ticker.C
 	}
 }
