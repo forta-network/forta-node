@@ -31,6 +31,17 @@ trace:
 query:
   queryImage: "ECR_REGISTRY/forta-query:GITHUB_HASH"
   port: 8778
+  publishTo:
+    batch:
+      sendEmpty: false
+      intervalSeconds: 15
+      maxAlerts: 100
+    contractAddress: "0xf4746faBc1D5E751248Ea3AC87ceB13C432F0C1A"
+    ipfs:
+      gatewayUrl: "http://ipfs.forta.internal"
+    ethereum:
+      jsonRpcUrl: "REGISTRY_API_URL"
+      contractAddress: "0x38C1e080BeEb26eeA91932178E62987598230271"
   db:
     path: "/tmp/forta-alerts"
 

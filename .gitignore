@@ -11,3 +11,4 @@ debug
 build
 .vscode
 config-local.yml
+config.yml
