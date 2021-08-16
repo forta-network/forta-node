@@ -45,6 +45,7 @@ type AlertListener struct {
 	ipfs      IPFS
 	ethClient EthClient
 
+	port          int
 	skipEmpty     bool
 	batchInterval time.Duration
 	batchLimit    int
@@ -324,7 +325,7 @@ func (al *AlertListener) getLatestBatch() (batch *BatchData) {
 }
 
 func (al *AlertListener) Start() error {
-	lis, err := net.Listen("tcp", "0.0.0.0:8770")
+	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", al.port))
 	if err != nil {
 		return err
 	}
@@ -393,6 +394,7 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertList
 		ipfs:      ipfsClient,
 		ethClient: ethClient,
 
+		port:          cfg.Port,
 		skipEmpty:     cfg.PublisherConfig.Batch.SkipEmpty,
 		batchInterval: batchInterval,
 		batchLimit:    batchLimit,
