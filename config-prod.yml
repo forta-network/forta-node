@@ -38,7 +38,7 @@ query:
       maxAlerts: 100
     contractAddress: "0xf4746faBc1D5E751248Ea3AC87ceB13C432F0C1A"
     ipfs:
-      gatewayUrl: "http://ipfs.forta.internal"
+      gatewayUrl: "http://ipfs.forta.internal:8080"
     ethereum:
       jsonRpcUrl: "REGISTRY_API_URL"
       contractAddress: "0x38C1e080BeEb26eeA91932178E62987598230271"
