@@ -267,29 +267,31 @@ func (al *AlertListener) getLatestBatch() (batch *BatchData) {
 		select {
 		case notif := <-al.notifCh:
 			alert := notif.SignedAlert
-			log.Infof("alert: %s", alert.Alert.Id)
+			hasAlert := alert != nil
+			if hasAlert {
+				log.Infof("alert: %s", alert.Alert.Id)
+			}
 
-			// TODO: Separate batches by chain ID later?
-			chainID, err := hexutil.DecodeUint64(alert.ChainId)
+			var blockNum string
+			if notif.EvalBlockRequest != nil {
+				blockNum = notif.EvalBlockRequest.Event.BlockNumber
+			} else {
+				blockNum = notif.EvalTxRequest.Event.Block.BlockNumber
+			}
+
+			notifBlockNum, err := hexutil.DecodeUint64(blockNum)
 			if err != nil {
-				log.Errorf("failed to parse alert chain id: %v", err)
+				log.Errorf("failed to parse alert notif block number: %v", err)
 				continue
 			}
-			batch.Data.ChainId = chainID
-
-			alertBlockNum, err := hexutil.DecodeUint64(alert.BlockNumber)
-			if err != nil {
-				log.Errorf("failed to parse alert block number: %v", err)
-				continue
+			if batch.Data.BlockStart == 0 || (batch.Data.BlockStart > 0 && notifBlockNum < batch.Data.BlockStart) {
+				batch.Data.BlockStart = notifBlockNum
 			}
-			if batch.Data.BlockStart == 0 || (batch.Data.BlockStart > 0 && alertBlockNum < batch.Data.BlockStart) {
-				batch.Data.BlockStart = alertBlockNum
-			}
-			if batch.Data.BlockEnd == 0 || (batch.Data.BlockEnd > 0 && alertBlockNum > batch.Data.BlockEnd) {
-				batch.Data.BlockEnd = alertBlockNum
+			if batch.Data.BlockEnd == 0 || (batch.Data.BlockEnd > 0 && notifBlockNum > batch.Data.BlockEnd) {
+				batch.Data.BlockEnd = notifBlockNum
 			}
 
-			if alert.Alert.Finding.Severity > batch.Data.MaxSeverity {
+			if hasAlert && alert.Alert.Finding.Severity > batch.Data.MaxSeverity {
 				batch.Data.MaxSeverity = alert.Alert.Finding.Severity
 			}
 
@@ -301,13 +303,6 @@ func (al *AlertListener) getLatestBatch() (batch *BatchData) {
 		if done {
 			break
 		}
-	}
-
-	// We use single chain ID for now.
-	if batch.Data.ChainId > 0 {
-		al.latestChainID = batch.Data.ChainId
-	} else {
-		batch.Data.ChainId = al.latestChainID
 	}
 
 	if batch.Data.BlockStart == 0 {
