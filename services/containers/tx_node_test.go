@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"testing"
 
-	"OpenZeppelin/fortify-node/clients"
-	"OpenZeppelin/fortify-node/clients/messaging"
-	mock_clients "OpenZeppelin/fortify-node/clients/mocks"
-	"OpenZeppelin/fortify-node/config"
+	"forta-network/forta-node/clients"
+	"forta-network/forta-node/clients/messaging"
+	mock_clients "forta-network/forta-node/clients/mocks"
+	"forta-network/forta-node/config"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -21,7 +21,7 @@ const (
 	testScannerContainerID = "test-scanner-container-id"
 	testProxyContainerID   = "test-proxy-container-id"
 	testAgentID            = "test-agent"
-	testAgentContainerName = "fortify-agent-test-age-cdd4" // This is a result
+	testAgentContainerName = "forta-agent-test-age-cdd4" // This is a result
 	testAgentNetworkID     = "test-agent-network-id"
 	testAgentContainerID   = "test-agent-container-id"
 )

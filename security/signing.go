@@ -15,7 +15,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"google.golang.org/protobuf/runtime/protoiface"
 
-	"OpenZeppelin/fortify-node/protocol"
+	"forta-network/forta-node/protocol"
 )
 
 // LoadKey loads the node private key.

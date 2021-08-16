@@ -5,8 +5,8 @@
 package mock_registry
 
 import (
-	domain "OpenZeppelin/fortify-node/domain"
-	regtypes "OpenZeppelin/fortify-node/services/registry/regtypes"
+	domain "forta-network/forta-node/domain"
+	regtypes "forta-network/forta-node/services/registry/regtypes"
 	context "context"
 	big "math/big"
 	reflect "reflect"

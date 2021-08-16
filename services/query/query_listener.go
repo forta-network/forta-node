@@ -11,12 +11,12 @@ import (
 	"net/http"
 	"time"
 
-	"OpenZeppelin/fortify-node/config"
-	"OpenZeppelin/fortify-node/contracts"
-	"OpenZeppelin/fortify-node/protocol"
-	"OpenZeppelin/fortify-node/security"
-	"OpenZeppelin/fortify-node/store"
-	"OpenZeppelin/fortify-node/utils"
+	"forta-network/forta-node/config"
+	"forta-network/forta-node/contracts"
+	"forta-network/forta-node/protocol"
+	"forta-network/forta-node/security"
+	"forta-network/forta-node/store"
+	"forta-network/forta-node/utils"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"

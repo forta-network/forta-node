@@ -10,7 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 
-	"OpenZeppelin/fortify-node/config"
+	"forta-network/forta-node/config"
 )
 
 type Service interface {

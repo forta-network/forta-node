@@ -1,4 +1,4 @@
-module OpenZeppelin/fortify-node
+module forta-network/forta-node
 
 go 1.16
 

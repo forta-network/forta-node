@@ -8,8 +8,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
-	"OpenZeppelin/fortify-node/protocol"
-	"OpenZeppelin/fortify-node/security"
+	"forta-network/forta-node/protocol"
+	"forta-network/forta-node/security"
 )
 
 // AgentRoundTrip contains

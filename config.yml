@@ -15,7 +15,7 @@ registry:
 #  poolId: "123"
 
 scanner:
-  scannerImage: "openzeppelin/fortify-scanner:latest"
+  scannerImage: "forta-network/forta-scanner:latest"
   chainId: 1
   #startBlock: 11792184
   #endBlock: 11792184
@@ -24,20 +24,20 @@ scanner:
     jsonRpcUrl: "http://eth.fortify-dev.com:8545"
 
 query:
-  queryImage: "openzeppelin/fortify-query:latest"
+  queryImage: "forta-network/forta-query:latest"
   port: 8778
   db:
-    path: "/tmp/fortify-alerts"
+    path: "/tmp/forta-alerts"
 
 json-rpc-proxy:
-  jsonRpcImage: "openzeppelin/fortify-json-rpc:latest"
+  jsonRpcImage: "forta-network/forta-json-rpc:latest"
   ethereum:
-    jsonRpcUrl: "http://eth.fortify-dev.com:8545"
+    jsonRpcUrl: "http://eth.forta-dev.com:8545"
 
 trace:
   enabled: true
   ethereum:
-    jsonRpcUrl: "http://eth.fortify-dev.com:8545"
+    jsonRpcUrl: "http://eth.forta-dev.com:8545"
 log:
   level: info
   maxLogSize: 10m

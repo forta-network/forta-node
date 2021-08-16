@@ -1,11 +1,11 @@
 package scanner
 
 import (
-	"OpenZeppelin/fortify-node/clients"
-	"OpenZeppelin/fortify-node/domain"
-	"OpenZeppelin/fortify-node/protocol"
-	"OpenZeppelin/fortify-node/store"
-	"OpenZeppelin/fortify-node/utils"
+	"forta-network/forta-node/clients"
+	"forta-network/forta-node/domain"
+	"forta-network/forta-node/protocol"
+	"forta-network/forta-node/store"
+	"forta-network/forta-node/utils"
 
 	"context"
 	"fmt"

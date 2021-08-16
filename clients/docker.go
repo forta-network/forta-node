@@ -19,7 +19,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const dockerResourcesLabel = "Fortify"
+const dockerResourcesLabel = "Forta"
 
 var labels = map[string]string{dockerResourcesLabel: "true"}
 

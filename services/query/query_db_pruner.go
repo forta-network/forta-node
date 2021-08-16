@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"OpenZeppelin/fortify-node/store"
+	"forta-network/forta-node/store"
 )
 
 // DBPruner periodically prunes db of old records

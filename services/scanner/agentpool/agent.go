@@ -1,10 +1,10 @@
 package agentpool
 
 import (
-	"OpenZeppelin/fortify-node/clients"
-	"OpenZeppelin/fortify-node/config"
-	"OpenZeppelin/fortify-node/protocol"
-	"OpenZeppelin/fortify-node/services/scanner"
+	"forta-network/forta-node/clients"
+	"forta-network/forta-node/config"
+	"forta-network/forta-node/protocol"
+	"forta-network/forta-node/services/scanner"
 	"context"
 	"strconv"
 	"time"

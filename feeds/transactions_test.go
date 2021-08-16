@@ -7,10 +7,10 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	"OpenZeppelin/fortify-node/domain"
-	clients "OpenZeppelin/fortify-node/ethereum/mocks"
-	"OpenZeppelin/fortify-node/testutils"
-	"OpenZeppelin/fortify-node/utils"
+	"forta-network/forta-node/domain"
+	clients "forta-network/forta-node/ethereum/mocks"
+	"forta-network/forta-node/testutils"
+	"forta-network/forta-node/utils"
 )
 
 func getTestTransactionFeed(t *testing.T, blockFeed BlockFeed) (*transactionFeed, *clients.MockClient) {

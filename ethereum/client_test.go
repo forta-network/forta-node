@@ -10,8 +10,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	"OpenZeppelin/fortify-node/domain"
-	mocks "OpenZeppelin/fortify-node/ethereum/mocks"
+	"forta-network/forta-node/domain"
+	mocks "forta-network/forta-node/ethereum/mocks"
 )
 
 const testBlockHash = "0x4fc0862e76691f5312964883954d5c2db35e2b8f7a4f191775a4f50c69804a8d"

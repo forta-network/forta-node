@@ -7,12 +7,12 @@ import (
 
 	"golang.org/x/sync/semaphore"
 
-	"OpenZeppelin/fortify-node/clients/messaging"
-	mock_clients "OpenZeppelin/fortify-node/clients/mocks"
-	"OpenZeppelin/fortify-node/config"
-	"OpenZeppelin/fortify-node/domain"
-	mock_registry "OpenZeppelin/fortify-node/services/registry/mocks"
-	"OpenZeppelin/fortify-node/services/registry/regtypes"
+	"forta-network/forta-node/clients/messaging"
+	mock_clients "forta-network/forta-node/clients/mocks"
+	"forta-network/forta-node/config"
+	"forta-network/forta-node/domain"
+	mock_registry "forta-network/forta-node/services/registry/mocks"
+	"forta-network/forta-node/services/registry/regtypes"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/mock/gomock"
