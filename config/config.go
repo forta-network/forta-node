@@ -113,7 +113,7 @@ type RegistryConfig struct {
 }
 
 type BatchConfig struct {
-	SkipEmpty       bool `yaml:"sendEmpty" json:"sendEmpty"`
+	SkipEmpty       bool `yaml:"skipEmpty" json:"skipEmpty"`
 	IntervalSeconds *int `yaml:"intervalSeconds" json:"intervalSeconds"`
 	MaxAlerts       *int `yaml:"maxAlerts" json:"maxAlerts"`
 }

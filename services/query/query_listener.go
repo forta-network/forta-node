@@ -106,6 +106,14 @@ func (al *AlertListener) publishAlerts() {
 			continue
 		}
 		log.Infof("new alert batch: %s", string(buf.Bytes()))
+
+		// if no alerts, and skipEmpty is true, then save with blank txHash
+		if al.skipEmpty && batch.Data.AlertCount == uint32(0) {
+			log.Info("not sending batch, because there are no alerts")
+			al.storeBatchWithTxHash(batch.Data, "")
+			continue
+		}
+
 		cid, err := al.ipfs.Add(&buf, ipfsapi.Pin(true))
 		if err != nil {
 			batchErr = fmt.Errorf("failed to store alert data to ipfs: %v", err)
@@ -174,26 +182,22 @@ type BatchData protocol.SignedAlertBatch
 func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 	alertBatch := (*AlertBatch)(bd.Data)
 	isBlockAlert := notif.EvalBlockRequest != nil
-	hasAlert := notif.SignedAlert != nil
+
+	// if no alert, nothing to append, return early
+	if notif.SignedAlert == nil {
+		return
+	}
 
 	var agentAlerts *protocol.AgentAlerts
 	if isBlockAlert {
 		blockNum := hexutil.MustDecodeUint64(notif.EvalBlockRequest.Event.BlockNumber)
 		blockRes := alertBatch.GetBlockResults(notif.EvalBlockRequest.Event.BlockHash, blockNum)
-		if hasAlert {
-			agentAlerts = (*BlockResults)(blockRes).GetAgentAlerts(notif.SignedAlert.Alert.Agent)
-		}
+		agentAlerts = (*BlockResults)(blockRes).GetAgentAlerts(notif.SignedAlert.Alert.Agent)
 	} else {
 		blockNum := hexutil.MustDecodeUint64(notif.EvalTxRequest.Event.Block.BlockNumber)
 		blockRes := alertBatch.GetBlockResults(notif.EvalTxRequest.Event.Block.BlockHash, blockNum)
 		txRes := (*BlockResults)(blockRes).GetTransactionResults(notif.EvalTxRequest.Event)
-		if hasAlert {
-			agentAlerts = (*TransactionResults)(txRes).GetAgentAlerts(notif.SignedAlert.Alert.Agent)
-		}
-	}
-
-	if !hasAlert {
-		return
+		agentAlerts = (*TransactionResults)(txRes).GetAgentAlerts(notif.SignedAlert.Alert.Agent)
 	}
 
 	agentAlerts.Alerts = append(agentAlerts.Alerts, notif.SignedAlert)
@@ -263,7 +267,7 @@ func (al *AlertListener) getLatestBatch() (batch *BatchData) {
 	batch = &BatchData{Data: &protocol.AlertBatch{ChainId: uint64(al.cfg.ChainID)}}
 
 	var done bool
-	for i := 0; i < defaultBatchLimit; i++ {
+	for i := 0; i < al.batchLimit; i++ {
 		select {
 		case notif := <-al.notifCh:
 			alert := notif.SignedAlert

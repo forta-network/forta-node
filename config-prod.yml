@@ -33,7 +33,7 @@ query:
   port: 8778
   publishTo:
     batch:
-      sendEmpty: false
+      skipEmpty: true
       intervalSeconds: 15
       maxAlerts: 100
     contractAddress: "0xf4746faBc1D5E751248Ea3AC87ceB13C432F0C1A"
