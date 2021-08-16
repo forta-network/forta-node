@@ -5,11 +5,10 @@ registry:
   ethereum:
     websocketUrl: "REGISTRY_WSS_URL"
     jsonRpcUrl: "REGISTRY_API_URL"
-  contractAddress: "0x40EC0E5FB2d22C1Bbf00662635eF8D20E22E8560"
+  contractAddress: "0x38C1e080BeEb26eeA91932178E62987598230271"
   containerRegistry: disco-dev.forta.network
   username: discouser
   password: discopass
-  poolId: "0x9d3d1df113ae5f4ff7fb542439229d50a384f4c2162c4fe4e298beefc872ddf2"
 
 scanner:
   scannerImage: "ECR_REGISTRY/forta-scanner:GITHUB_HASH"

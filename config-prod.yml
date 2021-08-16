@@ -5,18 +5,16 @@ registry:
   ethereum:
     websocketUrl: "REGISTRY_WSS_URL"
     jsonRpcUrl: "REGISTRY_API_URL"
-  contractAddress: "0xDF686c48A8Cc5dF43c2b5b3086c4d77E9463Cac0"
+  contractAddress: "0x1Ad235EF22Dd15d291ecD4b44a5739aD4F61b3A5"
   containerRegistry: disco.forta.network
   username: discouser
   password: discopass
-  poolId: "0x9d3d1df113ae5f4ff7fb542439229d50a384f4c2162c4fe4e298beefc872ddf2"
 
 scanner:
   scannerImage: "ECR_REGISTRY/forta-scanner:GITHUB_HASH"
   chainId: 1
   #startBlock: 12860865
   #endBlock: 11792184
-  #disableTracing: true
   ethereum:
     jsonRpcUrl: "https://cloudflare-eth.com"
 
