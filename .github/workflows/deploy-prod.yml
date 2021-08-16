@@ -29,7 +29,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.PROD_DEPLOY_AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.PROD_DEPLOY_AWS_SECRET_KEY }}
-          aws-region: ${{ secrets.PROD_DEPLOY_AWS_REGION }}
+          aws-region: us-east-1
       - name: Make Containers
         run: |
           make build
@@ -100,9 +100,9 @@ jobs:
         with:
           aws_access_key: ${{ secrets.PROD_DEPLOY_AWS_ACCESS_KEY }}
           aws_secret_key: ${{ secrets.PROD_DEPLOY_AWS_SECRET_KEY }}
-          aws_region: ${{ secrets.PROD_DEPLOY_AWS_REGION }}
-          codedeploy_name: ${{ secrets.PROD_CODEDEPLOY_APP }}
-          codedeploy_group: ${{ secrets.PROD_CODEDEPLOY_GROUP }}
-          s3_bucket: ${{ secrets.PROD_DEPLOY_BUCKET }}
+          aws_region: us-east-1
+          codedeploy_name: prod-forta-node
+          codedeploy_group: prod-forta-deploy-group
+          s3_bucket: prod-forta-codedeploy
           s3_folder: prod
           directory: ./dist/
