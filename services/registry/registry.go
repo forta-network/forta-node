@@ -21,7 +21,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/rpc"
 )
 
 // RegistryService listens to the agent scanner list changes so the node can stay in sync.
@@ -78,7 +77,7 @@ func New(cfg config.Config, scannerAddress common.Address, msgClient clients.Mes
 // Start starts the registry service.
 func (rs *RegistryService) Start() error {
 	log.Infof("Starting %s", rs.Name())
-	rpcClient, err := rpc.Dial(rs.cfg.Registry.Ethereum.JsonRpcUrl)
+	rpcClient, err := ethereum.NewRpcClient(rs.cfg.Registry.Ethereum.JsonRpcUrl)
 	if err != nil {
 		return err
 	}
