@@ -269,7 +269,7 @@ func (al *AlertListener) getLatestBatch() (batch *BatchData) {
 			alert := notif.SignedAlert
 			hasAlert := alert != nil
 			if hasAlert {
-				log.Infof("alert: %s", alert.Alert.Id)
+				log.Debugf("alert: %s", alert.Alert.Id)
 			}
 
 			var blockNum string
@@ -347,11 +347,23 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertList
 		return nil, err
 	}
 	ethClient := ethclient.NewClient(rpcClient)
-	txOpts := bind.NewKeyedTransactor(cfg.Key.PrivateKey)
+	chainID, err := ethClient.ChainID(ctx)
+	if err != nil {
+		log.Errorf("could not determine scanner registry chain ID: %s", err.Error())
+		return nil, err
+	}
+
+	txOpts, err := bind.NewKeyedTransactorWithChainID(cfg.Key.PrivateKey, chainID)
+	if err != nil {
+		log.Errorf("error while creating keyed transactor for listener: %s", err.Error())
+		return nil, err
+	}
+
 	contract, err := contracts.NewAlertsTransactor(common.HexToAddress(cfg.PublisherConfig.ContractAddress), ethClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize the alerts contract: %v", err)
 	}
+
 	ats := &contracts.AlertsTransactorSession{
 		Contract:     contract,
 		TransactOpts: *txOpts,
