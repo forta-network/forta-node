@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"net"
+	"net/http"
 	"strings"
 	"time"
 
@@ -247,10 +249,26 @@ func (e streamEthClient) TransactionReceipt(ctx context.Context, txHash string) 
 	return &result, err
 }
 
+func NewRpcClient(url string) (*rpc.Client, error) {
+	tr := &http.Transport{
+		DialContext: (&net.Dialer{
+			KeepAlive: 30 * time.Second,
+			Timeout:   5 * time.Second,
+		}).DialContext,
+		IdleConnTimeout:       5 * time.Second,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+	return rpc.DialHTTPWithClient(url, &http.Client{Transport: tr})
+}
+
 // NewStreamEthClient creates a new ethereum client
 func NewStreamEthClient(ctx context.Context, url string) (*streamEthClient, error) {
 	//TODO: consider NewClient with a custom RPC so that one can inject headers
-	rpcClient, err := rpc.DialContext(ctx, url)
+	rpcClient, err := NewRpcClient(url)
+
 	if err != nil {
 		return nil, err
 	}
