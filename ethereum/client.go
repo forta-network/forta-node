@@ -255,6 +255,7 @@ func NewRpcClient(url string) (*rpc.Client, error) {
 			KeepAlive: 30 * time.Second,
 			Timeout:   5 * time.Second,
 		}).DialContext,
+		IdleConnTimeout: 5 * time.Second,
 	}
 	return rpc.DialHTTPWithClient(url, &http.Client{Transport: tr})
 }
