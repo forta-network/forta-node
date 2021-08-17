@@ -94,7 +94,7 @@ func withBackoff(ctx context.Context, name string, operation func(ctx context.Co
 		if ctx.Err() != nil {
 			return backoff.Permanent(ctx.Err())
 		}
-		tCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		tCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 
 		defer cancel()
 		err := operation(tCtx)
