@@ -3,10 +3,10 @@ package scanner
 import (
 	"context"
 
-	"OpenZeppelin/fortify-node/config"
-	"OpenZeppelin/fortify-node/domain"
-	"OpenZeppelin/fortify-node/ethereum"
-	"OpenZeppelin/fortify-node/feeds"
+	"forta-network/forta-node/config"
+	"forta-network/forta-node/domain"
+	"forta-network/forta-node/ethereum"
+	"forta-network/forta-node/feeds"
 
 	log "github.com/sirupsen/logrus"
 )

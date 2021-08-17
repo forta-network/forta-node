@@ -1,8 +1,8 @@
 package containers
 
 import (
-	"OpenZeppelin/fortify-node/clients"
-	"OpenZeppelin/fortify-node/utils"
+	"forta-network/forta-node/clients"
+	"forta-network/forta-node/utils"
 
 	"fmt"
 	"time"

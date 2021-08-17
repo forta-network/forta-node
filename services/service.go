@@ -10,7 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 
-	"OpenZeppelin/fortify-node/config"
+	"forta-network/forta-node/config"
 )
 
 type Service interface {
@@ -57,12 +57,12 @@ func ContainerMain(name string, getServices func(ctx context.Context, cfg config
 
 	serviceList, err := getServices(ctx, cfg)
 	if err != nil {
-		log.Error("could not initialize services", err)
+		log.Error("could not initialize services: ", err)
 		return
 	}
 
 	if err := StartServices(ctx, serviceList); err != nil {
-		log.Error("error running services", err)
+		log.Error("error running services: ", err)
 	}
 
 	log.Infof("Stopping %s", name)

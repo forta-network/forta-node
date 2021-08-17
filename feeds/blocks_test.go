@@ -10,9 +10,9 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	"OpenZeppelin/fortify-node/domain"
-	mocks "OpenZeppelin/fortify-node/ethereum/mocks"
-	"OpenZeppelin/fortify-node/utils"
+	"forta-network/forta-node/domain"
+	mocks "forta-network/forta-node/ethereum/mocks"
+	"forta-network/forta-node/utils"
 )
 
 var testErr = errors.New("test")

@@ -450,6 +450,19 @@
         "internalType": "address",
         "name": "_scanner",
         "type": "address"
+      }
+    ],
+    "name": "addScannerAsOwner",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_scanner",
+        "type": "address"
       },
       {
         "internalType": "bytes32",

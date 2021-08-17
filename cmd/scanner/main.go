@@ -8,16 +8,16 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	gethlog "github.com/ethereum/go-ethereum/log"
 
-	"OpenZeppelin/fortify-node/clients"
-	"OpenZeppelin/fortify-node/clients/messaging"
-	"OpenZeppelin/fortify-node/config"
-	"OpenZeppelin/fortify-node/ethereum"
-	"OpenZeppelin/fortify-node/feeds"
-	"OpenZeppelin/fortify-node/security"
-	"OpenZeppelin/fortify-node/services"
-	"OpenZeppelin/fortify-node/services/registry"
-	"OpenZeppelin/fortify-node/services/scanner"
-	"OpenZeppelin/fortify-node/services/scanner/agentpool"
+	"forta-network/forta-node/clients"
+	"forta-network/forta-node/clients/messaging"
+	"forta-network/forta-node/config"
+	"forta-network/forta-node/ethereum"
+	"forta-network/forta-node/feeds"
+	"forta-network/forta-node/security"
+	"forta-network/forta-node/services"
+	"forta-network/forta-node/services/registry"
+	"forta-network/forta-node/services/scanner"
+	"forta-network/forta-node/services/scanner/agentpool"
 )
 
 func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, cfg config.Config) (*scanner.TxStreamService, feeds.BlockFeed, error) {

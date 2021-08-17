@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 
-	"OpenZeppelin/fortify-node/config"
-	"OpenZeppelin/fortify-node/security"
-	"OpenZeppelin/fortify-node/services"
-	"OpenZeppelin/fortify-node/services/query"
-	"OpenZeppelin/fortify-node/store"
+	log "github.com/sirupsen/logrus"
+
+	"forta-network/forta-node/config"
+	"forta-network/forta-node/security"
+	"forta-network/forta-node/services"
+	"forta-network/forta-node/services/query"
+	"forta-network/forta-node/store"
 )
 
 func initApi(ctx context.Context, as store.AlertStore, cfg config.Config) (*query.AlertApi, error) {
@@ -34,21 +36,25 @@ func initPruner(ctx context.Context, as store.AlertStore, cfg config.Config) (*q
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
 	as, err := store.NewBadgerAlertStore()
 	if err != nil {
+		log.Errorf("Error while initializing BadgerDB: %s", err.Error())
 		return nil, err
 	}
 
 	api, err := initApi(ctx, as, cfg)
 	if err != nil {
+		log.Errorf("Error while initializing API: %s", err.Error())
 		return nil, err
 	}
 
 	listener, err := initListener(ctx, as, cfg)
 	if err != nil {
+		log.Errorf("Error while initializing Listener: %s", err.Error())
 		return nil, err
 	}
 
 	pruner, err := initPruner(ctx, as, cfg)
 	if err != nil {
+		log.Errorf("Error while initializing Pruner: %s", err.Error())
 		return nil, err
 	}
 

@@ -3,12 +3,12 @@ package agentpool
 import (
 	"sync"
 
-	"OpenZeppelin/fortify-node/clients"
-	"OpenZeppelin/fortify-node/clients/agentgrpc"
-	"OpenZeppelin/fortify-node/clients/messaging"
-	"OpenZeppelin/fortify-node/config"
-	"OpenZeppelin/fortify-node/protocol"
-	"OpenZeppelin/fortify-node/services/scanner"
+	"forta-network/forta-node/clients"
+	"forta-network/forta-node/clients/agentgrpc"
+	"forta-network/forta-node/clients/messaging"
+	"forta-network/forta-node/config"
+	"forta-network/forta-node/protocol"
+	"forta-network/forta-node/services/scanner"
 )
 
 // AgentPool maintains the pool of agents that the scanner should

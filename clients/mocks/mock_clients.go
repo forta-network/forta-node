@@ -5,9 +5,9 @@
 package mock_clients
 
 import (
-	clients "OpenZeppelin/fortify-node/clients"
-	config "OpenZeppelin/fortify-node/config"
-	protocol "OpenZeppelin/fortify-node/protocol"
+	clients "forta-network/forta-node/clients"
+	config "forta-network/forta-node/config"
+	protocol "forta-network/forta-node/protocol"
 	context "context"
 	reflect "reflect"
 

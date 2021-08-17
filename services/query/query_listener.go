@@ -11,12 +11,12 @@ import (
 	"net/http"
 	"time"
 
-	"OpenZeppelin/fortify-node/config"
-	"OpenZeppelin/fortify-node/contracts"
-	"OpenZeppelin/fortify-node/protocol"
-	"OpenZeppelin/fortify-node/security"
-	"OpenZeppelin/fortify-node/store"
-	"OpenZeppelin/fortify-node/utils"
+	"forta-network/forta-node/config"
+	"forta-network/forta-node/contracts"
+	"forta-network/forta-node/protocol"
+	"forta-network/forta-node/security"
+	"forta-network/forta-node/store"
+	"forta-network/forta-node/utils"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -45,6 +45,7 @@ type AlertListener struct {
 	ipfs      IPFS
 	ethClient EthClient
 
+	port          int
 	skipEmpty     bool
 	batchInterval time.Duration
 	batchLimit    int
@@ -80,56 +81,59 @@ func (al *AlertListener) Notify(ctx context.Context, req *protocol.NotifyRequest
 	return &protocol.NotifyResponse{}, nil
 }
 
+func (al *AlertListener) publishNextBatch() error {
+	batch := al.getLatestBatch()
+
+	signature, err := security.SignProtoMessage(al.cfg.Key, (*protocol.SignedAlertBatch)(batch))
+	if err != nil {
+		return fmt.Errorf("failed to sign alert batch: %v", err)
+	}
+	batch.Signature = signature
+
+	var buf bytes.Buffer
+	if err = json.NewEncoder(&buf).Encode(batch); err != nil {
+		return fmt.Errorf("failed to encode the signed alert: %v", err)
+	}
+	log.Debugf("alert payload: %s", string(buf.Bytes()))
+
+	// if no alerts, and skipEmpty is true, then save with blank txHash
+	if al.skipEmpty && batch.Data.AlertCount == uint32(0) {
+		log.Info("skipping batch, because there are no alerts and skipEmpty is enabled")
+		al.storeBatchWithTxHash(batch.Data, "")
+		return nil
+	}
+
+	cid, err := al.ipfs.Add(&buf, ipfsapi.Pin(true))
+	if err != nil {
+		return fmt.Errorf("failed to store alert data to ipfs: %v", err)
+	}
+	log.Infof("alert batch: blockStart=%d, blockEnd=%d, alertCount=%d, maxSeverity=%s, ref=%s", batch.Data.BlockStart, batch.Data.BlockEnd, batch.Data.AlertCount, batch.Data.MaxSeverity.String(), cid)
+
+	tx, err := al.contract.AddAlertBatch(
+		big.NewInt(0).SetUint64(batch.Data.ChainId),
+		big.NewInt(0).SetUint64(batch.Data.BlockStart),
+		big.NewInt(0).SetUint64(batch.Data.BlockEnd),
+		big.NewInt(int64(batch.Data.AlertCount)),
+		big.NewInt(0).SetUint64(uint64(batch.Data.MaxSeverity)),
+		cid,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to send the alert tx: %v", err)
+	}
+
+	// Store all block and transaction alerts.
+	al.storeBatchWithTxHash(batch.Data, tx.Hash().Hex())
+	return nil
+}
+
 func (al *AlertListener) publishAlerts() {
 	ticker := time.NewTicker(al.batchInterval)
-	var batchErr error
 	for {
-		if batchErr != nil {
-			log.Errorf("failed to publish alert batch: %v", batchErr)
+		if err := al.publishNextBatch(); err != nil {
+			log.Errorf("failed to publish alert batch: %v", err)
 			// Sleep
 			ticker.Reset(al.batchInterval)
-			<-ticker.C
 		}
-
-		batch := al.getLatestBatch()
-
-		signature, err := security.SignProtoMessage(al.cfg.Key, (*protocol.SignedAlertBatch)(batch))
-		if err != nil {
-			batchErr = fmt.Errorf("failed to sign alert batch: %v", err)
-			continue
-		}
-		batch.Signature = signature
-
-		var buf bytes.Buffer
-		if err = json.NewEncoder(&buf).Encode(batch); err != nil {
-			batchErr = fmt.Errorf("failed to encode the signed alert: %v", err)
-			continue
-		}
-		log.Infof("new alert batch: %s", string(buf.Bytes()))
-		cid, err := al.ipfs.Add(&buf, ipfsapi.Pin(true))
-		if err != nil {
-			batchErr = fmt.Errorf("failed to store alert data to ipfs: %v", err)
-			continue
-		}
-		log.Infof("stored the batch to ipfs: %s", cid)
-
-		tx, err := al.contract.AddAlertBatch(
-			big.NewInt(0).SetUint64(batch.Data.ChainId),
-			big.NewInt(0).SetUint64(batch.Data.BlockStart),
-			big.NewInt(0).SetUint64(batch.Data.BlockEnd),
-			big.NewInt(int64(batch.Data.AlertCount)),
-			big.NewInt(0).SetUint64(uint64(batch.Data.MaxSeverity)),
-			cid,
-		)
-		if err != nil {
-			batchErr = fmt.Errorf("failed to send the alert tx: %v", err)
-			continue
-		}
-
-		// Store all block and transaction alerts.
-		al.storeBatchWithTxHash(batch.Data, tx.Hash().Hex())
-
-		batchErr = nil
 		<-ticker.C
 	}
 }
@@ -192,7 +196,7 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 		}
 	}
 
-	if !hasAlert {
+	if agentAlerts == nil {
 		return
 	}
 
@@ -263,13 +267,13 @@ func (al *AlertListener) getLatestBatch() (batch *BatchData) {
 	batch = &BatchData{Data: &protocol.AlertBatch{ChainId: uint64(al.cfg.ChainID)}}
 
 	var done bool
-	for i := 0; i < defaultBatchLimit; i++ {
+	for i := 0; i < al.batchLimit; i++ {
 		select {
 		case notif := <-al.notifCh:
 			alert := notif.SignedAlert
 			hasAlert := alert != nil
 			if hasAlert {
-				log.Infof("alert: %s", alert.Alert.Id)
+				log.Debugf("alert: %s", alert.Alert.Id)
 			}
 
 			var blockNum string
@@ -320,7 +324,7 @@ func (al *AlertListener) getLatestBatch() (batch *BatchData) {
 }
 
 func (al *AlertListener) Start() error {
-	lis, err := net.Listen("tcp", "0.0.0.0:8770")
+	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", al.port))
 	if err != nil {
 		return err
 	}
@@ -347,11 +351,23 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertList
 		return nil, err
 	}
 	ethClient := ethclient.NewClient(rpcClient)
-	txOpts := bind.NewKeyedTransactor(cfg.Key.PrivateKey)
+	chainID, err := ethClient.ChainID(ctx)
+	if err != nil {
+		log.Errorf("could not determine scanner registry chain ID: %s", err.Error())
+		return nil, err
+	}
+
+	txOpts, err := bind.NewKeyedTransactorWithChainID(cfg.Key.PrivateKey, chainID)
+	if err != nil {
+		log.Errorf("error while creating keyed transactor for listener: %s", err.Error())
+		return nil, err
+	}
+
 	contract, err := contracts.NewAlertsTransactor(common.HexToAddress(cfg.PublisherConfig.ContractAddress), ethClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize the alerts contract: %v", err)
 	}
+
 	ats := &contracts.AlertsTransactorSession{
 		Contract:     contract,
 		TransactOpts: *txOpts,
@@ -389,6 +405,7 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertList
 		ipfs:      ipfsClient,
 		ethClient: ethClient,
 
+		port:          cfg.Port,
 		skipEmpty:     cfg.PublisherConfig.Batch.SkipEmpty,
 		batchInterval: batchInterval,
 		batchLimit:    batchLimit,

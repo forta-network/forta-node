@@ -1,3 +1,3 @@
 #!/bin/bash
 
-killall -s SIGINT fortify || true
+killall -s SIGINT forta || true

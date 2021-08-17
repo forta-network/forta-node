@@ -8,10 +8,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"OpenZeppelin/fortify-node/clients"
-	"OpenZeppelin/fortify-node/clients/messaging"
-	"OpenZeppelin/fortify-node/config"
-	"OpenZeppelin/fortify-node/store"
+	"forta-network/forta-node/clients"
+	"forta-network/forta-node/clients/messaging"
+	"forta-network/forta-node/config"
+	"forta-network/forta-node/store"
 )
 
 // TxNodeService manages the safe-node docker container as a service
@@ -99,7 +99,7 @@ func (t *TxNodeService) start() error {
 		Name:  config.DockerQueryContainerName,
 		Image: t.config.Config.Query.QueryImage,
 		Env: map[string]string{
-			config.EnvFortifyConfig: cfgJson,
+			config.EnvConfig: cfgJson,
 		},
 		Ports: map[string]string{
 			fmt.Sprintf("%d", t.config.Config.Query.Port): "80",
@@ -123,7 +123,7 @@ func (t *TxNodeService) start() error {
 		Name:  config.DockerJSONRPCProxyContainerName,
 		Image: t.config.Config.JsonRpcProxy.JsonRpcImage,
 		Env: map[string]string{
-			config.EnvFortifyConfig: cfgJson,
+			config.EnvConfig: cfgJson,
 		},
 		NetworkID:   nodeNetwork,
 		MaxLogFiles: t.maxLogFiles,
@@ -137,9 +137,9 @@ func (t *TxNodeService) start() error {
 		Name:  config.DockerScannerContainerName,
 		Image: t.config.Config.Scanner.ScannerImage,
 		Env: map[string]string{
-			config.EnvFortifyConfig: cfgJson,
-			config.EnvQueryNode:     config.DockerQueryContainerName,
-			config.EnvNatsHost:      config.DockerNatsContainerName,
+			config.EnvConfig:    cfgJson,
+			config.EnvQueryNode: config.DockerQueryContainerName,
+			config.EnvNatsHost:  config.DockerNatsContainerName,
 		},
 		Volumes: map[string]string{
 			keyPath: "/.keys",

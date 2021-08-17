@@ -6,17 +6,17 @@ import (
 	"math/big"
 	"os"
 
-	"OpenZeppelin/fortify-node/utils"
+	"forta-network/forta-node/utils"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
-const EnvFortifyConfig = "FORTIFY_CONFIG"
+const EnvConfig = "FORTA_CONFIG"
 const EnvJsonRpcHost = "JSON_RPC_HOST"
 const EnvJsonRpcPort = "JSON_RPC_PORT"
 const EnvAgentGrpcPort = "AGENT_GRPC_PORT"
-const FortifyPrefix = "fortify"
+const ContainerNamePrefix = "forta"
 
 const (
 	//TODO: figure out protocol for this other than direct communication
@@ -27,10 +27,10 @@ const (
 
 // Docker container names
 var (
-	DockerNatsContainerName         = fmt.Sprintf("%s-nats", FortifyPrefix)
-	DockerScannerContainerName      = fmt.Sprintf("%s-scanner", FortifyPrefix)
-	DockerJSONRPCProxyContainerName = fmt.Sprintf("%s-json-rpc", FortifyPrefix)
-	DockerQueryContainerName        = fmt.Sprintf("%s-query", FortifyPrefix)
+	DockerNatsContainerName         = fmt.Sprintf("%s-nats", ContainerNamePrefix)
+	DockerScannerContainerName      = fmt.Sprintf("%s-scanner", ContainerNamePrefix)
+	DockerJSONRPCProxyContainerName = fmt.Sprintf("%s-json-rpc", ContainerNamePrefix)
+	DockerQueryContainerName        = fmt.Sprintf("%s-query", ContainerNamePrefix)
 
 	DockerNetworkName = DockerScannerContainerName
 )
@@ -55,7 +55,7 @@ func (ac AgentConfig) ImageHash() string {
 
 func (ac AgentConfig) ContainerName() string {
 	_, digest := utils.SplitImageRef(ac.Image)
-	return fmt.Sprintf("fortify-agent-%s-%s", utils.ShortenString(ac.ID, 8), utils.ShortenString(digest, 4))
+	return fmt.Sprintf("%s-agent-%s-%s", ContainerNamePrefix, utils.ShortenString(ac.ID, 8), utils.ShortenString(digest, 4))
 }
 
 func (ac AgentConfig) GrpcPort() string {
@@ -113,7 +113,7 @@ type RegistryConfig struct {
 }
 
 type BatchConfig struct {
-	SkipEmpty       bool `yaml:"sendEmpty" json:"sendEmpty"`
+	SkipEmpty       bool `yaml:"skipEmpty" json:"skipEmpty"`
 	IntervalSeconds *int `yaml:"intervalSeconds" json:"intervalSeconds"`
 	MaxAlerts       *int `yaml:"maxAlerts" json:"maxAlerts"`
 }
@@ -138,16 +138,16 @@ type Config struct {
 	Log          LogConfig          `yaml:"log" json:"log"`
 }
 
-func GetFortifyCfgDir() (string, error) {
+func GetCfgDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%s/.fortify", home), nil
+	return fmt.Sprintf("%s/.forta", home), nil
 }
 
 func GetKeyStorePath() (string, error) {
-	cfgDir, err := GetFortifyCfgDir()
+	cfgDir, err := GetCfgDir()
 	if err != nil {
 		return "", err
 	}
@@ -176,9 +176,9 @@ func InitLogLevel(cfg Config) error {
 }
 
 func GetConfigFromEnv() (Config, error) {
-	cfgJson := os.Getenv(EnvFortifyConfig)
+	cfgJson := os.Getenv(EnvConfig)
 	if cfgJson == "" {
-		return Config{}, fmt.Errorf("%s is required", EnvFortifyConfig)
+		return Config{}, fmt.Errorf("%s is required", EnvConfig)
 	}
 	var cfg Config
 	if err := json.Unmarshal([]byte(cfgJson), &cfg); err != nil {

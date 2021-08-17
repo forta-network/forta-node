@@ -1,26 +1,26 @@
 containers:
 	docker pull nats:2.3.2
-	docker build -t openzeppelin/fortify-scanner -f Dockerfile-scanner .
-	docker build -t openzeppelin/fortify-query -f Dockerfile-query .
-	docker build -t openzeppelin/fortify-json-rpc -f Dockerfile-json-rpc .
+	docker build -t forta-network/forta-scanner -f Dockerfile-scanner .
+	docker build -t forta-network/forta-query -f Dockerfile-query .
+	docker build -t forta-network/forta-json-rpc -f Dockerfile-json-rpc .
 
 docker-login:
 	aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 997179694723.dkr.ecr.us-west-2.amazonaws.com
 
 ecr:
-	docker tag openzeppelin/fortify-scanner:latest 997179694723.dkr.ecr.us-west-2.amazonaws.com/fortify-scanner:latest
-	docker tag openzeppelin/fortify-query:latest 997179694723.dkr.ecr.us-west-2.amazonaws.com/fortify-query:latest
-	docker tag openzeppelin/fortify-json-rpc:latest 997179694723.dkr.ecr.us-west-2.amazonaws.com/fortify-json-rpc:latest
-	docker push 997179694723.dkr.ecr.us-west-2.amazonaws.com/fortify-scanner:latest
-	docker push 997179694723.dkr.ecr.us-west-2.amazonaws.com/fortify-query:latest
-	docker push 997179694723.dkr.ecr.us-west-2.amazonaws.com/fortify-json-rpc:latest
+	docker tag forta-network/forta-scanner:latest 997179694723.dkr.ecr.us-west-2.amazonaws.com/forta-scanner:latest
+	docker tag forta-network/forta-query:latest 997179694723.dkr.ecr.us-west-2.amazonaws.com/forta-query:latest
+	docker tag forta-network/forta-json-rpc:latest 997179694723.dkr.ecr.us-west-2.amazonaws.com/forta-json-rpc:latest
+	docker push 997179694723.dkr.ecr.us-west-2.amazonaws.com/forta-scanner:latest
+	docker push 997179694723.dkr.ecr.us-west-2.amazonaws.com/forta-query:latest
+	docker push 997179694723.dkr.ecr.us-west-2.amazonaws.com/forta-json-rpc:latest
 
 main:
-	docker build -t build-fortify -f Dockerfile-cli .
-	docker create --name build-fortify build-fortify
-	docker cp build-fortify:/main fortify
-	docker rm -f build-fortify
-	chmod 755 fortify
+	docker build -t build-forta -f Dockerfile-cli .
+	docker create --name build-forta build-forta
+	docker cp build-forta:/main forta
+	docker rm -f build-forta
+	chmod 755 forta
 
 proto:
 	protoc -I=protocol --go-grpc_out=protocol/. --go_out=protocol/. protocol/agent.proto
@@ -39,7 +39,7 @@ test:
 	go test -v -count=1 ./...
 
 run:
-	go build -o build/fortify . && ./build/fortify --passphrase 123
+	go build -o build/forta . && ./build/forta --passphrase 123
 
 abigen:
 	abigen --abi ./contracts/scanner_registry.json --out ./contracts/scanner_registry.go --pkg contracts --type ScannerRegistry
