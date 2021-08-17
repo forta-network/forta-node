@@ -128,10 +128,9 @@ func (al *AlertListener) publishNextBatch() error {
 
 func (al *AlertListener) publishAlerts() {
 	ticker := time.NewTicker(al.batchInterval)
-	var batchErr error
 	for {
 		if err := al.publishNextBatch(); err != nil {
-			log.Errorf("failed to publish alert batch: %v", batchErr)
+			log.Errorf("failed to publish alert batch: %v", err)
 			// Sleep
 			ticker.Reset(al.batchInterval)
 		}
