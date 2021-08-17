@@ -178,22 +178,26 @@ type BatchData protocol.SignedAlertBatch
 func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 	alertBatch := (*AlertBatch)(bd.Data)
 	isBlockAlert := notif.EvalBlockRequest != nil
-
-	// if no alert, nothing to append, return early
-	if notif.SignedAlert == nil {
-		return
-	}
+	hasAlert := notif.SignedAlert != nil
 
 	var agentAlerts *protocol.AgentAlerts
 	if isBlockAlert {
 		blockNum := hexutil.MustDecodeUint64(notif.EvalBlockRequest.Event.BlockNumber)
 		blockRes := alertBatch.GetBlockResults(notif.EvalBlockRequest.Event.BlockHash, blockNum)
-		agentAlerts = (*BlockResults)(blockRes).GetAgentAlerts(notif.SignedAlert.Alert.Agent)
+		if hasAlert {
+			agentAlerts = (*BlockResults)(blockRes).GetAgentAlerts(notif.SignedAlert.Alert.Agent)
+		}
 	} else {
 		blockNum := hexutil.MustDecodeUint64(notif.EvalTxRequest.Event.Block.BlockNumber)
 		blockRes := alertBatch.GetBlockResults(notif.EvalTxRequest.Event.Block.BlockHash, blockNum)
 		txRes := (*BlockResults)(blockRes).GetTransactionResults(notif.EvalTxRequest.Event)
-		agentAlerts = (*TransactionResults)(txRes).GetAgentAlerts(notif.SignedAlert.Alert.Agent)
+		if hasAlert {
+			agentAlerts = (*TransactionResults)(txRes).GetAgentAlerts(notif.SignedAlert.Alert.Agent)
+		}
+	}
+
+	if agentAlerts == nil {
+		return
 	}
 
 	agentAlerts.Alerts = append(agentAlerts.Alerts, notif.SignedAlert)
