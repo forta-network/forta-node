@@ -3,9 +3,9 @@
 # ECR_REGISTRY and GITHUB_HASH are replaced during code deploy
 region=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)
 aws ecr get-login-password --region $region | docker login --username AWS --password-stdin "ECR_REGISTRY"
-docker pull "ECR_REGISTRY/fortify-scanner:GITHUB_HASH"
-docker pull "ECR_REGISTRY/fortify-query:GITHUB_HASH"
-docker pull "ECR_REGISTRY/fortify-json-rpc:GITHUB_HASH"
+docker pull "ECR_REGISTRY/forta-scanner:GITHUB_HASH"
+docker pull "ECR_REGISTRY/forta-query:GITHUB_HASH"
+docker pull "ECR_REGISTRY/forta-json-rpc:GITHUB_HASH"
 
 instanceId=$(curl -s http://instance-data/latest/meta-data/instance-id)
 region=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)

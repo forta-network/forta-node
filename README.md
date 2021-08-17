@@ -1,7 +1,7 @@
-![Go](https://github.com/OpenZeppelin/fortify-node/workflows/Go/badge.svg)
-![Deploy Dev](https://github.com/OpenZeppelin/fortify-node/actions/workflows/deploy-dev.yml/badge.svg)
+![Go](https://github.com/forta-network/forta-node/workflows/Go/badge.svg)
+![Deploy Dev](https://github.com/forta-network/forta-node/actions/workflows/deploy-dev.yml/badge.svg)
 
-## fortify-node
+## forta-node
 
 #### Dependencies
 
@@ -27,7 +27,7 @@ $ make build
 #### Run Node
 
 ```shell
-$ ./fortify
+$ ./forta
 ```
 
 #### Stop Node

@@ -1,8 +1,8 @@
 .idea
 *.iml
 main
-fortify-node
-fortify
+forta-node
+forta
 !cmd/query
 !cmd/scanner
 *.pb.go
@@ -11,3 +11,4 @@ debug
 build
 .vscode
 config-local.yml
+config.yml

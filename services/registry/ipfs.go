@@ -1,7 +1,7 @@
 package registry
 
 import (
-	"OpenZeppelin/fortify-node/services/registry/regtypes"
+	"forta-network/forta-node/services/registry/regtypes"
 	"encoding/json"
 	"fmt"
 	"net/http"

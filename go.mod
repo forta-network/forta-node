@@ -1,4 +1,4 @@
-module OpenZeppelin/fortify-node
+module forta-network/forta-node
 
 go 1.16
 
@@ -16,7 +16,7 @@ require (
 	github.com/docker/docker v1.4.2-0.20180625184442-8e610b2b55bf
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-units v0.4.0 // indirect
-	github.com/ethereum/go-ethereum v1.10.6
+	github.com/ethereum/go-ethereum v1.10.7
 	github.com/go-kit/kit v0.9.0 // indirect
 	github.com/golang/glog v0.0.0-20210429001901-424d2337a529 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -27,6 +27,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/ipfs/go-cid v0.0.7
+	github.com/ipfs/go-ipfs-api v0.2.0
 	github.com/klauspost/compress v1.13.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.8 // indirect
 	github.com/kr/pretty v0.2.1 // indirect

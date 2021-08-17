@@ -1,11 +1,11 @@
 package scanner
 
 import (
-	"OpenZeppelin/fortify-node/clients"
-	"OpenZeppelin/fortify-node/domain"
-	"OpenZeppelin/fortify-node/protocol"
-	"OpenZeppelin/fortify-node/store"
-	"OpenZeppelin/fortify-node/utils"
+	"forta-network/forta-node/clients"
+	"forta-network/forta-node/domain"
+	"forta-network/forta-node/protocol"
+	"forta-network/forta-node/store"
+	"forta-network/forta-node/utils"
 
 	"context"
 	"fmt"
@@ -95,12 +95,28 @@ func (t *BlockAnalyzerService) Start() error {
 			}
 			log.Debugf(resStr)
 
+			rt := &clients.AgentRoundTrip{
+				EvalBlockRequest:  result.Request,
+				EvalBlockResponse: result.Response,
+			}
+
+			if len(result.Response.Findings) == 0 {
+				if err := t.cfg.AlertSender.NotifyWithoutAlert(
+					rt, result.Request.Event.Network.ChainId, result.Request.Event.BlockNumber,
+				); err != nil {
+					return err
+				}
+				continue
+			}
+
 			for _, f := range result.Response.Findings {
 				alert, err := t.findingToAlert(result, ts, f)
 				if err != nil {
 					return err
 				}
-				if err := t.cfg.AlertSender.SignAndNotify(alert); err != nil {
+				if err := t.cfg.AlertSender.SignAlertAndNotify(
+					rt, alert, result.Request.Event.Network.ChainId, result.Request.Event.BlockNumber,
+				); err != nil {
 					return err
 				}
 			}

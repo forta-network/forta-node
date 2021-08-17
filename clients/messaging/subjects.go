@@ -1,6 +1,8 @@
 package messaging
 
-import "OpenZeppelin/fortify-node/config"
+import (
+	"forta-network/forta-node/config"
+)
 
 // Message types
 const (

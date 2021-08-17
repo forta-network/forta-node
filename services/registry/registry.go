@@ -9,14 +9,14 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/semaphore"
 
-	"OpenZeppelin/fortify-node/clients"
-	"OpenZeppelin/fortify-node/clients/messaging"
-	"OpenZeppelin/fortify-node/config"
-	"OpenZeppelin/fortify-node/contracts"
-	"OpenZeppelin/fortify-node/ethereum"
-	"OpenZeppelin/fortify-node/services"
-	"OpenZeppelin/fortify-node/services/registry/regtypes"
-	"OpenZeppelin/fortify-node/utils"
+	"forta-network/forta-node/clients"
+	"forta-network/forta-node/clients/messaging"
+	"forta-network/forta-node/config"
+	"forta-network/forta-node/contracts"
+	"forta-network/forta-node/ethereum"
+	"forta-network/forta-node/services"
+	"forta-network/forta-node/services/registry/regtypes"
+	"forta-network/forta-node/utils"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -24,11 +24,11 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
-// RegistryService listens to the agent pool changes so the node can stay in sync.
+// RegistryService listens to the agent scanner list changes so the node can stay in sync.
 type RegistryService struct {
-	cfg       config.Config
-	poolID    common.Hash
-	msgClient clients.MessageClient
+	cfg            config.Config
+	scannerAddress common.Address
+	msgClient      clients.MessageClient
 
 	contract   ContractRegistryCaller
 	ipfsClient IPFSClient
@@ -42,9 +42,9 @@ type RegistryService struct {
 
 // ContractRegistryCaller calls the contract registry.
 type ContractRegistryCaller interface {
-	AgentLength(opts *bind.CallOpts, _poolId [32]byte) (*big.Int, error)
-	AgentAt(opts *bind.CallOpts, _poolId [32]byte, index *big.Int) ([32]byte, *big.Int, bool, string, bool, error)
-	GetPoolHash(opts *bind.CallOpts, _poolId [32]byte) ([32]byte, error)
+	AgentLength(opts *bind.CallOpts, scanner common.Address) (*big.Int, error)
+	AgentAt(opts *bind.CallOpts, scanner common.Address, index *big.Int) ([32]byte, *big.Int, bool, string, bool, error)
+	GetAgentListHash(opts *bind.CallOpts, scanner common.Address) ([32]byte, error)
 }
 
 // IPFSClient interacts with an IPFS Gateway.
@@ -58,7 +58,7 @@ type EthClient interface {
 }
 
 // New creates a new service.
-func New(cfg config.Config, msgClient clients.MessageClient) services.Service {
+func New(cfg config.Config, scannerAddress common.Address, msgClient clients.MessageClient) services.Service {
 	var ipfsURL string
 	if cfg.Registry.IPFSGateway != nil {
 		ipfsURL = *cfg.Registry.IPFSGateway
@@ -67,11 +67,11 @@ func New(cfg config.Config, msgClient clients.MessageClient) services.Service {
 	}
 
 	return &RegistryService{
-		cfg:        cfg,
-		poolID:     common.HexToHash(cfg.Registry.PoolID),
-		msgClient:  msgClient,
-		ipfsClient: &ipfsClient{ipfsURL},
-		done:       make(chan struct{}),
+		cfg:            cfg,
+		scannerAddress: scannerAddress,
+		msgClient:      msgClient,
+		ipfsClient:     &ipfsClient{ipfsURL},
+		done:           make(chan struct{}),
 	}
 }
 
@@ -92,7 +92,7 @@ func (rs *RegistryService) Start() error {
 	rs.ethClient = ethClient
 
 	// init registry contract
-	rs.contract, err = contracts.NewPoolRegistryCaller(common.HexToAddress(rs.cfg.Registry.ContractAddress), ethclient.NewClient(rpcClient))
+	rs.contract, err = contracts.NewScannerRegistryCaller(common.HexToAddress(rs.cfg.Registry.ContractAddress), ethclient.NewClient(rpcClient))
 	if err != nil {
 		return fmt.Errorf("failed to create the agent registry caller: %v", err)
 	}
@@ -119,10 +119,10 @@ func (rs *RegistryService) publishLatestAgents() error {
 	// only allow one executor at a time, even if slow
 	if rs.sem.TryAcquire(1) {
 		defer rs.sem.Release(1)
-		// opts is nil so we get the latest pool version
-		version, err := rs.contract.GetPoolHash(nil, rs.poolID)
+		// opts is nil so we get the latest scanner list version
+		version, err := rs.contract.GetAgentListHash(nil, rs.scannerAddress)
 		if err != nil {
-			return fmt.Errorf("failed to get the pool agents version: %v", err)
+			return fmt.Errorf("failed to get the scanner list agents version: %v", err)
 		}
 		versionStr := string(version[:])
 		// if versions change, then get the full list of agents
@@ -153,17 +153,17 @@ func (rs *RegistryService) getLatestAgents() ([]*config.AgentConfig, error) {
 		BlockNumber: num,
 	}
 
-	lengthBig, err := rs.contract.AgentLength(opts, rs.poolID)
+	lengthBig, err := rs.contract.AgentLength(opts, rs.scannerAddress)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get the pool agents length: %v", err)
+		return nil, fmt.Errorf("failed to get the scanner list agents length: %v", err)
 	}
-	log.Infof("registry: getLatestAgents(%s) = %s", rs.poolID.Hex(), lengthBig.Text(10))
+	log.Infof("registry: getLatestAgents(%s) = %s", rs.scannerAddress.Hex(), lengthBig.Text(10))
 	// TODO: If we are going to get 100s of agents, we probably need to batch the calls here.
 	length := int(lengthBig.Int64())
 	for i := 0; i < length; i++ {
-		agentID, _, _, agentRef, disabled, err := rs.contract.AgentAt(opts, rs.poolID, big.NewInt(int64(i)))
+		agentID, _, _, agentRef, disabled, err := rs.contract.AgentAt(opts, rs.scannerAddress, big.NewInt(int64(i)))
 		if err != nil {
-			return nil, fmt.Errorf("failed to get agent at index '%d' in pool '%s': %v", i, rs.poolID.String(), err)
+			return nil, fmt.Errorf("failed to get agent at index '%d' in scanner list '%s': %v", i, rs.scannerAddress.String(), err)
 		}
 		// if agent dev disables agent, this will prevent it from running
 		if !disabled {

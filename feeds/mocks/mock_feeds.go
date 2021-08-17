@@ -5,7 +5,7 @@
 package mock_feeds
 
 import (
-	domain "OpenZeppelin/fortify-node/domain"
+	domain "forta-network/forta-node/domain"
 	reflect "reflect"
 
 	types "github.com/ethereum/go-ethereum/core/types"

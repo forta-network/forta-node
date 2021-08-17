@@ -3,9 +3,9 @@ package containers
 import (
 	"fmt"
 
-	"OpenZeppelin/fortify-node/clients"
-	"OpenZeppelin/fortify-node/clients/messaging"
-	"OpenZeppelin/fortify-node/config"
+	"forta-network/forta-node/clients"
+	"forta-network/forta-node/clients/messaging"
+	"forta-network/forta-node/config"
 
 	log "github.com/sirupsen/logrus"
 )

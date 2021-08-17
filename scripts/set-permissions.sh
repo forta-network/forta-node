@@ -1,3 +1,3 @@
 #!/bin/bash
 
-chmod 755 /usr/local/bin/fortify
+chmod 755 /usr/local/bin/forta

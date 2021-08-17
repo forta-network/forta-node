@@ -1,14 +1,14 @@
 package agentpool
 
 import (
-	"OpenZeppelin/fortify-node/clients"
-	"OpenZeppelin/fortify-node/clients/messaging"
-	"OpenZeppelin/fortify-node/config"
-	"OpenZeppelin/fortify-node/protocol"
+	"forta-network/forta-node/clients"
+	"forta-network/forta-node/clients/messaging"
+	"forta-network/forta-node/config"
+	"forta-network/forta-node/protocol"
 	"testing"
 
-	mock_clients "OpenZeppelin/fortify-node/clients/mocks"
-	"OpenZeppelin/fortify-node/services/scanner"
+	mock_clients "forta-network/forta-node/clients/mocks"
+	"forta-network/forta-node/services/scanner"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"

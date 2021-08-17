@@ -9,11 +9,11 @@ import (
 	"github.com/dgraph-io/badger/v3"
 	"github.com/golang/protobuf/proto"
 
-	"OpenZeppelin/fortify-node/protocol"
+	"forta-network/forta-node/protocol"
 )
 
 //DBPath is a local location of badger db (/db is a mounted volume)
-const DBPath = "/db/fortify-alerts"
+const DBPath = "/db/forta-alerts"
 const AlertTimeFormat = time.RFC3339Nano
 
 type Operator string
@@ -253,7 +253,7 @@ func (s *BadgerAlertStore) AddAlert(a *protocol.SignedAlert) error {
 }
 
 func NewBadgerAlertStore() (*BadgerAlertStore, error) {
-	db, err := badger.Open(badger.DefaultOptions("/db/fortify-alerts"))
+	db, err := badger.Open(badger.DefaultOptions(DBPath))
 	if err != nil {
 		return nil, err
 	}

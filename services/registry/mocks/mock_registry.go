@@ -5,13 +5,14 @@
 package mock_registry
 
 import (
-	domain "OpenZeppelin/fortify-node/domain"
-	regtypes "OpenZeppelin/fortify-node/services/registry/regtypes"
+	domain "forta-network/forta-node/domain"
+	regtypes "forta-network/forta-node/services/registry/regtypes"
 	context "context"
 	big "math/big"
 	reflect "reflect"
 
 	bind "github.com/ethereum/go-ethereum/accounts/abi/bind"
+	common "github.com/ethereum/go-ethereum/common"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -39,9 +40,9 @@ func (m *MockContractRegistryCaller) EXPECT() *MockContractRegistryCallerMockRec
 }
 
 // AgentAt mocks base method.
-func (m *MockContractRegistryCaller) AgentAt(opts *bind.CallOpts, _poolId [32]byte, index *big.Int) ([32]byte, *big.Int, bool, string, bool, error) {
+func (m *MockContractRegistryCaller) AgentAt(opts *bind.CallOpts, scanner common.Address, index *big.Int) ([32]byte, *big.Int, bool, string, bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AgentAt", opts, _poolId, index)
+	ret := m.ctrl.Call(m, "AgentAt", opts, scanner, index)
 	ret0, _ := ret[0].([32]byte)
 	ret1, _ := ret[1].(*big.Int)
 	ret2, _ := ret[2].(bool)
@@ -52,39 +53,39 @@ func (m *MockContractRegistryCaller) AgentAt(opts *bind.CallOpts, _poolId [32]by
 }
 
 // AgentAt indicates an expected call of AgentAt.
-func (mr *MockContractRegistryCallerMockRecorder) AgentAt(opts, _poolId, index interface{}) *gomock.Call {
+func (mr *MockContractRegistryCallerMockRecorder) AgentAt(opts, scanner, index interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AgentAt", reflect.TypeOf((*MockContractRegistryCaller)(nil).AgentAt), opts, _poolId, index)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AgentAt", reflect.TypeOf((*MockContractRegistryCaller)(nil).AgentAt), opts, scanner, index)
 }
 
 // AgentLength mocks base method.
-func (m *MockContractRegistryCaller) AgentLength(opts *bind.CallOpts, _poolId [32]byte) (*big.Int, error) {
+func (m *MockContractRegistryCaller) AgentLength(opts *bind.CallOpts, scanner common.Address) (*big.Int, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AgentLength", opts, _poolId)
+	ret := m.ctrl.Call(m, "AgentLength", opts, scanner)
 	ret0, _ := ret[0].(*big.Int)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AgentLength indicates an expected call of AgentLength.
-func (mr *MockContractRegistryCallerMockRecorder) AgentLength(opts, _poolId interface{}) *gomock.Call {
+func (mr *MockContractRegistryCallerMockRecorder) AgentLength(opts, scanner interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AgentLength", reflect.TypeOf((*MockContractRegistryCaller)(nil).AgentLength), opts, _poolId)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AgentLength", reflect.TypeOf((*MockContractRegistryCaller)(nil).AgentLength), opts, scanner)
 }
 
-// GetPoolHash mocks base method.
-func (m *MockContractRegistryCaller) GetPoolHash(opts *bind.CallOpts, _poolId [32]byte) ([32]byte, error) {
+// GetAgentListHash mocks base method.
+func (m *MockContractRegistryCaller) GetAgentListHash(opts *bind.CallOpts, scanner common.Address) ([32]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPoolHash", opts, _poolId)
+	ret := m.ctrl.Call(m, "GetAgentListHash", opts, scanner)
 	ret0, _ := ret[0].([32]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetPoolHash indicates an expected call of GetPoolHash.
-func (mr *MockContractRegistryCallerMockRecorder) GetPoolHash(opts, _poolId interface{}) *gomock.Call {
+// GetAgentListHash indicates an expected call of GetAgentListHash.
+func (mr *MockContractRegistryCallerMockRecorder) GetAgentListHash(opts, scanner interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPoolHash", reflect.TypeOf((*MockContractRegistryCaller)(nil).GetPoolHash), opts, _poolId)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAgentListHash", reflect.TypeOf((*MockContractRegistryCaller)(nil).GetAgentListHash), opts, scanner)
 }
 
 // MockIPFSClient is a mock of IPFSClient interface.

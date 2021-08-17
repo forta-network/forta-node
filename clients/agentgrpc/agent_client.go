@@ -1,8 +1,8 @@
 package agentgrpc
 
 import (
-	"OpenZeppelin/fortify-node/config"
-	"OpenZeppelin/fortify-node/protocol"
+	"forta-network/forta-node/config"
+	"forta-network/forta-node/protocol"
 	"fmt"
 	"time"
 

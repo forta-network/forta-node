@@ -29,11 +29,11 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.PROD_DEPLOY_AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.PROD_DEPLOY_AWS_SECRET_KEY }}
-          aws-region: ${{ secrets.PROD_DEPLOY_AWS_REGION }}
+          aws-region: us-east-1
       - name: Make Containers
         run: |
           make build
-          chmod 755 fortify
+          chmod 755 forta
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
@@ -42,8 +42,8 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           GITHUB_HASH: ${{ github.sha }}
         run: |
-          sed -i "s/GITHUB_HASH/$GITHUB_HASH/g" config-fortify-prod.yml
-          sed -i "s/ECR_REGISTRY/$ECR_REGISTRY/g" config-fortify-prod.yml
+          sed -i "s/GITHUB_HASH/$GITHUB_HASH/g" config-prod.yml
+          sed -i "s/ECR_REGISTRY/$ECR_REGISTRY/g" config-prod.yml
           sed -i "s/GITHUB_HASH/$GITHUB_HASH/g" scripts/load-images.sh
           sed -i "s/ECR_REGISTRY/$ECR_REGISTRY/g" scripts/load-images.sh
       - name: Build and Tag ECR images
@@ -56,16 +56,16 @@ jobs:
           # be deployed to ECS.
 
           # scanner
-          docker tag openzeppelin/fortify-scanner:latest $ECR_REGISTRY/fortify-scanner:latest
-          docker tag openzeppelin/fortify-scanner:latest $ECR_REGISTRY/fortify-scanner:$IMAGE_TAG
+          docker tag forta-network/forta-scanner:latest $ECR_REGISTRY/forta-scanner:latest
+          docker tag forta-network/forta-scanner:latest $ECR_REGISTRY/forta-scanner:$IMAGE_TAG
 
           # query
-          docker tag openzeppelin/fortify-query:latest $ECR_REGISTRY/fortify-query:latest
-          docker tag openzeppelin/fortify-query:latest $ECR_REGISTRY/fortify-query:$IMAGE_TAG
+          docker tag forta-network/forta-query:latest $ECR_REGISTRY/forta-query:latest
+          docker tag forta-network/forta-query:latest $ECR_REGISTRY/forta-query:$IMAGE_TAG
 
           # json-rpc
-          docker tag openzeppelin/fortify-json-rpc:latest $ECR_REGISTRY/fortify-json-rpc:latest
-          docker tag openzeppelin/fortify-json-rpc:latest $ECR_REGISTRY/fortify-json-rpc:$IMAGE_TAG
+          docker tag forta-network/forta-json-rpc:latest $ECR_REGISTRY/forta-json-rpc:latest
+          docker tag forta-network/forta-json-rpc:latest $ECR_REGISTRY/forta-json-rpc:$IMAGE_TAG
 
           echo "::set-output name=image::$IMAGE_TAG"
       - name: Push to ECR
@@ -73,17 +73,17 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker push $ECR_REGISTRY/fortify-json-rpc:latest
-          docker push $ECR_REGISTRY/fortify-json-rpc:$IMAGE_TAG
-          docker push $ECR_REGISTRY/fortify-scanner:latest
-          docker push $ECR_REGISTRY/fortify-scanner:$IMAGE_TAG
-          docker push $ECR_REGISTRY/fortify-query:latest
-          docker push $ECR_REGISTRY/fortify-query:$IMAGE_TAG
+          docker push $ECR_REGISTRY/forta-json-rpc:latest
+          docker push $ECR_REGISTRY/forta-json-rpc:$IMAGE_TAG
+          docker push $ECR_REGISTRY/forta-scanner:latest
+          docker push $ECR_REGISTRY/forta-scanner:$IMAGE_TAG
+          docker push $ECR_REGISTRY/forta-query:latest
+          docker push $ECR_REGISTRY/forta-query:$IMAGE_TAG
       - name: Prepare Distribution
         run: |
           mkdir dist
-          cp fortify dist/
-          cp config-fortify-prod.yml dist/config-fortify.yml
+          cp forta dist/
+          cp config-prod.yml dist/config.yml
           cp appspec.yml dist/
           cp -R scripts dist/
       - name: Zip Distribution
@@ -100,9 +100,9 @@ jobs:
         with:
           aws_access_key: ${{ secrets.PROD_DEPLOY_AWS_ACCESS_KEY }}
           aws_secret_key: ${{ secrets.PROD_DEPLOY_AWS_SECRET_KEY }}
-          aws_region: ${{ secrets.PROD_DEPLOY_AWS_REGION }}
-          codedeploy_name: ${{ secrets.PROD_CODEDEPLOY_APP }}
-          codedeploy_group: ${{ secrets.PROD_CODEDEPLOY_GROUP }}
-          s3_bucket: ${{ secrets.PROD_DEPLOY_BUCKET }}
+          aws_region: us-east-1
+          codedeploy_name: prod-forta-node
+          codedeploy_group: prod-forta-deploy-group
+          s3_bucket: prod-forta-codedeploy
           s3_folder: prod
           directory: ./dist/

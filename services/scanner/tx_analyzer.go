@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"OpenZeppelin/fortify-node/clients"
-	"OpenZeppelin/fortify-node/domain"
-	"OpenZeppelin/fortify-node/protocol"
-	"OpenZeppelin/fortify-node/store"
-	"OpenZeppelin/fortify-node/utils"
+	"forta-network/forta-node/clients"
+	"forta-network/forta-node/domain"
+	"forta-network/forta-node/protocol"
+	"forta-network/forta-node/store"
+	"forta-network/forta-node/utils"
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/jsonpb"
@@ -101,7 +101,13 @@ func (t *TxAnalyzerService) Start() error {
 				if err != nil {
 					return err
 				}
-				if err := t.cfg.AlertSender.SignAndNotify(alert); err != nil {
+				if err := t.cfg.AlertSender.SignAlertAndNotify(
+					&clients.AgentRoundTrip{
+						EvalTxRequest:  result.Request,
+						EvalTxResponse: result.Response,
+					},
+					alert, result.Request.Event.Network.ChainId, result.Request.Event.Block.BlockNumber,
+				); err != nil {
 					return err
 				}
 			}

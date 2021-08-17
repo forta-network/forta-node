@@ -7,12 +7,12 @@ import (
 
 	"golang.org/x/sync/semaphore"
 
-	"OpenZeppelin/fortify-node/clients/messaging"
-	mock_clients "OpenZeppelin/fortify-node/clients/mocks"
-	"OpenZeppelin/fortify-node/config"
-	"OpenZeppelin/fortify-node/domain"
-	mock_registry "OpenZeppelin/fortify-node/services/registry/mocks"
-	"OpenZeppelin/fortify-node/services/registry/regtypes"
+	"forta-network/forta-node/clients/messaging"
+	mock_clients "forta-network/forta-node/clients/mocks"
+	"forta-network/forta-node/config"
+	"forta-network/forta-node/domain"
+	mock_registry "forta-network/forta-node/services/registry/mocks"
+	"forta-network/forta-node/services/registry/regtypes"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/mock/gomock"
@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	testPoolIDStr         = "0x1000000000000000000000000000000000000000000000000000000000000000"
+	testScannerAddressStr = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"
 	testAgentIDStr        = "0x2000000000000000000000000000000000000000000000000000000000000000"
 	testAgentRef          = "QmWacxPov5FVCyvnpXroDJ76urakzN4ckpFhhRzpsAkRek"
 	testImageRef          = "bafybeide7cspdmxqjcpa3qvrayvfpiix2it4v6mjejjc22q72zbq7rm4re@sha256:cdd4ddccf5e9c740eb4144bcc68e3ea3a056789ec7453e94a6416dcfc80937a4"
@@ -30,7 +30,7 @@ const (
 )
 
 var (
-	testPoolID         = common.HexToHash(testPoolIDStr)
+	testScannerAddress = common.HexToAddress(testScannerAddressStr)
 	testAgentID        = common.HexToHash(testAgentIDStr)
 	testAgentFile      = &regtypes.AgentFile{}
 	testVersion1       = [32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
@@ -67,13 +67,13 @@ func (s *Suite) SetupTest() {
 	s.ethClient = mock_registry.NewMockEthClient(gomock.NewController(s.T()))
 	s.msgClient = mock_clients.NewMockMessageClient(gomock.NewController(s.T()))
 	s.service = &RegistryService{
-		poolID:     testPoolID,
-		msgClient:  s.msgClient,
-		contract:   s.contract,
-		ipfsClient: s.ipfsClient,
-		ethClient:  s.ethClient,
-		done:       make(chan struct{}),
-		sem:        semaphore.NewWeighted(1),
+		scannerAddress: testScannerAddress,
+		msgClient:      s.msgClient,
+		contract:       s.contract,
+		ipfsClient:     s.ipfsClient,
+		ethClient:      s.ethClient,
+		done:           make(chan struct{}),
+		sem:            semaphore.NewWeighted(1),
 	}
 	s.service.cfg.Registry.ContainerRegistry = testContainerRegistry
 }
@@ -103,15 +103,11 @@ func (ac agentConfigs) String() string {
 	return fmt.Sprintf("%+v", ([]*config.AgentConfig)(ac))
 }
 
-func eqBytes(h common.Hash) gomock.Matcher {
-	return gomock.Eq(([32]byte)(h))
-}
-
 func (s *Suite) TestDifferentVersion() {
 	// Given that the last known version is 1
 	s.service.version = string(testVersion1[:])
 	// When the last version is returned as 2 at the time of checking
-	s.contract.EXPECT().GetPoolHash(nil, eqBytes(s.service.poolID)).Return(testVersion2, nil)
+	s.contract.EXPECT().GetAgentListHash(nil, s.service.scannerAddress).Return(testVersion2, nil)
 	// Then
 	s.shouldUpdateAgents()
 
@@ -120,8 +116,8 @@ func (s *Suite) TestDifferentVersion() {
 
 func (s *Suite) shouldUpdateAgents() {
 	s.ethClient.EXPECT().BlockByNumber(gomock.Any(), gomock.Any()).Return(&domain.Block{Number: "0x1"}, nil)
-	s.contract.EXPECT().AgentLength(gomock.Any(), eqBytes(testPoolID)).Return(testAgentLengthBig, nil)
-	s.contract.EXPECT().AgentAt(gomock.Any(), eqBytes(testPoolID), big.NewInt(testAgentLength-1)).
+	s.contract.EXPECT().AgentLength(gomock.Any(), testScannerAddress).Return(testAgentLengthBig, nil)
+	s.contract.EXPECT().AgentAt(gomock.Any(), testScannerAddress, big.NewInt(testAgentLength-1)).
 		Return(testAgentID, big.NewInt(0), false, testAgentRef, false, nil)
 	s.ipfsClient.EXPECT().GetAgentFile(testAgentRef).Return(testAgentFile, nil)
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, (agentConfigs)([]*config.AgentConfig{
@@ -136,7 +132,7 @@ func (s *Suite) TestFirstTime() {
 	// Given that there is no last known version
 	s.service.version = ""
 	// When the last version is returned as anything
-	s.contract.EXPECT().GetPoolHash(nil, eqBytes(s.service.poolID)).Return(testVersion2, nil)
+	s.contract.EXPECT().GetAgentListHash(nil, s.service.scannerAddress).Return(testVersion2, nil)
 	// Then
 	s.shouldUpdateAgents()
 
@@ -147,7 +143,7 @@ func (s *Suite) TestSameVersion() {
 	// Given that the last known version is 1
 	s.service.version = string(testVersion1[:])
 	// When the last version is returned as the same
-	s.contract.EXPECT().GetPoolHash(nil, eqBytes(s.service.poolID)).Return(testVersion1, nil)
+	s.contract.EXPECT().GetAgentListHash(nil, s.service.scannerAddress).Return(testVersion1, nil)
 	// Then it should silently skip
 
 	s.NoError(s.service.publishLatestAgents())
