@@ -94,7 +94,7 @@ func (al *AlertListener) publishNextBatch() error {
 	if err = json.NewEncoder(&buf).Encode(batch); err != nil {
 		return fmt.Errorf("failed to encode the signed alert: %v", err)
 	}
-	log.Infof("new alert batch: %s", string(buf.Bytes()))
+	log.Debugf("alert payload: %s", string(buf.Bytes()))
 
 	// if no alerts, and skipEmpty is true, then save with blank txHash
 	if al.skipEmpty && batch.Data.AlertCount == uint32(0) {
@@ -107,7 +107,7 @@ func (al *AlertListener) publishNextBatch() error {
 	if err != nil {
 		return fmt.Errorf("failed to store alert data to ipfs: %v", err)
 	}
-	log.Infof("stored the batch to ipfs: %s", cid)
+	log.Infof("alert batch: blockStart=%d, blockEnd=%d, alertCount=%d, maxSeverity=%s, ref=%s", batch.Data.BlockStart, batch.Data.BlockEnd, batch.Data.AlertCount, batch.Data.MaxSeverity.String(), cid)
 
 	tx, err := al.contract.AddAlertBatch(
 		big.NewInt(0).SetUint64(batch.Data.ChainId),
