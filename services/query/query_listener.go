@@ -83,6 +83,7 @@ func (al *AlertListener) Notify(ctx context.Context, req *protocol.NotifyRequest
 
 func (al *AlertListener) publishNextBatch() error {
 	batch := al.getLatestBatch()
+	al.storeBatchWithTxHash(batch.Data, "")
 
 	signature, err := security.SignProtoMessage(al.cfg.Key, (*protocol.SignedAlertBatch)(batch))
 	if err != nil {
@@ -99,7 +100,6 @@ func (al *AlertListener) publishNextBatch() error {
 	// if no alerts, and skipEmpty is true, then save with blank txHash
 	if al.skipEmpty && batch.Data.AlertCount == uint32(0) {
 		log.Info("skipping batch, because there are no alerts and skipEmpty is enabled")
-		al.storeBatchWithTxHash(batch.Data, "")
 		return nil
 	}
 
