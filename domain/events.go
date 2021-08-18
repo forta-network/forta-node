@@ -42,6 +42,10 @@ func strArr(vals []*string) []string {
 	return result
 }
 
+func strPtr(val string) *string {
+	return &val
+}
+
 func (t *BlockEvent) ToMessage() (*protocol.BlockEvent, error) {
 	evtType := protocol.BlockEvent_BLOCK
 	if t.EventType == "reorg" {
@@ -134,6 +138,14 @@ func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 				log.Errorf("JSON: %s", string(traceJson))
 				return nil, err
 			}
+			// lowercase addresses
+			if pTrace.Action != nil {
+				pTrace.Action.To = strings.ToLower(pTrace.Action.To)
+				pTrace.Action.From = strings.ToLower(pTrace.Action.From)
+				pTrace.Action.RefundAddress = strings.ToLower(pTrace.Action.RefundAddress)
+				pTrace.Action.Address = strings.ToLower(pTrace.Action.Address)
+			}
+
 			traces = append(traces, &pTrace)
 		}
 	}
@@ -153,6 +165,10 @@ func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 			log.Errorf("JSON: %s", string(txJson))
 			return nil, err
 		}
+
+		// lowercase to/from
+		tx.To = strings.ToLower(tx.To)
+		tx.From = strings.ToLower(tx.From)
 	}
 
 	// convert receipt domain model to proto
@@ -170,8 +186,10 @@ func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 			return nil, err
 		}
 
+		receipt.ContractAddress = strings.ToLower(receipt.ContractAddress)
 		safeAddStrValueToMap(addresses, receipt.ContractAddress)
 		for _, l := range receipt.Logs {
+			l.Address = strings.ToLower(l.Address)
 			safeAddStrValueToMap(addresses, l.Address)
 		}
 	}
