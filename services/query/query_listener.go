@@ -99,7 +99,7 @@ func (al *AlertListener) publishNextBatch() error {
 
 	al.storeBatchWithTxHash(batch.Data, "")
 	if al.skipPublish {
-		log.Infof("alert batch: blockStart=%d, blockEnd=%d, alertCount=%d, maxSeverity=%s, ref=%s", batch.Data.BlockStart, batch.Data.BlockEnd, batch.Data.AlertCount, batch.Data.MaxSeverity.String())
+		log.Infof("alert batch: blockStart=%d, blockEnd=%d, alertCount=%d, maxSeverity=%s", batch.Data.BlockStart, batch.Data.BlockEnd, batch.Data.AlertCount, batch.Data.MaxSeverity.String())
 		log.Info("skipping batch, because skipPublish is enabled")
 		return nil
 	}
