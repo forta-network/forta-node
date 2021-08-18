@@ -139,10 +139,12 @@ func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 				return nil, err
 			}
 			// lowercase addresses
-			pTrace.Action.To = strings.ToLower(pTrace.Action.To)
-			pTrace.Action.From = strings.ToLower(pTrace.Action.From)
-			pTrace.Action.RefundAddress = strings.ToLower(pTrace.Action.RefundAddress)
-			pTrace.Action.Address = strings.ToLower(pTrace.Action.Address)
+			if pTrace.Action != nil {
+				pTrace.Action.To = strings.ToLower(pTrace.Action.To)
+				pTrace.Action.From = strings.ToLower(pTrace.Action.From)
+				pTrace.Action.RefundAddress = strings.ToLower(pTrace.Action.RefundAddress)
+				pTrace.Action.Address = strings.ToLower(pTrace.Action.Address)
+			}
 
 			traces = append(traces, &pTrace)
 		}
