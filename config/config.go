@@ -119,6 +119,7 @@ type BatchConfig struct {
 }
 
 type PublisherConfig struct {
+	SkipPublish     bool           `yaml:"skipPublish" json:"skipPublish"`
 	Ethereum        EthereumConfig `yaml:"ethereum" json:"ethereum"`
 	ContractAddress string         `yaml:"contractAddress" json:"contractAddress"`
 	IPFS            struct {

@@ -47,6 +47,7 @@ type AlertListener struct {
 
 	port          int
 	skipEmpty     bool
+	skipPublish   bool
 	batchInterval time.Duration
 	batchLimit    int
 	latestBlock   uint64
@@ -96,10 +97,16 @@ func (al *AlertListener) publishNextBatch() error {
 	}
 	log.Debugf("alert payload: %s", string(buf.Bytes()))
 
+	al.storeBatchWithTxHash(batch.Data, "")
+	if al.skipPublish {
+		log.Infof("alert batch: blockStart=%d, blockEnd=%d, alertCount=%d, maxSeverity=%s", batch.Data.BlockStart, batch.Data.BlockEnd, batch.Data.AlertCount, batch.Data.MaxSeverity.String())
+		log.Info("skipping batch, because skipPublish is enabled")
+		return nil
+	}
+
 	// if no alerts, and skipEmpty is true, then save with blank txHash
 	if al.skipEmpty && batch.Data.AlertCount == uint32(0) {
 		log.Info("skipping batch, because there are no alerts and skipEmpty is enabled")
-		al.storeBatchWithTxHash(batch.Data, "")
 		return nil
 	}
 
@@ -407,6 +414,7 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertList
 
 		port:          cfg.Port,
 		skipEmpty:     cfg.PublisherConfig.Batch.SkipEmpty,
+		skipPublish:   cfg.PublisherConfig.SkipPublish,
 		batchInterval: batchInterval,
 		batchLimit:    batchLimit,
 		latestBlock:   latestBlock,
