@@ -18,7 +18,7 @@ scanner:
   ethereum:
     jsonRpcUrl: "https://cloudflare-eth.com"
 
-json-rpc-proxy:
+jsonRpcProxy:
   jsonRpcImage: "ECR_REGISTRY/forta-json-rpc:GITHUB_HASH"
   ethereum:
     jsonRpcUrl: "https://cloudflare-eth.com"

@@ -68,27 +68,27 @@ type DBConfig struct {
 
 type EthereumConfig struct {
 	JsonRpcUrl   string            `yaml:"jsonRpcUrl" json:"jsonRpcUrl" validate:"omitempty,url"`
-	WebsocketUrl string            `yaml:"websocketUrl" json:"websocketUrl" validate:"required_without=jsonRpcUrl,url"`
+	WebsocketUrl string            `yaml:"websocketUrl" json:"websocketUrl" validate:"required_without=JsonRpcUrl"`
 	Headers      map[string]string `yaml:"headers" json:"headers"`
 }
 
 type QueryConfig struct {
 	QueryImage string          `yaml:"queryImage" json:"queryImage"`
-	Port       int             `yaml:"port" json:"port" validate:"number,max=65535"`
+	Port       int             `yaml:"port" json:"port" validate:"max=65535"`
 	DB         DBConfig        `yaml:"db" json:"db"`
 	PublishTo  PublisherConfig `yaml:"publishTo" json:"publishTo"`
 }
 type ScannerConfig struct {
-	ChainID      int            `yaml:"chainId" json:"chainId" validate:"number"`
+	ChainID      int            `yaml:"chainId" json:"chainId"`
 	ScannerImage string         `yaml:"scannerImage" json:"scannerImage"`
-	StartBlock   int            `yaml:"startBlock" json:"startBlock" validate:"omitempty,number"`
-	EndBlock     int            `yaml:"endBlock" json:"endBlock" validate:"omitempty,number"`
+	StartBlock   int            `yaml:"startBlock" json:"startBlock"`
+	EndBlock     int            `yaml:"endBlock" json:"endBlock"`
 	Ethereum     EthereumConfig `yaml:"ethereum" json:"ethereum"`
 }
 
 type TraceConfig struct {
 	Ethereum EthereumConfig `yaml:"ethereum" json:"ethereum"`
-	Enabled  bool           `yaml:"enabled" json:"enabled" validate:"omitempty,boolean"`
+	Enabled  bool           `yaml:"enabled" json:"enabled"`
 }
 
 type JsonRpcProxyConfig struct {
@@ -99,34 +99,36 @@ type JsonRpcProxyConfig struct {
 type LogConfig struct {
 	Level       string `yaml:"level" json:"level"`
 	MaxLogSize  string `yaml:"maxLogSize" json:"maxLogSize"`
-	MaxLogFiles int    `yaml:"maxLogFiles" json:"maxLogFiles" validate:"omitempty,number"`
+	MaxLogFiles int    `yaml:"maxLogFiles" json:"maxLogFiles"`
 }
 
 type RegistryConfig struct {
 	Ethereum          EthereumConfig `yaml:"ethereum" json:"ethereum"`
-	IPFSGateway       *string        `yaml:"ipfsGateway" json:"ipfs,omitempty" validate:"omitempty,url"`
+	IPFSGateway       *string        `yaml:"ipfsGateway" json:"ipfsGateway,omitempty" validate:"omitempty,url"`
 	ContractAddress   string         `yaml:"contractAddress" json:"contractAddress" validate:"eth_addr"`
 	ContainerRegistry string         `yaml:"containerRegistry" json:"containerRegistry" validate:"hostname"`
 	Username          string         `yaml:"username" json:"username"`
 	Password          string         `yaml:"password" json:"password"`
 }
 
+type IPFSConfig struct {
+	GatewayURL string `yaml:"gatewayUrl" json:"gatewayUrl" validate:"url"`
+	Username   string `yaml:"username" json:"username"`
+	Password   string `yaml:"password" json:"password"`
+}
+
 type PublisherConfig struct {
 	SkipPublish     bool           `yaml:"skipPublish" json:"skipPublish"`
-	Ethereum        EthereumConfig `yaml:"ethereum" json:"ethereum"  validate:"dive,required_unless=skipPublish"`
-	ContractAddress string         `yaml:"contractAddress" json:"contractAddress" validate:"eth_addr"`
-	IPFS            struct {
-		GatewayURL string `yaml:"gatewayUrl" json:"gatewayUrl" validate:"required_unless=skipPublish,url"`
-		Username   string `yaml:"username" json:"username"`
-		Password   string `yaml:"password" json:"password"`
-	} `yaml:"ipfs" json:"ipfs"`
-	Batch BatchConfig `yaml:"batch" json:"batch"`
+	Ethereum        EthereumConfig `yaml:"ethereum" json:"ethereum"  validate:"required_unless=SkipPublish true"`
+	ContractAddress string         `yaml:"contractAddress" json:"contractAddress" validate:"required_unless=SkipPublish true,omitempty,eth_addr"`
+	IPFS            *IPFSConfig    `yaml:"ipfs" json:"ipfs" validate:"required_unless=SkipPublish true"`
+	Batch           BatchConfig    `yaml:"batch" json:"batch"`
 }
 
 type BatchConfig struct {
-	SkipEmpty       bool `yaml:"skipEmpty" json:"skipEmpty" validate:"omitempty,boolean"`
-	IntervalSeconds *int `yaml:"intervalSeconds" json:"intervalSeconds" validate:"omitempty,number"`
-	MaxAlerts       *int `yaml:"maxAlerts" json:"maxAlerts" validate:"omitempty,number"`
+	SkipEmpty       bool `yaml:"skipEmpty" json:"skipEmpty"`
+	IntervalSeconds *int `yaml:"intervalSeconds" json:"intervalSeconds"`
+	MaxAlerts       *int `yaml:"maxAlerts" json:"maxAlerts"`
 }
 
 type Config struct {
@@ -140,7 +142,7 @@ type Config struct {
 	Scanner      ScannerConfig      `yaml:"scanner" json:"scanner"`
 	Query        QueryConfig        `yaml:"query" json:"query"`
 	Trace        TraceConfig        `yaml:"trace" json:"trace"`
-	JsonRpcProxy JsonRpcProxyConfig `yaml:"json-rpc-proxy" json:"jsonRpcProxy"`
+	JsonRpcProxy JsonRpcProxyConfig `yaml:"jsonRpcProxy" json:"jsonRpcProxy"`
 	Log          LogConfig          `yaml:"log" json:"log"`
 }
 

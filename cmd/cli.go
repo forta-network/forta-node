@@ -4,13 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"forta-network/forta-node/config"
-	"log"
 	"os"
 	"path"
 	"reflect"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -50,13 +50,14 @@ publishes alerts about them`,
 
 // Execute executes the root command.
 func Execute() error {
-	cmdForta.AddCommand(cmdFortaInit)
-	cmdForta.AddCommand(cmdFortaRun)
 	return cmdForta.Execute()
 }
 
 func init() {
 	cobra.OnInitialize(initConfig)
+
+	cmdForta.AddCommand(cmdFortaInit)
+	cmdForta.AddCommand(cmdFortaRun)
 
 	// Global (persistent) flags
 
@@ -69,8 +70,13 @@ func init() {
 	cmdForta.PersistentFlags().Bool("production", false, "production mode")
 	viper.BindPFlag(keyFortaProduction, cmdForta.PersistentFlags().Lookup("production"))
 
-	cmdForta.Flags().String("passphrase", "", "passphrase to decrypt the private key")
+	cmdForta.PersistentFlags().String("passphrase", "", "passphrase to decrypt the private key")
 	viper.BindPFlag(keyFortaPassphrase, cmdForta.PersistentFlags().Lookup("passphrase"))
+
+	// forta init
+
+	cmdFortaInit.Flags().String("passphrase", "", "passphrase to decrypt the private key")
+	cmdFortaInit.MarkFlagRequired("passphrase")
 }
 
 func initConfig() {
@@ -98,12 +104,15 @@ func initConfig() {
 	cfg.Production = viper.GetBool(keyFortaProduction)
 	cfg.Passphrase = viper.GetString(keyFortaPassphrase)
 
+	if err := viper.ReadInConfig(); err != nil {
+		log.Errorf("failed to read the config file: %v", err)
+	}
 	if err := viper.Unmarshal(&cfg); err != nil {
-		panic(fmt.Errorf("failed to read the config file: %v", err))
+		log.Errorf("failed to unmarshal the config file: %v", err)
 	}
 
 	if err := config.InitLogLevel(cfg); err != nil {
-		log.Fatalf("failed to init log level: %v", err)
+		log.Errorf("failed to init log level: %v", err)
 	}
 }
 
@@ -123,7 +132,7 @@ func validateConfig() error {
 		validationErrs := err.(validator.ValidationErrors)
 		fmt.Println("The config file has invalid or missing fields:")
 		for _, validationErr := range validationErrs {
-			fmt.Println("  -", validationErr.Namespace()[7:])
+			fmt.Printf("  - %s\n", validationErr.Namespace()[7:])
 		}
 		return errors.New("failed to validate the config file")
 	}

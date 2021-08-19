@@ -78,7 +78,7 @@ scanner:
     websocketUrl: <fill in this and remove other>
     jsonRpcUrl: <fill in this and remove other>
 
-json-rpc-proxy:
+jsonRpcProxy:
   jsonRpcImage: forta-network/forta-json-rpc
   ethereum:
     websocketUrl: <fill in this and remove other>
