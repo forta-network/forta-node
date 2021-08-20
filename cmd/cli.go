@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	keyFortaConfigDir  = "forta_config_dir"
+	keyFortaDir        = "forta_dir"
 	keyFortaConfigFile = "forta_config_file"
 	keyFortaPassphrase = "forta_passphrase"
 	keyFortaProduction = "forta_production"
@@ -63,34 +63,34 @@ func init() {
 
 	// Global (persistent) flags
 
-	cmdForta.PersistentFlags().String("dir", "", "Forta config dir (default is $HOME/.forta)")
-	viper.BindPFlag(keyFortaConfigDir, cmdForta.PersistentFlags().Lookup("dir"))
+	cmdForta.PersistentFlags().String("dir", "", "Forta dir (default is $HOME/.forta) (overrides $FORTA_DIR)")
+	viper.BindPFlag(keyFortaDir, cmdForta.PersistentFlags().Lookup("dir"))
 
-	cmdForta.PersistentFlags().String("config", "", "config file (default is $HOME/.forta/config.yml)")
+	cmdForta.PersistentFlags().String("config", "", "config file (default is $HOME/.forta/config.yml) (overrides $FORTA_CONFIG_FILE)")
 	viper.BindPFlag(keyFortaConfigFile, cmdForta.PersistentFlags().Lookup("config"))
 
-	cmdForta.PersistentFlags().Bool("production", false, "production mode")
+	cmdForta.PersistentFlags().Bool("production", false, "production mode (overrides $FORTA_PRODUCTION)")
 	viper.BindPFlag(keyFortaProduction, cmdForta.PersistentFlags().Lookup("production"))
 
-	cmdForta.PersistentFlags().String("passphrase", "", "passphrase to decrypt the private key")
+	cmdForta.PersistentFlags().String("passphrase", "", "passphrase to decrypt the private key (overrides $FORTA_PASSPHRASE)")
 	viper.BindPFlag(keyFortaPassphrase, cmdForta.PersistentFlags().Lookup("passphrase"))
 
 	// forta init
 
-	cmdFortaInit.Flags().String("passphrase", "", "passphrase to decrypt the private key")
+	cmdFortaInit.Flags().String("passphrase", "", "passphrase to decrypt the private key (overrides $FORTA_PASSPHRASE)")
 	cmdFortaInit.MarkFlagRequired("passphrase")
 }
 
 func initConfig() {
 	viper.SetConfigType("yaml")
 
-	viper.BindEnv(keyFortaConfigDir)
+	viper.BindEnv(keyFortaDir)
 	viper.BindEnv(keyFortaConfigFile)
 	viper.BindEnv(keyFortaPassphrase)
 	viper.BindEnv(keyFortaProduction)
 	viper.AutomaticEnv()
 
-	if cfg.FortaDir = viper.GetString(keyFortaConfigDir); cfg.FortaDir == "" {
+	if cfg.FortaDir = viper.GetString(keyFortaDir); cfg.FortaDir == "" {
 		home, err := os.UserHomeDir()
 		cobra.CheckErr(err)
 		cfg.FortaDir = path.Join(home, ".forta")
