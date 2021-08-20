@@ -63,7 +63,7 @@ func (ac AgentConfig) GrpcPort() string {
 }
 
 type DBConfig struct {
-	Path string `yaml:"path" json:"path" validate:"dir"`
+	Path string `yaml:"path" json:"path"`
 }
 
 type EthereumConfig struct {
@@ -144,22 +144,6 @@ type Config struct {
 	Trace        TraceConfig        `yaml:"trace" json:"trace"`
 	JsonRpcProxy JsonRpcProxyConfig `yaml:"jsonRpcProxy" json:"jsonRpcProxy"`
 	Log          LogConfig          `yaml:"log" json:"log"`
-}
-
-func GetCfgDir() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%s/.forta", home), nil
-}
-
-func GetKeyStorePath() (string, error) {
-	cfgDir, err := GetCfgDir()
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%s/.keys", cfgDir), nil
 }
 
 func ParseBigInt(num int) *big.Int {

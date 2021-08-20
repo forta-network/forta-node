@@ -107,8 +107,6 @@ query:
     ethereum:
       websocketUrl: <fill in this and remove other>
       jsonRpcUrl: <fill in this and remove other>
-  db:
-    path: "/tmp/forta-alerts"
 
 log:
   level: info

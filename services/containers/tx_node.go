@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -67,9 +68,10 @@ func (t *TxNodeService) start() error {
 	}
 	cfgJson := string(cfgBytes)
 
-	keyPath, err := config.GetKeyStorePath()
-	if err != nil {
-		return err
+	keyPath := t.config.Config.KeyDirPath
+	alertsDBPath := t.config.Config.Query.DB.Path
+	if len(alertsDBPath) == 0 {
+		alertsDBPath = path.Join(t.config.Config.FortaDir, "alertsdb")
 	}
 
 	if err := t.client.Prune(t.ctx); err != nil {
@@ -105,8 +107,8 @@ func (t *TxNodeService) start() error {
 			fmt.Sprintf("%d", t.config.Config.Query.Port): "80",
 		},
 		Volumes: map[string]string{
-			t.config.Config.Query.DB.Path: store.DBPath,
-			keyPath:                       "/.keys",
+			alertsDBPath: store.DBPath,
+			keyPath:      "/.keys",
 		},
 		Files: map[string][]byte{
 			"passphrase": []byte(t.config.Passphrase),
