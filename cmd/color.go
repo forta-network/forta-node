@@ -9,3 +9,7 @@ func yellowBold(str string, args ...interface{}) {
 func greenBold(str string, args ...interface{}) {
 	color.New(color.Bold, color.FgGreen).Printf(str, args...)
 }
+
+func redBold(str string, args ...interface{}) {
+	color.New(color.Bold, color.FgRed).Printf(str, args...)
+}
