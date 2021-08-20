@@ -23,7 +23,12 @@ const (
 )
 
 var (
-	cfg      config.Config
+	cfg config.Config
+
+	parsedArgs struct {
+		PrivateKeyFilePath string
+	}
+
 	cmdForta = &cobra.Command{
 		Use:   "forta",
 		Short: "Forta node command line interface",
@@ -44,7 +49,27 @@ publishes alerts about them`,
 	cmdFortaRun = &cobra.Command{
 		Use:   "run",
 		Short: "launch the node",
-		RunE:  withValidConfig(handleFortaRun),
+		RunE:  withInitialized(withValidConfig(handleFortaRun)),
+	}
+
+	cmdFortaAccount = &cobra.Command{
+		Use:   "account",
+		Short: "account management",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cmd.Help()
+		},
+	}
+
+	cmdFortaAccountAddress = &cobra.Command{
+		Use:   "address",
+		Short: "show the scanner address",
+		RunE:  withInitialized(handleFortaAccountAddress),
+	}
+
+	cmdFortaAccountImport = &cobra.Command{
+		Use:   "import",
+		Short: "import new scanner account (removes the old one)",
+		RunE:  withInitialized(handleFortaAccountImport),
 	}
 )
 
@@ -58,6 +83,10 @@ func init() {
 
 	cmdForta.AddCommand(cmdFortaInit)
 	cmdForta.AddCommand(cmdFortaRun)
+
+	cmdForta.AddCommand(cmdFortaAccount)
+	cmdFortaAccount.AddCommand(cmdFortaAccountAddress)
+	cmdFortaAccount.AddCommand(cmdFortaAccountImport)
 
 	// Global (persistent) flags
 
@@ -73,10 +102,10 @@ func init() {
 	cmdForta.PersistentFlags().String("passphrase", "", "passphrase to decrypt the private key (overrides $FORTA_PASSPHRASE)")
 	viper.BindPFlag(keyFortaPassphrase, cmdForta.PersistentFlags().Lookup("passphrase"))
 
-	// forta init
+	// forta account import
 
-	cmdFortaInit.Flags().String("passphrase", "", "passphrase to decrypt the private key (overrides $FORTA_PASSPHRASE)")
-	cmdFortaInit.MarkFlagRequired("passphrase")
+	cmdFortaAccountImport.Flags().String("file", "", "path to a file that contains a private key hex")
+	cmdFortaAccountImport.MarkFlagRequired("file")
 }
 
 func initConfig() {
@@ -134,7 +163,7 @@ func validateConfig() error {
 		for _, validationErr := range validationErrs {
 			fmt.Printf("  - %s\n", validationErr.Namespace()[7:])
 		}
-		return errors.New("failed to validate the config file")
+		return errors.New("invalid config file")
 	}
 
 	return nil
@@ -142,12 +171,18 @@ func validateConfig() error {
 
 func withValidConfig(handler func(*cobra.Command, []string) error) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		if !isInitialized() {
-			yellowBold("Please make sure you do 'forta init' first and check your configuration at %s\n", cfg.ConfigPath)
-			return fmt.Errorf("not initialized")
-		}
 		if err := validateConfig(); err != nil {
 			return err
+		}
+		return handler(cmd, args)
+	}
+}
+
+func withInitialized(handler func(*cobra.Command, []string) error) func(*cobra.Command, []string) error {
+	return func(cmd *cobra.Command, args []string) error {
+		if !isInitialized() {
+			yellowBold("Please make sure you do 'forta init' first and check your configuration at %s\n", cfg.ConfigPath)
+			return errors.New("not initialized")
 		}
 		return handler(cmd, args)
 	}
