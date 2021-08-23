@@ -40,13 +40,13 @@ func initExecID(ctx context.Context) context.Context {
 func ContainerMain(name string, getServices func(ctx context.Context, cfg config.Config) ([]Service, error)) {
 	cfg, err := config.GetConfigFromEnv()
 	if err != nil {
-		log.Error("could not initialize log level", err)
+		log.Errorf("could not initialize log level: %v", err)
 		return
 	}
 
 	lvl, err := log.ParseLevel(cfg.Log.Level)
 	if err != nil {
-		log.Error("could not initialize log level", err)
+		log.Errorf("could not initialize log level: %v", err)
 		return
 	}
 	log.SetLevel(lvl)
@@ -57,7 +57,7 @@ func ContainerMain(name string, getServices func(ctx context.Context, cfg config
 
 	serviceList, err := getServices(ctx, cfg)
 	if err != nil {
-		log.Error("could not initialize services: ", err)
+		log.Errorf("could not initialize services: %v", err)
 		return
 	}
 

@@ -90,13 +90,15 @@ func initAlertSender(ctx context.Context, key *keystore.Key) (clients.AlertSende
 }
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
+	cfg.LocalAgentsPath = config.DefaultContainerLocalAgentsFilePath
+
 	natsHost := os.Getenv(config.EnvNatsHost)
 	if natsHost == "" {
 		return nil, fmt.Errorf("%s is a required env var", config.EnvNatsHost)
 	}
 	msgClient := messaging.NewClient("scanner", fmt.Sprintf("%s:%s", natsHost, config.DefaultNatsPort))
 
-	key, err := security.LoadKey()
+	key, err := security.LoadKey(config.DefaultContainerKeyDirPath)
 	if err != nil {
 		return nil, err
 	}

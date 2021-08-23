@@ -27,6 +27,7 @@ var (
 
 	parsedArgs struct {
 		PrivateKeyFilePath string
+		AgentVersion       uint64
 	}
 
 	cmdForta = &cobra.Command{
@@ -71,6 +72,20 @@ publishes alerts about them`,
 		Short: "import new scanner account (removes the old one)",
 		RunE:  withInitialized(handleFortaAccountImport),
 	}
+
+	cmdFortaAgent = &cobra.Command{
+		Use:   "agent",
+		Short: "agent management",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cmd.Help()
+		},
+	}
+
+	cmdFortaAgentAdd = &cobra.Command{
+		Use:   "add",
+		Short: "add new agent",
+		RunE:  withInitialized(withValidConfig(handleFortaAgentAdd)),
+	}
 )
 
 // Execute executes the root command.
@@ -87,6 +102,9 @@ func init() {
 	cmdForta.AddCommand(cmdFortaAccount)
 	cmdFortaAccount.AddCommand(cmdFortaAccountAddress)
 	cmdFortaAccount.AddCommand(cmdFortaAccountImport)
+
+	cmdForta.AddCommand(cmdFortaAgent)
+	cmdFortaAgent.AddCommand(cmdFortaAgentAdd)
 
 	// Global (persistent) flags
 
@@ -129,9 +147,10 @@ func initConfig() {
 	}
 	viper.SetConfigFile(cfg.ConfigPath)
 
-	cfg.KeyDirPath = path.Join(cfg.FortaDir, ".keys")
+	cfg.KeyDirPath = path.Join(cfg.FortaDir, config.DefaultKeysDirName)
 	cfg.Production = viper.GetBool(keyFortaProduction)
 	cfg.Passphrase = viper.GetString(keyFortaPassphrase)
+	cfg.LocalAgentsPath = path.Join(cfg.FortaDir, config.DefaultLocalAgentsFileName)
 
 	if err := viper.ReadInConfig(); err != nil {
 		log.Errorf("failed to read the config file: %v", err)

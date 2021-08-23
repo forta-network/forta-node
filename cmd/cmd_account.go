@@ -17,9 +17,9 @@ func handleFortaAccountAddress(cmd *cobra.Command, args []string) error {
 	accounts := ks.Accounts()
 	if len(accounts) > 1 {
 		redBold("You have multiple accounts. Please import your scanner account again with 'forta account import'.")
-		fmt.Println("Your current account addresses:")
+		cmd.Println("Your current account addresses:")
 		for _, account := range accounts {
-			fmt.Println(account.Address.Hex())
+			cmd.Println(account.Address.Hex())
 		}
 		return errors.New("multiple accounts")
 	}
@@ -29,7 +29,7 @@ func handleFortaAccountAddress(cmd *cobra.Command, args []string) error {
 		return errors.New("no accounts")
 	}
 
-	fmt.Println(accounts[0].Address.Hex())
+	cmd.Println(accounts[0].Address.Hex())
 	return nil
 }
 
@@ -59,6 +59,6 @@ func handleFortaAccountImport(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to import: %v", err)
 	}
-	fmt.Println(account.Address.Hex())
+	cmd.Println(account.Address.Hex())
 	return nil
 }

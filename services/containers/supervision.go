@@ -16,6 +16,7 @@ func (t *TxNodeService) startAgent(agent config.AgentConfig) error {
 	if err := t.agentClient.PullImage(t.ctx, agent.Image); err != nil {
 		return fmt.Errorf("failed to pull the image: %v", err)
 	}
+	log.Infof("pulled agent image: %v", agent.Image)
 
 	nwID, err := t.client.CreatePublicNetwork(t.ctx, agent.ContainerName())
 	if err != nil {

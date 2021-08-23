@@ -5,8 +5,8 @@
 package mock_ethereum
 
 import (
-	domain "forta-network/forta-node/domain"
 	context "context"
+	domain "forta-network/forta-node/domain"
 	big "math/big"
 	reflect "reflect"
 
