@@ -33,7 +33,7 @@ func TestEthClient_BlockByHash(t *testing.T) {
 	ethClient, client, ctx := initClient(t)
 	hash := testBlockHash
 	// verify retry
-	client.EXPECT().CallContext(gomock.Any(), gomock.Any(), testBlockHash).Return(testErr).Times(1)
+	client.EXPECT().CallContext(gomock.Any(), gomock.Any(), blocksByHash, testBlockHash).Return(testErr).Times(1)
 	client.EXPECT().CallContext(gomock.Any(), gomock.Any(), blocksByHash, testBlockHash).DoAndReturn(func(ctx context.Context, result interface{}, method string, args ...interface{}) error {
 		b, _ := json.Marshal(domain.Block{Hash: hash})
 		return json.Unmarshal(b, result)

@@ -74,7 +74,7 @@ func TestTransactionFeed_ToMessage(t *testing.T) {
 
 	txFeed, client := getTestTransactionFeed(t, bf)
 
-	client.EXPECT().TransactionReceipt(gomock.Any(), gomock.Any()).Return(nil, nil).Times(9)
+	client.EXPECT().TransactionReceipt(gomock.Any(), gomock.Any()).Return(nil, nil)
 
 	var result *domain.TransactionEvent
 	err := txFeed.ForEachTransaction(func(evt *domain.BlockEvent) error { return nil }, func(evt *domain.TransactionEvent) error {
