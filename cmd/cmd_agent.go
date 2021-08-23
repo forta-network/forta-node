@@ -14,7 +14,7 @@ func handleFortaAgentAdd(cmd *cobra.Command, args []string) error {
 	if err := reg.Init(); err != nil {
 		return fmt.Errorf("failed to initialize")
 	}
-	agentCfg, err := reg.FindAgentGlobally(args[0], parsedArgs.AgentVersion)
+	agentCfg, err := reg.FindAgentGlobally(args[0], parsedArgs.Version)
 	if err != nil {
 		return fmt.Errorf("failed to load the agent: %v", err)
 	}
