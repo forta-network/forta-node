@@ -98,15 +98,19 @@ func (s *Suite) SetupTest() {
 	s.service = service
 }
 
-// TestAgentRun tests running the agent.
-func (s *Suite) TestAgentRun() {
+func testAgentData() (config.AgentConfig, messaging.AgentPayload) {
 	agentConfig := config.AgentConfig{
 		ID:    testAgentID,
 		Image: testImageRef,
 	}
-	agentPayload := messaging.AgentPayload{
+	return agentConfig, messaging.AgentPayload{
 		agentConfig,
 	}
+}
+
+// TestAgentRun tests running the agent.
+func (s *Suite) TestAgentRun() {
+	agentConfig, agentPayload := testAgentData()
 	// Creates the agent network, starts the agent container, attaches the scanner and the proxy to the
 	// agent network, publishes a "running" message.
 	s.agentClient.EXPECT().PullImage(s.service.ctx, testImageRef)
@@ -125,13 +129,7 @@ func (s *Suite) TestAgentRun() {
 func (s *Suite) TestAgentRunAgain() {
 	s.TestAgentRun()
 
-	agentConfig := config.AgentConfig{
-		ID:    testAgentID,
-		Image: testImageRef,
-	}
-	agentPayload := messaging.AgentPayload{
-		agentConfig,
-	}
+	_, agentPayload := testAgentData()
 	// Expect it to only publish a message again to ensure the subscribers that
 	// the agent is running.
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusRunning, agentPayload)
@@ -143,7 +141,7 @@ func (s *Suite) TestAgentRunAgain() {
 func (s *Suite) TestAgentStopOne() {
 	s.TestAgentRun()
 
-	agentPayload := messaging.AgentPayload{}
+	_, agentPayload := testAgentData()
 	// Stops the agent container and publishes a "stopped" message.
 	s.dockerClient.EXPECT().StopContainer(s.service.ctx, testAgentContainerID)
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusStopped, agentPayload)
