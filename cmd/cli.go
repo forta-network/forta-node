@@ -29,7 +29,7 @@ var (
 
 	parsedArgs struct {
 		PrivateKeyFilePath string
-		AgentVersion       uint64
+		Version            uint64
 	}
 
 	cmdForta = &cobra.Command{
@@ -126,6 +126,9 @@ func init() {
 
 	cmdFortaAccountImport.Flags().String("file", "", "path to a file that contains a private key hex")
 	cmdFortaAccountImport.MarkFlagRequired("file")
+
+	// forta agent add
+	cmdFortaAgentAdd.Flags().Uint64Var(&parsedArgs.Version, "version", 0, "agent version")
 }
 
 func initConfig() {
