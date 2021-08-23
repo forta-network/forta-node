@@ -5,10 +5,10 @@
 package mock_clients
 
 import (
+	context "context"
 	clients "forta-network/forta-node/clients"
 	config "forta-network/forta-node/config"
 	protocol "forta-network/forta-node/protocol"
-	context "context"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"

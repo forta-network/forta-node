@@ -3,6 +3,10 @@ package testutils
 import (
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/ethereum/go-ethereum/core/types"
+
 	"forta-network/forta-node/domain"
 )
 
@@ -23,7 +27,19 @@ func TestTxs(nonces ...int) []domain.Transaction {
 // TestBlock gets a block with a list of transactions with the following nonces
 func TestBlock(nonces ...int) *domain.Block {
 	return &domain.Block{
+		Number:       "0x0",
 		Hash:         "0x1",
 		Transactions: TestTxs(nonces...),
 	}
+}
+
+func TestLogs(indexes ...int) []types.Log {
+	var result []types.Log
+	for _, index := range indexes {
+		result = append(result, types.Log{
+			TxHash:  common.HexToHash(fmt.Sprintf("%x", index)),
+			TxIndex: uint(index),
+		})
+	}
+	return result
 }

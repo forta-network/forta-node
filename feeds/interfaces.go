@@ -19,5 +19,5 @@ type TransactionFeed interface {
 
 // LogFeed is a feed of logs
 type LogFeed interface {
-	ForEachLog(handler func(log types.Log) error) error
+	ForEachLog(handler func(logEntry types.Log) error) error
 }

@@ -2,82 +2,105 @@ package feeds
 
 import (
 	"context"
-	"time"
+	"forta-network/forta-node/utils"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
+
+	eth "forta-network/forta-node/ethereum"
 )
 
-type EthClient interface {
-	SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- types.Log) (ethereum.Subscription, error)
-	Close()
-}
-
 type logFeed struct {
-	ctx    context.Context
-	wssUrl string
-	query  ethereum.FilterQuery
+	ctx        context.Context
+	url        string
+	startBlock *big.Int
+	endBlock   *big.Int
+	topics     [][]string
+	addresses  []string
+	client     eth.Client
 }
 
 func (l *logFeed) ForEachLog(handler func(logEntry types.Log) error) error {
-	logs := make(chan types.Log)
-	client, err := ethclient.Dial(l.wssUrl)
-	if err != nil {
-		return err
-	}
-
-	sub, err := client.SubscribeFilterLogs(l.ctx, l.query, logs)
-	if err != nil {
-		return err
-	}
-
 	eg, ctx := errgroup.WithContext(l.ctx)
-	ticker := time.NewTicker(500 * time.Millisecond)
 
-	eg.Go(func() error {
-		defer client.Close()
-		for {
-			<-ticker.C
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case err := <-sub.Err():
-				return err
-			}
+	addrs := make([]common.Address, 0, len(l.addresses))
+	for _, addr := range l.addresses {
+		addrs = append(addrs, common.HexToAddress(addr))
+	}
+
+	var topics [][]common.Hash
+	for _, topicSet := range l.topics {
+		var topicPosition []common.Hash
+		for _, topic := range topicSet {
+			topicHash := common.HexToHash(topic)
+			topicPosition = append(topicPosition, topicHash)
 		}
-	})
+		topics = append(topics, topicPosition)
+	}
 
+	currentBlock := l.startBlock
+	increment := big.NewInt(1)
 	eg.Go(func() error {
-		for ethLog := range logs {
-			log.Infof("received an event from agent registry (tx=%s)", ethLog.TxHash.Hex())
-			if err := handler(ethLog); err != nil {
+		for {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			blk, err := l.client.BlockByNumber(l.ctx, currentBlock)
+			if err != nil {
+				log.Error("error while getting latest block number:", err)
 				return err
 			}
+
+			// initialize current block if nil
+			if currentBlock == nil {
+				currentBlock, err = utils.HexToBigInt(blk.Number)
+				if err != nil {
+					log.Errorf("error while converting latest block number: %s, %s", blk.Number, err)
+					return err
+				}
+			}
+
+			q := ethereum.FilterQuery{
+				FromBlock: currentBlock,
+				ToBlock:   currentBlock,
+				Addresses: addrs,
+				Topics:    topics,
+			}
+			logs, err := l.client.GetLogs(l.ctx, q)
+			if err != nil {
+				return err
+			}
+			for _, lg := range logs {
+				if err := handler(lg); err != nil {
+					log.Error("handler returned error, exiting log subscription:", err)
+					return err
+				}
+			}
+			currentBlock = currentBlock.Add(currentBlock, increment)
 		}
 		return nil
 	})
-	log.Info("subscribed to agent registry updates")
+	log.Infof("subscribed to logs: address=%v, topics=%v, startBlock=%s, endBlock=%s", l.addresses, l.topics, l.startBlock, l.endBlock)
 	defer func() {
-		log.Warn("stopped subscribing to agent registry updates")
+		log.Warn("log subscription closed")
 	}()
 	return eg.Wait()
 }
 
-func NewLogFeed(ctx context.Context, wssUrl string, contractAddrs []string) (*logFeed, error) {
-	addrs := make([]common.Address, 0, len(contractAddrs))
-	for _, addr := range contractAddrs {
-		addrs = append(addrs, common.HexToAddress(addr))
-	}
+type LogFeedConfig struct {
+	Topics    [][]string
+	Addresses []string
+}
 
+func NewLogFeed(ctx context.Context, client eth.Client, cfg LogFeedConfig) (*logFeed, error) {
 	return &logFeed{
-		ctx:    ctx,
-		wssUrl: wssUrl,
-		query: ethereum.FilterQuery{
-			Addresses: addrs,
-		},
+		ctx:       ctx,
+		client:    client,
+		topics:    cfg.Topics,
+		addresses: cfg.Addresses,
 	}, nil
 }
