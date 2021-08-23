@@ -168,7 +168,7 @@ func (e streamEthClient) TraceBlock(ctx context.Context, number *big.Int) ([]dom
 // GetLogs returns the set of logs for a block
 func (e streamEthClient) GetLogs(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error) {
 	name := fmt.Sprintf("%s(%v)", getLogs, q)
-	log.Info(name)
+	log.Debugf(name)
 	var result []types.Log
 
 	args, err := toFilterArg(q)
