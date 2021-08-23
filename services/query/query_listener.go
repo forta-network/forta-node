@@ -381,11 +381,16 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertList
 	}
 
 	var ipfsClient IPFS
-	if len(cfg.PublisherConfig.IPFS.Username) > 0 && len(cfg.PublisherConfig.IPFS.Password) > 0 {
+	switch {
+	case cfg.PublisherConfig.SkipPublish:
+		// use nil IPFS client
+
+	case len(cfg.PublisherConfig.IPFS.Username) > 0 && len(cfg.PublisherConfig.IPFS.Password) > 0:
 		ipfsClient = ipfsapi.NewShellWithClient(cfg.PublisherConfig.IPFS.GatewayURL, &http.Client{
 			Transport: utils.NewBasicAuthTransport(cfg.PublisherConfig.IPFS.Username, cfg.PublisherConfig.IPFS.Password),
 		})
-	} else {
+
+	default:
 		ipfsClient = ipfsapi.NewShellWithClient(cfg.PublisherConfig.IPFS.GatewayURL, http.DefaultClient)
 	}
 

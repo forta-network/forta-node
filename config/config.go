@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"path"
 
 	yaml "gopkg.in/yaml.v3"
 
@@ -14,6 +15,7 @@ import (
 )
 
 const EnvConfig = "FORTA_CONFIG"
+const EnvFortaDir = "FORTA_DIR"
 const EnvJsonRpcHost = "JSON_RPC_HOST"
 const EnvJsonRpcPort = "JSON_RPC_PORT"
 const EnvAgentGrpcPort = "AGENT_GRPC_PORT"
@@ -26,6 +28,11 @@ const (
 	EnvNatsHost = "NATS_HOST"
 )
 
+const (
+	DefaultLocalAgentsFileName = "local-agents.json"
+	DefaultKeysDirName         = ".keys"
+)
+
 // Docker container names
 var (
 	DockerNatsContainerName         = fmt.Sprintf("%s-nats", ContainerNamePrefix)
@@ -34,6 +41,10 @@ var (
 	DockerQueryContainerName        = fmt.Sprintf("%s-query", ContainerNamePrefix)
 
 	DockerNetworkName = DockerScannerContainerName
+
+	DefaultContainerFortaDirPath        = "/.forta"
+	DefaultContainerKeyDirPath          = path.Join(DefaultContainerFortaDirPath, DefaultKeysDirName)
+	DefaultContainerLocalAgentsFilePath = path.Join(DefaultContainerFortaDirPath, DefaultLocalAgentsFileName)
 )
 
 // Global constant values
@@ -133,11 +144,12 @@ type BatchConfig struct {
 }
 
 type Config struct {
-	Production bool   `yaml:"-" json:"-"`
-	FortaDir   string `yaml:"-" json:"-"`
-	ConfigPath string `yaml:"-" json:"-"`
-	KeyDirPath string `yaml:"-" json:"-"`
-	Passphrase string `yaml:"-" json:"-"`
+	Production      bool   `yaml:"-" json:"-"`
+	FortaDir        string `yaml:"-" json:"-"`
+	ConfigPath      string `yaml:"-" json:"-"`
+	KeyDirPath      string `yaml:"-" json:"-"`
+	Passphrase      string `yaml:"-" json:"-"`
+	LocalAgentsPath string `yaml:"-" json:"-"`
 
 	Registry     RegistryConfig     `yaml:"registry" json:"registry"`
 	Scanner      ScannerConfig      `yaml:"scanner" json:"scanner"`
@@ -203,23 +215,26 @@ func readFile(filename string, cfg *Config) error {
 
 // EnvDefaults contain default values for one env.
 type EnvDefaults struct {
-	DefaultRegistryContractAddress string
-	DefaultAlertContractAddress    string
-	DiscoSubdomain                 string
+	DefaultAgentRegistryContractAddress   string
+	DefaultScannerRegistryContractAddress string
+	DefaultAlertContractAddress           string
+	DiscoSubdomain                        string
 }
 
 // GetEnvDefaults returns the default values for an env.
 func GetEnvDefaults(production bool) EnvDefaults {
 	if production {
 		return EnvDefaults{
-			DefaultRegistryContractAddress: "0x38C1e080BeEb26eeA91932178E62987598230271",
-			DefaultAlertContractAddress:    "0xf4746faBc1D5E751248Ea3AC87ceB13C432F0C1A",
-			DiscoSubdomain:                 "disco-dev",
+			DefaultAgentRegistryContractAddress:   "0xFE1927bF5bc338e4884A0d406e33921e8058d75d",
+			DefaultScannerRegistryContractAddress: "0x1Ad235EF22Dd15d291ecD4b44a5739aD4F61b3A5",
+			DefaultAlertContractAddress:           "0xf4746faBc1D5E751248Ea3AC87ceB13C432F0C1A",
+			DiscoSubdomain:                        "disco-dev",
 		}
 	}
 	return EnvDefaults{
-		DefaultRegistryContractAddress: "0x1Ad235EF22Dd15d291ecD4b44a5739aD4F61b3A5",
-		DefaultAlertContractAddress:    "0x8c06716460e4A6E8Ca6a0bfe7190b1a6A059eA2F",
-		DiscoSubdomain:                 "disco",
+		DefaultAgentRegistryContractAddress:   "0x272D3e86E9DDb4c46eE7483C7abbc224145E11bE",
+		DefaultScannerRegistryContractAddress: "0x38C1e080BeEb26eeA91932178E62987598230271",
+		DefaultAlertContractAddress:           "0x8c06716460e4A6E8Ca6a0bfe7190b1a6A059eA2F",
+		DiscoSubdomain:                        "disco",
 	}
 }

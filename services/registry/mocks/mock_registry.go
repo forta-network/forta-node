@@ -18,31 +18,84 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockContractRegistryCaller is a mock of ContractRegistryCaller interface.
-type MockContractRegistryCaller struct {
+// MockAgentRegistryCaller is a mock of AgentRegistryCaller interface.
+type MockAgentRegistryCaller struct {
 	ctrl     *gomock.Controller
-	recorder *MockContractRegistryCallerMockRecorder
+	recorder *MockAgentRegistryCallerMockRecorder
 }
 
-// MockContractRegistryCallerMockRecorder is the mock recorder for MockContractRegistryCaller.
-type MockContractRegistryCallerMockRecorder struct {
-	mock *MockContractRegistryCaller
+// MockAgentRegistryCallerMockRecorder is the mock recorder for MockAgentRegistryCaller.
+type MockAgentRegistryCallerMockRecorder struct {
+	mock *MockAgentRegistryCaller
 }
 
-// NewMockContractRegistryCaller creates a new mock instance.
-func NewMockContractRegistryCaller(ctrl *gomock.Controller) *MockContractRegistryCaller {
-	mock := &MockContractRegistryCaller{ctrl: ctrl}
-	mock.recorder = &MockContractRegistryCallerMockRecorder{mock}
+// NewMockAgentRegistryCaller creates a new mock instance.
+func NewMockAgentRegistryCaller(ctrl *gomock.Controller) *MockAgentRegistryCaller {
+	mock := &MockAgentRegistryCaller{ctrl: ctrl}
+	mock.recorder = &MockAgentRegistryCallerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockContractRegistryCaller) EXPECT() *MockContractRegistryCallerMockRecorder {
+func (m *MockAgentRegistryCaller) EXPECT() *MockAgentRegistryCallerMockRecorder {
+	return m.recorder
+}
+
+// AgentLatestVersion mocks base method.
+func (m *MockAgentRegistryCaller) AgentLatestVersion(opts *bind.CallOpts, arg0 [32]byte) (*big.Int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AgentLatestVersion", opts, arg0)
+	ret0, _ := ret[0].(*big.Int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AgentLatestVersion indicates an expected call of AgentLatestVersion.
+func (mr *MockAgentRegistryCallerMockRecorder) AgentLatestVersion(opts, arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AgentLatestVersion", reflect.TypeOf((*MockAgentRegistryCaller)(nil).AgentLatestVersion), opts, arg0)
+}
+
+// AgentReference mocks base method.
+func (m *MockAgentRegistryCaller) AgentReference(opts *bind.CallOpts, arg0 [32]byte, arg1 *big.Int) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AgentReference", opts, arg0, arg1)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AgentReference indicates an expected call of AgentReference.
+func (mr *MockAgentRegistryCallerMockRecorder) AgentReference(opts, arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AgentReference", reflect.TypeOf((*MockAgentRegistryCaller)(nil).AgentReference), opts, arg0, arg1)
+}
+
+// MockScannerRegistryCaller is a mock of ScannerRegistryCaller interface.
+type MockScannerRegistryCaller struct {
+	ctrl     *gomock.Controller
+	recorder *MockScannerRegistryCallerMockRecorder
+}
+
+// MockScannerRegistryCallerMockRecorder is the mock recorder for MockScannerRegistryCaller.
+type MockScannerRegistryCallerMockRecorder struct {
+	mock *MockScannerRegistryCaller
+}
+
+// NewMockScannerRegistryCaller creates a new mock instance.
+func NewMockScannerRegistryCaller(ctrl *gomock.Controller) *MockScannerRegistryCaller {
+	mock := &MockScannerRegistryCaller{ctrl: ctrl}
+	mock.recorder = &MockScannerRegistryCallerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockScannerRegistryCaller) EXPECT() *MockScannerRegistryCallerMockRecorder {
 	return m.recorder
 }
 
 // AgentAt mocks base method.
-func (m *MockContractRegistryCaller) AgentAt(opts *bind.CallOpts, scanner common.Address, index *big.Int) ([32]byte, *big.Int, bool, string, bool, error) {
+func (m *MockScannerRegistryCaller) AgentAt(opts *bind.CallOpts, scanner common.Address, index *big.Int) ([32]byte, *big.Int, bool, string, bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AgentAt", opts, scanner, index)
 	ret0, _ := ret[0].([32]byte)
@@ -55,13 +108,13 @@ func (m *MockContractRegistryCaller) AgentAt(opts *bind.CallOpts, scanner common
 }
 
 // AgentAt indicates an expected call of AgentAt.
-func (mr *MockContractRegistryCallerMockRecorder) AgentAt(opts, scanner, index interface{}) *gomock.Call {
+func (mr *MockScannerRegistryCallerMockRecorder) AgentAt(opts, scanner, index interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AgentAt", reflect.TypeOf((*MockContractRegistryCaller)(nil).AgentAt), opts, scanner, index)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AgentAt", reflect.TypeOf((*MockScannerRegistryCaller)(nil).AgentAt), opts, scanner, index)
 }
 
 // AgentLength mocks base method.
-func (m *MockContractRegistryCaller) AgentLength(opts *bind.CallOpts, scanner common.Address) (*big.Int, error) {
+func (m *MockScannerRegistryCaller) AgentLength(opts *bind.CallOpts, scanner common.Address) (*big.Int, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AgentLength", opts, scanner)
 	ret0, _ := ret[0].(*big.Int)
@@ -70,13 +123,13 @@ func (m *MockContractRegistryCaller) AgentLength(opts *bind.CallOpts, scanner co
 }
 
 // AgentLength indicates an expected call of AgentLength.
-func (mr *MockContractRegistryCallerMockRecorder) AgentLength(opts, scanner interface{}) *gomock.Call {
+func (mr *MockScannerRegistryCallerMockRecorder) AgentLength(opts, scanner interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AgentLength", reflect.TypeOf((*MockContractRegistryCaller)(nil).AgentLength), opts, scanner)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AgentLength", reflect.TypeOf((*MockScannerRegistryCaller)(nil).AgentLength), opts, scanner)
 }
 
 // GetAgentListHash mocks base method.
-func (m *MockContractRegistryCaller) GetAgentListHash(opts *bind.CallOpts, scanner common.Address) ([32]byte, error) {
+func (m *MockScannerRegistryCaller) GetAgentListHash(opts *bind.CallOpts, scanner common.Address) ([32]byte, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAgentListHash", opts, scanner)
 	ret0, _ := ret[0].([32]byte)
@@ -85,9 +138,9 @@ func (m *MockContractRegistryCaller) GetAgentListHash(opts *bind.CallOpts, scann
 }
 
 // GetAgentListHash indicates an expected call of GetAgentListHash.
-func (mr *MockContractRegistryCallerMockRecorder) GetAgentListHash(opts, scanner interface{}) *gomock.Call {
+func (mr *MockScannerRegistryCallerMockRecorder) GetAgentListHash(opts, scanner interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAgentListHash", reflect.TypeOf((*MockContractRegistryCaller)(nil).GetAgentListHash), opts, scanner)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAgentListHash", reflect.TypeOf((*MockScannerRegistryCaller)(nil).GetAgentListHash), opts, scanner)
 }
 
 // MockIPFSClient is a mock of IPFSClient interface.

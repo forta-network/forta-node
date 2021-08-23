@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/forta-network/forta-node/config"
-	"github.com/forta-network/forta-node/services/registry"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/fatih/color"
+	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/services/registry"
 	"github.com/spf13/cobra"
 )
 
@@ -18,6 +17,7 @@ func handleFortaAgentAdd(cmd *cobra.Command, args []string) error {
 	if err := reg.Init(); err != nil {
 		return fmt.Errorf("failed to initialize")
 	}
+
 	agentCfg, err := reg.FindAgentGlobally(args[0], parsedArgs.Version)
 	if err != nil {
 		return fmt.Errorf("failed to load the agent: %v", err)

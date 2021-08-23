@@ -68,7 +68,6 @@ func (t *TxNodeService) start() error {
 	}
 	cfgJson := string(cfgBytes)
 
-	keyPath := t.config.Config.KeyDirPath
 	alertsDBPath := t.config.Config.Query.DB.Path
 	if len(alertsDBPath) == 0 {
 		alertsDBPath = path.Join(t.config.Config.FortaDir, "alertsdb")
@@ -101,14 +100,15 @@ func (t *TxNodeService) start() error {
 		Name:  config.DockerQueryContainerName,
 		Image: t.config.Config.Query.QueryImage,
 		Env: map[string]string{
-			config.EnvConfig: cfgJson,
+			config.EnvConfig:   cfgJson,
+			config.EnvFortaDir: config.DefaultContainerFortaDirPath,
 		},
 		Ports: map[string]string{
 			fmt.Sprintf("%d", t.config.Config.Query.Port): "80",
 		},
 		Volumes: map[string]string{
-			alertsDBPath: store.DBPath,
-			keyPath:      "/.keys",
+			alertsDBPath:             store.DBPath,
+			t.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
 		},
 		Files: map[string][]byte{
 			"passphrase": []byte(t.config.Passphrase),
@@ -140,11 +140,12 @@ func (t *TxNodeService) start() error {
 		Image: t.config.Config.Scanner.ScannerImage,
 		Env: map[string]string{
 			config.EnvConfig:    cfgJson,
+			config.EnvFortaDir:  config.DefaultContainerFortaDirPath,
 			config.EnvQueryNode: config.DockerQueryContainerName,
 			config.EnvNatsHost:  config.DockerNatsContainerName,
 		},
 		Volumes: map[string]string{
-			keyPath: "/.keys",
+			t.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
 		},
 		Files: map[string][]byte{
 			"passphrase": []byte(t.config.Passphrase),

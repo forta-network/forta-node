@@ -49,7 +49,7 @@ func TestSuite(t *testing.T) {
 type Suite struct {
 	r *require.Assertions
 
-	contract   *mock_registry.MockContractRegistryCaller
+	scannerReg *mock_registry.MockScannerRegistryCaller
 	ipfsClient *mock_registry.MockIPFSClient
 	ethClient  *mock_registry.MockEthClient
 	msgClient  *mock_clients.MockMessageClient
@@ -62,14 +62,14 @@ type Suite struct {
 // SetupTest sets up the test.
 func (s *Suite) SetupTest() {
 	s.r = require.New(s.T())
-	s.contract = mock_registry.NewMockContractRegistryCaller(gomock.NewController(s.T()))
+	s.scannerReg = mock_registry.NewMockScannerRegistryCaller(gomock.NewController(s.T()))
 	s.ipfsClient = mock_registry.NewMockIPFSClient(gomock.NewController(s.T()))
 	s.ethClient = mock_registry.NewMockEthClient(gomock.NewController(s.T()))
 	s.msgClient = mock_clients.NewMockMessageClient(gomock.NewController(s.T()))
 	s.service = &RegistryService{
 		scannerAddress: testScannerAddress,
 		msgClient:      s.msgClient,
-		contract:       s.contract,
+		scannerReg:     s.scannerReg,
 		ipfsClient:     s.ipfsClient,
 		ethClient:      s.ethClient,
 		done:           make(chan struct{}),
@@ -107,7 +107,7 @@ func (s *Suite) TestDifferentVersion() {
 	// Given that the last known version is 1
 	s.service.version = string(testVersion1[:])
 	// When the last version is returned as 2 at the time of checking
-	s.contract.EXPECT().GetAgentListHash(nil, s.service.scannerAddress).Return(testVersion2, nil)
+	s.scannerReg.EXPECT().GetAgentListHash(nil, s.service.scannerAddress).Return(testVersion2, nil)
 	// Then
 	s.shouldUpdateAgents()
 
@@ -116,8 +116,8 @@ func (s *Suite) TestDifferentVersion() {
 
 func (s *Suite) shouldUpdateAgents() {
 	s.ethClient.EXPECT().BlockByNumber(gomock.Any(), gomock.Any()).Return(&domain.Block{Number: "0x1"}, nil)
-	s.contract.EXPECT().AgentLength(gomock.Any(), testScannerAddress).Return(testAgentLengthBig, nil)
-	s.contract.EXPECT().AgentAt(gomock.Any(), testScannerAddress, big.NewInt(testAgentLength-1)).
+	s.scannerReg.EXPECT().AgentLength(gomock.Any(), testScannerAddress).Return(testAgentLengthBig, nil)
+	s.scannerReg.EXPECT().AgentAt(gomock.Any(), testScannerAddress, big.NewInt(testAgentLength-1)).
 		Return(testAgentID, big.NewInt(0), false, testAgentRef, false, nil)
 	s.ipfsClient.EXPECT().GetAgentFile(testAgentRef).Return(testAgentFile, nil)
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, (agentConfigs)([]*config.AgentConfig{
@@ -132,7 +132,7 @@ func (s *Suite) TestFirstTime() {
 	// Given that there is no last known version
 	s.service.version = ""
 	// When the last version is returned as anything
-	s.contract.EXPECT().GetAgentListHash(nil, s.service.scannerAddress).Return(testVersion2, nil)
+	s.scannerReg.EXPECT().GetAgentListHash(nil, s.service.scannerAddress).Return(testVersion2, nil)
 	// Then
 	s.shouldUpdateAgents()
 
@@ -143,7 +143,7 @@ func (s *Suite) TestSameVersion() {
 	// Given that the last known version is 1
 	s.service.version = string(testVersion1[:])
 	// When the last version is returned as the same
-	s.contract.EXPECT().GetAgentListHash(nil, s.service.scannerAddress).Return(testVersion1, nil)
+	s.scannerReg.EXPECT().GetAgentListHash(nil, s.service.scannerAddress).Return(testVersion1, nil)
 	// Then it should silently skip
 
 	s.NoError(s.service.publishLatestAgents())

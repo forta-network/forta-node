@@ -32,12 +32,12 @@ func Run(cfg config.Config) {
 
 	serviceList, err := initServices(cfg, cfg.Passphrase, ctx)
 	if err != nil {
-		log.Error("could not initialize services", err)
+		log.Errorf("could not initialize services: %v", err)
 		return
 	}
 
 	if err := services.StartServices(ctx, serviceList); err != nil {
-		log.Error("error running services", err)
+		log.Errorf("error running services: %v", err)
 	}
 
 	log.Info("Stopping Node")
