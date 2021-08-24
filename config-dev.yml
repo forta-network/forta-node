@@ -40,7 +40,7 @@ query:
     ipfs:
       gatewayUrl: "http://ipfs.forta.internal:5001"
     ethereum:
-      jsonRpcUrl: "0x8c06716460e4A6E8Ca6a0bfe7190b1a6A059eA2F"
+      jsonRpcUrl: "REGISTRY_API_URL"
   db:
     path: "/tmp/forta-alerts"
 
