@@ -4,6 +4,8 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/forta-network/forta-node/domain"
+
 	"github.com/forta-network/forta-node/utils"
 
 	"github.com/ethereum/go-ethereum"
@@ -23,6 +25,8 @@ type logFeed struct {
 	topics     [][]string
 	addresses  []string
 	client     eth.Client
+
+	blockCh chan *domain.Block
 }
 
 func (l *logFeed) ForEachLog(handler func(logEntry types.Log) error) error {
@@ -81,6 +85,10 @@ func (l *logFeed) ForEachLog(handler func(logEntry types.Log) error) error {
 					return err
 				}
 			}
+			if l.blockCh != nil {
+				l.blockCh <- blk
+			}
+
 			currentBlock = currentBlock.Add(currentBlock, increment)
 		}
 		return nil
@@ -97,11 +105,12 @@ type LogFeedConfig struct {
 	Addresses []string
 }
 
-func NewLogFeed(ctx context.Context, client eth.Client, cfg LogFeedConfig) (*logFeed, error) {
+func NewLogFeed(ctx context.Context, client eth.Client, blockCh chan *domain.Block, cfg LogFeedConfig) (*logFeed, error) {
 	return &logFeed{
 		ctx:       ctx,
 		client:    client,
 		topics:    cfg.Topics,
 		addresses: cfg.Addresses,
+		blockCh:   blockCh,
 	}, nil
 }

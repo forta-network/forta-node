@@ -31,7 +31,7 @@ func TestLogFeed_ForEachLog(t *testing.T) {
 	client.EXPECT().BlockByNumber(gomock.Any(), big.NewInt(2)).Return(blk, nil).Times(1)
 	client.EXPECT().GetLogs(gomock.Any(), gomock.Any()).Return([]types.Log{logs[2]}, nil).Times(1)
 
-	lf, err := NewLogFeed(ctx, client, LogFeedConfig{
+	lf, err := NewLogFeed(ctx, client, nil, LogFeedConfig{
 		Addresses: []string{addr},
 		Topics:    [][]string{{AlertBatchTopic}},
 	})
