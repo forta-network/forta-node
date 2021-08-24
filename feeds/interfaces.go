@@ -2,6 +2,7 @@ package feeds
 
 import (
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/forta-network/forta-node/contracts"
 
 	"github.com/forta-network/forta-node/domain"
 )
@@ -20,4 +21,9 @@ type TransactionFeed interface {
 // LogFeed is a feed of logs
 type LogFeed interface {
 	ForEachLog(handler func(logEntry types.Log) error) error
+}
+
+// AlertFeed is a feed of alerts from alert batch events
+type AlertFeed interface {
+	ForEachAlert(handler func(batch *contracts.AlertsAlertBatch) error) error
 }

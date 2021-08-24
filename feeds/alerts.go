@@ -11,12 +11,12 @@ import (
 //AlertBatchTopic is the topic value for the AlertBatch event, which can be used for filtering
 const AlertBatchTopic = "0x36cde681f44e056b0e848fa24ffca3217ac9323460feeacf1a8ad8da28daf924"
 
-type AlertFeed struct {
+type alertFeed struct {
 	ctx context.Context
 	lf  LogFeed
 }
 
-func (af *AlertFeed) ForEachAlert(handler func(batch *contracts.AlertsAlertBatch) error) error {
+func (af *alertFeed) ForEachAlert(handler func(batch *contracts.AlertsAlertBatch) error) error {
 
 	// cache by address so we don't over-allocate
 	filterers := make(map[string]*contracts.AlertsFilterer)
@@ -46,8 +46,8 @@ func (af *AlertFeed) ForEachAlert(handler func(batch *contracts.AlertsAlertBatch
 }
 
 // NewAlertFeed creates a new alert feed from a logFeed
-func NewAlertFeed(ctx context.Context, lf LogFeed) (*AlertFeed, error) {
-	return &AlertFeed{
+func NewAlertFeed(ctx context.Context, lf LogFeed) (*alertFeed, error) {
+	return &alertFeed{
 		ctx: ctx,
 		lf:  lf,
 	}, nil
