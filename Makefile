@@ -1,8 +1,8 @@
 containers:
 	docker pull nats:2.3.2
-	docker build -t forta-network/forta-scanner -f Dockerfile-scanner .
-	docker build -t forta-network/forta-query -f Dockerfile-query .
-	docker build -t forta-network/forta-json-rpc -f Dockerfile-json-rpc .
+	docker build -t forta-network/forta-scanner -f Dockerfile.scanner .
+	docker build -t forta-network/forta-query -f Dockerfile.query .
+	docker build -t forta-network/forta-json-rpc -f Dockerfile.json-rpc .
 
 docker-login:
 	aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 997179694723.dkr.ecr.us-west-2.amazonaws.com
@@ -16,7 +16,7 @@ ecr:
 	docker push 997179694723.dkr.ecr.us-west-2.amazonaws.com/forta-json-rpc:latest
 
 main:
-	docker build -t build-forta -f Dockerfile-cli .
+	docker build -t build-forta -f Dockerfile.cli .
 	docker create --name build-forta build-forta
 	docker cp build-forta:/main forta
 	docker rm -f build-forta
@@ -45,3 +45,12 @@ abigen:
 	abigen --abi ./contracts/agent_registry.json --out ./contracts/agent_registry.go --pkg contracts --type AgentRegistry
 	abigen --abi ./contracts/scanner_registry.json --out ./contracts/scanner_registry.go --pkg contracts --type ScannerRegistry
 	abigen --abi ./contracts/alerts.json --out ./contracts/alerts.go --pkg contracts --type Alerts
+
+install:
+	make containers
+	make main
+	cp forta /usr/bin/forta
+
+release-install:
+	./scripts/release-build.sh disco.forta.network
+	cp build/forta /usr/bin/forta
