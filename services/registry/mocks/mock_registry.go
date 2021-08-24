@@ -9,13 +9,12 @@ import (
 	big "math/big"
 	reflect "reflect"
 
-	domain "github.com/forta-network/forta-node/domain"
-	regtypes "github.com/forta-network/forta-node/services/registry/regtypes"
-
 	ethereum "github.com/ethereum/go-ethereum"
 	bind "github.com/ethereum/go-ethereum/accounts/abi/bind"
 	common "github.com/ethereum/go-ethereum/common"
 	types "github.com/ethereum/go-ethereum/core/types"
+	domain "github.com/forta-network/forta-node/domain"
+	regtypes "github.com/forta-network/forta-node/services/registry/regtypes"
 	gomock "github.com/golang/mock/gomock"
 )
 

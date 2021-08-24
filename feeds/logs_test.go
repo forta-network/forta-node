@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/forta-network/forta-node/domain"
+
 	mocks "github.com/forta-network/forta-node/ethereum/mocks"
 	"github.com/forta-network/forta-node/testutils"
 
@@ -31,14 +33,16 @@ func TestLogFeed_ForEachLog(t *testing.T) {
 	client.EXPECT().BlockByNumber(gomock.Any(), big.NewInt(2)).Return(blk, nil).Times(1)
 	client.EXPECT().GetLogs(gomock.Any(), gomock.Any()).Return([]types.Log{logs[2]}, nil).Times(1)
 
-	lf, err := NewLogFeed(ctx, client, nil, LogFeedConfig{
+	lf, err := NewLogFeed(ctx, client, LogFeedConfig{
 		Addresses: []string{addr},
 		Topics:    [][]string{{AlertBatchTopic}},
 	})
 	assert.NoError(t, err)
 
 	var foundLogs []types.Log
-	err = lf.ForEachLog(func(logEntry types.Log) error {
+	err = lf.ForEachLog(func(blk *domain.Block) error {
+		return nil
+	}, func(logEntry types.Log) error {
 		foundLogs = append(foundLogs, logEntry)
 		// return early
 		if len(foundLogs) == 3 {

@@ -20,10 +20,10 @@ type TransactionFeed interface {
 
 // LogFeed is a feed of logs
 type LogFeed interface {
-	ForEachLog(handler func(logEntry types.Log) error) error
+	ForEachLog(blockHandler func(blk *domain.Block) error, handler func(logEntry types.Log) error) error
 }
 
 // AlertFeed is a feed of alerts from alert batch events
 type AlertFeed interface {
-	ForEachAlert(handler func(logEntry types.Log, batch *contracts.AlertsAlertBatch) error) error
+	ForEachAlert(blockHandler func(blk *domain.Block) error, handler func(logEntry types.Log, batch *contracts.AlertsAlertBatch) error) error
 }

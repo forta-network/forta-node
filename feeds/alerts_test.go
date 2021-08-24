@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/forta-network/forta-node/domain"
+
 	"github.com/forta-network/forta-node/contracts"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -18,7 +20,7 @@ type fakeLogFeed struct {
 	logs []types.Log
 }
 
-func (lf *fakeLogFeed) ForEachLog(handler func(logEntry types.Log) error) error {
+func (lf *fakeLogFeed) ForEachLog(blockHandler func(blk *domain.Block) error, handler func(logEntry types.Log) error) error {
 	for _, l := range lf.logs {
 		if err := handler(l); err != nil {
 			return err
@@ -63,7 +65,9 @@ func TestAlertFeed_ForEachAlert(t *testing.T) {
 	assert.NoError(t, err)
 
 	var res *contracts.AlertsAlertBatch
-	err = af.ForEachAlert(func(logEntry types.Log, batch *contracts.AlertsAlertBatch) error {
+	err = af.ForEachAlert(func(blk *domain.Block) error {
+		return nil
+	}, func(logEntry types.Log, batch *contracts.AlertsAlertBatch) error {
 		res = batch
 		return nil
 	})

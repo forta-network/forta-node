@@ -3,6 +3,8 @@ package feeds
 import (
 	"context"
 
+	"github.com/forta-network/forta-node/domain"
+
 	"github.com/forta-network/forta-node/contracts"
 
 	"github.com/ethereum/go-ethereum/core/types"
@@ -16,11 +18,12 @@ type alertFeed struct {
 	lf  LogFeed
 }
 
-func (af *alertFeed) ForEachAlert(handler func(logEntry types.Log, batch *contracts.AlertsAlertBatch) error) error {
+//ForEachAlert wraps a LogFeed.ForEachLog invocation and parses out the alert object
+func (af *alertFeed) ForEachAlert(blockHandler func(blk *domain.Block) error, handler func(logEntry types.Log, batch *contracts.AlertsAlertBatch) error) error {
 
 	// cache by address so we don't over-allocate
 	filterers := make(map[string]*contracts.AlertsFilterer)
-	return af.lf.ForEachLog(func(logEntry types.Log) error {
+	return af.lf.ForEachLog(blockHandler, func(logEntry types.Log) error {
 		if af.ctx.Err() != nil {
 			return af.ctx.Err()
 		}

@@ -9,10 +9,9 @@ import (
 	big "math/big"
 	reflect "reflect"
 
-	domain "github.com/forta-network/forta-node/domain"
-
 	ethereum "github.com/ethereum/go-ethereum"
 	types "github.com/ethereum/go-ethereum/core/types"
+	domain "github.com/forta-network/forta-node/domain"
 	gomock "github.com/golang/mock/gomock"
 )
 
