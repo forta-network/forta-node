@@ -19,7 +19,6 @@ import (
 
 type logFeed struct {
 	ctx        context.Context
-	url        string
 	startBlock *big.Int
 	endBlock   *big.Int
 	topics     [][]string
@@ -52,6 +51,13 @@ func (l *logFeed) ForEachLog(blockHandler func(blk *domain.Block) error, handler
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
+			if currentBlock != nil && l.endBlock != nil {
+				if currentBlock.Cmp(l.endBlock) > 0 {
+					log.Infof("completed processing logs (endBlock reached)")
+					return nil
+				}
+			}
+
 			blk, err := l.client.BlockByNumber(l.ctx, currentBlock)
 			if err != nil {
 				log.Error("error while getting latest block number:", err)
@@ -93,21 +99,25 @@ func (l *logFeed) ForEachLog(blockHandler func(blk *domain.Block) error, handler
 	})
 	log.Infof("subscribed to logs: address=%v, topics=%v, startBlock=%s, endBlock=%s", l.addresses, l.topics, l.startBlock, l.endBlock)
 	defer func() {
-		log.Warn("log subscription closed")
+		log.Info("log subscription closed")
 	}()
 	return eg.Wait()
 }
 
 type LogFeedConfig struct {
-	Topics    [][]string
-	Addresses []string
+	Topics     [][]string
+	Addresses  []string
+	startBlock *big.Int
+	endBlock   *big.Int
 }
 
 func NewLogFeed(ctx context.Context, client eth.Client, cfg LogFeedConfig) (*logFeed, error) {
 	return &logFeed{
-		ctx:       ctx,
-		client:    client,
-		topics:    cfg.Topics,
-		addresses: cfg.Addresses,
+		ctx:        ctx,
+		client:     client,
+		topics:     cfg.Topics,
+		addresses:  cfg.Addresses,
+		startBlock: cfg.startBlock,
+		endBlock:   cfg.endBlock,
 	}, nil
 }
