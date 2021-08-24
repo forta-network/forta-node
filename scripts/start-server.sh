@@ -8,4 +8,6 @@ secretId="${envPrefix}_forta_passphrase"
 
 # get secret from secrets manager
 passphrase=$(aws secretsmanager --region $region get-secret-value --secret-id $secretId |jq -r '.SecretString')
-nohup forta -config "/etc/forta/config.yml" -passphrase $passphrase > /dev/null 2> /tmp/forta.log < /dev/null &
+nohup \
+	env FORTA_DIR=/.forta \
+	forta --config "/etc/forta/config.yml" --passphrase $passphrase > /dev/null 2> /tmp/forta.log < /dev/null &
