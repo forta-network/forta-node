@@ -3,9 +3,9 @@ package containers
 import (
 	"fmt"
 
-	"forta-network/forta-node/clients"
-	"forta-network/forta-node/clients/messaging"
-	"forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/clients/messaging"
+	"github.com/forta-network/forta-node/config"
 
 	log "github.com/sirupsen/logrus"
 )

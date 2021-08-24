@@ -7,7 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/core/types"
 
-	"forta-network/forta-node/domain"
+	"github.com/forta-network/forta-node/domain"
 )
 
 // mocking code borrowed from go-ethereum/core/types tests

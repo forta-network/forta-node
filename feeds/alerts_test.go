@@ -2,10 +2,11 @@ package feeds
 
 import (
 	"context"
-	"forta-network/forta-node/contracts"
 	"math/big"
 	"strings"
 	"testing"
+
+	"github.com/forta-network/forta-node/contracts"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"

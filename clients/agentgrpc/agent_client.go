@@ -1,10 +1,11 @@
 package agentgrpc
 
 import (
-	"forta-network/forta-node/config"
-	"forta-network/forta-node/protocol"
 	"fmt"
 	"time"
+
+	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/protocol"
 
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"

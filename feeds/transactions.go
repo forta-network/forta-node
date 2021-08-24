@@ -7,9 +7,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 
-	"forta-network/forta-node/domain"
-	"forta-network/forta-node/ethereum"
-	"forta-network/forta-node/utils"
+	"github.com/forta-network/forta-node/domain"
+	"github.com/forta-network/forta-node/ethereum"
+	"github.com/forta-network/forta-node/utils"
 )
 
 type transactionFeed struct {

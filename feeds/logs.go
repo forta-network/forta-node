@@ -2,8 +2,9 @@ package feeds
 
 import (
 	"context"
-	"forta-network/forta-node/utils"
 	"math/big"
+
+	"github.com/forta-network/forta-node/utils"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
@@ -11,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 
-	eth "forta-network/forta-node/ethereum"
+	eth "github.com/forta-network/forta-node/ethereum"
 )
 
 type logFeed struct {

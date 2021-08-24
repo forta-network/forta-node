@@ -10,7 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 
-	"forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/config"
 )
 
 type Service interface {

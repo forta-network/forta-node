@@ -8,9 +8,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	log "github.com/sirupsen/logrus"
 
-	"forta-network/forta-node/config"
-	"forta-network/forta-node/services"
-	"forta-network/forta-node/services/containers"
+	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/services"
+	"github.com/forta-network/forta-node/services/containers"
 )
 
 func initServices(cfg config.Config, passphrase string, ctx context.Context) ([]services.Service, error) {

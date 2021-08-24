@@ -9,8 +9,8 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	log "github.com/sirupsen/logrus"
 
-	"forta-network/forta-node/protocol"
-	"forta-network/forta-node/utils"
+	"github.com/forta-network/forta-node/protocol"
+	"github.com/forta-network/forta-node/utils"
 )
 
 type EventType string
@@ -64,26 +64,26 @@ func (t *BlockEvent) ToMessage() (*protocol.BlockEvent, error) {
 			ChainId: utils.BigIntToHex(t.ChainID),
 		},
 		Block: &protocol.BlockEvent_EthBlock{
-			Difficulty: str(t.Block.Difficulty),
-			Hash: t.Block.Hash,
-			Number: t.Block.Number,
-			ParentHash: t.Block.ParentHash,
-			Timestamp: t.Block.Timestamp,
-			Nonce: str(t.Block.Nonce),
-			ExtraData: str(t.Block.ExtraData),
-			GasLimit: str(t.Block.GasLimit),
-			GasUsed: str(t.Block.GasUsed),
-			LogsBloom: str(t.Block.LogsBloom),
-			Miner: str(t.Block.Miner),
-			MixHash: str(t.Block.MixHash),
-			Size: str(t.Block.Size),
-			StateRoot: str(t.Block.StateRoot),
-			ReceiptsRoot: str(t.Block.ReceiptsRoot),
-			TotalDifficulty: str(t.Block.TotalDifficulty),
-			Sha3Uncles: str(t.Block.Sha3Uncles),
-			Uncles: strArr(t.Block.Uncles),
+			Difficulty:       str(t.Block.Difficulty),
+			Hash:             t.Block.Hash,
+			Number:           t.Block.Number,
+			ParentHash:       t.Block.ParentHash,
+			Timestamp:        t.Block.Timestamp,
+			Nonce:            str(t.Block.Nonce),
+			ExtraData:        str(t.Block.ExtraData),
+			GasLimit:         str(t.Block.GasLimit),
+			GasUsed:          str(t.Block.GasUsed),
+			LogsBloom:        str(t.Block.LogsBloom),
+			Miner:            str(t.Block.Miner),
+			MixHash:          str(t.Block.MixHash),
+			Size:             str(t.Block.Size),
+			StateRoot:        str(t.Block.StateRoot),
+			ReceiptsRoot:     str(t.Block.ReceiptsRoot),
+			TotalDifficulty:  str(t.Block.TotalDifficulty),
+			Sha3Uncles:       str(t.Block.Sha3Uncles),
+			Uncles:           strArr(t.Block.Uncles),
 			TransactionsRoot: str(t.Block.TransactionsRoot),
-			Transactions: txs,
+			Transactions:     txs,
 		},
 	}, nil
 }

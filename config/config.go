@@ -6,10 +6,9 @@ import (
 	"math/big"
 	"os"
 
-	"forta-network/forta-node/utils"
+	"github.com/forta-network/forta-node/utils"
 
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
 )
 
 const EnvConfig = "FORTA_CONFIG"

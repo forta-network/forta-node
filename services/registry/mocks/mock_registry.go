@@ -6,10 +6,11 @@ package mock_registry
 
 import (
 	context "context"
-	domain "forta-network/forta-node/domain"
-	regtypes "forta-network/forta-node/services/registry/regtypes"
 	big "math/big"
 	reflect "reflect"
+
+	domain "github.com/forta-network/forta-node/domain"
+	regtypes "github.com/forta-network/forta-node/services/registry/regtypes"
 
 	ethereum "github.com/ethereum/go-ethereum"
 	bind "github.com/ethereum/go-ethereum/accounts/abi/bind"

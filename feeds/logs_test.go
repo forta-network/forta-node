@@ -2,10 +2,11 @@ package feeds
 
 import (
 	"context"
-	mocks "forta-network/forta-node/ethereum/mocks"
-	"forta-network/forta-node/testutils"
 	"math/big"
 	"testing"
+
+	mocks "github.com/forta-network/forta-node/ethereum/mocks"
+	"github.com/forta-network/forta-node/testutils"
 
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/golang/mock/gomock"

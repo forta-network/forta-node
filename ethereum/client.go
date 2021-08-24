@@ -11,8 +11,8 @@ import (
 
 	backoff "github.com/cenkalti/backoff/v4"
 
-	"forta-network/forta-node/domain"
-	"forta-network/forta-node/utils"
+	"github.com/forta-network/forta-node/domain"
+	"github.com/forta-network/forta-node/utils"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/core/types"

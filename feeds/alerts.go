@@ -2,7 +2,8 @@ package feeds
 
 import (
 	"context"
-	"forta-network/forta-node/contracts"
+
+	"github.com/forta-network/forta-node/contracts"
 
 	"github.com/ethereum/go-ethereum/core/types"
 )

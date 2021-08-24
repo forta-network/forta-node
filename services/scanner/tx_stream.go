@@ -3,10 +3,10 @@ package scanner
 import (
 	"context"
 
-	"forta-network/forta-node/config"
-	"forta-network/forta-node/domain"
-	"forta-network/forta-node/ethereum"
-	"forta-network/forta-node/feeds"
+	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/domain"
+	"github.com/forta-network/forta-node/ethereum"
+	"github.com/forta-network/forta-node/feeds"
 
 	log "github.com/sirupsen/logrus"
 )

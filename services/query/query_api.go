@@ -13,8 +13,8 @@ import (
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 
-	"forta-network/forta-node/protocol"
-	"forta-network/forta-node/store"
+	"github.com/forta-network/forta-node/protocol"
+	"github.com/forta-network/forta-node/store"
 )
 
 // AlertApi allows retrieval of alerts from the database

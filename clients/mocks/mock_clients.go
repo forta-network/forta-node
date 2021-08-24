@@ -6,10 +6,11 @@ package mock_clients
 
 import (
 	context "context"
-	clients "forta-network/forta-node/clients"
-	config "forta-network/forta-node/config"
-	protocol "forta-network/forta-node/protocol"
 	reflect "reflect"
+
+	clients "github.com/forta-network/forta-node/clients"
+	config "github.com/forta-network/forta-node/config"
+	protocol "github.com/forta-network/forta-node/protocol"
 
 	gomock "github.com/golang/mock/gomock"
 	grpc "google.golang.org/grpc"

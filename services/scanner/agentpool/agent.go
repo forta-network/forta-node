@@ -1,13 +1,14 @@
 package agentpool
 
 import (
-	"forta-network/forta-node/clients"
-	"forta-network/forta-node/config"
-	"forta-network/forta-node/protocol"
-	"forta-network/forta-node/services/scanner"
 	"context"
 	"strconv"
 	"time"
+
+	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/protocol"
+	"github.com/forta-network/forta-node/services/scanner"
 
 	log "github.com/sirupsen/logrus"
 )
