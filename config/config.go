@@ -6,6 +6,8 @@ import (
 	"math/big"
 	"os"
 
+	yaml "gopkg.in/yaml.v3"
+
 	"github.com/forta-network/forta-node/utils"
 
 	log "github.com/sirupsen/logrus"
