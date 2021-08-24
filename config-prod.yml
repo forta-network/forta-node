@@ -36,12 +36,11 @@ query:
       skipEmpty: true
       intervalSeconds: 15
       maxAlerts: 100
-    contractAddress: "0xf4746faBc1D5E751248Ea3AC87ceB13C432F0C1A"
+    contractAddress: "0x8c06716460e4A6E8Ca6a0bfe7190b1a6A059eA2F"
     ipfs:
       gatewayUrl: "http://ipfs.forta.internal:5001"
     ethereum:
       jsonRpcUrl: "REGISTRY_API_URL"
-      contractAddress: "0x38C1e080BeEb26eeA91932178E62987598230271"
   db:
     path: "/tmp/forta-alerts"
 
