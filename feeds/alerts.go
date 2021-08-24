@@ -16,7 +16,7 @@ type alertFeed struct {
 	lf  LogFeed
 }
 
-func (af *alertFeed) ForEachAlert(handler func(batch *contracts.AlertsAlertBatch) error) error {
+func (af *alertFeed) ForEachAlert(handler func(logEntry types.Log, batch *contracts.AlertsAlertBatch) error) error {
 
 	// cache by address so we don't over-allocate
 	filterers := make(map[string]*contracts.AlertsFilterer)
@@ -39,7 +39,7 @@ func (af *alertFeed) ForEachAlert(handler func(batch *contracts.AlertsAlertBatch
 			return err
 		}
 		if batch != nil {
-			return handler(batch)
+			return handler(logEntry, batch)
 		}
 		return nil
 	})
