@@ -242,8 +242,7 @@ func (e streamEthClient) TransactionReceipt(ctx context.Context, txHash string) 
 	log.Debugf(name)
 	var result domain.TransactionReceipt
 	err := withBackoff(ctx, name, func(ctx context.Context) error {
-		err := e.rpcClient.CallContext(ctx, &result, transactionReceipt, txHash)
-		if err != nil {
+		if err := e.rpcClient.CallContext(ctx, &result, transactionReceipt, txHash); err != nil {
 			return err
 		}
 		if result.TransactionHash == nil {
