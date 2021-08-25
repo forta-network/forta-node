@@ -246,7 +246,7 @@ func (e streamEthClient) TransactionReceipt(ctx context.Context, txHash string) 
 			return err
 		}
 		if result.TransactionHash == nil {
-			return errors.New("receipt not found")
+			return errors.New("receipt was empty")
 		}
 		return nil
 	}, RetryOptions{
