@@ -175,6 +175,10 @@ func (t *TxNodeService) ensureNodeImages() error {
 		Ref  string
 	}{
 		{
+			Name: "nats",
+			Ref:  "nats:2.3.2",
+		},
+		{
 			Name: "scanner",
 			Ref:  config.DockerScannerContainerImage,
 		},
