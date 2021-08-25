@@ -2,6 +2,7 @@ package ethereum
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
@@ -99,10 +100,7 @@ func withBackoff(ctx context.Context, name string, operation func(ctx context.Co
 		if ctx.Err() != nil {
 			return backoff.Permanent(ctx.Err())
 		}
-		tCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-
-		defer cancel()
-		err := operation(tCtx)
+		err := operation(ctx)
 
 		if err == nil {
 			//success, returning now avoids failing on context timeouts in certain edge cases
@@ -249,7 +247,13 @@ func (e streamEthClient) TransactionReceipt(ctx context.Context, txHash string) 
 	log.Debugf(name)
 	var result domain.TransactionReceipt
 	err := withBackoff(ctx, name, func(ctx context.Context) error {
-		return e.rpcClient.CallContext(ctx, &result, transactionReceipt, txHash)
+		if err := e.rpcClient.CallContext(ctx, &result, transactionReceipt, txHash); err != nil {
+			return err
+		}
+		if result.TransactionHash == nil {
+			return errors.New("receipt was empty")
+		}
+		return nil
 	}, RetryOptions{
 		MaxElapsedTime: pointDur(5 * time.Minute),
 	})
