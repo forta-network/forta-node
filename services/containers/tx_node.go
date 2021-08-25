@@ -77,6 +77,12 @@ func (t *TxNodeService) start() error {
 		return err
 	}
 
+	if config.UseDockerContainers == "remote" {
+		if err := t.ensureNodeImages(); err != nil {
+			return err
+		}
+	}
+
 	nodeNetwork, err := t.client.CreatePublicNetwork(t.ctx, config.DockerNetworkName)
 	if err != nil {
 		return err
@@ -84,7 +90,7 @@ func (t *TxNodeService) start() error {
 
 	natsContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerNatsContainerName,
-		Image: "nats:latest",
+		Image: "nats:2.3.2",
 		Ports: map[string]string{
 			"4222": "4222",
 		},
@@ -98,7 +104,7 @@ func (t *TxNodeService) start() error {
 
 	queryContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerQueryContainerName,
-		Image: t.config.Config.Query.QueryImage,
+		Image: config.DockerQueryContainerImage,
 		Env: map[string]string{
 			config.EnvConfig:   cfgJson,
 			config.EnvFortaDir: config.DefaultContainerFortaDirPath,
@@ -123,7 +129,7 @@ func (t *TxNodeService) start() error {
 
 	t.jsonRpcContainer, err = t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerJSONRPCProxyContainerName,
-		Image: t.config.Config.JsonRpcProxy.JsonRpcImage,
+		Image: config.DockerJSONRPCProxyContainerImage,
 		Env: map[string]string{
 			config.EnvConfig: cfgJson,
 		},
@@ -137,7 +143,7 @@ func (t *TxNodeService) start() error {
 
 	t.scannerContainer, err = t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerScannerContainerName,
-		Image: t.config.Config.Scanner.ScannerImage,
+		Image: config.DockerScannerContainerImage,
 		Env: map[string]string{
 			config.EnvConfig:    cfgJson,
 			config.EnvFortaDir:  config.DefaultContainerFortaDirPath,
@@ -160,6 +166,11 @@ func (t *TxNodeService) start() error {
 
 	t.addContainerUnsafe(natsContainer, queryContainer, t.jsonRpcContainer, t.scannerContainer)
 
+	return nil
+}
+
+func (t *TxNodeService) ensureNodeImages() error {
+	// TODO: Implement - this should check if we have the images locally and pull if we don't
 	return nil
 }
 

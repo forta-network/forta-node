@@ -5,10 +5,9 @@ set -o pipefail
 
 REGISTRY="$1"
 
-DIGEST=''
 push_and_find_digest() {
 	PUSH_OUTPUT=$(docker push "$REGISTRY/$1")
-	DIGEST=$(grep -oE '([0-9a-z]{64})' "$PUSH_OUTPUT")
+	DIGEST=$(echo "$PUSH_OUTPUT" | grep -oE '([0-9a-z]{64})')
 }
 
 docker build -t "$REGISTRY/forta-scanner" -f Dockerfile.scanner .
@@ -23,5 +22,4 @@ docker build -t "$REGISTRY/forta-json-rpc" -f Dockerfile.json-rpc .
 push_and_find_digest forta-json-rpc
 JSON_RPC_IMAGE="$REGISTRY/$DIGEST"
 
-mkdir -p build
-go build -o build/forta "-X 'config/config.DockerScannerImageName=$SCANNER_IMAGE' -X 'config/config.DockerQueryContainerName=$QUERY_IMAGE' -X 'config/config.DockerJSONRPCProxyContainerName=$JSON_RPC_IMAGE'"
+./scripts/build.sh "$SCANNER_IMAGE" "$QUERY_IMAGE" "$JSON_RPC_IMAGE" 'remote'

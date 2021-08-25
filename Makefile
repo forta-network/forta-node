@@ -47,10 +47,9 @@ abigen:
 	abigen --abi ./contracts/alerts.json --out ./contracts/alerts.go --pkg contracts --type Alerts
 
 install:
-	make containers
-	make main
+	./scripts/build-for-local.sh
 	cp forta /usr/bin/forta
 
-release-install:
-	./scripts/release-build.sh disco.forta.network
-	cp build/forta /usr/bin/forta
+install-release:
+	./scripts/build-for-release.sh disco.forta.network
+	cp forta /usr/bin/forta

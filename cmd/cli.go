@@ -86,6 +86,12 @@ publishes alerts about them`,
 		Short: "add new agent",
 		RunE:  withInitialized(withValidConfig(handleFortaAgentAdd)),
 	}
+
+	cmdFortaImages = &cobra.Command{
+		Use:   "images",
+		Short: "list the Forta node container images",
+		RunE:  handleFortaImages,
+	}
 )
 
 // Execute executes the root command.
@@ -105,6 +111,8 @@ func init() {
 
 	cmdForta.AddCommand(cmdFortaAgent)
 	cmdFortaAgent.AddCommand(cmdFortaAgentAdd)
+
+	cmdForta.AddCommand(cmdFortaImages)
 
 	// Global (persistent) flags
 
