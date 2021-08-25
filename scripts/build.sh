@@ -1,4 +1,7 @@
-#!/bin/sh
+#!/bin/bash
+
+set -e
+set -o pipefail
 
 mkdir -p build
 MODULE_NAME=$(grep 'module' go.mod | cut -c8-) # Get the module name from go.mod

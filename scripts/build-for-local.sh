@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -xe
+set -e
 set -o pipefail
 
 SCANNER_IMAGE='forta-network/forta-scanner:latest'

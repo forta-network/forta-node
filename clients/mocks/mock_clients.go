@@ -97,6 +97,20 @@ func (mr *MockDockerClientMockRecorder) GetContainers(ctx interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainers", reflect.TypeOf((*MockDockerClient)(nil).GetContainers), ctx)
 }
 
+// HasLocalImage mocks base method.
+func (m *MockDockerClient) HasLocalImage(ctx context.Context, ref string) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasLocalImage", ctx, ref)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// HasLocalImage indicates an expected call of HasLocalImage.
+func (mr *MockDockerClientMockRecorder) HasLocalImage(ctx, ref interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasLocalImage", reflect.TypeOf((*MockDockerClient)(nil).HasLocalImage), ctx, ref)
+}
+
 // Prune mocks base method.
 func (m *MockDockerClient) Prune(ctx context.Context) error {
 	m.ctrl.T.Helper()

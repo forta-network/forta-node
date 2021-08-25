@@ -11,12 +11,9 @@ import (
 )
 
 func (t *TxNodeService) startAgent(agent config.AgentConfig) error {
-	// TODO: Verify the manifest (and the config?)
-
-	if err := t.agentClient.PullImage(t.ctx, agent.Image); err != nil {
-		return fmt.Errorf("failed to pull the image: %v", err)
+	if err := t.ensureLocalImage(fmt.Sprintf("agent %s", agent.ID), agent.Image); err != nil {
+		return err
 	}
-	log.Infof("pulled agent image: %v", agent.Image)
 
 	nwID, err := t.client.CreatePublicNetwork(t.ctx, agent.ContainerName())
 	if err != nil {

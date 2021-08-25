@@ -170,7 +170,40 @@ func (t *TxNodeService) start() error {
 }
 
 func (t *TxNodeService) ensureNodeImages() error {
-	// TODO: Implement - this should check if we have the images locally and pull if we don't
+	for _, image := range []struct {
+		Name string
+		Ref  string
+	}{
+		{
+			Name: "scanner",
+			Ref:  config.DockerScannerContainerImage,
+		},
+		{
+			Name: "query",
+			Ref:  config.DockerQueryContainerImage,
+		},
+		{
+			Name: "json-rpc",
+			Ref:  config.DockerJSONRPCProxyContainerImage,
+		},
+	} {
+		if err := t.ensureLocalImage(image.Name, image.Ref); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (t *TxNodeService) ensureLocalImage(name, ref string) error {
+	if t.client.HasLocalImage(t.ctx, ref) {
+		log.Infof("found local image for '%s': %s", name, ref)
+		return nil
+	}
+	err := t.client.PullImage(t.ctx, ref)
+	if err != nil {
+		return fmt.Errorf("failed to pull image (%s): %v", name, ref)
+	}
+	log.Infof("pulled image for '%s': %s", name, ref)
 	return nil
 }
 

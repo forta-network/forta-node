@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/go-playground/validator/v10"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -163,16 +162,9 @@ func initConfig() {
 	cfg.Passphrase = viper.GetString(keyFortaPassphrase)
 	cfg.LocalAgentsPath = path.Join(cfg.FortaDir, config.DefaultLocalAgentsFileName)
 
-	if err := viper.ReadInConfig(); err != nil {
-		log.Errorf("failed to read the config file: %v", err)
-	}
-	if err := viper.Unmarshal(&cfg); err != nil {
-		log.Errorf("failed to unmarshal the config file: %v", err)
-	}
-
-	if err := config.InitLogLevel(cfg); err != nil {
-		log.Errorf("failed to init log level: %v", err)
-	}
+	viper.ReadInConfig()
+	viper.Unmarshal(&cfg)
+	config.InitLogLevel(cfg)
 }
 
 func validateConfig() error {

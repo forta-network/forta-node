@@ -315,6 +315,12 @@ func (d *dockerClient) StopContainer(ctx context.Context, ID string) error {
 	return d.cli.ContainerKill(ctx, ID, "SIGKILL")
 }
 
+// HasLocalImage checks if we have an image locally.
+func (d *dockerClient) HasLocalImage(ctx context.Context, ref string) bool {
+	_, _, err := d.cli.ImageInspectWithRaw(ctx, ref)
+	return err == nil
+}
+
 // NewDockerClient creates a new docker client
 func NewDockerClient() (*dockerClient, error) {
 	cli, err := client.NewClientWithOpts()
