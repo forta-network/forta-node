@@ -107,8 +107,8 @@ func (l *logFeed) ForEachLog(blockHandler func(blk *domain.Block) error, handler
 type LogFeedConfig struct {
 	Topics     [][]string
 	Addresses  []string
-	startBlock *big.Int
-	endBlock   *big.Int
+	StartBlock *big.Int
+	EndBlock   *big.Int
 }
 
 func NewLogFeed(ctx context.Context, client eth.Client, cfg LogFeedConfig) (*logFeed, error) {
@@ -117,7 +117,7 @@ func NewLogFeed(ctx context.Context, client eth.Client, cfg LogFeedConfig) (*log
 		client:     client,
 		topics:     cfg.Topics,
 		addresses:  cfg.Addresses,
-		startBlock: cfg.startBlock,
-		endBlock:   cfg.endBlock,
+		startBlock: cfg.StartBlock,
+		endBlock:   cfg.EndBlock,
 	}, nil
 }
