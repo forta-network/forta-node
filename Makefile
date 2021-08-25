@@ -51,5 +51,5 @@ install:
 	cp forta /usr/bin/forta
 
 install-release:
-	./scripts/build-for-release.sh localhost:1970
+	./scripts/build-for-release.sh disco.forta.network
 	cp forta /usr/bin/forta
