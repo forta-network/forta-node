@@ -7,7 +7,7 @@ import (
 )
 
 func handleFortaImages(cmd *cobra.Command, args []string) error {
-	cmd.Println("Use containers:", config.UseDockerContainers)
+	cmd.Println("Use images:", config.UseDockerImages)
 	cmd.Println("Scanner:", config.DockerScannerContainerImage)
 	cmd.Println("Query:", config.DockerQueryContainerImage)
 	cmd.Println("Proxy:", config.DockerJSONRPCProxyContainerImage)

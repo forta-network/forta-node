@@ -37,7 +37,7 @@ var (
 	DockerScannerContainerImage      string
 	DockerQueryContainerImage        string
 	DockerJSONRPCProxyContainerImage string
-	UseDockerContainers              string // "local" or "remote"
+	UseDockerImages                  string // "local" or "remote"
 
 	DockerNatsContainerName         = fmt.Sprintf("%s-nats", ContainerNamePrefix)
 	DockerScannerContainerName      = fmt.Sprintf("%s-scanner", ContainerNamePrefix)

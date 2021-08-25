@@ -77,7 +77,7 @@ func (t *TxNodeService) start() error {
 		return err
 	}
 
-	if config.UseDockerContainers == "remote" {
+	if config.UseDockerImages == "remote" {
 		if err := t.ensureNodeImages(); err != nil {
 			return err
 		}
