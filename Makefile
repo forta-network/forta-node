@@ -4,17 +4,6 @@ containers:
 	docker build -t forta-network/forta-query -f Dockerfile.query .
 	docker build -t forta-network/forta-json-rpc -f Dockerfile.json-rpc .
 
-docker-login:
-	aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 997179694723.dkr.ecr.us-west-2.amazonaws.com
-
-ecr:
-	docker tag forta-network/forta-scanner:latest 997179694723.dkr.ecr.us-west-2.amazonaws.com/forta-scanner:latest
-	docker tag forta-network/forta-query:latest 997179694723.dkr.ecr.us-west-2.amazonaws.com/forta-query:latest
-	docker tag forta-network/forta-json-rpc:latest 997179694723.dkr.ecr.us-west-2.amazonaws.com/forta-json-rpc:latest
-	docker push 997179694723.dkr.ecr.us-west-2.amazonaws.com/forta-scanner:latest
-	docker push 997179694723.dkr.ecr.us-west-2.amazonaws.com/forta-query:latest
-	docker push 997179694723.dkr.ecr.us-west-2.amazonaws.com/forta-json-rpc:latest
-
 main:
 	docker build -t build-forta -f Dockerfile.cli .
 	docker create --name build-forta build-forta
