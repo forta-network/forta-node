@@ -2,6 +2,7 @@ package ethereum
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
@@ -9,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
 	"github.com/ethereum/go-ethereum/rpc"
 	log "github.com/sirupsen/logrus"
 
@@ -242,7 +242,14 @@ func (e streamEthClient) TransactionReceipt(ctx context.Context, txHash string) 
 	log.Debugf(name)
 	var result domain.TransactionReceipt
 	err := withBackoff(ctx, name, func(ctx context.Context) error {
-		return e.rpcClient.CallContext(ctx, &result, transactionReceipt, txHash)
+		err := e.rpcClient.CallContext(ctx, &result, transactionReceipt, txHash)
+		if err != nil {
+			return err
+		}
+		if result.TransactionHash == nil {
+			return errors.New("receipt not found")
+		}
+		return nil
 	}, RetryOptions{
 		MaxElapsedTime: pointDur(5 * time.Minute),
 	})

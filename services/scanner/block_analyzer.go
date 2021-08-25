@@ -6,17 +6,16 @@ import (
 	"forta-network/forta-node/protocol"
 	"forta-network/forta-node/store"
 	"forta-network/forta-node/utils"
+	"strings"
+
+	"github.com/ethereum/go-ethereum/crypto"
 
 	"context"
-	"fmt"
 	"time"
 
-	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/jsonpb"
-	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/crypto/sha3"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -33,20 +32,18 @@ type BlockAnalyzerServiceConfig struct {
 	AgentPool    AgentPool
 }
 
-func (t *BlockAnalyzerService) calculateAlertID(result *BlockResult, f *protocol.Finding) (string, error) {
-	findingBytes, err := proto.Marshal(f)
-	if err != nil {
-		return "", err
-	}
-	idStr := fmt.Sprintf("%s%s%s", result.Request.Event.Network.ChainId, result.Request.Event.BlockHash, string(findingBytes))
-	return base58.Encode(sha3.New256().Sum([]byte(idStr))), nil
+func (t *BlockAnalyzerService) calculateAlertID(result *BlockResult, f *protocol.Finding) string {
+	idStr := strings.Join([]string{
+		result.Request.Event.Network.ChainId,
+		result.Request.Event.BlockHash,
+		f.AlertId,
+		f.Severity.String(),
+		result.AgentConfig.ID}, "")
+	return crypto.Keccak256Hash([]byte(idStr)).Hex()
 }
 
 func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
-	alertID, err := t.calculateAlertID(result, f)
-	if err != nil {
-		return nil, err
-	}
+	alertID := t.calculateAlertID(result, f)
 	blockNumber, err := utils.HexToBigInt(result.Request.Event.BlockNumber)
 	if err != nil {
 		return nil, err
@@ -66,6 +63,8 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 			ImageHash: result.AgentConfig.ImageHash(),
 		},
 		Tags: map[string]string{
+			"agentImage":  result.AgentConfig.Image,
+			"agentId":     result.AgentConfig.ID,
 			"blockHash":   result.Request.Event.BlockHash,
 			"blockNumber": blockNumber.String(),
 			"chainId":     chainId.String(),
