@@ -1,9 +1,18 @@
 package cmd
 
-import "github.com/fatih/color"
+import (
+	"fmt"
+	"os"
+
+	"github.com/fatih/color"
+)
+
+func toStderr(str string) {
+	fmt.Fprintf(os.Stderr, str)
+}
 
 func yellowBold(str string, args ...interface{}) {
-	color.New(color.Bold, color.FgYellow).Printf(str, args...)
+	toStderr(color.New(color.Bold, color.FgYellow).Sprintf(str, args...))
 }
 
 func greenBold(str string, args ...interface{}) {
@@ -11,5 +20,5 @@ func greenBold(str string, args ...interface{}) {
 }
 
 func redBold(str string, args ...interface{}) {
-	color.New(color.Bold, color.FgRed).Printf(str, args...)
+	toStderr(color.New(color.Bold, color.FgRed).Sprintf(str, args...))
 }

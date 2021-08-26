@@ -3,11 +3,12 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"github.com/forta-network/forta-node/config"
 	"os"
 	"path"
 	"reflect"
 	"strings"
+
+	"github.com/forta-network/forta-node/config"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/spf13/cobra"
