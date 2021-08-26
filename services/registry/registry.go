@@ -168,7 +168,8 @@ func (rs *RegistryService) getLatestAgents() ([]*config.AgentConfig, error) {
 		if !disabled {
 			agentCfg, err := rs.makeAgentConfig(agentID, agentRef)
 			if err != nil {
-				return nil, fmt.Errorf("failed to make agent config: %v", err)
+				log.Errorf("could not load agent (skipping): %s, %s", agentID, agentRef)
+				continue
 			}
 			agentConfigs = append(agentConfigs, &agentCfg)
 		}
