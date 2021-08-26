@@ -5,11 +5,13 @@
 package mock_ethereum
 
 import (
-	domain "forta-network/forta-node/domain"
 	context "context"
 	big "math/big"
 	reflect "reflect"
 
+	ethereum "github.com/ethereum/go-ethereum"
+	types "github.com/ethereum/go-ethereum/core/types"
+	domain "github.com/forta-network/forta-node/domain"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -163,18 +165,18 @@ func (mr *MockClientMockRecorder) Close() *gomock.Call {
 }
 
 // GetLogs mocks base method.
-func (m *MockClient) GetLogs(ctx context.Context, hash string) ([]domain.LogEntry, error) {
+func (m *MockClient) GetLogs(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLogs", ctx, hash)
-	ret0, _ := ret[0].([]domain.LogEntry)
+	ret := m.ctrl.Call(m, "GetLogs", ctx, q)
+	ret0, _ := ret[0].([]types.Log)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetLogs indicates an expected call of GetLogs.
-func (mr *MockClientMockRecorder) GetLogs(ctx, hash interface{}) *gomock.Call {
+func (mr *MockClientMockRecorder) GetLogs(ctx, q interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLogs", reflect.TypeOf((*MockClient)(nil).GetLogs), ctx, hash)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLogs", reflect.TypeOf((*MockClient)(nil).GetLogs), ctx, q)
 }
 
 // TraceBlock mocks base method.

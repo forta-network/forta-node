@@ -1,22 +1,21 @@
 package scanner
 
 import (
-	"forta-network/forta-node/clients"
-	"forta-network/forta-node/domain"
-	"forta-network/forta-node/protocol"
-	"forta-network/forta-node/store"
-	"forta-network/forta-node/utils"
-	"strings"
-
-	"github.com/ethereum/go-ethereum/crypto"
-
 	"context"
+	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/domain"
+	"github.com/forta-network/forta-node/protocol"
+	"github.com/forta-network/forta-node/store"
+	"github.com/forta-network/forta-node/utils"
 )
 
 // BlockAnalyzerService reads TX info, calls agents, and emits results

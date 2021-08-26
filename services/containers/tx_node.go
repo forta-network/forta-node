@@ -8,10 +8,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"forta-network/forta-node/clients"
-	"forta-network/forta-node/clients/messaging"
-	"forta-network/forta-node/config"
-	"forta-network/forta-node/store"
+	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/clients/messaging"
+	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/store"
 )
 
 // TxNodeService manages the safe-node docker container as a service

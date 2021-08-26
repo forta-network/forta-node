@@ -1,4 +1,4 @@
-module forta-network/forta-node
+module github.com/forta-network/forta-node
 
 go 1.16
 

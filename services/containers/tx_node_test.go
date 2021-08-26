@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"testing"
 
-	"forta-network/forta-node/clients"
-	"forta-network/forta-node/clients/messaging"
-	mock_clients "forta-network/forta-node/clients/mocks"
-	"forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/clients/messaging"
+	mock_clients "github.com/forta-network/forta-node/clients/mocks"
+	"github.com/forta-network/forta-node/config"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -36,9 +36,9 @@ type Suite struct {
 	r *require.Assertions
 
 	dockerClient *mock_clients.MockDockerClient
-	agentClient *mock_clients.MockDockerClient
+	agentClient  *mock_clients.MockDockerClient
 
-	msgClient    *mock_clients.MockMessageClient
+	msgClient *mock_clients.MockMessageClient
 
 	service *TxNodeService
 
@@ -72,9 +72,9 @@ func (s *Suite) SetupTest() {
 
 	s.msgClient = mock_clients.NewMockMessageClient(gomock.NewController(s.T()))
 	service := &TxNodeService{
-		ctx:       context.Background(),
-		client:    s.dockerClient,
-		msgClient: s.msgClient,
+		ctx:         context.Background(),
+		client:      s.dockerClient,
+		msgClient:   s.msgClient,
 		agentClient: s.agentClient,
 	}
 	service.config.Config.Log.Level = "debug"

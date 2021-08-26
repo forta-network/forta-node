@@ -5,10 +5,11 @@
 package mock_feeds
 
 import (
-	domain "forta-network/forta-node/domain"
 	reflect "reflect"
 
 	types "github.com/ethereum/go-ethereum/core/types"
+	contracts "github.com/forta-network/forta-node/contracts"
+	domain "github.com/forta-network/forta-node/domain"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -122,15 +123,52 @@ func (m *MockLogFeed) EXPECT() *MockLogFeedMockRecorder {
 }
 
 // ForEachLog mocks base method.
-func (m *MockLogFeed) ForEachLog(handler func(types.Log) error) error {
+func (m *MockLogFeed) ForEachLog(blockHandler func(*domain.Block) error, handler func(types.Log) error) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ForEachLog", handler)
+	ret := m.ctrl.Call(m, "ForEachLog", blockHandler, handler)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ForEachLog indicates an expected call of ForEachLog.
-func (mr *MockLogFeedMockRecorder) ForEachLog(handler interface{}) *gomock.Call {
+func (mr *MockLogFeedMockRecorder) ForEachLog(blockHandler, handler interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForEachLog", reflect.TypeOf((*MockLogFeed)(nil).ForEachLog), handler)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForEachLog", reflect.TypeOf((*MockLogFeed)(nil).ForEachLog), blockHandler, handler)
+}
+
+// MockAlertFeed is a mock of AlertFeed interface.
+type MockAlertFeed struct {
+	ctrl     *gomock.Controller
+	recorder *MockAlertFeedMockRecorder
+}
+
+// MockAlertFeedMockRecorder is the mock recorder for MockAlertFeed.
+type MockAlertFeedMockRecorder struct {
+	mock *MockAlertFeed
+}
+
+// NewMockAlertFeed creates a new mock instance.
+func NewMockAlertFeed(ctrl *gomock.Controller) *MockAlertFeed {
+	mock := &MockAlertFeed{ctrl: ctrl}
+	mock.recorder = &MockAlertFeedMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockAlertFeed) EXPECT() *MockAlertFeedMockRecorder {
+	return m.recorder
+}
+
+// ForEachAlert mocks base method.
+func (m *MockAlertFeed) ForEachAlert(blockHandler func(*domain.Block) error, handler func(types.Log, *contracts.AlertsAlertBatch) error) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ForEachAlert", blockHandler, handler)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ForEachAlert indicates an expected call of ForEachAlert.
+func (mr *MockAlertFeedMockRecorder) ForEachAlert(blockHandler, handler interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForEachAlert", reflect.TypeOf((*MockAlertFeed)(nil).ForEachAlert), blockHandler, handler)
 }

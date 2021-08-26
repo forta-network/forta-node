@@ -10,12 +10,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
+	backoff "github.com/cenkalti/backoff/v4"
+
+	"github.com/forta-network/forta-node/domain"
+	"github.com/forta-network/forta-node/utils"
+
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 	log "github.com/sirupsen/logrus"
-
-	"forta-network/forta-node/domain"
-	"forta-network/forta-node/utils"
 )
 
 type rpcClient interface {
@@ -32,7 +35,7 @@ type Client interface {
 	TransactionReceipt(ctx context.Context, txHash string) (*domain.TransactionReceipt, error)
 	ChainID(ctx context.Context) (*big.Int, error)
 	TraceBlock(ctx context.Context, number *big.Int) ([]domain.Trace, error)
-	GetLogs(ctx context.Context, hash string) ([]domain.LogEntry, error)
+	GetLogs(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error)
 }
 
 const blocksByNumber = "eth_getBlockByNumber"
@@ -161,14 +164,18 @@ func (e streamEthClient) TraceBlock(ctx context.Context, number *big.Int) ([]dom
 }
 
 // GetLogs returns the set of logs for a block
-func (e streamEthClient) GetLogs(ctx context.Context, hash string) ([]domain.LogEntry, error) {
-	name := fmt.Sprintf("%s(%s)", getLogs, hash)
+func (e streamEthClient) GetLogs(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error) {
+	name := fmt.Sprintf("%s(%v)", getLogs, q)
 	log.Debugf(name)
-	var result []domain.LogEntry
-	err := withBackoff(ctx, name, func(ctx context.Context) error {
-		return e.rpcClient.CallContext(ctx, &result, getLogs, map[string]string{
-			"blockHash": hash,
-		})
+	var result []types.Log
+
+	args, err := toFilterArg(q)
+	if err != nil {
+		return nil, err
+	}
+
+	err = withBackoff(ctx, name, func(ctx context.Context) error {
+		return e.rpcClient.CallContext(ctx, &result, getLogs, args)
 	}, RetryOptions{
 		MinBackoff:     pointDur(5 * time.Second),
 		MaxElapsedTime: pointDur(12 * time.Hour),

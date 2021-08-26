@@ -11,12 +11,12 @@ import (
 	"net/http"
 	"time"
 
-	"forta-network/forta-node/config"
-	"forta-network/forta-node/contracts"
-	"forta-network/forta-node/protocol"
-	"forta-network/forta-node/security"
-	"forta-network/forta-node/store"
-	"forta-network/forta-node/utils"
+	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/contracts"
+	"github.com/forta-network/forta-node/protocol"
+	"github.com/forta-network/forta-node/security"
+	"github.com/forta-network/forta-node/store"
+	"github.com/forta-network/forta-node/utils"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
