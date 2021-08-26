@@ -17,9 +17,9 @@ import (
 
 // TxNodeService manages the safe-node docker container as a service
 type TxNodeService struct {
-	ctx         context.Context
-	client      clients.DockerClient
-	agentClient clients.DockerClient
+	ctx        context.Context
+	client     clients.DockerClient
+	authClient clients.DockerClient
 
 	msgClient   clients.MessageClient
 	config      TxNodeServiceConfig
@@ -171,39 +171,47 @@ func (t *TxNodeService) start() error {
 
 func (t *TxNodeService) ensureNodeImages() error {
 	for _, image := range []struct {
-		Name string
-		Ref  string
+		Name        string
+		Ref         string
+		RequireAuth bool
 	}{
 		{
 			Name: "nats",
 			Ref:  "nats:2.3.2",
 		},
 		{
-			Name: "scanner",
-			Ref:  config.DockerScannerContainerImage,
+			Name:        "scanner",
+			Ref:         config.DockerScannerContainerImage,
+			RequireAuth: true,
 		},
 		{
-			Name: "query",
-			Ref:  config.DockerQueryContainerImage,
+			Name:        "query",
+			Ref:         config.DockerQueryContainerImage,
+			RequireAuth: true,
 		},
 		{
-			Name: "json-rpc",
-			Ref:  config.DockerJSONRPCProxyContainerImage,
+			Name:        "json-rpc",
+			Ref:         config.DockerJSONRPCProxyContainerImage,
+			RequireAuth: true,
 		},
 	} {
-		if err := t.ensureLocalImage(image.Name, image.Ref); err != nil {
+		if err := t.ensureLocalImage(image.Name, image.Ref, image.RequireAuth); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (t *TxNodeService) ensureLocalImage(name, ref string) error {
+func (t *TxNodeService) ensureLocalImage(name, ref string, requireAuth bool) error {
 	if t.client.HasLocalImage(t.ctx, ref) {
 		log.Infof("found local image for '%s': %s", name, ref)
 		return nil
 	}
-	err := t.client.PullImage(t.ctx, ref)
+	client := t.client
+	if requireAuth {
+		client = t.authClient
+	}
+	err := client.PullImage(t.ctx, ref)
 	if err != nil {
 		return fmt.Errorf("failed to pull image (%s): %v", name, ref)
 	}
@@ -231,7 +239,7 @@ func (t *TxNodeService) Name() string {
 }
 
 func NewTxNodeService(ctx context.Context, cfg TxNodeServiceConfig) (*TxNodeService, error) {
-	agentDockerClient, err := clients.NewAuthDockerClient(cfg.Config.Registry.Username, cfg.Config.Registry.Password)
+	dockerAuthClient, err := clients.NewAuthDockerClient(cfg.Config.Registry.Username, cfg.Config.Registry.Password)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the agent docker client: %v", err)
 	}
@@ -240,9 +248,9 @@ func NewTxNodeService(ctx context.Context, cfg TxNodeServiceConfig) (*TxNodeServ
 		return nil, fmt.Errorf("failed to create the docker client: %v", err)
 	}
 	return &TxNodeService{
-		ctx:         ctx,
-		client:      dockerClient,
-		agentClient: agentDockerClient,
-		config:      cfg,
+		ctx:        ctx,
+		client:     dockerClient,
+		authClient: dockerAuthClient,
+		config:     cfg,
 	}, nil
 }

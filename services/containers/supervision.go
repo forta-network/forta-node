@@ -11,7 +11,7 @@ import (
 )
 
 func (t *TxNodeService) startAgent(agent config.AgentConfig) error {
-	if err := t.ensureLocalImage(fmt.Sprintf("agent %s", agent.ID), agent.Image); err != nil {
+	if err := t.ensureLocalImage(fmt.Sprintf("agent %s", agent.ID), agent.Image, true); err != nil {
 		return err
 	}
 
