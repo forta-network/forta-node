@@ -100,8 +100,10 @@ func withBackoff(ctx context.Context, name string, operation func(ctx context.Co
 		if ctx.Err() != nil {
 			return backoff.Permanent(ctx.Err())
 		}
-		err := operation(ctx)
 
+		tCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+		err := operation(tCtx)
+		cancel()
 		if err == nil {
 			//success, returning now avoids failing on context timeouts in certain edge cases
 			return nil
