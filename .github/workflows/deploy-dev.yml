@@ -37,8 +37,8 @@ jobs:
         uses: docker/login-action@v1
         with:
           registry: disco-dev.forta.network
-          username: discouser #${{ secrets.DISCO_DEV_USERNAME }}
-          password: discopass #${{ secrets.DISCO_DEV_PASSWORD }}
+          username: discouser
+          password: discopass
       - name: Create build for revision
         run: |
           ./scripts/build-for-release.sh disco-dev.forta.network
