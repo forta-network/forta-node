@@ -1,9 +1,9 @@
 package agentgrpc
 
 import (
-	"forta-network/forta-node/config"
-	"forta-network/forta-node/protocol"
 	"fmt"
+	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/protocol"
 	"time"
 
 	log "github.com/sirupsen/logrus"

@@ -22,23 +22,23 @@ mocks:
 	mockgen -source feeds/interfaces.go -destination feeds/mocks/mock_feeds.go
 	mockgen -source services/registry/registry.go -destination services/registry/mocks/mock_registry.go
 
-build: proto main containers
-
 test:
 	go test -v -count=1 ./...
 
 run:
-	go build -o build/forta . && ./build/forta --passphrase 123
+	go build -o forta . && ./forta --passphrase 123
 
 abigen:
 	abigen --abi ./contracts/agent_registry.json --out ./contracts/agent_registry.go --pkg contracts --type AgentRegistry
 	abigen --abi ./contracts/scanner_registry.json --out ./contracts/scanner_registry.go --pkg contracts --type ScannerRegistry
 	abigen --abi ./contracts/alerts.json --out ./contracts/alerts.go --pkg contracts --type Alerts
 
-install:
+build-local: ## Build for local installation from source
 	./scripts/build-for-local.sh
-	cp forta /usr/bin/forta
 
-install-release:
-	./scripts/build-for-release.sh disco.forta.network
+build-remote: ## Try the "remote" containers option for build
+	./scripts/build-for-release.sh disco-dev.forta.network
+
+.PHONY: install
+install: build-local ## Single install target for local installation
 	cp forta /usr/bin/forta

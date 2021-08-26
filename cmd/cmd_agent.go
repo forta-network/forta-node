@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"forta-network/forta-node/services/registry"
+	"github.com/forta-network/forta-node/services/registry"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/fatih/color"

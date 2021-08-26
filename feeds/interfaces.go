@@ -3,7 +3,7 @@ package feeds
 import (
 	"github.com/ethereum/go-ethereum/core/types"
 
-	"forta-network/forta-node/domain"
+	"github.com/forta-network/forta-node/domain"
 )
 
 // BlockFeed is a subscribable feed of blocks.

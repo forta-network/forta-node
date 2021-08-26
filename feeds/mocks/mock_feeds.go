@@ -5,10 +5,10 @@
 package mock_feeds
 
 import (
-	domain "forta-network/forta-node/domain"
 	reflect "reflect"
 
 	types "github.com/ethereum/go-ethereum/core/types"
+	domain "github.com/forta-network/forta-node/domain"
 	gomock "github.com/golang/mock/gomock"
 )
 

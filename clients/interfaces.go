@@ -2,8 +2,8 @@ package clients
 
 import (
 	"context"
-	"forta-network/forta-node/config"
-	"forta-network/forta-node/protocol"
+	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/protocol"
 	"io"
 )
 

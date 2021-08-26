@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/config"
 
 	"github.com/spf13/cobra"
 )

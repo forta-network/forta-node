@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 
-	"forta-network/forta-node/config"
-	"forta-network/forta-node/services"
-	jrp "forta-network/forta-node/services/json-rpc"
+	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/services"
+	jrp "github.com/forta-network/forta-node/services/json-rpc"
 )
 
 func initJsonRpcProxy(ctx context.Context, cfg config.Config) (*jrp.JsonRpcProxy, error) {

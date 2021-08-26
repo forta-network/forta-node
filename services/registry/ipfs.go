@@ -1,9 +1,9 @@
 package registry
 
 import (
-	"forta-network/forta-node/services/registry/regtypes"
 	"encoding/json"
 	"fmt"
+	"github.com/forta-network/forta-node/services/registry/regtypes"
 	"net/http"
 )
 

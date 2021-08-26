@@ -7,7 +7,7 @@ import (
 	"os"
 	"path"
 
-	"forta-network/forta-node/utils"
+	"github.com/forta-network/forta-node/utils"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -34,10 +34,10 @@ const (
 
 // Docker container names
 var (
-	DockerScannerContainerImage      string
-	DockerQueryContainerImage        string
-	DockerJSONRPCProxyContainerImage string
-	UseDockerImages                  string // "local" or "remote"
+	DockerScannerContainerImage      = "forta-network/forta-scanner:latest"
+	DockerQueryContainerImage        = "forta-network/forta-query:latest"
+	DockerJSONRPCProxyContainerImage = "forta-network/forta-json-rpc:latest"
+	UseDockerImages                  = "local"
 
 	DockerNatsContainerName         = fmt.Sprintf("%s-nats", ContainerNamePrefix)
 	DockerScannerContainerName      = fmt.Sprintf("%s-scanner", ContainerNamePrefix)

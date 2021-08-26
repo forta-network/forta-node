@@ -6,13 +6,13 @@ package mock_registry
 
 import (
 	context "context"
-	domain "forta-network/forta-node/domain"
-	regtypes "forta-network/forta-node/services/registry/regtypes"
 	big "math/big"
 	reflect "reflect"
 
 	bind "github.com/ethereum/go-ethereum/accounts/abi/bind"
 	common "github.com/ethereum/go-ethereum/common"
+	domain "github.com/forta-network/forta-node/domain"
+	regtypes "github.com/forta-network/forta-node/services/registry/regtypes"
 	gomock "github.com/golang/mock/gomock"
 )
 

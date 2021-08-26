@@ -1,7 +1,7 @@
 package main
 
 import (
-	"forta-network/forta-node/cmd"
+	"github.com/forta-network/forta-node/cmd"
 )
 
 func main() {

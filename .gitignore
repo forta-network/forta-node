@@ -5,7 +5,6 @@ forta-node
 forta
 !cmd/query
 !cmd/scanner
-*.pb.go
 private.key
 debug
 build

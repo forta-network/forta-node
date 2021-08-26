@@ -5,11 +5,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"forta-network/forta-node/config"
-	"forta-network/forta-node/security"
-	"forta-network/forta-node/services"
-	"forta-network/forta-node/services/query"
-	"forta-network/forta-node/store"
+	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/security"
+	"github.com/forta-network/forta-node/services"
+	"github.com/forta-network/forta-node/services/query"
+	"github.com/forta-network/forta-node/store"
 )
 
 func initApi(ctx context.Context, as store.AlertStore, cfg config.Config) (*query.AlertApi, error) {

@@ -11,4 +11,4 @@ docker build -t "$SCANNER_IMAGE" -f Dockerfile.scanner .
 docker build -t "$QUERY_IMAGE" -f Dockerfile.query .
 docker build -t "$JSON_RPC_IMAGE" -f Dockerfile.json-rpc .
 
-./scripts/build.sh "$SCANNER_IMAGE" "$QUERY_IMAGE" "$JSON_RPC_IMAGE" 'local'
+go build -o forta .

@@ -3,7 +3,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/config"
 	"os"
 	"path"
 	"reflect"

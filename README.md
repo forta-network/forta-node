@@ -1,5 +1,5 @@
-![Go](https://github.com/forta-network/forta-node/workflows/Go/badge.svg)
-![Deploy Dev](https://github.com/forta-network/forta-node/actions/workflows/deploy-dev.yml/badge.svg)
+![Go](https://github.com/github.com/forta-network/forta-node/workflows/Go/badge.svg)
+![Deploy Dev](https://github.com/github.com/forta-network/forta-node/actions/workflows/deploy-dev.yml/badge.svg)
 
 ## forta-node
 

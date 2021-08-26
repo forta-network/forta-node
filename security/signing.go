@@ -16,7 +16,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"google.golang.org/protobuf/runtime/protoiface"
 
-	"forta-network/forta-node/protocol"
+	"github.com/forta-network/forta-node/protocol"
 )
 
 // LoadKey loads the node private key.

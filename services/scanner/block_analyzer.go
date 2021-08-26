@@ -1,11 +1,11 @@
 package scanner
 
 import (
-	"forta-network/forta-node/clients"
-	"forta-network/forta-node/domain"
-	"forta-network/forta-node/protocol"
-	"forta-network/forta-node/store"
-	"forta-network/forta-node/utils"
+	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/domain"
+	"github.com/forta-network/forta-node/protocol"
+	"github.com/forta-network/forta-node/store"
+	"github.com/forta-network/forta-node/utils"
 
 	"context"
 	"fmt"
