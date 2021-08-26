@@ -3,6 +3,7 @@ name: Deploy Dev
 on:
   push:
     branches: [ master ]
+  pull_request:
   workflow_dispatch:
     branches: [ master ]
 
@@ -36,8 +37,8 @@ jobs:
         uses: docker/login-action@v1
         with:
           registry: disco-dev.forta.network
-          username: ${{ secrets.DISCO_DEV_USERNAME }}
-          password: ${{ secrets.DISCO_DEV_PASSWORD }}
+          username: discouser #${{ secrets.DISCO_DEV_USERNAME }}
+          password: discopass #${{ secrets.DISCO_DEV_PASSWORD }}
       - name: Create build for revision
         run: |
           ./scripts/build-for-release.sh disco-dev.forta.network
