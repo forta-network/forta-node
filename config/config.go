@@ -89,17 +89,15 @@ type EthereumConfig struct {
 }
 
 type QueryConfig struct {
-	QueryImage string          `yaml:"queryImage" json:"queryImage"`
-	Port       int             `yaml:"port" json:"port" validate:"max=65535"`
-	DB         DBConfig        `yaml:"db" json:"db"`
-	PublishTo  PublisherConfig `yaml:"publishTo" json:"publishTo"`
+	Port      int             `yaml:"port" json:"port" validate:"max=65535"`
+	DB        DBConfig        `yaml:"db" json:"db"`
+	PublishTo PublisherConfig `yaml:"publishTo" json:"publishTo"`
 }
 type ScannerConfig struct {
-	ChainID      int            `yaml:"chainId" json:"chainId"`
-	ScannerImage string         `yaml:"scannerImage" json:"scannerImage"`
-	StartBlock   int            `yaml:"startBlock" json:"startBlock"`
-	EndBlock     int            `yaml:"endBlock" json:"endBlock"`
-	Ethereum     EthereumConfig `yaml:"ethereum" json:"ethereum"`
+	ChainID    int            `yaml:"chainId" json:"chainId"`
+	StartBlock int            `yaml:"startBlock" json:"startBlock"`
+	EndBlock   int            `yaml:"endBlock" json:"endBlock"`
+	Ethereum   EthereumConfig `yaml:"ethereum" json:"ethereum"`
 }
 
 type TraceConfig struct {
@@ -108,8 +106,7 @@ type TraceConfig struct {
 }
 
 type JsonRpcProxyConfig struct {
-	JsonRpcImage string         `yaml:"jsonRpcImage" json:"jsonRpcImage"`
-	Ethereum     EthereumConfig `yaml:"ethereum" json:"ethereum"`
+	Ethereum EthereumConfig `yaml:"ethereum" json:"ethereum"`
 }
 
 type LogConfig struct {
