@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"os"
 	"time"
+
+	"github.com/forta-network/forta-node/protocol"
 )
 
 // Logger logs the test alerts either to a log file or to a webhook.
