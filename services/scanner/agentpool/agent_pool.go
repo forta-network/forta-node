@@ -177,11 +177,6 @@ func (ap *AgentPool) manageReadinessUnsafe() {
 	for _, agent := range ap.agents {
 		allReady = allReady || agent.ready
 	}
-	if allReady {
-		processingState.Continue()
-	} else {
-		processingState.Pause()
-	}
 }
 
 func (ap *AgentPool) registerMessageHandlers() {
