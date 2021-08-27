@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	github.com/forta-network/forta-node/protocol"
 	"net/http"
 	"net/url"
 	"os"

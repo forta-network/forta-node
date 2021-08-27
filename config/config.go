@@ -56,6 +56,7 @@ var (
 type AgentConfig struct {
 	ID         string  `yaml:"id" json:"id"`
 	Image      string  `yaml:"image" json:"image"`
+	IsLocal    bool    `yaml:"isLocal" json:"isLocal"`
 	StartBlock *uint64 `yaml:"startBlock" json:"startBlock,omitempty"`
 	StopBlock  *uint64 `yaml:"stopBlock" json:"stopBlock,omitempty"`
 }
@@ -129,12 +130,18 @@ type IPFSConfig struct {
 	Password   string `yaml:"password" json:"password"`
 }
 
+type TestAlertsConfig struct {
+	Disable    bool   `yaml:"disable" json:"disable"`
+	WebhookURL string `yaml:"webhookUrl" json:"webhookUrl" validate:"omitempty,url"`
+}
+
 type PublisherConfig struct {
-	SkipPublish     bool           `yaml:"skipPublish" json:"skipPublish"`
-	Ethereum        EthereumConfig `yaml:"ethereum" json:"ethereum"  validate:"required_unless=SkipPublish true"`
-	ContractAddress string         `yaml:"contractAddress" json:"contractAddress" validate:"required_unless=SkipPublish true,omitempty,eth_addr"`
-	IPFS            *IPFSConfig    `yaml:"ipfs" json:"ipfs" validate:"required_unless=SkipPublish true"`
-	Batch           BatchConfig    `yaml:"batch" json:"batch"`
+	SkipPublish     bool             `yaml:"skipPublish" json:"skipPublish"`
+	Ethereum        EthereumConfig   `yaml:"ethereum" json:"ethereum"  validate:"required_unless=SkipPublish true"`
+	ContractAddress string           `yaml:"contractAddress" json:"contractAddress" validate:"required_unless=SkipPublish true,omitempty,eth_addr"`
+	IPFS            *IPFSConfig      `yaml:"ipfs" json:"ipfs" validate:"required_unless=SkipPublish true"`
+	Batch           BatchConfig      `yaml:"batch" json:"batch"`
+	TestAlerts      TestAlertsConfig `yaml:"testAlerts" json:"testAlerts"`
 }
 
 type BatchConfig struct {
@@ -144,12 +151,13 @@ type BatchConfig struct {
 }
 
 type Config struct {
-	Production      bool   `yaml:"-" json:"-"`
-	FortaDir        string `yaml:"-" json:"-"`
-	ConfigPath      string `yaml:"-" json:"-"`
-	KeyDirPath      string `yaml:"-" json:"-"`
-	Passphrase      string `yaml:"-" json:"-"`
-	LocalAgentsPath string `yaml:"-" json:"-"`
+	Production      bool           `yaml:"-" json:"-"`
+	FortaDir        string         `yaml:"-" json:"-"`
+	ConfigPath      string         `yaml:"-" json:"-"`
+	KeyDirPath      string         `yaml:"-" json:"-"`
+	Passphrase      string         `yaml:"-" json:"-"`
+	LocalAgentsPath string         `yaml:"-" json:"-"`
+	LocalAgents     []*AgentConfig `yaml:"-" json:"localAgents"`
 
 	Registry     RegistryConfig     `yaml:"registry" json:"registry"`
 	Scanner      ScannerConfig      `yaml:"scanner" json:"scanner"`

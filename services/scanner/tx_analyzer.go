@@ -59,6 +59,7 @@ func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *pr
 			Name:      result.AgentConfig.ID,
 			Image:     result.AgentConfig.Image,
 			ImageHash: result.AgentConfig.ImageHash(),
+			IsTest:    result.AgentConfig.IsLocal,
 		},
 		Tags: map[string]string{
 			"agentImage":  result.AgentConfig.Image,

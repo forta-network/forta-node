@@ -96,6 +96,15 @@ func (t *TxNodeService) start() error {
 		return err
 	}
 
+	queryContainerVolumes := map[string]string{
+		alertsDBPath:             store.DBPath,
+		t.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
+	}
+	// Mount the test alerts dir only if we really should write test alerts to a file.
+	testAlertsCfg := t.config.Config.Query.PublishTo.TestAlerts
+	if !testAlertsCfg.Disable && len(testAlertsCfg.WebhookURL) == 0 && len(t.config.Config.LocalAgents) > 0 {
+		queryContainerVolumes["/tmp"] = "/test-alerts"
+	}
 	queryContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerQueryContainerName,
 		Image: t.config.Config.Query.QueryImage,
@@ -106,10 +115,7 @@ func (t *TxNodeService) start() error {
 		Ports: map[string]string{
 			fmt.Sprintf("%d", t.config.Config.Query.Port): "80",
 		},
-		Volumes: map[string]string{
-			alertsDBPath:             store.DBPath,
-			t.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
-		},
+		Volumes: queryContainerVolumes,
 		Files: map[string][]byte{
 			"passphrase": []byte(t.config.Passphrase),
 		},

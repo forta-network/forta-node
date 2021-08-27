@@ -23,6 +23,7 @@ message AgentInfo {
   string image = 1;
   string imageHash = 2;
   string name = 3;
+  bool isTest = 4;
 }
 
 message Signature {

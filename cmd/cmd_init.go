@@ -112,6 +112,9 @@ query:
     ethereum:
       websocketUrl: <fill in this and remove other>
       jsonRpcUrl: <fill in this and remove other>
+    # testAlerts: # Configuration for logging alerts from test agents
+    #   disable: false
+    #   webhookUrl: '' # Does POST <webhookUrl> for each test alert if this field is non-empty 
 
 log:
   level: info
