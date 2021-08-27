@@ -6,10 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dgraph-io/badger/v3"
-	"github.com/golang/protobuf/proto"
-
+	badger "github.com/dgraph-io/badger/v3"
 	"github.com/forta-network/forta-node/protocol"
+	"github.com/golang/protobuf/proto"
 )
 
 //DBPath is a local location of badger db (/db is a mounted volume)

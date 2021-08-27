@@ -2,12 +2,13 @@ package agentpool
 
 import (
 	"context"
+	"strconv"
+	"time"
+
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/protocol"
 	"github.com/forta-network/forta-node/services/scanner"
-	"strconv"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -60,8 +61,6 @@ func (agent *Agent) setClient(agentClient clients.AgentClient) {
 
 func (agent *Agent) processTransactions() {
 	for request := range agent.evalTxCh {
-		processingState.waitIfPaused()
-
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		resp, err := agent.client.EvaluateTx(ctx, request)
 		cancel()
@@ -80,8 +79,6 @@ func (agent *Agent) processTransactions() {
 
 func (agent *Agent) processBlocks() {
 	for request := range agent.evalBlockCh {
-		processingState.waitIfPaused()
-
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		resp, err := agent.client.EvaluateBlock(ctx, request)
 		cancel()

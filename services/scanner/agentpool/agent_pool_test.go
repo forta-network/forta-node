@@ -1,13 +1,13 @@
 package agentpool
 
 import (
-	"github.com/forta-network/forta-node/clients"
-	"github.com/forta-network/forta-node/clients/messaging"
-	"github.com/forta-network/forta-node/config"
-	"github.com/forta-network/forta-node/protocol"
 	"testing"
 
+	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/clients/messaging"
 	mock_clients "github.com/forta-network/forta-node/clients/mocks"
+	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/protocol"
 	"github.com/forta-network/forta-node/services/scanner"
 
 	"github.com/golang/mock/gomock"
@@ -68,18 +68,16 @@ func (s *Suite) TestStartProcessStop() {
 	// Then a "run" action should be published
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsActionRun, gomock.Any())
 	s.r.NoError(s.ap.handleAgentVersionsUpdate(agentPayload))
-	// And the processing state must be "paused".
-	s.r.Equal(int64(1), processingState.paused)
 
 	// Given that the agent is known to the pool but it is not ready yet
 	s.r.Equal(1, len(s.ap.agents))
 	s.r.False(s.ap.agents[0].ready)
 	// When the agent pool receives a message saying that the agent started to run
 	s.r.NoError(s.ap.handleStatusRunning(agentPayload))
-	// Then the processing state must not be "paused"
-	s.r.Equal(int64(0), processingState.paused)
+	// Then the agent must be marked ready
+	s.r.True(s.ap.agents[0].ready)
 
-	// Given that the agent is running and the processing state is not paused
+	// Given that the agent is running
 	// When an evaluate requests are received
 	// Then the agent should process them
 

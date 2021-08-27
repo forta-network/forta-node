@@ -2,21 +2,19 @@ package scanner
 
 import (
 	"context"
-	"fmt"
+	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/domain"
 	"github.com/forta-network/forta-node/protocol"
 	"github.com/forta-network/forta-node/store"
 	"github.com/forta-network/forta-node/utils"
 
-	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/jsonpb"
-	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/crypto/sha3"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -32,20 +30,18 @@ type TxAnalyzerServiceConfig struct {
 	AgentPool   AgentPool
 }
 
-func (t *TxAnalyzerService) calculateAlertID(result *TxResult, f *protocol.Finding) (string, error) {
-	findingBytes, err := proto.Marshal(f)
-	if err != nil {
-		return "", err
-	}
-	idStr := fmt.Sprintf("%s%s%s", result.Request.Event.Network.ChainId, result.Request.Event.Transaction.Hash, string(findingBytes))
-	return base58.Encode(sha3.New256().Sum([]byte(idStr))), nil
+func (t *TxAnalyzerService) calculateAlertID(result *TxResult, f *protocol.Finding) string {
+	idStr := strings.Join([]string{
+		result.Request.Event.Network.ChainId,
+		result.Request.Event.Transaction.Hash,
+		f.AlertId,
+		f.Severity.String(),
+		result.AgentConfig.Image}, "")
+	return crypto.Keccak256Hash([]byte(idStr)).Hex()
 }
 
 func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
-	alertID, err := t.calculateAlertID(result, f)
-	if err != nil {
-		return nil, err
-	}
+	alertID := t.calculateAlertID(result, f)
 	blockNumber, err := utils.HexToBigInt(result.Request.Event.Block.BlockNumber)
 	if err != nil {
 		return nil, err
@@ -63,8 +59,11 @@ func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *pr
 			Name:      result.AgentConfig.ID,
 			Image:     result.AgentConfig.Image,
 			ImageHash: result.AgentConfig.ImageHash(),
+			IsTest:    result.AgentConfig.IsLocal,
 		},
 		Tags: map[string]string{
+			"agentImage":  result.AgentConfig.Image,
+			"agentId":     result.AgentConfig.ID,
 			"chainId":     chainId.String(),
 			"blockHash":   result.Request.Event.Block.BlockHash,
 			"blockNumber": blockNumber.String(),

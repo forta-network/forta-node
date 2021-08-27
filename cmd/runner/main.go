@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/services"
 	"github.com/forta-network/forta-node/services/containers"

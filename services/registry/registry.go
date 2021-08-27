@@ -2,16 +2,14 @@ package registry
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/big"
-
 	"time"
 
-	log "github.com/sirupsen/logrus"
-	"golang.org/x/sync/semaphore"
-
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/config"
@@ -19,11 +17,8 @@ import (
 	"github.com/forta-network/forta-node/ethereum"
 	"github.com/forta-network/forta-node/services/registry/regtypes"
 	"github.com/forta-network/forta-node/utils"
-
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/rpc"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/sync/semaphore"
 )
 
 // RegistryService listens to the agent scanner list changes so the node can stay in sync.
@@ -146,28 +141,6 @@ func (rs *RegistryService) FindAgentGlobally(agentID string, version uint64) (co
 	return rs.makeAgentConfig(agentIDBytes, agentRef)
 }
 
-// ReadLocalAgents tries to read the local agents and silently returns an
-// empty array if the file is not readable or not found.
-func (rs *RegistryService) ReadLocalAgents() ([]*config.AgentConfig, error) {
-	var agents []*config.AgentConfig
-	b, err := ioutil.ReadFile(rs.cfg.LocalAgentsPath)
-	if err == nil {
-		if err := json.Unmarshal(b, &agents); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal the local agents file: %v", err)
-		}
-	}
-	return agents, nil
-}
-
-// WriteLocalAgents writes the agents to the local list.
-func (rs *RegistryService) WriteLocalAgents(agents []*config.AgentConfig) error {
-	if len(agents) == 0 {
-		return nil
-	}
-	b, _ := json.MarshalIndent(agents, "", "  ")
-	return ioutil.WriteFile(rs.cfg.LocalAgentsPath, b, 0644)
-}
-
 func (rs *RegistryService) start() error {
 	go func() {
 		//TODO: possibly make this configurable, but 15s per block is normal
@@ -247,16 +220,15 @@ func (rs *RegistryService) getLatestAgents() ([]*config.AgentConfig, error) {
 		if !disabled {
 			agentCfg, err := rs.makeAgentConfig(agentID, agentRef)
 			if err != nil {
-				return nil, fmt.Errorf("failed to make agent config: %v", err)
+				log.Errorf("could not load agent (skipping): %s, %s", agentID, agentRef)
+				continue
 			}
 			agentConfigs = append(agentConfigs, &agentCfg)
 		}
 	}
 
 	// Also include local agents if any.
-	localAgents, _ := rs.ReadLocalAgents()
-
-	return append(agentConfigs, localAgents...), nil
+	return append(agentConfigs, rs.cfg.LocalAgents...), nil
 }
 
 func (rs *RegistryService) makeAgentConfig(agentID [32]byte, ref string) (agentCfg config.AgentConfig, err error) {

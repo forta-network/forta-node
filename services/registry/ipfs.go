@@ -3,8 +3,9 @@ package registry
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/forta-network/forta-node/services/registry/regtypes"
 	"net/http"
+
+	"github.com/forta-network/forta-node/services/registry/regtypes"
 )
 
 type ipfsClient struct {

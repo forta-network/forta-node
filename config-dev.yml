@@ -9,6 +9,7 @@ registry:
   containerRegistry: disco-dev.forta.network
   username: discouser
   password: discopass
+  ipfsGateway: "http://ipfs.forta.internal:8080"
 
 scanner:
   chainId: 1
@@ -38,7 +39,6 @@ query:
       gatewayUrl: "http://ipfs.forta.internal:5001"
     ethereum:
       jsonRpcUrl: "REGISTRY_API_URL"
-      contractAddress: "0x38C1e080BeEb26eeA91932178E62987598230271"
   db:
     path: "/tmp/forta-alerts"
 

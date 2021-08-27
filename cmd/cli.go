@@ -83,7 +83,7 @@ publishes alerts about them`,
 
 	cmdFortaAgentAdd = &cobra.Command{
 		Use:   "add",
-		Short: "add new agent",
+		Short: "try an agent by adding it to the local list",
 		RunE:  withInitialized(withValidConfig(handleFortaAgentAdd)),
 	}
 
@@ -162,6 +162,7 @@ func initConfig() {
 	cfg.Production = viper.GetBool(keyFortaProduction)
 	cfg.Passphrase = viper.GetString(keyFortaPassphrase)
 	cfg.LocalAgentsPath = path.Join(cfg.FortaDir, config.DefaultLocalAgentsFileName)
+	cfg.LocalAgents, _ = readLocalAgents()
 
 	viper.ReadInConfig()
 	viper.Unmarshal(&cfg)
@@ -182,9 +183,9 @@ func validateConfig() error {
 
 	if err := validate.Struct(&cfg); err != nil {
 		validationErrs := err.(validator.ValidationErrors)
-		fmt.Println("The config file has invalid or missing fields:")
+		fmt.Fprintln(os.Stderr, "The config file has invalid or missing fields:")
 		for _, validationErr := range validationErrs {
-			fmt.Printf("  - %s\n", validationErr.Namespace()[7:])
+			fmt.Fprintf(os.Stderr, "  - %s\n", validationErr.Namespace()[7:])
 		}
 		return errors.New("invalid config file")
 	}

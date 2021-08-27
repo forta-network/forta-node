@@ -14,6 +14,7 @@ func (t *TxNodeService) startAgent(agent config.AgentConfig) error {
 	if err := t.ensureLocalImage(fmt.Sprintf("agent %s", agent.ID), agent.Image, true); err != nil {
 		return err
 	}
+	log.Infof("pulled agent image: %v", agent.Image)
 
 	nwID, err := t.client.CreatePublicNetwork(t.ctx, agent.ContainerName())
 	if err != nil {

@@ -3,12 +3,12 @@ package cmd
 import (
 	"bytes"
 	"fmt"
-	"github.com/forta-network/forta-node/config"
-	"html/template"
 	"os"
+	"text/template"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/fatih/color"
+	"github.com/forta-network/forta-node/config"
 	"github.com/spf13/cobra"
 )
 
@@ -111,6 +111,9 @@ query:
     ethereum:
       websocketUrl: <fill in this and remove other>
       jsonRpcUrl: <fill in this and remove other>
+    # testAlerts: # Configuration for logging alerts from test agents
+    #   disable: false
+    #   webhookUrl: '' # Does POST <webhookUrl> for each test alert if this field is non-empty 
 
 log:
   level: info

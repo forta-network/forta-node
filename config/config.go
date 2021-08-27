@@ -8,9 +8,9 @@ import (
 	"path"
 
 	"github.com/forta-network/forta-node/utils"
+	"gopkg.in/yaml.v3"
 
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
 )
 
 const EnvConfig = "FORTA_CONFIG"
@@ -60,6 +60,7 @@ var (
 type AgentConfig struct {
 	ID         string  `yaml:"id" json:"id"`
 	Image      string  `yaml:"image" json:"image"`
+	IsLocal    bool    `yaml:"isLocal" json:"isLocal"`
 	StartBlock *uint64 `yaml:"startBlock" json:"startBlock,omitempty"`
 	StopBlock  *uint64 `yaml:"stopBlock" json:"stopBlock,omitempty"`
 }
@@ -130,27 +131,34 @@ type IPFSConfig struct {
 	Password   string `yaml:"password" json:"password"`
 }
 
-type PublisherConfig struct {
-	SkipPublish     bool           `yaml:"skipPublish" json:"skipPublish"`
-	Ethereum        EthereumConfig `yaml:"ethereum" json:"ethereum"  validate:"required_unless=SkipPublish true"`
-	ContractAddress string         `yaml:"contractAddress" json:"contractAddress" validate:"required_unless=SkipPublish true,omitempty,eth_addr"`
-	IPFS            *IPFSConfig    `yaml:"ipfs" json:"ipfs" validate:"required_unless=SkipPublish true"`
-	Batch           BatchConfig    `yaml:"batch" json:"batch"`
-}
-
 type BatchConfig struct {
 	SkipEmpty       bool `yaml:"skipEmpty" json:"skipEmpty"`
 	IntervalSeconds *int `yaml:"intervalSeconds" json:"intervalSeconds"`
 	MaxAlerts       *int `yaml:"maxAlerts" json:"maxAlerts"`
 }
 
+type TestAlertsConfig struct {
+	Disable    bool   `yaml:"disable" json:"disable"`
+	WebhookURL string `yaml:"webhookUrl" json:"webhookUrl" validate:"omitempty,url"`
+}
+
+type PublisherConfig struct {
+	SkipPublish     bool             `yaml:"skipPublish" json:"skipPublish"`
+	Ethereum        EthereumConfig   `yaml:"ethereum" json:"ethereum"  validate:"required_unless=SkipPublish true"`
+	ContractAddress string           `yaml:"contractAddress" json:"contractAddress" validate:"required_unless=SkipPublish true,omitempty,eth_addr"`
+	IPFS            *IPFSConfig      `yaml:"ipfs" json:"ipfs" validate:"required_unless=SkipPublish true"`
+	Batch           BatchConfig      `yaml:"batch" json:"batch"`
+	TestAlerts      TestAlertsConfig `yaml:"testAlerts" json:"testAlerts"`
+}
+
 type Config struct {
-	Production      bool   `yaml:"-" json:"-"`
-	FortaDir        string `yaml:"-" json:"-"`
-	ConfigPath      string `yaml:"-" json:"-"`
-	KeyDirPath      string `yaml:"-" json:"-"`
-	Passphrase      string `yaml:"-" json:"-"`
-	LocalAgentsPath string `yaml:"-" json:"-"`
+	Production      bool           `yaml:"-" json:"-"`
+	FortaDir        string         `yaml:"-" json:"-"`
+	ConfigPath      string         `yaml:"-" json:"-"`
+	KeyDirPath      string         `yaml:"-" json:"-"`
+	Passphrase      string         `yaml:"-" json:"-"`
+	LocalAgentsPath string         `yaml:"-" json:"-"`
+	LocalAgents     []*AgentConfig `yaml:"-" json:"localAgents"`
 
 	Registry     RegistryConfig     `yaml:"registry" json:"registry"`
 	Scanner      ScannerConfig      `yaml:"scanner" json:"scanner"`

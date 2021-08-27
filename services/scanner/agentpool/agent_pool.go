@@ -120,7 +120,6 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 	}
 
 	ap.agents = newAgents
-	ap.manageReadinessUnsafe()
 	if len(agentsToRun) > 0 {
 		ap.msgClient.Publish(messaging.SubjectAgentsActionRun, agentsToRun)
 	}
@@ -133,8 +132,7 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
-	// If an agent was added before and just started to run, we should mark as ready
-	// and start the processing goroutines.
+	// If an agent was added before and just started to run, we should mark as ready.
 	for _, agentCfg := range payload {
 		for _, agent := range ap.agents {
 			if agent.config.ContainerName() == agentCfg.ContainerName() {
@@ -145,7 +143,6 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 			}
 		}
 	}
-	ap.manageReadinessUnsafe()
 	return nil
 }
 
@@ -169,19 +166,6 @@ func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
 	}
 	ap.agents = newAgents
 	return nil
-}
-
-// manageReadinessUnsafe pauses or continues depending on the readiness.
-func (ap *AgentPool) manageReadinessUnsafe() {
-	var allReady bool
-	for _, agent := range ap.agents {
-		allReady = allReady || agent.ready
-	}
-	if allReady {
-		processingState.Continue()
-	} else {
-		processingState.Pause()
-	}
 }
 
 func (ap *AgentPool) registerMessageHandlers() {
