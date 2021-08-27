@@ -78,7 +78,7 @@ func (s *Suite) TestStartProcessStop() {
 	// Then the agent must be marked ready
 	s.r.True(s.ap.agents[0].ready)
 
-	// Given that the agent is running and the processing state is not paused
+	// Given that the agent is running
 	// When an evaluate requests are received
 	// Then the agent should process them
 
