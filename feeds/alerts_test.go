@@ -67,7 +67,7 @@ func TestAlertFeed_ForEachAlert(t *testing.T) {
 	var res *contracts.AlertsAlertBatch
 	err = af.ForEachAlert(func(blk *domain.Block) error {
 		return nil
-	}, func(logEntry types.Log, batch *contracts.AlertsAlertBatch) error {
+	}, func(batch *contracts.AlertsAlertBatch) error {
 		res = batch
 		return nil
 	})

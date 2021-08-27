@@ -25,5 +25,5 @@ type LogFeed interface {
 
 // AlertFeed is a feed of alerts from alert batch events
 type AlertFeed interface {
-	ForEachAlert(blockHandler func(blk *domain.Block) error, handler func(logEntry types.Log, batch *contracts.AlertsAlertBatch) error) error
+	ForEachAlert(blockHandler func(blk *domain.Block) error, handler func(batch *contracts.AlertsAlertBatch) error) error
 }

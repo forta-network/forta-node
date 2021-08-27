@@ -160,7 +160,7 @@ func (m *MockAlertFeed) EXPECT() *MockAlertFeedMockRecorder {
 }
 
 // ForEachAlert mocks base method.
-func (m *MockAlertFeed) ForEachAlert(blockHandler func(*domain.Block) error, handler func(types.Log, *contracts.AlertsAlertBatch) error) error {
+func (m *MockAlertFeed) ForEachAlert(blockHandler func(*domain.Block) error, handler func(*contracts.AlertsAlertBatch) error) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ForEachAlert", blockHandler, handler)
 	ret0, _ := ret[0].(error)
