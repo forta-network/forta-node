@@ -256,6 +256,7 @@ func (rs *RegistryService) makeAgentConfig(agentID [32]byte, ref string) (agentC
 	if !ok {
 		log.Warnf("invalid agent reference - skipping: %s", agentCfg.Image)
 	}
+	agentCfg.Manifest = ref
 
 	return
 }

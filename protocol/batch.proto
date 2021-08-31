@@ -19,6 +19,7 @@ message AlertBatch {
   uint32 alertCount = 4;
   Finding.Severity maxSeverity = 5;
   repeated BlockResults results = 6;
+  repeated BatchAgent agents = 7;
 }
 
 message BlockResults {
@@ -33,7 +34,7 @@ message TransactionResults {
 }
 
 message AgentAlerts {
-  AgentInfo agent = 1;
+  string agentManifest = 1;
   repeated SignedAlert alerts = 2;
 }
 
@@ -41,4 +42,10 @@ message Block {
   string blockHash = 1;
   uint64 blockNumber = 2;
   string blockTimestamp = 3;
+}
+
+message BatchAgent {
+  AgentInfo info = 1;
+  repeated uint64 blocks = 2;
+  repeated string transactions = 3;
 }

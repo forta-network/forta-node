@@ -8,12 +8,14 @@ import (
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
+	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/protocol"
 	"github.com/forta-network/forta-node/security"
 )
 
 // AgentRoundTrip contains
 type AgentRoundTrip struct {
+	AgentConfig       config.AgentConfig
 	EvalBlockRequest  *protocol.EvaluateBlockRequest
 	EvalBlockResponse *protocol.EvaluateBlockResponse
 	EvalTxRequest     *protocol.EvaluateTxRequest
@@ -53,6 +55,7 @@ func (a *alertSender) SignAlertAndNotify(rt *AgentRoundTrip, alert *protocol.Ale
 		EvalBlockResponse: rt.EvalBlockResponse,
 		EvalTxRequest:     rt.EvalTxRequest,
 		EvalTxResponse:    rt.EvalTxResponse,
+		AgentInfo:         rt.AgentConfig.ToAgentInfo(),
 	})
 	return err
 }
@@ -63,6 +66,7 @@ func (a *alertSender) NotifyWithoutAlert(rt *AgentRoundTrip, chainID, blockNumbe
 		EvalBlockResponse: rt.EvalBlockResponse,
 		EvalTxRequest:     rt.EvalTxRequest,
 		EvalTxResponse:    rt.EvalTxResponse,
+		AgentInfo:         rt.AgentConfig.ToAgentInfo(),
 	})
 	return err
 }
