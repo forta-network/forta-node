@@ -60,14 +60,17 @@ func (agent *Agent) setClient(agentClient clients.AgentClient) {
 }
 
 func (agent *Agent) processTransactions() {
+	log := log.WithField("evaluate", "transaction").WithField("agent", agent.config.ID)
 	for request := range agent.evalTxCh {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		log.Debugf("sending request")
 		resp, err := agent.client.EvaluateTx(ctx, request)
 		cancel()
 		if err != nil {
 			log.Error("error invoking agent", err)
 			continue
 		}
+		log.Debugf("request successful")
 		resp.Metadata["imageHash"] = agent.config.ImageHash()
 		agent.txResults <- &scanner.TxResult{
 			AgentConfig: agent.config,
@@ -78,14 +81,17 @@ func (agent *Agent) processTransactions() {
 }
 
 func (agent *Agent) processBlocks() {
+	log := log.WithField("evaluate", "block").WithField("agent", agent.config.ID)
 	for request := range agent.evalBlockCh {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		log.Debugf("sending request")
 		resp, err := agent.client.EvaluateBlock(ctx, request)
 		cancel()
 		if err != nil {
 			log.Error("error invoking agent", err)
 			continue
 		}
+		log.Debugf("request successful")
 		resp.Metadata["imageHash"] = agent.config.ImageHash()
 		agent.blockResults <- &scanner.BlockResult{
 			AgentConfig: agent.config,
