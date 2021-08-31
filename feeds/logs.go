@@ -26,7 +26,7 @@ type logFeed struct {
 	client     eth.Client
 }
 
-func (l *logFeed) ForEachLog(blockHandler func(blk *domain.Block) error, handler func(logEntry types.Log) error) error {
+func (l *logFeed) ForEachLog(handler func(blk *domain.Block, logEntry types.Log) error, finishBlockHandler func(blk *domain.Block) error) error {
 	eg, ctx := errgroup.WithContext(l.ctx)
 
 	addrs := make([]common.Address, 0, len(l.addresses))
@@ -84,14 +84,14 @@ func (l *logFeed) ForEachLog(blockHandler func(blk *domain.Block) error, handler
 				return err
 			}
 			for _, lg := range logs {
-				if err := handler(lg); err != nil {
+				if err := handler(blk, lg); err != nil {
 					log.Error("handler returned error, exiting log subscription:", err)
 					return err
 				}
 			}
 
 			currentBlock = currentBlock.Add(currentBlock, increment)
-			if err := blockHandler(blk); err != nil {
+			if err := finishBlockHandler(blk); err != nil {
 				return err
 			}
 		}

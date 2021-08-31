@@ -123,17 +123,17 @@ func (m *MockLogFeed) EXPECT() *MockLogFeedMockRecorder {
 }
 
 // ForEachLog mocks base method.
-func (m *MockLogFeed) ForEachLog(blockHandler func(*domain.Block) error, handler func(types.Log) error) error {
+func (m *MockLogFeed) ForEachLog(handler func(*domain.Block, types.Log) error, finishBlockHandler func(*domain.Block) error) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ForEachLog", blockHandler, handler)
+	ret := m.ctrl.Call(m, "ForEachLog", handler, finishBlockHandler)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ForEachLog indicates an expected call of ForEachLog.
-func (mr *MockLogFeedMockRecorder) ForEachLog(blockHandler, handler interface{}) *gomock.Call {
+func (mr *MockLogFeedMockRecorder) ForEachLog(handler, finishBlockHandler interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForEachLog", reflect.TypeOf((*MockLogFeed)(nil).ForEachLog), blockHandler, handler)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForEachLog", reflect.TypeOf((*MockLogFeed)(nil).ForEachLog), handler, finishBlockHandler)
 }
 
 // MockAlertFeed is a mock of AlertFeed interface.
@@ -160,15 +160,15 @@ func (m *MockAlertFeed) EXPECT() *MockAlertFeedMockRecorder {
 }
 
 // ForEachAlert mocks base method.
-func (m *MockAlertFeed) ForEachAlert(blockHandler func(*domain.Block) error, handler func(*contracts.AlertsAlertBatch) error) error {
+func (m *MockAlertFeed) ForEachAlert(handler func(*domain.Block, *contracts.AlertsAlertBatch) error, finishBlockHandler func(*domain.Block) error) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ForEachAlert", blockHandler, handler)
+	ret := m.ctrl.Call(m, "ForEachAlert", handler, finishBlockHandler)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ForEachAlert indicates an expected call of ForEachAlert.
-func (mr *MockAlertFeedMockRecorder) ForEachAlert(blockHandler, handler interface{}) *gomock.Call {
+func (mr *MockAlertFeedMockRecorder) ForEachAlert(handler, finishBlockHandler interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForEachAlert", reflect.TypeOf((*MockAlertFeed)(nil).ForEachAlert), blockHandler, handler)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForEachAlert", reflect.TypeOf((*MockAlertFeed)(nil).ForEachAlert), handler, finishBlockHandler)
 }

@@ -19,11 +19,11 @@ type alertFeed struct {
 }
 
 //ForEachAlert wraps a LogFeed.ForEachLog invocation and parses out the alert object
-func (af *alertFeed) ForEachAlert(blockHandler func(blk *domain.Block) error, handler func(batch *contracts.AlertsAlertBatch) error) error {
+func (af *alertFeed) ForEachAlert(handler func(blk *domain.Block, batch *contracts.AlertsAlertBatch) error, finishBlockHandler func(blk *domain.Block) error) error {
 
 	// cache by address so we don't over-allocate
 	filterers := make(map[string]*contracts.AlertsFilterer)
-	return af.lf.ForEachLog(blockHandler, func(logEntry types.Log) error {
+	return af.lf.ForEachLog(func(blk *domain.Block, logEntry types.Log) error {
 		if af.ctx.Err() != nil {
 			return af.ctx.Err()
 		}
@@ -42,10 +42,10 @@ func (af *alertFeed) ForEachAlert(blockHandler func(blk *domain.Block) error, ha
 			return err
 		}
 		if batch != nil {
-			return handler(batch)
+			return handler(blk, batch)
 		}
 		return nil
-	})
+	}, finishBlockHandler)
 }
 
 // NewAlertFeed creates a new alert feed from a logFeed
