@@ -93,6 +93,7 @@ func (s *Suite) SetupTest() {
 	s.dockerClient.EXPECT().StartContainer(service.ctx, (configMatcher)(clients.DockerContainerConfig{
 		Name: config.DockerScannerContainerName,
 	})).Return(&clients.DockerContainer{ID: testScannerContainerID}, nil)
+	s.dockerClient.EXPECT().HasLocalImage(service.ctx, gomock.Any()).Return(true).AnyTimes()
 
 	s.r.NoError(service.start())
 	s.service = service
@@ -113,7 +114,6 @@ func (s *Suite) TestAgentRun() {
 	agentConfig, agentPayload := testAgentData()
 	// Creates the agent network, starts the agent container, attaches the scanner and the proxy to the
 	// agent network, publishes a "running" message.
-	s.dockerAuthClient.EXPECT().PullImage(s.service.ctx, testImageRef)
 	s.dockerClient.EXPECT().CreatePublicNetwork(s.service.ctx, testAgentContainerName).Return(testAgentNetworkID, nil)
 	s.dockerClient.EXPECT().StartContainer(s.service.ctx, (configMatcher)(clients.DockerContainerConfig{
 		Name: agentConfig.ContainerName(),
