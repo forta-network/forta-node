@@ -81,12 +81,13 @@ publishes alerts about them`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
+		Hidden: true,
 	}
 
 	cmdFortaAgentAdd = &cobra.Command{
 		Use:   "add",
 		Short: "try an agent by adding it to the local list",
-		RunE:  withInitialized(withValidConfig(handleFortaAgentAdd)),
+		RunE:  withDevOnly(withInitialized(withValidConfig(handleFortaAgentAdd))),
 	}
 )
 
@@ -208,6 +209,15 @@ func withInitialized(handler func(*cobra.Command, []string) error) func(*cobra.C
 		if !isInitialized() {
 			yellowBold("Please make sure you do 'forta init' first and check your configuration at %s\n", cfg.ConfigPath)
 			return errors.New("not initialized")
+		}
+		return handler(cmd, args)
+	}
+}
+
+func withDevOnly(handler func(*cobra.Command, []string) error) func(*cobra.Command, []string) error {
+	return func(cmd *cobra.Command, args []string) error {
+		if !cfg.Development {
+			return nil // no-op feature if not a dev run
 		}
 		return handler(cmd, args)
 	}
