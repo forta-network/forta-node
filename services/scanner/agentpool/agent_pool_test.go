@@ -5,10 +5,9 @@ import (
 
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/messaging"
+	mock_clients "github.com/forta-network/forta-node/clients/mocks"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/protocol"
-
-	mock_clients "github.com/forta-network/forta-node/clients/mocks"
 	"github.com/forta-network/forta-node/services/scanner"
 
 	"github.com/golang/mock/gomock"

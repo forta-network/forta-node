@@ -35,8 +35,8 @@ func TestSuite(t *testing.T) {
 type Suite struct {
 	r *require.Assertions
 
-	dockerClient *mock_clients.MockDockerClient
-	agentClient  *mock_clients.MockDockerClient
+	dockerClient     *mock_clients.MockDockerClient
+	dockerAuthClient *mock_clients.MockDockerClient
 
 	msgClient *mock_clients.MockMessageClient
 
@@ -68,14 +68,14 @@ func (m configMatcher) String() string {
 func (s *Suite) SetupTest() {
 	s.r = require.New(s.T())
 	s.dockerClient = mock_clients.NewMockDockerClient(gomock.NewController(s.T()))
-	s.agentClient = mock_clients.NewMockDockerClient(gomock.NewController(s.T()))
+	s.dockerAuthClient = mock_clients.NewMockDockerClient(gomock.NewController(s.T()))
 
 	s.msgClient = mock_clients.NewMockMessageClient(gomock.NewController(s.T()))
 	service := &TxNodeService{
-		ctx:         context.Background(),
-		client:      s.dockerClient,
-		msgClient:   s.msgClient,
-		agentClient: s.agentClient,
+		ctx:        context.Background(),
+		client:     s.dockerClient,
+		authClient: s.dockerAuthClient,
+		msgClient:  s.msgClient,
 	}
 	service.config.Config.Log.Level = "debug"
 
@@ -93,6 +93,7 @@ func (s *Suite) SetupTest() {
 	s.dockerClient.EXPECT().StartContainer(service.ctx, (configMatcher)(clients.DockerContainerConfig{
 		Name: config.DockerScannerContainerName,
 	})).Return(&clients.DockerContainer{ID: testScannerContainerID}, nil)
+	s.dockerClient.EXPECT().HasLocalImage(service.ctx, gomock.Any()).Return(true).AnyTimes()
 
 	s.r.NoError(service.start())
 	s.service = service
@@ -113,7 +114,6 @@ func (s *Suite) TestAgentRun() {
 	agentConfig, agentPayload := testAgentData()
 	// Creates the agent network, starts the agent container, attaches the scanner and the proxy to the
 	// agent network, publishes a "running" message.
-	s.agentClient.EXPECT().PullImage(s.service.ctx, testImageRef)
 	s.dockerClient.EXPECT().CreatePublicNetwork(s.service.ctx, testAgentContainerName).Return(testAgentNetworkID, nil)
 	s.dockerClient.EXPECT().StartContainer(s.service.ctx, (configMatcher)(clients.DockerContainerConfig{
 		Name: agentConfig.ContainerName(),

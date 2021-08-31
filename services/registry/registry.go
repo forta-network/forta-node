@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"

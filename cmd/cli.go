@@ -3,7 +3,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-
 	"os"
 	"path"
 	"reflect"
@@ -12,7 +11,6 @@ import (
 	"github.com/forta-network/forta-node/config"
 
 	"github.com/go-playground/validator/v10"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -89,6 +87,12 @@ publishes alerts about them`,
 		Short: "try an agent by adding it to the local list",
 		RunE:  withDevOnly(withInitialized(withValidConfig(handleFortaAgentAdd))),
 	}
+
+	cmdFortaImages = &cobra.Command{
+		Use:   "images",
+		Short: "list the Forta node container images",
+		RunE:  handleFortaImages,
+	}
 )
 
 // Execute executes the root command.
@@ -108,6 +112,8 @@ func init() {
 
 	cmdForta.AddCommand(cmdFortaAgent)
 	cmdFortaAgent.AddCommand(cmdFortaAgentAdd)
+
+	cmdForta.AddCommand(cmdFortaImages)
 
 	// Global (persistent) flags
 
@@ -159,16 +165,9 @@ func initConfig() {
 	cfg.LocalAgentsPath = path.Join(cfg.FortaDir, config.DefaultLocalAgentsFileName)
 	cfg.LocalAgents, _ = readLocalAgents()
 
-	if err := viper.ReadInConfig(); err != nil {
-		log.Errorf("failed to read the config file: %v", err)
-	}
-	if err := viper.Unmarshal(&cfg); err != nil {
-		log.Errorf("failed to unmarshal the config file: %v", err)
-	}
-
-	if err := config.InitLogLevel(cfg); err != nil {
-		log.Errorf("failed to init log level: %v", err)
-	}
+	viper.ReadInConfig()
+	viper.Unmarshal(&cfg)
+	config.InitLogLevel(cfg)
 }
 
 func validateConfig() error {

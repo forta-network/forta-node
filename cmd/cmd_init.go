@@ -3,13 +3,12 @@ package cmd
 import (
 	"bytes"
 	"fmt"
-	"html/template"
 	"os"
-
-	"github.com/forta-network/forta-node/config"
+	"text/template"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/fatih/color"
+	"github.com/forta-network/forta-node/config"
 	"github.com/spf13/cobra"
 )
 

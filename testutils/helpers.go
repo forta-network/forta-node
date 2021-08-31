@@ -4,9 +4,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/ethereum/go-ethereum/core/types"
-
 	"github.com/forta-network/forta-node/domain"
 )
 

@@ -7,9 +7,8 @@ import (
 	"os"
 	"path"
 
-	yaml "gopkg.in/yaml.v3"
-
 	"github.com/forta-network/forta-node/utils"
+	"gopkg.in/yaml.v3"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -35,6 +34,11 @@ const (
 
 // Docker container names
 var (
+	DockerScannerContainerImage      = "forta-network/forta-scanner:latest"
+	DockerQueryContainerImage        = "forta-network/forta-query:latest"
+	DockerJSONRPCProxyContainerImage = "forta-network/forta-json-rpc:latest"
+	UseDockerImages                  = "local"
+
 	DockerNatsContainerName         = fmt.Sprintf("%s-nats", ContainerNamePrefix)
 	DockerScannerContainerName      = fmt.Sprintf("%s-scanner", ContainerNamePrefix)
 	DockerJSONRPCProxyContainerName = fmt.Sprintf("%s-json-rpc", ContainerNamePrefix)
@@ -86,17 +90,15 @@ type EthereumConfig struct {
 }
 
 type QueryConfig struct {
-	QueryImage string          `yaml:"queryImage" json:"queryImage"`
-	Port       int             `yaml:"port" json:"port" validate:"max=65535"`
-	DB         DBConfig        `yaml:"db" json:"db"`
-	PublishTo  PublisherConfig `yaml:"publishTo" json:"publishTo"`
+	Port      int             `yaml:"port" json:"port" validate:"max=65535"`
+	DB        DBConfig        `yaml:"db" json:"db"`
+	PublishTo PublisherConfig `yaml:"publishTo" json:"publishTo"`
 }
 type ScannerConfig struct {
-	ChainID      int            `yaml:"chainId" json:"chainId"`
-	ScannerImage string         `yaml:"scannerImage" json:"scannerImage"`
-	StartBlock   int            `yaml:"startBlock" json:"startBlock"`
-	EndBlock     int            `yaml:"endBlock" json:"endBlock"`
-	Ethereum     EthereumConfig `yaml:"ethereum" json:"ethereum"`
+	ChainID    int            `yaml:"chainId" json:"chainId"`
+	StartBlock int            `yaml:"startBlock" json:"startBlock"`
+	EndBlock   int            `yaml:"endBlock" json:"endBlock"`
+	Ethereum   EthereumConfig `yaml:"ethereum" json:"ethereum"`
 }
 
 type TraceConfig struct {
@@ -105,8 +107,7 @@ type TraceConfig struct {
 }
 
 type JsonRpcProxyConfig struct {
-	JsonRpcImage string         `yaml:"jsonRpcImage" json:"jsonRpcImage"`
-	Ethereum     EthereumConfig `yaml:"ethereum" json:"ethereum"`
+	Ethereum EthereumConfig `yaml:"ethereum" json:"ethereum"`
 }
 
 type LogConfig struct {
@@ -130,6 +131,12 @@ type IPFSConfig struct {
 	Password   string `yaml:"password" json:"password"`
 }
 
+type BatchConfig struct {
+	SkipEmpty       bool `yaml:"skipEmpty" json:"skipEmpty"`
+	IntervalSeconds *int `yaml:"intervalSeconds" json:"intervalSeconds"`
+	MaxAlerts       *int `yaml:"maxAlerts" json:"maxAlerts"`
+}
+
 type TestAlertsConfig struct {
 	Disable    bool   `yaml:"disable" json:"disable"`
 	WebhookURL string `yaml:"webhookUrl" json:"webhookUrl" validate:"omitempty,url"`
@@ -142,12 +149,6 @@ type PublisherConfig struct {
 	IPFS            *IPFSConfig      `yaml:"ipfs" json:"ipfs" validate:"required_unless=SkipPublish true"`
 	Batch           BatchConfig      `yaml:"batch" json:"batch"`
 	TestAlerts      TestAlertsConfig `yaml:"testAlerts" json:"testAlerts"`
-}
-
-type BatchConfig struct {
-	SkipEmpty       bool `yaml:"skipEmpty" json:"skipEmpty"`
-	IntervalSeconds *int `yaml:"intervalSeconds" json:"intervalSeconds"`
-	MaxAlerts       *int `yaml:"maxAlerts" json:"maxAlerts"`
 }
 
 type Config struct {
