@@ -224,7 +224,7 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 func (ab *AlertBatch) AddBatchAgent(agent *protocol.AgentInfo, blockNumber string, txHash string) {
 	var batchAgent *protocol.BatchAgent
 	for _, ba := range ab.Agents {
-		if ba.Info.Id == agent.Id {
+		if ba.Info.Manifest == agent.Manifest {
 			batchAgent = ba
 			break
 		}
@@ -281,12 +281,12 @@ func (br *BlockResults) GetTransactionResults(tx *protocol.TransactionEvent) *pr
 // GetAgentAlerts returns an existing or a new aggregation object for the agent alerts.
 func (br *BlockResults) GetAgentAlerts(agent *protocol.AgentInfo) *protocol.AgentAlerts {
 	for _, agentAlerts := range br.Results {
-		if agentAlerts.AgentId == agent.Id {
+		if agentAlerts.AgentManifest == agent.Manifest {
 			return agentAlerts
 		}
 	}
 	aa := &protocol.AgentAlerts{
-		AgentId: agent.Id,
+		AgentManifest: agent.Manifest,
 	}
 	br.Results = append(br.Results, aa)
 	return aa
@@ -295,12 +295,12 @@ func (br *BlockResults) GetAgentAlerts(agent *protocol.AgentInfo) *protocol.Agen
 // GetAgentAlerts returns an existing or a new aggregation object for the agent alerts.
 func (tr *TransactionResults) GetAgentAlerts(agent *protocol.AgentInfo) *protocol.AgentAlerts {
 	for _, agentAlerts := range tr.Results {
-		if agentAlerts.AgentId == agent.Id {
+		if agentAlerts.AgentManifest == agent.Manifest {
 			return agentAlerts
 		}
 	}
 	aa := &protocol.AgentAlerts{
-		AgentId: agent.Id,
+		AgentManifest: agent.Manifest,
 	}
 	tr.Results = append(tr.Results, aa)
 	return aa

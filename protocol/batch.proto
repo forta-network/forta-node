@@ -34,7 +34,7 @@ message TransactionResults {
 }
 
 message AgentAlerts {
-  string agentId = 1;
+  string agentManifest = 1;
   repeated SignedAlert alerts = 2;
 }
 
