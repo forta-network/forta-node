@@ -24,6 +24,7 @@ message AgentInfo {
   string imageHash = 2;
   string id = 3;
   bool isTest = 4;
+  string manifest = 5;
 }
 
 message Signature {

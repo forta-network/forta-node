@@ -74,6 +74,7 @@ func (ac AgentConfig) ToAgentInfo() *protocol.AgentInfo {
 		Image:     ac.Image,
 		ImageHash: ac.ImageHash(),
 		IsTest:    ac.IsLocal,
+		Manifest:  ac.Manifest,
 	}
 }
 
