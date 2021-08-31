@@ -11,13 +11,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/forta-network/forta-node/config"
-	"github.com/forta-network/forta-node/contracts"
-	"github.com/forta-network/forta-node/protocol"
-	"github.com/forta-network/forta-node/security"
-	"github.com/forta-network/forta-node/store"
-	"github.com/forta-network/forta-node/utils"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
@@ -25,6 +18,13 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/contracts"
+	"github.com/forta-network/forta-node/protocol"
+	"github.com/forta-network/forta-node/security"
+	"github.com/forta-network/forta-node/services/query/testalerts"
+	"github.com/forta-network/forta-node/store"
+	"github.com/forta-network/forta-node/utils"
 	ipfsapi "github.com/ipfs/go-ipfs-api"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -38,12 +38,13 @@ const (
 // AlertListener allows retrieval of alerts from the database
 type AlertListener struct {
 	protocol.UnimplementedQueryNodeServer
-	ctx       context.Context
-	store     store.AlertStore
-	cfg       AlertListenerConfig
-	contract  AlertsContract
-	ipfs      IPFS
-	ethClient EthClient
+	ctx             context.Context
+	store           store.AlertStore
+	cfg             AlertListenerConfig
+	contract        AlertsContract
+	ipfs            IPFS
+	ethClient       EthClient
+	testAlertLogger TestAlertLogger
 
 	port          int
 	skipEmpty     bool
@@ -53,6 +54,11 @@ type AlertListener struct {
 	latestBlock   uint64
 	latestChainID uint64
 	notifCh       chan *protocol.NotifyRequest
+}
+
+// TestAlertLogger logs the test alerts.
+type TestAlertLogger interface {
+	LogTestAlert(context.Context, *protocol.SignedAlert) error
 }
 
 // EthClient interacts with the Ethereum API.
@@ -283,6 +289,16 @@ func (al *AlertListener) getLatestBatch() (batch *BatchData) {
 				log.Debugf("alert: %s", alert.Alert.Id)
 			}
 
+			if hasAlert && notif.SignedAlert.Alert.Agent.IsTest {
+				if al.cfg.PublisherConfig.TestAlerts.Disable {
+					continue
+				}
+				if err := al.testAlertLogger.LogTestAlert(al.ctx, notif.SignedAlert); err != nil {
+					log.Warnf("failed to log test alert: %v", err)
+				}
+				continue
+			}
+
 			var blockNum string
 			if notif.EvalBlockRequest != nil {
 				blockNum = notif.EvalBlockRequest.Event.BlockNumber
@@ -381,11 +397,16 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertList
 	}
 
 	var ipfsClient IPFS
-	if len(cfg.PublisherConfig.IPFS.Username) > 0 && len(cfg.PublisherConfig.IPFS.Password) > 0 {
+	switch {
+	case cfg.PublisherConfig.SkipPublish:
+		// use nil IPFS client
+
+	case len(cfg.PublisherConfig.IPFS.Username) > 0 && len(cfg.PublisherConfig.IPFS.Password) > 0:
 		ipfsClient = ipfsapi.NewShellWithClient(cfg.PublisherConfig.IPFS.GatewayURL, &http.Client{
 			Transport: utils.NewBasicAuthTransport(cfg.PublisherConfig.IPFS.Username, cfg.PublisherConfig.IPFS.Password),
 		})
-	} else {
+
+	default:
 		ipfsClient = ipfsapi.NewShellWithClient(cfg.PublisherConfig.IPFS.GatewayURL, http.DefaultClient)
 	}
 
@@ -404,13 +425,19 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertList
 		batchLimit = *cfg.PublisherConfig.Batch.MaxAlerts
 	}
 
+	var testAlertLogger TestAlertLogger
+	if !cfg.PublisherConfig.TestAlerts.Disable {
+		testAlertLogger = testalerts.NewLogger(cfg.PublisherConfig.TestAlerts.WebhookURL)
+	}
+
 	return &AlertListener{
-		ctx:       ctx,
-		store:     store,
-		cfg:       cfg,
-		contract:  ats,
-		ipfs:      ipfsClient,
-		ethClient: ethClient,
+		ctx:             ctx,
+		store:           store,
+		cfg:             cfg,
+		contract:        ats,
+		ipfs:            ipfsClient,
+		ethClient:       ethClient,
+		testAlertLogger: testAlertLogger,
 
 		port:          cfg.Port,
 		skipEmpty:     cfg.PublisherConfig.Batch.SkipEmpty,

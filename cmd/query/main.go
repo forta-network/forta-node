@@ -17,7 +17,7 @@ func initApi(ctx context.Context, as store.AlertStore, cfg config.Config) (*quer
 }
 
 func initListener(ctx context.Context, as store.AlertStore, cfg config.Config) (*query.AlertListener, error) {
-	key, err := security.LoadKey()
+	key, err := security.LoadKey(config.DefaultContainerKeyDirPath)
 	if err != nil {
 		return nil, err
 	}

@@ -8,13 +8,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/forta-network/forta-node/protocol"
+	"github.com/forta-network/forta-node/store"
+
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/forta-network/forta-node/protocol"
-	"github.com/forta-network/forta-node/store"
 )
 
 // AlertApi allows retrieval of alerts from the database

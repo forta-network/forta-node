@@ -95,7 +95,6 @@ func (l *logFeed) ForEachLog(blockHandler func(blk *domain.Block) error, handler
 				return err
 			}
 		}
-		return nil
 	})
 	log.Infof("subscribed to logs: address=%v, topics=%v, startBlock=%s, endBlock=%s", l.addresses, l.topics, l.startBlock, l.endBlock)
 	defer func() {

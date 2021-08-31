@@ -32,55 +32,16 @@ jobs:
           aws-access-key-id: ${{ secrets.DEV_DEPLOY_AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.DEV_DEPLOY_AWS_SECRET_KEY }}
           aws-region: us-east-1
-      - name: Make Containers
+      - name: Login to Forta Disco
+        uses: docker/login-action@v1
+        with:
+          registry: disco-dev.forta.network
+          username: discouser
+          password: discopass
+      - name: Create build for revision
         run: |
-          make build
+          ./scripts/build-for-release.sh disco-dev.forta.network
           chmod 755 forta
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-      - name: Populate Templates
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          GITHUB_HASH: ${{ github.sha }}
-        run: |
-          sed -i "s/GITHUB_HASH/$GITHUB_HASH/g" config-dev.yml
-          sed -i "s/ECR_REGISTRY/$ECR_REGISTRY/g" config-dev.yml
-          sed -i "s/GITHUB_HASH/$GITHUB_HASH/g" scripts/load-images.sh
-          sed -i "s/ECR_REGISTRY/$ECR_REGISTRY/g" scripts/load-images.sh
-      - name: Build and Tag ECR images
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          # Build a docker container and
-          # push it to ECR so that it can
-          # be deployed to ECS.
-
-          # scanner
-          docker tag forta-network/forta-scanner:latest $ECR_REGISTRY/forta-scanner:latest
-          docker tag forta-network/forta-scanner:latest $ECR_REGISTRY/forta-scanner:$IMAGE_TAG
-
-          # query
-          docker tag forta-network/forta-query:latest $ECR_REGISTRY/forta-query:latest
-          docker tag forta-network/forta-query:latest $ECR_REGISTRY/forta-query:$IMAGE_TAG
-
-          # json-rpc
-          docker tag forta-network/forta-json-rpc:latest $ECR_REGISTRY/forta-json-rpc:latest
-          docker tag forta-network/forta-json-rpc:latest $ECR_REGISTRY/forta-json-rpc:$IMAGE_TAG
-
-          echo "::set-output name=image::$IMAGE_TAG"
-      - name: Push to ECR
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker push $ECR_REGISTRY/forta-json-rpc:latest
-          docker push $ECR_REGISTRY/forta-json-rpc:$IMAGE_TAG
-          docker push $ECR_REGISTRY/forta-scanner:latest
-          docker push $ECR_REGISTRY/forta-scanner:$IMAGE_TAG
-          docker push $ECR_REGISTRY/forta-query:latest
-          docker push $ECR_REGISTRY/forta-query:$IMAGE_TAG
       - name: Prepare Distribution
         run: |
           mkdir dist

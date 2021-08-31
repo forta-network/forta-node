@@ -17,9 +17,6 @@ hooks:
     - location: scripts/inject-secrets.sh
       timeout: 300
       runas: root
-    - location: scripts/load-images.sh
-      timeout: 300
-      runas: forta
   ApplicationStart:
     - location: scripts/start-server.sh
       timeout: 300

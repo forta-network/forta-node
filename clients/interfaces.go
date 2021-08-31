@@ -18,6 +18,7 @@ type DockerClient interface {
 	StartContainer(ctx context.Context, config DockerContainerConfig) (*DockerContainer, error)
 	StopContainer(ctx context.Context, ID string) error
 	Prune(ctx context.Context) error
+	HasLocalImage(ctx context.Context, ref string) bool
 }
 
 // MessageClient receives and publishes messages.

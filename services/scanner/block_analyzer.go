@@ -60,6 +60,7 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 			Name:      result.AgentConfig.ID,
 			Image:     result.AgentConfig.Image,
 			ImageHash: result.AgentConfig.ImageHash(),
+			IsTest:    result.AgentConfig.IsLocal,
 		},
 		Tags: map[string]string{
 			"agentImage":  result.AgentConfig.Image,

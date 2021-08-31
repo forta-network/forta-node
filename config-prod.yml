@@ -12,15 +12,13 @@ registry:
   ipfsGateway: "http://ipfs.forta.internal:8080"
 
 scanner:
-  scannerImage: "ECR_REGISTRY/forta-scanner:GITHUB_HASH"
   chainId: 1
   #startBlock: 12860865
   #endBlock: 11792184
   ethereum:
     jsonRpcUrl: "https://cloudflare-eth.com"
 
-json-rpc-proxy:
-  jsonRpcImage: "ECR_REGISTRY/forta-json-rpc:GITHUB_HASH"
+jsonRpcProxy:
   ethereum:
     jsonRpcUrl: "https://cloudflare-eth.com"
 
@@ -30,7 +28,6 @@ trace:
     jsonRpcUrl: "ALCHEMY_URL"
 
 query:
-  queryImage: "ECR_REGISTRY/forta-query:GITHUB_HASH"
   port: 8778
   publishTo:
     batch:

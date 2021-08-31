@@ -59,6 +59,7 @@ func getTestBlockFeed(t *testing.T) (*blockFeed, *mocks.MockClient, *mocks.MockC
 		client:      client,
 		traceClient: traceClient,
 		cache:       cache,
+		tracing:     true,
 	}, client, traceClient, ctx, cancel
 }
 
@@ -176,7 +177,6 @@ func TestBlockFeed_ForEachBlock_Reorg(t *testing.T) {
 
 	traceClient.EXPECT().TraceBlock(ctx, big.NewInt(3)).Return(nil, nil).Times(1)
 	client.EXPECT().BlockByNumber(ctx, big.NewInt(3)).Return(block3, nil).Times(1)
-	traceClient.EXPECT().TraceBlock(ctx, hexToBigInt(block3.Number)).Return(nil, nil).Times(1)
 
 	count := 0
 	var evts []*domain.BlockEvent

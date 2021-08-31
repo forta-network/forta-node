@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -19,7 +20,7 @@ import (
 )
 
 // LoadKey loads the node private key.
-func LoadKey() (*keystore.Key, error) {
+func LoadKey(keysDirPath string) (*keystore.Key, error) {
 	f, err := os.OpenFile("/passphrase", os.O_RDONLY, 400)
 	if err != nil {
 		return nil, err
@@ -31,7 +32,7 @@ func LoadKey() (*keystore.Key, error) {
 	}
 	passphrase := string(pw)
 
-	files, err := ioutil.ReadDir("/.keys")
+	files, err := ioutil.ReadDir(keysDirPath)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +41,7 @@ func LoadKey() (*keystore.Key, error) {
 		return nil, errors.New("there must be only one key in key directory")
 	}
 
-	keyBytes, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", "/.keys", files[0].Name()))
+	keyBytes, err := ioutil.ReadFile(path.Join(keysDirPath, files[0].Name()))
 	if err != nil {
 		return nil, err
 	}
