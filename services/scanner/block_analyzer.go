@@ -56,12 +56,7 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 		Finding:   f,
 		Timestamp: ts.Format(store.AlertTimeFormat),
 		Type:      protocol.AlertType_BLOCK,
-		Agent: &protocol.AgentInfo{
-			Name:      result.AgentConfig.ID,
-			Image:     result.AgentConfig.Image,
-			ImageHash: result.AgentConfig.ImageHash(),
-			IsTest:    result.AgentConfig.IsLocal,
-		},
+		Agent:     result.AgentConfig.ToAgentInfo(),
 		Tags: map[string]string{
 			"agentImage":  result.AgentConfig.Image,
 			"agentId":     result.AgentConfig.ID,
@@ -95,6 +90,7 @@ func (t *BlockAnalyzerService) Start() error {
 			log.Debugf(resStr)
 
 			rt := &clients.AgentRoundTrip{
+				AgentConfig:       result.AgentConfig,
 				EvalBlockRequest:  result.Request,
 				EvalBlockResponse: result.Response,
 			}

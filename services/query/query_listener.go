@@ -198,15 +198,17 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 		blockNum := hexutil.MustDecodeUint64(notif.EvalBlockRequest.Event.BlockNumber)
 		blockRes := alertBatch.GetBlockResults(notif.EvalBlockRequest.Event.BlockHash, blockNum, notif.EvalBlockRequest.Event.Block.Timestamp)
 		if hasAlert {
-			agentAlerts = (*BlockResults)(blockRes).GetAgentAlerts(notif.SignedAlert.Alert.Agent)
+			agentAlerts = (*BlockResults)(blockRes).GetAgentAlerts(notif.AgentInfo)
 		}
+		alertBatch.AddBatchAgent(notif.AgentInfo, notif.EvalBlockRequest.Event.BlockNumber, "")
 	} else {
 		blockNum := hexutil.MustDecodeUint64(notif.EvalTxRequest.Event.Block.BlockNumber)
 		blockRes := alertBatch.GetBlockResults(notif.EvalTxRequest.Event.Block.BlockHash, blockNum, notif.EvalTxRequest.Event.Block.BlockTimestamp)
 		txRes := (*BlockResults)(blockRes).GetTransactionResults(notif.EvalTxRequest.Event)
 		if hasAlert {
-			agentAlerts = (*TransactionResults)(txRes).GetAgentAlerts(notif.SignedAlert.Alert.Agent)
+			agentAlerts = (*TransactionResults)(txRes).GetAgentAlerts(notif.AgentInfo)
 		}
+		alertBatch.AddBatchAgent(notif.AgentInfo, notif.EvalTxRequest.Event.Block.BlockNumber, notif.EvalTxRequest.Event.Receipt.TransactionHash)
 	}
 
 	if agentAlerts == nil {
@@ -215,6 +217,33 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 
 	agentAlerts.Alerts = append(agentAlerts.Alerts, notif.SignedAlert)
 	bd.Data.AlertCount++
+}
+
+// AddBatchAgent includes the agent info in the batch so we know that this agent really
+// processed a specific block or a tx hash.
+func (ab *AlertBatch) AddBatchAgent(agent *protocol.AgentInfo, blockNumber string, txHash string) {
+	var batchAgent *protocol.BatchAgent
+	for _, ba := range ab.Agents {
+		if ba.Info.Id == agent.Id {
+			batchAgent = ba
+			break
+		}
+	}
+	if batchAgent == nil {
+		batchAgent = &protocol.BatchAgent{
+			Info: agent,
+		}
+		ab.Agents = append(ab.Agents, batchAgent)
+	}
+	// There should always be a block number.
+	if len(blockNumber) == 0 {
+		return
+	}
+	blockNum, _ := hexutil.DecodeUint64(blockNumber)
+	batchAgent.Blocks = append(batchAgent.Blocks, blockNum)
+	if len(txHash) > 0 {
+		batchAgent.Transactions = append(batchAgent.Transactions, txHash)
+	}
 }
 
 // GetBlockResults returns an existing or a new aggregation object for the block.
@@ -252,12 +281,12 @@ func (br *BlockResults) GetTransactionResults(tx *protocol.TransactionEvent) *pr
 // GetAgentAlerts returns an existing or a new aggregation object for the agent alerts.
 func (br *BlockResults) GetAgentAlerts(agent *protocol.AgentInfo) *protocol.AgentAlerts {
 	for _, agentAlerts := range br.Results {
-		if agentAlerts.Agent.Name == agent.Name {
+		if agentAlerts.AgentId == agent.Id {
 			return agentAlerts
 		}
 	}
 	aa := &protocol.AgentAlerts{
-		Agent: agent,
+		AgentId: agent.Id,
 	}
 	br.Results = append(br.Results, aa)
 	return aa
@@ -266,12 +295,12 @@ func (br *BlockResults) GetAgentAlerts(agent *protocol.AgentInfo) *protocol.Agen
 // GetAgentAlerts returns an existing or a new aggregation object for the agent alerts.
 func (tr *TransactionResults) GetAgentAlerts(agent *protocol.AgentInfo) *protocol.AgentAlerts {
 	for _, agentAlerts := range tr.Results {
-		if agentAlerts.Agent.Name == agent.Name {
+		if agentAlerts.AgentId == agent.Id {
 			return agentAlerts
 		}
 	}
 	aa := &protocol.AgentAlerts{
-		Agent: agent,
+		AgentId: agent.Id,
 	}
 	tr.Results = append(tr.Results, aa)
 	return aa

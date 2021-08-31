@@ -55,12 +55,7 @@ func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *pr
 		Finding:   f,
 		Timestamp: ts.Format(store.AlertTimeFormat),
 		Type:      protocol.AlertType_TRANSACTION,
-		Agent: &protocol.AgentInfo{
-			Name:      result.AgentConfig.ID,
-			Image:     result.AgentConfig.Image,
-			ImageHash: result.AgentConfig.ImageHash(),
-			IsTest:    result.AgentConfig.IsLocal,
-		},
+		Agent:     result.AgentConfig.ToAgentInfo(),
 		Tags: map[string]string{
 			"agentImage":  result.AgentConfig.Image,
 			"agentId":     result.AgentConfig.ID,
@@ -102,6 +97,7 @@ func (t *TxAnalyzerService) Start() error {
 				}
 				if err := t.cfg.AlertSender.SignAlertAndNotify(
 					&clients.AgentRoundTrip{
+						AgentConfig:    result.AgentConfig,
 						EvalTxRequest:  result.Request,
 						EvalTxResponse: result.Response,
 					},

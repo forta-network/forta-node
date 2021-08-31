@@ -22,7 +22,7 @@ message ScannerInfo {
 message AgentInfo {
   string image = 1;
   string imageHash = 2;
-  string name = 3;
+  string id = 3;
   bool isTest = 4;
 }
 
@@ -63,6 +63,7 @@ message NotifyRequest {
   EvaluateTxResponse evalTxResponse = 3;
   EvaluateBlockRequest evalBlockRequest = 4;
   EvaluateBlockResponse evalBlockResponse = 5;
+  AgentInfo agentInfo = 6;
 }
 
 message NotifyResponse {}

@@ -44,8 +44,8 @@ func stringVal(fieldName string, alert *protocol.Alert) (string, bool) {
 	if fieldName == "type" {
 		return alert.Finding.Type.String(), true
 	}
-	if fieldName == "agentName" {
-		return alert.Agent.Name, true
+	if fieldName == "agentId" {
+		return alert.Agent.Id, true
 	}
 	if fieldName == "agentImage" {
 		return alert.Agent.Image, true
