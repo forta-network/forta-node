@@ -31,7 +31,7 @@ func handleFortaInit(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		var buf bytes.Buffer
-		if err := tmpl.Execute(&buf, config.GetEnvDefaults(cfg.Production)); err != nil {
+		if err := tmpl.Execute(&buf, config.GetEnvDefaults(cfg.Development)); err != nil {
 			return err
 		}
 		if err := os.WriteFile(cfg.ConfigPath, buf.Bytes(), 0644); err != nil {

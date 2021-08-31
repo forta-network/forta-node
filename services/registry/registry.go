@@ -87,7 +87,7 @@ func (rs *RegistryService) Init() (err error) {
 	if err != nil {
 		return
 	}
-	agentRegAddress := config.GetEnvDefaults(rs.cfg.Production).DefaultAgentRegistryContractAddress
+	agentRegAddress := config.GetEnvDefaults(rs.cfg.Development).DefaultAgentRegistryContractAddress
 	client := ethclient.NewClient(rs.rpcClient)
 	rs.agentReg, err = contracts.NewAgentRegistryCaller(common.HexToAddress(agentRegAddress), client)
 	if err != nil {

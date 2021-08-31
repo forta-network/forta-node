@@ -18,10 +18,10 @@ import (
 )
 
 const (
-	keyFortaDir        = "forta_dir"
-	keyFortaConfigFile = "forta_config_file"
-	keyFortaPassphrase = "forta_passphrase"
-	keyFortaProduction = "forta_production"
+	keyFortaDir         = "forta_dir"
+	keyFortaConfigFile  = "forta_config_file"
+	keyFortaPassphrase  = "forta_passphrase"
+	keyFortaDevelopment = "forta_development"
 )
 
 var (
@@ -116,8 +116,8 @@ func init() {
 	cmdForta.PersistentFlags().String("config", "", "config file (default is $HOME/.forta/config.yml) (overrides $FORTA_CONFIG_FILE)")
 	viper.BindPFlag(keyFortaConfigFile, cmdForta.PersistentFlags().Lookup("config"))
 
-	cmdForta.PersistentFlags().Bool("production", false, "production mode (overrides $FORTA_PRODUCTION)")
-	viper.BindPFlag(keyFortaProduction, cmdForta.PersistentFlags().Lookup("production"))
+	cmdForta.PersistentFlags().Bool("development", false, "development mode (overrides $FORTA_DEVELOPMENT)")
+	viper.BindPFlag(keyFortaDevelopment, cmdForta.PersistentFlags().Lookup("development"))
 
 	cmdForta.PersistentFlags().String("passphrase", "", "passphrase to decrypt the private key (overrides $FORTA_PASSPHRASE)")
 	viper.BindPFlag(keyFortaPassphrase, cmdForta.PersistentFlags().Lookup("passphrase"))
@@ -137,7 +137,7 @@ func initConfig() {
 	viper.BindEnv(keyFortaDir)
 	viper.BindEnv(keyFortaConfigFile)
 	viper.BindEnv(keyFortaPassphrase)
-	viper.BindEnv(keyFortaProduction)
+	viper.BindEnv(keyFortaDevelopment)
 	viper.AutomaticEnv()
 
 	if cfg.FortaDir = viper.GetString(keyFortaDir); cfg.FortaDir == "" {
@@ -153,7 +153,7 @@ func initConfig() {
 	viper.SetConfigFile(cfg.ConfigPath)
 
 	cfg.KeyDirPath = path.Join(cfg.FortaDir, config.DefaultKeysDirName)
-	cfg.Production = viper.GetBool(keyFortaProduction)
+	cfg.Development = !viper.GetBool(keyFortaDevelopment)
 	cfg.Passphrase = viper.GetString(keyFortaPassphrase)
 	cfg.LocalAgentsPath = path.Join(cfg.FortaDir, config.DefaultLocalAgentsFileName)
 	cfg.LocalAgents, _ = readLocalAgents()

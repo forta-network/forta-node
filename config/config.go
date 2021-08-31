@@ -151,7 +151,7 @@ type BatchConfig struct {
 }
 
 type Config struct {
-	Production      bool           `yaml:"-" json:"-"`
+	Development     bool           `yaml:"-" json:"-"`
 	FortaDir        string         `yaml:"-" json:"-"`
 	ConfigPath      string         `yaml:"-" json:"-"`
 	KeyDirPath      string         `yaml:"-" json:"-"`
@@ -230,18 +230,18 @@ type EnvDefaults struct {
 }
 
 // GetEnvDefaults returns the default values for an env.
-func GetEnvDefaults(production bool) EnvDefaults {
-	if production {
+func GetEnvDefaults(development bool) EnvDefaults {
+	if development {
 		return EnvDefaults{
-			DefaultAgentRegistryContractAddress:   "0xFE1927bF5bc338e4884A0d406e33921e8058d75d",
-			DefaultScannerRegistryContractAddress: "0x1Ad235EF22Dd15d291ecD4b44a5739aD4F61b3A5",
+			DefaultAgentRegistryContractAddress:   "0x272D3e86E9DDb4c46eE7483C7abbc224145E11bE",
+			DefaultScannerRegistryContractAddress: "0x38C1e080BeEb26eeA91932178E62987598230271",
 			DefaultAlertContractAddress:           "0xf4746faBc1D5E751248Ea3AC87ceB13C432F0C1A",
 			DiscoSubdomain:                        "disco-dev",
 		}
 	}
 	return EnvDefaults{
-		DefaultAgentRegistryContractAddress:   "0x272D3e86E9DDb4c46eE7483C7abbc224145E11bE",
-		DefaultScannerRegistryContractAddress: "0x38C1e080BeEb26eeA91932178E62987598230271",
+		DefaultAgentRegistryContractAddress:   "0xFE1927bF5bc338e4884A0d406e33921e8058d75d",
+		DefaultScannerRegistryContractAddress: "0x1Ad235EF22Dd15d291ecD4b44a5739aD4F61b3A5",
 		DefaultAlertContractAddress:           "0x8c06716460e4A6E8Ca6a0bfe7190b1a6A059eA2F",
 		DiscoSubdomain:                        "disco",
 	}
