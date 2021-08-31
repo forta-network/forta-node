@@ -196,13 +196,13 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 	var agentAlerts *protocol.AgentAlerts
 	if isBlockAlert {
 		blockNum := hexutil.MustDecodeUint64(notif.EvalBlockRequest.Event.BlockNumber)
-		blockRes := alertBatch.GetBlockResults(notif.EvalBlockRequest.Event.BlockHash, blockNum)
+		blockRes := alertBatch.GetBlockResults(notif.EvalBlockRequest.Event.BlockHash, blockNum, notif.EvalBlockRequest.Event.Block.Timestamp)
 		if hasAlert {
 			agentAlerts = (*BlockResults)(blockRes).GetAgentAlerts(notif.SignedAlert.Alert.Agent)
 		}
 	} else {
 		blockNum := hexutil.MustDecodeUint64(notif.EvalTxRequest.Event.Block.BlockNumber)
-		blockRes := alertBatch.GetBlockResults(notif.EvalTxRequest.Event.Block.BlockHash, blockNum)
+		blockRes := alertBatch.GetBlockResults(notif.EvalTxRequest.Event.Block.BlockHash, blockNum, notif.EvalTxRequest.Event.Block.BlockTimestamp)
 		txRes := (*BlockResults)(blockRes).GetTransactionResults(notif.EvalTxRequest.Event)
 		if hasAlert {
 			agentAlerts = (*TransactionResults)(txRes).GetAgentAlerts(notif.SignedAlert.Alert.Agent)
@@ -218,7 +218,7 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 }
 
 // GetBlockResults returns an existing or a new aggregation object for the block.
-func (ab *AlertBatch) GetBlockResults(blockHash string, blockNumber uint64) *protocol.BlockResults {
+func (ab *AlertBatch) GetBlockResults(blockHash string, blockNumber uint64, blockTimestamp string) *protocol.BlockResults {
 	for _, blockRes := range ab.Results {
 		if blockRes.Block.BlockNumber == blockNumber {
 			return blockRes
@@ -226,8 +226,9 @@ func (ab *AlertBatch) GetBlockResults(blockHash string, blockNumber uint64) *pro
 	}
 	br := &protocol.BlockResults{
 		Block: &protocol.Block{
-			BlockHash:   blockHash,
-			BlockNumber: blockNumber,
+			BlockHash:      blockHash,
+			BlockNumber:    blockNumber,
+			BlockTimestamp: blockTimestamp,
 		},
 	}
 	ab.Results = append(ab.Results, br)

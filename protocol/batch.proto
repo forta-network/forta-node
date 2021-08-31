@@ -40,4 +40,5 @@ message AgentAlerts {
 message Block {
   string blockHash = 1;
   uint64 blockNumber = 2;
+  string blockTimestamp = 3;
 }
