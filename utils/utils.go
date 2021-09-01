@@ -25,3 +25,11 @@ func TryTimes(handler func(attempt int) error, times int, delay time.Duration) e
 	}
 	return result
 }
+
+func MapKeys(m map[string]bool) []string {
+	var res []string
+	for k := range m {
+		res = append(res, k)
+	}
+	return res
+}
