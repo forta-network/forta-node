@@ -3,6 +3,7 @@ package feeds
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/big"
 
 	log "github.com/sirupsen/logrus"
@@ -50,6 +51,11 @@ func (bf *blockFeed) initialize() error {
 		if err != nil {
 			log.Errorf("error converting blocknum hex to bigint: %s", err.Error())
 			return nil
+		}
+
+		// should be a positive number
+		if bf.start.Sign() <= 0 {
+			return fmt.Errorf("got invalid block number during initialization: %d", bf.start.Uint64())
 		}
 	}
 	log.Infof("initialized block number %d", bf.start)
