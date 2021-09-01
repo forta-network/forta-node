@@ -1,6 +1,9 @@
 package utils
 
-import "time"
+import (
+	"sort"
+	"time"
+)
 
 // ShortenString shortens the string if the string is longer than given length.
 func ShortenString(str string, maxLength int) string {
@@ -31,5 +34,6 @@ func MapKeys(m map[string]bool) []string {
 	for k := range m {
 		res = append(res, k)
 	}
+	sort.Strings(res)
 	return res
 }
