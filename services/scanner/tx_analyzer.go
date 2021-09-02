@@ -34,9 +34,14 @@ func (t *TxAnalyzerService) calculateAlertID(result *TxResult, f *protocol.Findi
 	idStr := strings.Join([]string{
 		result.Request.Event.Network.ChainId,
 		result.Request.Event.Transaction.Hash,
+		f.Name,
+		f.Description,
+		f.Protocol,
+		f.Type.String(),
 		f.AlertId,
 		f.Severity.String(),
-		result.AgentConfig.Image}, "")
+		result.AgentConfig.Image,
+		strings.Join(utils.MapKeys(result.Request.Event.Addresses), "")}, "")
 	return crypto.Keccak256Hash([]byte(idStr)).Hex()
 }
 

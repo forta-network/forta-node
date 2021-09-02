@@ -40,14 +40,14 @@ func TestLogFeed_ForEachLog(t *testing.T) {
 	assert.NoError(t, err)
 
 	var foundLogs []types.Log
-	err = lf.ForEachLog(func(blk *domain.Block) error {
-		return nil
-	}, func(logEntry types.Log) error {
+	err = lf.ForEachLog(func(blk *domain.Block, logEntry types.Log) error {
 		foundLogs = append(foundLogs, logEntry)
 		// return early
 		if len(foundLogs) == 3 {
 			return context.Canceled
 		}
+		return nil
+	}, func(blk *domain.Block) error {
 		return nil
 	})
 	// ensure expected error is the one returned
