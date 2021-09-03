@@ -67,7 +67,7 @@ func (agent *Agent) processTransactions() {
 		resp, err := agent.client.EvaluateTx(ctx, request)
 		cancel()
 		if err != nil {
-			log.Error("error invoking agent", err)
+			log.WithError(err).Error("error invoking agent")
 			continue
 		}
 		log.Debugf("request successful")
@@ -88,7 +88,7 @@ func (agent *Agent) processBlocks() {
 		resp, err := agent.client.EvaluateBlock(ctx, request)
 		cancel()
 		if err != nil {
-			log.Error("error invoking agent", err)
+			log.WithError(err).Error("error invoking agent")
 			continue
 		}
 		log.Debugf("request successful")

@@ -94,6 +94,22 @@ func (t *TxAnalyzerService) Start() error {
 			}
 			log.Debugf(resStr)
 
+			rt := &clients.AgentRoundTrip{
+				AgentConfig:    result.AgentConfig,
+				EvalTxRequest:  result.Request,
+				EvalTxResponse: result.Response,
+			}
+
+			if len(result.Response.Findings) == 0 {
+				if err := t.cfg.AlertSender.NotifyWithoutAlert(
+					rt, result.Request.Event.Network.ChainId, result.Request.Event.Block.BlockNumber,
+				); err != nil {
+					log.WithError(err).Error("failed to notify without alert")
+					return err
+				}
+				continue
+			}
+
 			//TODO: validate finding returned is well-formed
 			for _, f := range result.Response.Findings {
 				alert, err := t.findingToAlert(result, ts, f)
@@ -101,13 +117,9 @@ func (t *TxAnalyzerService) Start() error {
 					return err
 				}
 				if err := t.cfg.AlertSender.SignAlertAndNotify(
-					&clients.AgentRoundTrip{
-						AgentConfig:    result.AgentConfig,
-						EvalTxRequest:  result.Request,
-						EvalTxResponse: result.Response,
-					},
-					alert, result.Request.Event.Network.ChainId, result.Request.Event.Block.BlockNumber,
+					rt, alert, result.Request.Event.Network.ChainId, result.Request.Event.Block.BlockNumber,
 				); err != nil {
+					log.WithError(err).Error("failed to sign alert and notify")
 					return err
 				}
 			}

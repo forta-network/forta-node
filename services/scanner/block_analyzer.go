@@ -99,6 +99,7 @@ func (t *BlockAnalyzerService) Start() error {
 				if err := t.cfg.AlertSender.NotifyWithoutAlert(
 					rt, result.Request.Event.Network.ChainId, result.Request.Event.BlockNumber,
 				); err != nil {
+					log.WithError(err).Error("failed to notify without alert")
 					return err
 				}
 				continue
@@ -112,6 +113,7 @@ func (t *BlockAnalyzerService) Start() error {
 				if err := t.cfg.AlertSender.SignAlertAndNotify(
 					rt, alert, result.Request.Event.Network.ChainId, result.Request.Event.BlockNumber,
 				); err != nil {
+					log.WithError(err).Error("failed sign alert and notify")
 					return err
 				}
 			}
