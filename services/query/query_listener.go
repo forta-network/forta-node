@@ -196,19 +196,19 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 	var agentAlerts *protocol.AgentAlerts
 	if isBlockAlert {
 		blockNum := hexutil.MustDecodeUint64(notif.EvalBlockRequest.Event.BlockNumber)
-		blockRes := alertBatch.GetBlockResults(notif.EvalBlockRequest.Event.BlockHash, blockNum, notif.EvalBlockRequest.Event.Block.Timestamp)
+		alertBatch.AddBatchAgent(notif.AgentInfo, blockNum, "")
 		if hasAlert {
+			blockRes := alertBatch.GetBlockResults(notif.EvalBlockRequest.Event.BlockHash, blockNum, notif.EvalBlockRequest.Event.Block.Timestamp)
 			agentAlerts = (*BlockResults)(blockRes).GetAgentAlerts(notif.AgentInfo)
 		}
-		alertBatch.AddBatchAgent(notif.AgentInfo, notif.EvalBlockRequest.Event.BlockNumber, "")
 	} else {
 		blockNum := hexutil.MustDecodeUint64(notif.EvalTxRequest.Event.Block.BlockNumber)
-		blockRes := alertBatch.GetBlockResults(notif.EvalTxRequest.Event.Block.BlockHash, blockNum, notif.EvalTxRequest.Event.Block.BlockTimestamp)
-		txRes := (*BlockResults)(blockRes).GetTransactionResults(notif.EvalTxRequest.Event)
+		alertBatch.AddBatchAgent(notif.AgentInfo, blockNum, notif.EvalTxRequest.Event.Receipt.TransactionHash)
 		if hasAlert {
+			blockRes := alertBatch.GetBlockResults(notif.EvalTxRequest.Event.Block.BlockHash, blockNum, notif.EvalTxRequest.Event.Block.BlockTimestamp)
+			txRes := (*BlockResults)(blockRes).GetTransactionResults(notif.EvalTxRequest.Event)
 			agentAlerts = (*TransactionResults)(txRes).GetAgentAlerts(notif.AgentInfo)
 		}
-		alertBatch.AddBatchAgent(notif.AgentInfo, notif.EvalTxRequest.Event.Block.BlockNumber, notif.EvalTxRequest.Event.Receipt.TransactionHash)
 	}
 
 	if agentAlerts == nil {
@@ -221,7 +221,7 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 
 // AddBatchAgent includes the agent info in the batch so we know that this agent really
 // processed a specific block or a tx hash.
-func (ab *AlertBatch) AddBatchAgent(agent *protocol.AgentInfo, blockNumber string, txHash string) {
+func (ab *AlertBatch) AddBatchAgent(agent *protocol.AgentInfo, blockNumber uint64, txHash string) {
 	var batchAgent *protocol.BatchAgent
 	for _, ba := range ab.Agents {
 		if ba.Info.Manifest == agent.Manifest {
@@ -236,11 +236,10 @@ func (ab *AlertBatch) AddBatchAgent(agent *protocol.AgentInfo, blockNumber strin
 		ab.Agents = append(ab.Agents, batchAgent)
 	}
 	// There should always be a block number.
-	if len(blockNumber) == 0 {
+	if blockNumber == 0 {
 		return
 	}
-	blockNum, _ := hexutil.DecodeUint64(blockNumber)
-	batchAgent.Blocks = append(batchAgent.Blocks, blockNum)
+	batchAgent.Blocks = append(batchAgent.Blocks, blockNumber)
 	if len(txHash) > 0 {
 		batchAgent.Transactions = append(batchAgent.Transactions, txHash)
 	}
