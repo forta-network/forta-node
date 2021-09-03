@@ -17,6 +17,11 @@ registryWssUrlId="${envPrefix}_agent_registry_wss_url"
 registryWssUrlUnsafe=$(aws secretsmanager --region $region get-secret-value --secret-id $registryWssUrlId |jq -r '.SecretString')
 registryWssUrl=$(printf '%s\n' "$registryWssUrlUnsafe" | sed -e 's/[]\/$*.^[]/\\&/g');
 
+mainnetApiUrlId="${envPrefix}_mainnet_api_url"
+mainnetApiUrlUnsafe=$(aws secretsmanager --region $region get-secret-value --secret-id $mainnetApiUrlId |jq -r '.SecretString')
+mainnetApiUrl=$(printf '%s\n' "$mainnetApiUrlUnsafe" | sed -e 's/[]\/$*.^[]/\\&/g');
+
 sed -i "s/ALCHEMY_URL/$apiUrl/g" /etc/forta/config.yml
 sed -i "s/REGISTRY_API_URL/$registryApiUrl/g" /etc/forta/config.yml
 sed -i "s/REGISTRY_WSS_URL/$registryWssUrl/g" /etc/forta/config.yml
+sed -i "s/MAINNET_API_URL/$mainnetApiUrl/g" /etc/forta/config.yml
