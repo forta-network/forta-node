@@ -237,6 +237,7 @@ func (ab *AlertBatch) AddBatchAgent(agent *protocol.AgentInfo, blockNumber uint6
 	}
 	// There should always be a block number.
 	if blockNumber == 0 {
+		log.Error("zero block number while adding batch agent")
 		return
 	}
 	batchAgent.Blocks = append(batchAgent.Blocks, blockNumber)

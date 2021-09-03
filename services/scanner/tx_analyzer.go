@@ -104,6 +104,7 @@ func (t *TxAnalyzerService) Start() error {
 				if err := t.cfg.AlertSender.NotifyWithoutAlert(
 					rt, result.Request.Event.Network.ChainId, result.Request.Event.Block.BlockNumber,
 				); err != nil {
+					log.WithError(err).Error("failed to notify without alert")
 					return err
 				}
 				continue
@@ -118,6 +119,7 @@ func (t *TxAnalyzerService) Start() error {
 				if err := t.cfg.AlertSender.SignAlertAndNotify(
 					rt, alert, result.Request.Event.Network.ChainId, result.Request.Event.Block.BlockNumber,
 				); err != nil {
+					log.WithError(err).Error("failed to sign alert and notify")
 					return err
 				}
 			}
