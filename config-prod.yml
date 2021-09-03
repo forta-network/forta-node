@@ -16,11 +16,11 @@ scanner:
   #startBlock: 12860865
   #endBlock: 11792184
   ethereum:
-    jsonRpcUrl: "https://cloudflare-eth.com"
+    jsonRpcUrl: "MAINNET_API_URL"
 
 jsonRpcProxy:
   ethereum:
-    jsonRpcUrl: "https://cloudflare-eth.com"
+    jsonRpcUrl: "MAINNET_API_URL"
 
 trace:
   enabled: true
