@@ -113,6 +113,7 @@ func (agent *Agent) processBlocks() {
 				Request:     request,
 				Response:    resp,
 			}
+			continue
 		}
 		log.WithError(err).Error("error invoking agent")
 		if agent.errCounter.TooManyErrs(err) {
