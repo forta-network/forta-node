@@ -93,7 +93,6 @@ func (agent *Agent) processTransactions() {
 		if agent.errCounter.TooManyErrs(err) {
 			log.Error("too many errors - shutting down agent")
 			agent.msgClient.Publish(messaging.SubjectAgentsActionStop, agent.config)
-			agent.Close()
 			return
 		}
 	}
@@ -119,7 +118,6 @@ func (agent *Agent) processBlocks() {
 		if agent.errCounter.TooManyErrs(err) {
 			log.Error("too many errors - shutting down agent")
 			agent.msgClient.Publish(messaging.SubjectAgentsActionStop, agent.config)
-			agent.Close()
 			return
 		}
 	}
