@@ -3,12 +3,15 @@ package agentpool
 import (
 	"context"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/protocol"
 	"github.com/forta-network/forta-node/services/scanner"
+	"google.golang.org/grpc/codes"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -27,19 +30,29 @@ type Agent struct {
 	evalBlockCh  chan *protocol.EvaluateBlockRequest
 	blockResults chan<- *scanner.BlockResult
 
+	errCounter *errorCounter
+	msgClient  clients.MessageClient
+
 	client clients.AgentClient
 	ready  bool
 }
 
 // NewAgent creates a new agent.
-func NewAgent(agentCfg config.AgentConfig, txResults chan<- *scanner.TxResult, blockResults chan<- *scanner.BlockResult) *Agent {
+func NewAgent(agentCfg config.AgentConfig, msgClient clients.MessageClient, txResults chan<- *scanner.TxResult, blockResults chan<- *scanner.BlockResult) *Agent {
 	return &Agent{
 		config:       agentCfg,
 		evalTxCh:     make(chan *protocol.EvaluateTxRequest, DefaultBufferSize),
 		txResults:    txResults,
 		evalBlockCh:  make(chan *protocol.EvaluateBlockRequest, DefaultBufferSize),
 		blockResults: blockResults,
+		errCounter:   NewErrorCounter(3, isCriticalErr),
+		msgClient:    msgClient,
 	}
+}
+
+func isCriticalErr(err error) bool {
+	errStr := err.Error()
+	return strings.Contains(errStr, codes.DeadlineExceeded.String())
 }
 
 // Config returns the agent config.
@@ -66,16 +79,21 @@ func (agent *Agent) processTransactions() {
 		log.Debugf("sending request")
 		resp, err := agent.client.EvaluateTx(ctx, request)
 		cancel()
-		if err != nil {
-			log.WithError(err).Error("error invoking agent")
+		if err == nil {
+			log.Debugf("request successful")
+			resp.Metadata["imageHash"] = agent.config.ImageHash()
+			agent.txResults <- &scanner.TxResult{
+				AgentConfig: agent.config,
+				Request:     request,
+				Response:    resp,
+			}
 			continue
 		}
-		log.Debugf("request successful")
-		resp.Metadata["imageHash"] = agent.config.ImageHash()
-		agent.txResults <- &scanner.TxResult{
-			AgentConfig: agent.config,
-			Request:     request,
-			Response:    resp,
+		log.WithError(err).Error("error invoking agent")
+		if agent.errCounter.TooManyErrs(err) {
+			log.Error("too many errors - shutting down agent")
+			agent.msgClient.Publish(messaging.SubjectAgentsActionStop, agent.config)
+			return
 		}
 	}
 }
@@ -87,16 +105,21 @@ func (agent *Agent) processBlocks() {
 		log.Debugf("sending request")
 		resp, err := agent.client.EvaluateBlock(ctx, request)
 		cancel()
-		if err != nil {
-			log.WithError(err).Error("error invoking agent")
+		if err == nil {
+			log.Debugf("request successful")
+			resp.Metadata["imageHash"] = agent.config.ImageHash()
+			agent.blockResults <- &scanner.BlockResult{
+				AgentConfig: agent.config,
+				Request:     request,
+				Response:    resp,
+			}
 			continue
 		}
-		log.Debugf("request successful")
-		resp.Metadata["imageHash"] = agent.config.ImageHash()
-		agent.blockResults <- &scanner.BlockResult{
-			AgentConfig: agent.config,
-			Request:     request,
-			Response:    resp,
+		log.WithError(err).Error("error invoking agent")
+		if agent.errCounter.TooManyErrs(err) {
+			log.Error("too many errors - shutting down agent")
+			agent.msgClient.Publish(messaging.SubjectAgentsActionStop, agent.config)
+			return
 		}
 	}
 }

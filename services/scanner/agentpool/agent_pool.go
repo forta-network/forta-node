@@ -93,7 +93,7 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 			found = found || (agent.config.ContainerName() == agentCfg.ContainerName())
 		}
 		if !found {
-			newAgents = append(newAgents, NewAgent(agentCfg, ap.txResults, ap.blockResults))
+			newAgents = append(newAgents, NewAgent(agentCfg, ap.msgClient, ap.txResults, ap.blockResults))
 			agentsToRun = append(agentsToRun, agentCfg)
 		}
 	}
