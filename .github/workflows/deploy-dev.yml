@@ -34,10 +34,10 @@ jobs:
           registry: disco-dev.forta.network
           username: discouser
           password: discopass
-      # - name: Create build for revision
-      #   run: |
-      #     ./scripts/build-for-release.sh disco-dev.forta.network
-      #     chmod 755 forta
+      - name: Create build for revision
+        run: |
+          ./scripts/build-for-release.sh disco-dev.forta.network
+          chmod 755 forta
       - name: Configure AWS credentials (build artifact -> S3)
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -49,7 +49,6 @@ jobs:
           BUCKET_NAME: ${{ secrets.DEV_BUILD_ARTIFACTS_BUCKET_NAME }}
           REVISION: ${{ github.sha }}
         run: |
-          echo "foobar" > forta
           aws s3 cp forta "s3://$BUCKET_NAME/forta-$REVISION"
 
       - name: Prepare Distribution
