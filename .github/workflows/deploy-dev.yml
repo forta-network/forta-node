@@ -44,8 +44,11 @@ jobs:
           ./scripts/build-for-release.sh disco-dev.forta.network
           chmod 755 forta
       - name: Copy build to build artifacts bucket
+        env:
+          BUCKET_NAME: ${{ secrets.DEV_BUILD_ARTIFACTS_BUCKET_NAME }}
+          REVISION: ${{ github.sha }}
         run: |
-          aws s3 cp forta s3://{{ secrets.DEV_BUILD_ARTIFACTS_BUCKET_NAME }}/forta-{{ github.sha }}
+          aws s3 cp forta "s3://$BUCKET_NAME/forta-$REVISION"
       - name: Prepare Distribution
         run: |
           mkdir dist
