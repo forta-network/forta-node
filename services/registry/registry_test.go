@@ -2,6 +2,7 @@ package registry
 
 import (
 	"fmt"
+	"github.com/forta-network/forta-node/utils"
 	"math/big"
 	"testing"
 
@@ -105,7 +106,7 @@ func (ac agentConfigs) String() string {
 
 func (s *Suite) TestDifferentVersion() {
 	// Given that the last known version is 1
-	s.service.version = string(testVersion1[:])
+	s.service.version = utils.Bytes32ToHex(testVersion1)
 	// When the last version is returned as 2 at the time of checking
 	s.scannerReg.EXPECT().GetAgentListHash(nil, s.service.scannerAddress).Return(testVersion2, nil)
 	// Then
@@ -141,7 +142,7 @@ func (s *Suite) TestFirstTime() {
 
 func (s *Suite) TestSameVersion() {
 	// Given that the last known version is 1
-	s.service.version = string(testVersion1[:])
+	s.service.version = utils.Bytes32ToHex(testVersion1)
 	// When the last version is returned as the same
 	s.scannerReg.EXPECT().GetAgentListHash(nil, s.service.scannerAddress).Return(testVersion1, nil)
 	// Then it should silently skip
