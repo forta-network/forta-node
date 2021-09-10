@@ -9,7 +9,7 @@ registry:
   containerRegistry: disco.forta.network
   username: discouser
   password: discopass
-  ipfsGateway: "http://ipfs.forta.internal:8080"
+  ipfsGateway: "https://ipfs.infura.io"
 
 scanner:
   chainId: 1
