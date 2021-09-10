@@ -165,7 +165,7 @@ func (rs *RegistryService) publishLatestAgents() error {
 		if err != nil {
 			return fmt.Errorf("failed to get the scanner list agents version: %v", err)
 		}
-		versionStr := string(version[:])
+		versionStr := utils.Bytes32ToHex(version)
 		// if versions change, then get the full list of agents
 		if rs.version == "" || rs.version != versionStr {
 			log.Infof("registry: agent version changed %s->%s", rs.version, versionStr)
@@ -174,6 +174,7 @@ func (rs *RegistryService) publishLatestAgents() error {
 			if err != nil {
 				return fmt.Errorf("failed to get latest agents: %v", err)
 			}
+			log.Infof("registry: publishing %d agents", len(rs.agentsConfigs))
 			rs.msgClient.Publish(messaging.SubjectAgentsVersionsLatest, rs.agentsConfigs)
 		} else {
 			log.Info("registry: no agent changes detected")
@@ -216,11 +217,13 @@ func (rs *RegistryService) getLatestAgents() ([]*config.AgentConfig, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to get agent at index '%d' in scanner list '%s': %v", i, rs.scannerAddress.String(), err)
 		}
+		agentIDString := utils.Bytes32ToHex(agentID)
+		log.Debugf("registry: found agent %s", agentIDString)
 		// if agent dev disables agent, this will prevent it from running
 		if !disabled {
 			agentCfg, err := rs.makeAgentConfig(agentID, agentRef)
 			if err != nil {
-				log.Errorf("could not load agent (skipping): %s, %s", agentID, agentRef)
+				log.WithError(err).Errorf("could not load agent (skipping): %s, %s", agentIDString, agentRef)
 				continue
 			}
 			agentConfigs = append(agentConfigs, &agentCfg)
