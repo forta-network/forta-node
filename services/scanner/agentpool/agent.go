@@ -52,7 +52,8 @@ func NewAgent(agentCfg config.AgentConfig, msgClient clients.MessageClient, txRe
 
 func isCriticalErr(err error) bool {
 	errStr := err.Error()
-	return strings.Contains(errStr, codes.DeadlineExceeded.String())
+	return strings.Contains(errStr, codes.DeadlineExceeded.String()) ||
+		strings.Contains(errStr, codes.Unavailable.String())
 }
 
 // Config returns the agent config.
