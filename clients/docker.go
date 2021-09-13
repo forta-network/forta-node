@@ -313,6 +313,9 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 // StopContainer kills a container by ID
 func (d *dockerClient) StopContainer(ctx context.Context, ID string) error {
 	err := d.cli.ContainerKill(ctx, ID, "SIGKILL")
+	if err == nil {
+		return nil
+	}
 	if strings.Contains(strings.ToLower(err.Error()), "no such container") {
 		return nil
 	}
