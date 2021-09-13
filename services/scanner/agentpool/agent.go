@@ -93,7 +93,7 @@ func (agent *Agent) processTransactions() {
 		log.WithError(err).Error("error invoking agent")
 		if agent.errCounter.TooManyErrs(err) {
 			log.Error("too many errors - shutting down agent")
-			agent.msgClient.Publish(messaging.SubjectAgentsActionStop, agent.config)
+			agent.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{agent.config})
 			return
 		}
 	}
@@ -119,7 +119,7 @@ func (agent *Agent) processBlocks() {
 		log.WithError(err).Error("error invoking agent")
 		if agent.errCounter.TooManyErrs(err) {
 			log.Error("too many errors - shutting down agent")
-			agent.msgClient.Publish(messaging.SubjectAgentsActionStop, agent.config)
+			agent.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{agent.config})
 			return
 		}
 	}

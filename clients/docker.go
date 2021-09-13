@@ -312,7 +312,11 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 
 // StopContainer kills a container by ID
 func (d *dockerClient) StopContainer(ctx context.Context, ID string) error {
-	return d.cli.ContainerKill(ctx, ID, "SIGKILL")
+	err := d.cli.ContainerKill(ctx, ID, "SIGKILL")
+	if strings.Contains(strings.ToLower(err.Error()), "no such container") {
+		return nil
+	}
+	return err
 }
 
 // HasLocalImage checks if we have an image locally.
