@@ -2,6 +2,7 @@ package agentpool
 
 import (
 	"sync"
+	"time"
 
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/agentgrpc"
@@ -9,6 +10,7 @@ import (
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/protocol"
 	"github.com/forta-network/forta-node/services/scanner"
+	log "github.com/sirupsen/logrus"
 )
 
 // AgentPool maintains the pool of agents that the scanner should
@@ -35,6 +37,7 @@ func NewAgentPool(msgClient clients.MessageClient) *AgentPool {
 		},
 	}
 	agentPool.registerMessageHandlers()
+	go agentPool.logAgentChanBuffersLoop()
 	return agentPool
 }
 
@@ -68,6 +71,25 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 			continue
 		}
 		agent.evalBlockCh <- req
+	}
+}
+
+func (ap *AgentPool) logAgentChanBuffersLoop() {
+	ticker := time.NewTicker(time.Second * 30)
+	for range ticker.C {
+		ap.logAgentChanBuffers()
+	}
+}
+
+func (ap *AgentPool) logAgentChanBuffers() {
+	ap.mu.RLock()
+	defer ap.mu.RUnlock()
+	for _, agent := range ap.agents {
+		log.WithFields(log.Fields{
+			"agent":         agent.config.ID,
+			"buffer-blocks": len(agent.evalBlockCh),
+			"buffer-txs":    len(agent.evalTxCh),
+		}).Debug("agent request channel buffers")
 	}
 }
 

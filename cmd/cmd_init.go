@@ -68,7 +68,7 @@ registry:
   ethereum:
     websocketUrl: <fill in this and remove other>
     jsonRpcUrl: <fill in this and remove other>
-  contractAddress: {{ .DefaultRegistryContractAddress }} # Auto-set to default
+  contractAddress: {{ .DefaultScannerRegistryContractAddress }} # Auto-set to default
   containerRegistry: https://{{ .DiscoSubdomain }}.forta.network # Auto-set
   username: discouser
   password: discopass
