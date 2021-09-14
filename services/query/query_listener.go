@@ -31,8 +31,9 @@ import (
 )
 
 const (
-	defaultInterval   = time.Second * 15
-	defaultBatchLimit = 500
+	defaultInterval        = time.Second * 15
+	defaultBatchLimit      = 500
+	defaultBatchBufferSize = 100
 )
 
 // AlertListener allows retrieval of alerts from the database
@@ -54,6 +55,7 @@ type AlertListener struct {
 	latestBlock   uint64
 	latestChainID uint64
 	notifCh       chan *protocol.NotifyRequest
+	batchCh       chan *protocol.SignedAlertBatch
 }
 
 // TestAlertLogger logs the test alerts.
@@ -88,10 +90,8 @@ func (al *AlertListener) Notify(ctx context.Context, req *protocol.NotifyRequest
 	return &protocol.NotifyResponse{}, nil
 }
 
-func (al *AlertListener) publishNextBatch() error {
-	batch := al.getLatestBatch()
-
-	signature, err := security.SignProtoMessage(al.cfg.Key, (*protocol.SignedAlertBatch)(batch))
+func (al *AlertListener) publishNextBatch(batch *protocol.SignedAlertBatch) error {
+	signature, err := security.SignProtoMessage(al.cfg.Key, batch)
 	if err != nil {
 		return fmt.Errorf("failed to sign alert batch: %v", err)
 	}
@@ -139,15 +139,19 @@ func (al *AlertListener) publishNextBatch() error {
 	return nil
 }
 
-func (al *AlertListener) publishAlerts() {
-	ticker := time.NewTicker(al.batchInterval)
-	for {
-		if err := al.publishNextBatch(); err != nil {
+func (al *AlertListener) publishBatches() {
+	for batch := range al.batchCh {
+		if err := al.publishNextBatch(batch); err != nil {
 			log.Errorf("failed to publish alert batch: %v", err)
-			// Sleep
-			ticker.Reset(al.batchInterval)
+			time.Sleep(time.Second * 3)
 		}
-		<-ticker.C
+		time.Sleep(time.Millisecond * 200)
+	}
+}
+
+func (al *AlertListener) prepareBatches() {
+	for {
+		al.prepareLatestBatch()
 	}
 }
 
@@ -240,7 +244,16 @@ func (ab *AlertBatch) AddBatchAgent(agent *protocol.AgentInfo, blockNumber uint6
 		log.Error("zero block number while adding batch agent")
 		return
 	}
-	batchAgent.Blocks = append(batchAgent.Blocks, blockNumber)
+	var alreadyAddedBlockNum bool
+	for _, addedBlockNum := range batchAgent.Blocks {
+		if addedBlockNum == blockNumber {
+			alreadyAddedBlockNum = true
+			break
+		}
+	}
+	if !alreadyAddedBlockNum {
+		batchAgent.Blocks = append(batchAgent.Blocks, blockNumber)
+	}
 	if len(txHash) > 0 {
 		batchAgent.Transactions = append(batchAgent.Transactions, txHash)
 	}
@@ -306,8 +319,8 @@ func (tr *TransactionResults) GetAgentAlerts(agent *protocol.AgentInfo) *protoco
 	return aa
 }
 
-func (al *AlertListener) getLatestBatch() (batch *BatchData) {
-	batch = &BatchData{Data: &protocol.AlertBatch{ChainId: uint64(al.cfg.ChainID)}}
+func (al *AlertListener) prepareLatestBatch() {
+	batch := &BatchData{Data: &protocol.AlertBatch{ChainId: uint64(al.cfg.ChainID)}}
 
 	var done bool
 	for i := 0; i < al.batchLimit; i++ {
@@ -354,9 +367,10 @@ func (al *AlertListener) getLatestBatch() (batch *BatchData) {
 
 			batch.AppendAlert(notif)
 
-		default:
-			done = true // If we don't receive anymore notifs
+		case <-time.After(defaultInterval):
+			done = true
 		}
+
 		if done {
 			break
 		}
@@ -373,7 +387,7 @@ func (al *AlertListener) getLatestBatch() (batch *BatchData) {
 		al.latestBlock = latestBlock
 	}
 
-	return
+	al.batchCh <- (*protocol.SignedAlertBatch)(batch)
 }
 
 func (al *AlertListener) Start() error {
@@ -384,7 +398,8 @@ func (al *AlertListener) Start() error {
 	grpcServer := grpc.NewServer()
 	protocol.RegisterQueryNodeServer(grpcServer, al)
 
-	go al.publishAlerts()
+	go al.prepareBatches()
+	go al.publishBatches()
 
 	return grpcServer.Serve(lis)
 }
@@ -475,6 +490,7 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertList
 		batchInterval: batchInterval,
 		batchLimit:    batchLimit,
 		latestBlock:   latestBlock,
-		notifCh:       make(chan *protocol.NotifyRequest, batchLimit),
+		notifCh:       make(chan *protocol.NotifyRequest, defaultBatchLimit),
+		batchCh:       make(chan *protocol.SignedAlertBatch, defaultBatchBufferSize),
 	}, nil
 }
