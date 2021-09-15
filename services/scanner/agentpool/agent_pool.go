@@ -96,6 +96,7 @@ func (ap *AgentPool) logAgentChanBuffersLoop() {
 }
 
 func (ap *AgentPool) logAgentChanBuffers() {
+	log.Debug("logAgentChanBuffers")
 	ap.mu.RLock()
 	defer ap.mu.RUnlock()
 	for _, agent := range ap.agents {
@@ -113,6 +114,7 @@ func (ap *AgentPool) BlockResults() <-chan *scanner.BlockResult {
 }
 
 func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) error {
+	log.Debug("handleAgentVersionsUpdate")
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
 	latestVersions := payload
@@ -166,6 +168,7 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 }
 
 func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
+	log.Debug("handleStatusRunning")
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
 	// If an agent was added before and just started to run, we should mark as ready.
@@ -183,6 +186,7 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 }
 
 func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
+	log.Debug("handleStatusStopped")
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
 	var newAgents []*Agent
@@ -190,6 +194,7 @@ func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
 		var stopped bool
 		for _, agentCfg := range payload {
 			if agent.config.ContainerName() == agentCfg.ContainerName() {
+				log.WithField("agent", agent.config.ID).Debug("stopping")
 				agent.Close()
 				agent.ready = false
 				stopped = true
@@ -197,6 +202,7 @@ func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
 			}
 		}
 		if !stopped {
+			log.WithField("agent", agent.config.ID).Debug("not stopped")
 			newAgents = append(newAgents, agent)
 		}
 	}
