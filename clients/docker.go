@@ -48,6 +48,8 @@ type DockerContainerConfig struct {
 	Files          map[string][]byte
 	MaxLogSize     string
 	MaxLogFiles    int
+	CPUQuota       int64
+	Memory         int64
 }
 
 // DockerContainerList contains the full container data.
@@ -277,6 +279,10 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 					"max-size": maxLogSize,
 				},
 				Type: "json-file",
+			},
+			Resources: container.Resources{
+				CPUQuota: config.CPUQuota,
+				Memory:   config.Memory,
 			},
 		}, nil, config.Name)
 

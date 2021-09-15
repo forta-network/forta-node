@@ -19,6 +19,9 @@ func (t *TxNodeService) startAgent(agent config.AgentConfig) error {
 	if err != nil {
 		return err
 	}
+
+	limits := config.GetAgentResourceLimits(t.config.Config.ResourcesConfig)
+
 	agentContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
 		Name:           agent.ContainerName(),
 		Image:          agent.Image,
@@ -31,6 +34,8 @@ func (t *TxNodeService) startAgent(agent config.AgentConfig) error {
 		},
 		MaxLogFiles: t.maxLogFiles,
 		MaxLogSize:  t.maxLogSize,
+		CPUQuota:    limits.CPUQuota,
+		Memory:      limits.Memory,
 	})
 	if err != nil {
 		return err
