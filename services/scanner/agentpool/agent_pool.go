@@ -1,7 +1,6 @@
 package agentpool
 
 import (
-	"sync"
 	"time"
 
 	"github.com/forta-network/forta-node/clients"
@@ -21,7 +20,6 @@ type AgentPool struct {
 	blockResults chan *scanner.BlockResult
 	msgClient    clients.MessageClient
 	dialer       func(config.AgentConfig) clients.AgentClient
-	mu           sync.RWMutex
 }
 
 // NewAgentPool creates a new agent pool.
@@ -45,8 +43,6 @@ func NewAgentPool(msgClient clients.MessageClient) *AgentPool {
 // should be processing the block.
 func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 	log.WithField("tx", req.Event.Transaction.Hash).Debug("SendEvaluateTxRequest")
-	ap.mu.RLock()
-	defer ap.mu.RUnlock()
 	agents := ap.agents
 	for _, agent := range agents {
 		if !agent.ready || !agent.shouldProcessBlock(req.Event.Block.BlockNumber) {
@@ -57,7 +53,7 @@ func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 			continue
 		}
 		log.WithField("agent", agent.config.ID).Debug("sending tx request to evalBlockCh")
-		agent.evalTxCh <- req
+		writeToTxChannel(agent.evalTxCh, req)
 	}
 	log.WithField("tx", req.Event.Transaction.Hash).Debug("Finished SendEvaluateTxRequest")
 }
@@ -67,12 +63,28 @@ func (ap *AgentPool) TxResults() <-chan *scanner.TxResult {
 	return ap.txResults
 }
 
+func writeToTxChannel(evalCh chan *protocol.EvaluateTxRequest, req *protocol.EvaluateTxRequest) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Warn("attempt write to closed tx agent channel, ignoring")
+		}
+	}()
+	evalCh <- req
+}
+
+func writeToBlockChannel(evalCh chan *protocol.EvaluateBlockRequest, req *protocol.EvaluateBlockRequest) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Warn("attempt write to closed block agent channel, ignoring")
+		}
+	}()
+	evalCh <- req
+}
+
 // SendEvaluateBlockRequest sends the request to all of the active agents which
 // should be processing the block.
 func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest) {
 	log.WithField("block", req.Event.BlockNumber).Debug("SendEvaluateBlockRequest")
-	ap.mu.RLock()
-	defer ap.mu.RUnlock()
 	agents := ap.agents
 	for _, agent := range agents {
 		if !agent.ready || !agent.shouldProcessBlock(req.Event.BlockNumber) {
@@ -83,7 +95,7 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 			continue
 		}
 		log.WithField("agent", agent.config.ID).Debug("sending block request to evalBlockCh")
-		agent.evalBlockCh <- req
+		writeToBlockChannel(agent.evalBlockCh, req)
 	}
 	log.WithField("block", req.Event.BlockNumber).Debug("Finished SendEvaluateBlockRequest")
 }
@@ -97,8 +109,6 @@ func (ap *AgentPool) logAgentChanBuffersLoop() {
 
 func (ap *AgentPool) logAgentChanBuffers() {
 	log.Debug("logAgentChanBuffers")
-	ap.mu.RLock()
-	defer ap.mu.RUnlock()
 	for _, agent := range ap.agents {
 		log.WithFields(log.Fields{
 			"agent":         agent.config.ID,
@@ -115,8 +125,6 @@ func (ap *AgentPool) BlockResults() <-chan *scanner.BlockResult {
 
 func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) error {
 	log.Debug("handleAgentVersionsUpdate")
-	ap.mu.Lock()
-	defer ap.mu.Unlock()
 	latestVersions := payload
 
 	// The agents list which we completely replace with the old ones.
@@ -169,8 +177,6 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 
 func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	log.Debug("handleStatusRunning")
-	ap.mu.Lock()
-	defer ap.mu.Unlock()
 	// If an agent was added before and just started to run, we should mark as ready.
 	for _, agentCfg := range payload {
 		for _, agent := range ap.agents {
@@ -187,8 +193,6 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 
 func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
 	log.Debug("handleStatusStopped")
-	ap.mu.Lock()
-	defer ap.mu.Unlock()
 	var newAgents []*Agent
 	for _, agent := range ap.agents {
 		var stopped bool
