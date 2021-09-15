@@ -44,15 +44,22 @@ func NewAgentPool(msgClient clients.MessageClient) *AgentPool {
 // SendEvaluateTxRequest sends the request to all of the active agents which
 // should be processing the block.
 func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
+	log.WithField("tx", req.Event.Transaction.Hash).Debug("SendEvaluateTxRequest")
 	ap.mu.RLock()
 	defer ap.mu.RUnlock()
 	agents := ap.agents
 	for _, agent := range agents {
 		if !agent.ready || !agent.shouldProcessBlock(req.Event.Block.BlockNumber) {
+			log.WithFields(log.Fields{
+				"agent": agent.config.ID,
+				"ready": agent.ready,
+			}).Debug("agent not ready, NOT sending block request")
 			continue
 		}
+		log.WithField("agent", agent.config.ID).Debug("sending tx request to evalBlockCh")
 		agent.evalTxCh <- req
 	}
+	log.WithField("tx", req.Event.Transaction.Hash).Debug("Finished SendEvaluateTxRequest")
 }
 
 // TxResults returns the receive-only tx results channel.
@@ -63,15 +70,22 @@ func (ap *AgentPool) TxResults() <-chan *scanner.TxResult {
 // SendEvaluateBlockRequest sends the request to all of the active agents which
 // should be processing the block.
 func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest) {
+	log.WithField("block", req.Event.BlockNumber).Debug("SendEvaluateBlockRequest")
 	ap.mu.RLock()
 	defer ap.mu.RUnlock()
 	agents := ap.agents
 	for _, agent := range agents {
 		if !agent.ready || !agent.shouldProcessBlock(req.Event.BlockNumber) {
+			log.WithFields(log.Fields{
+				"agent": agent.config.ID,
+				"ready": agent.ready,
+			}).Debug("agent not ready, NOT sending block request")
 			continue
 		}
+		log.WithField("agent", agent.config.ID).Debug("sending block request to evalBlockCh")
 		agent.evalBlockCh <- req
 	}
+	log.WithField("block", req.Event.BlockNumber).Debug("Finished SendEvaluateBlockRequest")
 }
 
 func (ap *AgentPool) logAgentChanBuffersLoop() {
