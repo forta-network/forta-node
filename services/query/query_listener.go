@@ -322,6 +322,8 @@ func (tr *TransactionResults) GetAgentAlerts(agent *protocol.AgentInfo) *protoco
 func (al *AlertListener) prepareLatestBatch() {
 	batch := &BatchData{Data: &protocol.AlertBatch{ChainId: uint64(al.cfg.ChainID)}}
 
+	timeoutCh := time.After(defaultInterval)
+
 	var done bool
 	var i int
 	for i < al.batchLimit {
@@ -374,7 +376,7 @@ func (al *AlertListener) prepareLatestBatch() {
 
 			batch.AppendAlert(notif)
 
-		case <-time.After(defaultInterval):
+		case <-timeoutCh:
 			done = true
 		}
 
