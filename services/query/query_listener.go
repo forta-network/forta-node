@@ -145,7 +145,7 @@ func (al *AlertListener) publishBatches() {
 			log.Errorf("failed to publish alert batch: %v", err)
 			time.Sleep(time.Second * 3)
 		}
-		time.Sleep(defaultInterval) // rate limiting for ETH we spend
+		time.Sleep(time.Second * 200)
 	}
 }
 
@@ -323,7 +323,8 @@ func (al *AlertListener) prepareLatestBatch() {
 	batch := &BatchData{Data: &protocol.AlertBatch{ChainId: uint64(al.cfg.ChainID)}}
 
 	var done bool
-	for i := 0; i < al.batchLimit; i++ {
+	var i int
+	for i < al.batchLimit {
 		select {
 		case notif := <-al.notifCh:
 			alert := notif.SignedAlert
@@ -340,6 +341,12 @@ func (al *AlertListener) prepareLatestBatch() {
 					log.Warnf("failed to log test alert: %v", err)
 				}
 				continue
+			}
+
+			// Notifications with empty alerts shouldn't be taken into account while limiting the batch.
+			// Otherwise, we create too many batches very quickly.
+			if hasAlert {
+				i++
 			}
 
 			var blockNum string
