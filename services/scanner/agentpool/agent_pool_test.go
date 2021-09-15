@@ -81,7 +81,7 @@ func (s *Suite) TestStartProcessStop() {
 	// When an evaluate requests are received
 	// Then the agent should process them
 
-	txReq := &protocol.EvaluateTxRequest{Event: &protocol.TransactionEvent{Block: &protocol.TransactionEvent_EthBlock{BlockNumber: "123123"}}}
+	txReq := &protocol.EvaluateTxRequest{Event: &protocol.TransactionEvent{Block: &protocol.TransactionEvent_EthBlock{BlockNumber: "123123"}, Transaction: &protocol.TransactionEvent_EthTransaction{Hash: "0x0"}}}
 	txResp := &protocol.EvaluateTxResponse{Metadata: map[string]string{}}
 	blockReq := &protocol.EvaluateBlockRequest{Event: &protocol.BlockEvent{BlockNumber: "123123"}}
 	blockResp := &protocol.EvaluateBlockResponse{Metadata: map[string]string{}}
