@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package network.forta;
+
+option go_package = "./;protocol";
+
+message AgentMetrics {
+  string agentId = 1;
+  repeated MetricData txProcessing = 2;
+  repeated MetricData blockProcessing = 3;
+}
+
+message MetricData {
+  string timestamp = 1;
+  int64 number = 2;
+}

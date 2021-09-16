@@ -24,7 +24,8 @@ const (
 
 // Agent receives blocks and transactions, and produces results.
 type Agent struct {
-	config config.AgentConfig
+	config           config.AgentConfig
+	metricsThreshold time.Duration
 
 	txRequests    chan *protocol.EvaluateTxRequest // never closed - deallocated when agent is discarded
 	txResults     chan<- *scanner.TxResult
@@ -42,17 +43,18 @@ type Agent struct {
 }
 
 // New creates a new agent.
-func New(agentCfg config.AgentConfig, msgClient clients.MessageClient, txResults chan<- *scanner.TxResult, blockResults chan<- *scanner.BlockResult) *Agent {
+func New(agentCfg config.AgentConfig, msgClient clients.MessageClient, txResults chan<- *scanner.TxResult, blockResults chan<- *scanner.BlockResult, metricsThresholdMs int) *Agent {
 	return &Agent{
-		config:        agentCfg,
-		txRequests:    make(chan *protocol.EvaluateTxRequest, DefaultBufferSize),
-		txResults:     txResults,
-		blockRequests: make(chan *protocol.EvaluateBlockRequest, DefaultBufferSize),
-		blockResults:  blockResults,
-		errCounter:    NewErrorCounter(3, isCriticalErr),
-		msgClient:     msgClient,
-		ready:         make(chan struct{}),
-		closed:        make(chan struct{}),
+		config:           agentCfg,
+		metricsThreshold: (time.Duration)(metricsThresholdMs) * time.Millisecond,
+		txRequests:       make(chan *protocol.EvaluateTxRequest, DefaultBufferSize),
+		txResults:        txResults,
+		blockRequests:    make(chan *protocol.EvaluateBlockRequest, DefaultBufferSize),
+		blockResults:     blockResults,
+		errCounter:       NewErrorCounter(3, isCriticalErr),
+		msgClient:        msgClient,
+		ready:            make(chan struct{}),
+		closed:           make(chan struct{}),
 	}
 }
 
@@ -161,7 +163,9 @@ func (agent *Agent) processTransactions() {
 		resp, err := agent.client.EvaluateTx(ctx, request)
 		cancel()
 		if err == nil {
-			lg.WithField("duration", time.Since(startTime)).Debugf("request successful")
+			metricCalc := agent.makeMetricData(&startTime)
+			resp.Metric = metricCalc.MetricData
+			lg.WithField("duration", metricCalc.Duration).Debugf("request successful")
 			resp.Metadata["imageHash"] = agent.config.ImageHash()
 			agent.txResults <- &scanner.TxResult{
 				AgentConfig: agent.config,
@@ -198,7 +202,9 @@ func (agent *Agent) processBlocks() {
 		resp, err := agent.client.EvaluateBlock(ctx, request)
 		cancel()
 		if err == nil {
-			lg.WithField("duration", time.Since(startTime)).Debugf("request successful")
+			metricCalc := agent.makeMetricData(&startTime)
+			resp.Metric = metricCalc.MetricData
+			lg.WithField("duration", metricCalc.Duration).Debugf("request successful")
 			resp.Metadata["imageHash"] = agent.config.ImageHash()
 			agent.blockResults <- &scanner.BlockResult{
 				AgentConfig: agent.config,
@@ -216,6 +222,24 @@ func (agent *Agent) processBlocks() {
 			return
 		}
 	}
+}
+
+type metricCalc struct {
+	Duration   time.Duration
+	MetricData *protocol.MetricData
+}
+
+func (agent *Agent) makeMetricData(startTime *time.Time) (calc metricCalc) {
+	now := time.Now()
+	calc.Duration = now.Sub(*startTime)
+	if calc.Duration < agent.metricsThreshold {
+		return
+	}
+	calc.MetricData = &protocol.MetricData{
+		Timestamp: now.Format(time.RFC3339),
+		Number:    calc.Duration.Milliseconds(),
+	}
+	return
 }
 
 // ShouldProcessBlock tells if the agent should process block.

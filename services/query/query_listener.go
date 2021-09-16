@@ -39,13 +39,14 @@ const (
 // AlertListener allows retrieval of alerts from the database
 type AlertListener struct {
 	protocol.UnimplementedQueryNodeServer
-	ctx             context.Context
-	store           store.AlertStore
-	cfg             AlertListenerConfig
-	contract        AlertsContract
-	ipfs            IPFS
-	ethClient       EthClient
-	testAlertLogger TestAlertLogger
+	ctx               context.Context
+	store             store.AlertStore
+	cfg               AlertListenerConfig
+	contract          AlertsContract
+	ipfs              IPFS
+	ethClient         EthClient
+	testAlertLogger   TestAlertLogger
+	metricsAggregator *AgentMetricsAggregator
 
 	port          int
 	skipEmpty     bool
@@ -354,8 +355,10 @@ func (al *AlertListener) prepareLatestBatch() {
 			var blockNum string
 			if notif.EvalBlockRequest != nil {
 				blockNum = notif.EvalBlockRequest.Event.BlockNumber
+				al.metricsAggregator.PutBlockProcessingData(notif.AgentInfo.Id, notif.EvalBlockResponse.Metric)
 			} else {
 				blockNum = notif.EvalTxRequest.Event.Block.BlockNumber
+				al.metricsAggregator.PutTxProcessingData(notif.AgentInfo.Id, notif.EvalTxResponse.Metric)
 			}
 
 			notifBlockNum, err := hexutil.DecodeUint64(blockNum)
@@ -395,6 +398,8 @@ func (al *AlertListener) prepareLatestBatch() {
 		batch.Data.BlockEnd = latestBlock
 		al.latestBlock = latestBlock
 	}
+
+	batch.Data.Metrics = al.metricsAggregator.TryFlush()
 
 	al.batchCh <- (*protocol.SignedAlertBatch)(batch)
 }
@@ -485,13 +490,14 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertList
 	}
 
 	return &AlertListener{
-		ctx:             ctx,
-		store:           store,
-		cfg:             cfg,
-		contract:        ats,
-		ipfs:            ipfsClient,
-		ethClient:       ethClient,
-		testAlertLogger: testAlertLogger,
+		ctx:               ctx,
+		store:             store,
+		cfg:               cfg,
+		contract:          ats,
+		ipfs:              ipfsClient,
+		ethClient:         ethClient,
+		testAlertLogger:   testAlertLogger,
+		metricsAggregator: NewMetricsAggregator(cfg.PublisherConfig.AgentMetrics.FlushIntervalSeconds),
 
 		port:          cfg.Port,
 		skipEmpty:     cfg.PublisherConfig.Batch.SkipEmpty,

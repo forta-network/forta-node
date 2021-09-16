@@ -4,6 +4,7 @@ package network.forta;
 
 import public "query.proto";
 import public "agent.proto";
+import public "metrics.proto";
 
 option go_package = "./;protocol";
 
@@ -20,6 +21,7 @@ message AlertBatch {
   Finding.Severity maxSeverity = 5;
   repeated BlockResults results = 6;
   repeated BatchAgent agents = 7;
+  repeated AgentMetrics metrics = 8;
 }
 
 message BlockResults {

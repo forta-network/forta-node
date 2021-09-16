@@ -15,6 +15,7 @@ proto:
 	protoc -I=protocol --go-grpc_out=protocol/. --go_out=protocol/. protocol/agent.proto
 	protoc -I=protocol --go-grpc_out=protocol/. --go_out=protocol/. protocol/query.proto
 	protoc -I=protocol --go_out=protocol/. protocol/batch.proto
+	protoc -I=protocol --go_out=protocol/. protocol/metrics.proto
 
 mocks:
 	mockgen -source ethereum/client.go -destination ethereum/mocks/mock_client.go
