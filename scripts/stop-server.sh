@@ -1,3 +1,3 @@
 #!/bin/bash
 
-killall -s SIGINT forta || true
+(killall -s SIGINT forta && sleep 1m) || true

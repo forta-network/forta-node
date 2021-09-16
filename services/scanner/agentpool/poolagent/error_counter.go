@@ -1,4 +1,4 @@
-package agentpool
+package poolagent
 
 import "sync"
 
