@@ -104,10 +104,6 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 
 	for _, agent := range agents {
 		if !agent.IsReady() || !agent.ShouldProcessBlock(req.Event.BlockNumber) {
-			log.WithFields(log.Fields{
-				"agent": agent.Config().ID,
-				"ready": agent.IsReady(),
-			}).Debug("agent not ready, NOT sending block request")
 			continue
 		}
 		log.WithField("agent", agent.Config().ID).Debug("sending block request to evalBlockCh")
