@@ -16,7 +16,7 @@ import (
 
 // Constants
 const (
-	DefaultBufferSize = 100
+	DefaultBufferSize = 100 * poolagent.DefaultBufferSize // i.e. assuming 100 agents
 )
 
 // AgentPool maintains the pool of agents that the scanner should

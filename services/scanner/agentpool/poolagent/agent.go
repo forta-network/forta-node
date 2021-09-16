@@ -19,7 +19,7 @@ import (
 
 // Constants
 const (
-	DefaultBufferSize = 100
+	DefaultBufferSize = 2000
 )
 
 // Agent receives blocks and transactions, and produces results.
