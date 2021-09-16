@@ -16,7 +16,7 @@ import (
 
 // Constants
 const (
-	DefaultBufferSize = 100
+	DefaultBufferSize = 100 * poolagent.DefaultBufferSize // i.e. assuming 100 agents
 )
 
 // AgentPool maintains the pool of agents that the scanner should
@@ -66,7 +66,12 @@ func (ap *AgentPool) discardAgent(discarded *poolagent.Agent) {
 // SendEvaluateTxRequest sends the request to all of the active agents which
 // should be processing the block.
 func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
-	log.WithField("tx", req.Event.Transaction.Hash).Debug("SendEvaluateTxRequest")
+	startTime := time.Now()
+	lg := log.WithFields(log.Fields{
+		"tx":        req.Event.Transaction.Hash,
+		"component": "pool",
+	})
+	lg.Debug("SendEvaluateTxRequest")
 
 	ap.mu.RLock()
 	agents := ap.agents
@@ -76,16 +81,27 @@ func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 		if !agent.IsReady() || !agent.ShouldProcessBlock(req.Event.Block.BlockNumber) {
 			continue
 		}
-		log.WithField("agent", agent.Config().ID).Debug("sending tx request to evalBlockCh")
+		lg.WithFields(log.Fields{
+			"agent":    agent.Config().ID,
+			"duration": time.Since(startTime),
+		}).Debug("sending tx request to evalTxCh")
 
 		// unblock req send and discard agent if agent is closed
 		select {
 		case <-agent.Closed():
 			ap.discardAgent(agent)
 		case agent.TxRequestCh() <- req:
+		default: // do not try to send if the buffer is full
+			lg.WithField("agent", agent.Config().ID).Warn("agent request buffer is full - skipping")
 		}
+		lg.WithFields(log.Fields{
+			"agent":    agent.Config().ID,
+			"duration": time.Since(startTime),
+		}).Debug("sent tx request to evalTxCh")
 	}
-	log.WithField("tx", req.Event.Transaction.Hash).Debug("Finished SendEvaluateTxRequest")
+	lg.WithFields(log.Fields{
+		"duration": time.Since(startTime),
+	}).Debug("Finished SendEvaluateTxRequest")
 }
 
 // TxResults returns the receive-only tx results channel.
@@ -96,8 +112,12 @@ func (ap *AgentPool) TxResults() <-chan *scanner.TxResult {
 // SendEvaluateBlockRequest sends the request to all of the active agents which
 // should be processing the block.
 func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest) {
-	log.WithField("block", req.Event.BlockNumber).Debug("SendEvaluateBlockRequest")
-
+	startTime := time.Now()
+	lg := log.WithFields(log.Fields{
+		"block":     req.Event.BlockNumber,
+		"component": "pool",
+	})
+	lg.Debug("SendEvaluateBlockRequest")
 	ap.mu.RLock()
 	agents := ap.agents
 	ap.mu.RUnlock()
@@ -106,16 +126,28 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 		if !agent.IsReady() || !agent.ShouldProcessBlock(req.Event.BlockNumber) {
 			continue
 		}
-		log.WithField("agent", agent.Config().ID).Debug("sending block request to evalBlockCh")
+
+		lg.WithFields(log.Fields{
+			"agent":    agent.Config().ID,
+			"duration": time.Since(startTime),
+		}).Debug("sending block request to evalBlockCh")
 
 		// unblock req send if agent is closed
 		select {
 		case <-agent.Closed():
 			ap.discardAgent(agent)
 		case agent.BlockRequestCh() <- req:
+		default: // do not try to send if the buffer is full
+			lg.WithField("agent", agent.Config().ID).Warn("agent request buffer is full - skipping")
 		}
+		lg.WithFields(log.Fields{
+			"agent":    agent.Config().ID,
+			"duration": time.Since(startTime),
+		}).Debug("sent tx request to evalBlockCh")
 	}
-	log.WithField("block", req.Event.BlockNumber).Debug("Finished SendEvaluateBlockRequest")
+	lg.WithFields(log.Fields{
+		"duration": time.Since(startTime),
+	}).Debug("Finished SendEvaluateBlockRequest")
 }
 
 func (ap *AgentPool) logAgentChanBuffersLoop() {
