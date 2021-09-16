@@ -12,7 +12,6 @@ import (
 	"github.com/forta-network/forta-node/store"
 	"github.com/forta-network/forta-node/utils"
 
-	"github.com/golang/protobuf/jsonpb"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
@@ -85,14 +84,6 @@ func (t *TxAnalyzerService) Start() error {
 			}
 
 			ts := time.Now().UTC()
-
-			m := jsonpb.Marshaler{}
-			resStr, err := m.MarshalToString(result.Response)
-			if err != nil {
-				log.Error("error marshaling response", err)
-				continue
-			}
-			log.Debugf(resStr)
 
 			rt := &clients.AgentRoundTrip{
 				AgentConfig:    result.AgentConfig,

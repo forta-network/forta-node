@@ -146,29 +146,34 @@ func (agent *Agent) StartProcessing() {
 }
 
 func (agent *Agent) processTransactions() {
-	log := log.WithField("evaluate", "transaction").WithField("agent", agent.config.ID)
+	startTime := time.Now()
+	lg := log.WithFields(log.Fields{
+		"agent":     agent.config.ID,
+		"component": "agent",
+		"evaluate":  "transaction",
+	})
 	for request := range agent.txRequests {
 		if agent.IsClosed() {
 			return
 		}
-
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		log.Debugf("sending request")
+		lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
 		resp, err := agent.client.EvaluateTx(ctx, request)
 		cancel()
 		if err == nil {
-			log.Debugf("request successful")
+			lg.WithField("duration", time.Since(startTime)).Debugf("request successful")
 			resp.Metadata["imageHash"] = agent.config.ImageHash()
 			agent.txResults <- &scanner.TxResult{
 				AgentConfig: agent.config,
 				Request:     request,
 				Response:    resp,
 			}
+			lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
 			continue
 		}
-		log.WithError(err).Error("error invoking agent")
+		lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking agent")
 		if agent.errCounter.TooManyErrs(err) {
-			log.Error("too many errors - shutting down agent")
+			lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down agent")
 			agent.Close()
 			agent.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{agent.config})
 			return
@@ -177,29 +182,35 @@ func (agent *Agent) processTransactions() {
 }
 
 func (agent *Agent) processBlocks() {
-	log := log.WithField("evaluate", "block").WithField("agent", agent.config.ID)
+	startTime := time.Now()
+	lg := log.WithFields(log.Fields{
+		"agent":     agent.config.ID,
+		"component": "agent",
+		"evaluate":  "block",
+	})
 	for request := range agent.blockRequests {
 		if agent.IsClosed() {
 			return
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		log.Debugf("sending request")
+		lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
 		resp, err := agent.client.EvaluateBlock(ctx, request)
 		cancel()
 		if err == nil {
-			log.Debugf("request successful")
+			lg.WithField("duration", time.Since(startTime)).Debugf("request successful")
 			resp.Metadata["imageHash"] = agent.config.ImageHash()
 			agent.blockResults <- &scanner.BlockResult{
 				AgentConfig: agent.config,
 				Request:     request,
 				Response:    resp,
 			}
+			lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
 			continue
 		}
-		log.WithError(err).Error("error invoking agent")
+		lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking agent")
 		if agent.errCounter.TooManyErrs(err) {
-			log.Error("too many errors - shutting down agent")
+			lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down agent")
 			agent.Close()
 			agent.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{agent.config})
 			return

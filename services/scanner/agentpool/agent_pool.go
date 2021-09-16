@@ -67,7 +67,10 @@ func (ap *AgentPool) discardAgent(discarded *poolagent.Agent) {
 // should be processing the block.
 func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 	startTime := time.Now()
-	lg := log.WithField("tx", req.Event.Transaction.Hash)
+	lg := log.WithFields(log.Fields{
+		"tx":        req.Event.Transaction.Hash,
+		"component": "pool",
+	})
 	lg.Debug("SendEvaluateTxRequest")
 
 	ap.mu.RLock()
@@ -108,7 +111,10 @@ func (ap *AgentPool) TxResults() <-chan *scanner.TxResult {
 // should be processing the block.
 func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest) {
 	startTime := time.Now()
-	lg := log.WithField("block", req.Event.BlockNumber)
+	lg := log.WithFields(log.Fields{
+		"block":     req.Event.BlockNumber,
+		"component": "pool",
+	})
 	lg.Debug("SendEvaluateBlockRequest")
 	ap.mu.RLock()
 	agents := ap.agents
