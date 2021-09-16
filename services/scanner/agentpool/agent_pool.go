@@ -83,6 +83,7 @@ func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 		case <-agent.Closed():
 			ap.discardAgent(agent)
 		case agent.TxRequestCh() <- req:
+		default: // do not try to send if the buffer is full
 		}
 	}
 	log.WithField("tx", req.Event.Transaction.Hash).Debug("Finished SendEvaluateTxRequest")
@@ -113,6 +114,7 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 		case <-agent.Closed():
 			ap.discardAgent(agent)
 		case agent.BlockRequestCh() <- req:
+		default: // do not try to send if the buffer is full
 		}
 	}
 	log.WithField("block", req.Event.BlockNumber).Debug("Finished SendEvaluateBlockRequest")
