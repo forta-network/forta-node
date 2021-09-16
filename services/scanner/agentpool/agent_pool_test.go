@@ -71,11 +71,11 @@ func (s *Suite) TestStartProcessStop() {
 
 	// Given that the agent is known to the pool but it is not ready yet
 	s.r.Equal(1, len(s.ap.agents))
-	s.r.False(s.ap.agents[0].ready)
+	s.r.False(s.ap.agents[0].IsReady())
 	// When the agent pool receives a message saying that the agent started to run
 	s.r.NoError(s.ap.handleStatusRunning(agentPayload))
 	// Then the agent must be marked ready
-	s.r.True(s.ap.agents[0].ready)
+	s.r.True(s.ap.agents[0].IsReady())
 
 	// Given that the agent is running
 	// When an evaluate requests are received
