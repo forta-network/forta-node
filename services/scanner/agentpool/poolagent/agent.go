@@ -146,13 +146,13 @@ func (agent *Agent) StartProcessing() {
 }
 
 func (agent *Agent) processTransactions() {
-	startTime := time.Now()
 	lg := log.WithFields(log.Fields{
 		"agent":     agent.config.ID,
 		"component": "agent",
 		"evaluate":  "transaction",
 	})
 	for request := range agent.txRequests {
+		startTime := time.Now()
 		if agent.IsClosed() {
 			return
 		}
@@ -182,13 +182,13 @@ func (agent *Agent) processTransactions() {
 }
 
 func (agent *Agent) processBlocks() {
-	startTime := time.Now()
 	lg := log.WithFields(log.Fields{
 		"agent":     agent.config.ID,
 		"component": "agent",
 		"evaluate":  "block",
 	})
 	for request := range agent.blockRequests {
+		startTime := time.Now()
 		if agent.IsClosed() {
 			return
 		}
