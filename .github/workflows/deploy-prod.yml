@@ -3,7 +3,6 @@ name: Deploy Prod
 on:
   workflow_dispatch: 
     branches: [ master ]
-  pull_request:
 
 jobs:
   deploy:
