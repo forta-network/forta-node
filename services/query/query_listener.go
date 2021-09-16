@@ -101,7 +101,7 @@ func (al *AlertListener) publishNextBatch(batch *protocol.SignedAlertBatch) erro
 	if err = json.NewEncoder(&buf).Encode(batch); err != nil {
 		return fmt.Errorf("failed to encode the signed alert: %v", err)
 	}
-	log.Debugf("alert payload: %s", string(buf.Bytes()))
+	log.Tracef("alert payload: %s", string(buf.Bytes()))
 
 	al.storeBatchWithTxHash(batch.Data, "")
 	if al.skipPublish {
