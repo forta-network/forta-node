@@ -91,6 +91,7 @@ func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 		case <-agent.Closed():
 			ap.discardAgent(agent)
 		case agent.TxRequestCh() <- req:
+		default: // do not try to send if the buffer is full
 		}
 		lg.WithFields(log.Fields{
 			"agent":    agent.Config().ID,
@@ -135,6 +136,7 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 		case <-agent.Closed():
 			ap.discardAgent(agent)
 		case agent.BlockRequestCh() <- req:
+		default: // do not try to send if the buffer is full
 		}
 		lg.WithFields(log.Fields{
 			"agent":    agent.Config().ID,
