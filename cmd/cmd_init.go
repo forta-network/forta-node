@@ -119,6 +119,11 @@ log:
   level: info
   maxLogSize: 50m
   maxLogFiles: 10
+
+# resources:
+#   disableAgentLimits: false # Agent limits below are ignored if this is true
+#   agentMaxMemoryMib: 100 # default
+#   agentMaxCpus: 0.13 # approximate default
 `
 
 func isDirInitialized() bool {
