@@ -124,7 +124,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	}
 
 	registryService := registry.New(cfg, key.Address, msgClient)
-	agentPool := agentpool.NewAgentPool(msgClient)
+	agentPool := agentpool.NewAgentPool(cfg.Scanner, msgClient)
 	txAnalyzer, err := initTxAnalyzer(ctx, cfg, as, txStream, agentPool)
 	if err != nil {
 		return nil, err
