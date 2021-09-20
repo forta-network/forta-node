@@ -43,18 +43,17 @@ type Agent struct {
 }
 
 // New creates a new agent.
-func New(agentCfg config.AgentConfig, msgClient clients.MessageClient, txResults chan<- *scanner.TxResult, blockResults chan<- *scanner.BlockResult, metricsThresholdMs int) *Agent {
+func New(agentCfg config.AgentConfig, msgClient clients.MessageClient, txResults chan<- *scanner.TxResult, blockResults chan<- *scanner.BlockResult) *Agent {
 	return &Agent{
-		config:           agentCfg,
-		metricsThreshold: (time.Duration)(metricsThresholdMs) * time.Millisecond,
-		txRequests:       make(chan *protocol.EvaluateTxRequest, DefaultBufferSize),
-		txResults:        txResults,
-		blockRequests:    make(chan *protocol.EvaluateBlockRequest, DefaultBufferSize),
-		blockResults:     blockResults,
-		errCounter:       NewErrorCounter(3, isCriticalErr),
-		msgClient:        msgClient,
-		ready:            make(chan struct{}),
-		closed:           make(chan struct{}),
+		config:        agentCfg,
+		txRequests:    make(chan *protocol.EvaluateTxRequest, DefaultBufferSize),
+		txResults:     txResults,
+		blockRequests: make(chan *protocol.EvaluateBlockRequest, DefaultBufferSize),
+		blockResults:  blockResults,
+		errCounter:    NewErrorCounter(3, isCriticalErr),
+		msgClient:     msgClient,
+		ready:         make(chan struct{}),
+		closed:        make(chan struct{}),
 	}
 }
 
@@ -232,9 +231,6 @@ type metricCalc struct {
 func (agent *Agent) makeMetricData(startTime *time.Time) (calc metricCalc) {
 	now := time.Now()
 	calc.Duration = now.Sub(*startTime)
-	if calc.Duration < agent.metricsThreshold {
-		return
-	}
 	calc.MetricData = &protocol.MetricData{
 		Timestamp: now.Format(time.RFC3339),
 		Number:    calc.Duration.Milliseconds(),

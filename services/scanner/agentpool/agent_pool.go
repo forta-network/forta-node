@@ -16,20 +16,18 @@ import (
 
 // Constants
 const (
-	DefaultBufferSize                 = 100 * poolagent.DefaultBufferSize // i.e. assuming 100 agents
-	DefaultMetricsThresholdDurationMs = 5
+	DefaultBufferSize = 100 * poolagent.DefaultBufferSize // i.e. assuming 100 agents
 )
 
 // AgentPool maintains the pool of agents that the scanner should
 // interact with.
 type AgentPool struct {
-	agents             []*poolagent.Agent
-	txResults          chan *scanner.TxResult
-	blockResults       chan *scanner.BlockResult
-	msgClient          clients.MessageClient
-	dialer             func(config.AgentConfig) clients.AgentClient
-	metricsThresholdMs int
-	mu                 sync.RWMutex
+	agents       []*poolagent.Agent
+	txResults    chan *scanner.TxResult
+	blockResults chan *scanner.BlockResult
+	msgClient    clients.MessageClient
+	dialer       func(config.AgentConfig) clients.AgentClient
+	mu           sync.RWMutex
 }
 
 // NewAgentPool creates a new agent pool.
@@ -44,12 +42,6 @@ func NewAgentPool(cfg config.ScannerConfig, msgClient clients.MessageClient) *Ag
 			return client
 		},
 	}
-
-	threshold := DefaultMetricsThresholdDurationMs
-	if cfg.AgentMetrics.ThresholdMs > 0 {
-		threshold = cfg.AgentMetrics.ThresholdMs
-	}
-	agentPool.metricsThresholdMs = threshold
 
 	agentPool.registerMessageHandlers()
 	go agentPool.logAgentChanBuffersLoop()
@@ -200,7 +192,7 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 			found = found || (agent.Config().ContainerName() == agentCfg.ContainerName())
 		}
 		if !found {
-			newAgents = append(newAgents, poolagent.New(agentCfg, ap.msgClient, ap.txResults, ap.blockResults, ap.metricsThresholdMs))
+			newAgents = append(newAgents, poolagent.New(agentCfg, ap.msgClient, ap.txResults, ap.blockResults))
 			agentsToRun = append(agentsToRun, agentCfg)
 		}
 	}

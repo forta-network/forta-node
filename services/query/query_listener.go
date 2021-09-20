@@ -84,6 +84,7 @@ type AlertListenerConfig struct {
 	ChainID         int
 	Key             *keystore.Key
 	PublisherConfig config.PublisherConfig
+	MetricsConfig   config.AgentMetricsConfig
 }
 
 func (al *AlertListener) Notify(ctx context.Context, req *protocol.NotifyRequest) (*protocol.NotifyResponse, error) {
@@ -356,9 +357,11 @@ func (al *AlertListener) prepareLatestBatch() {
 			if notif.EvalBlockRequest != nil {
 				blockNum = notif.EvalBlockRequest.Event.BlockNumber
 				al.metricsAggregator.PutBlockProcessingData(notif.AgentInfo.Id, notif.EvalBlockResponse.Metric)
+				al.metricsAggregator.CountFinding(notif.AgentInfo.Id, hasAlert)
 			} else {
 				blockNum = notif.EvalTxRequest.Event.Block.BlockNumber
 				al.metricsAggregator.PutTxProcessingData(notif.AgentInfo.Id, notif.EvalTxResponse.Metric)
+				al.metricsAggregator.CountFinding(notif.AgentInfo.Id, hasAlert)
 			}
 
 			notifBlockNum, err := hexutil.DecodeUint64(blockNum)
@@ -497,7 +500,7 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertList
 		ipfs:              ipfsClient,
 		ethClient:         ethClient,
 		testAlertLogger:   testAlertLogger,
-		metricsAggregator: NewMetricsAggregator(cfg.PublisherConfig.AgentMetrics.FlushIntervalSeconds),
+		metricsAggregator: NewMetricsAggregator(cfg.MetricsConfig.FlushIntervalSeconds, cfg.MetricsConfig.ThresholdMs),
 
 		port:          cfg.Port,
 		skipEmpty:     cfg.PublisherConfig.Batch.SkipEmpty,

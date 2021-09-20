@@ -6,8 +6,15 @@ option go_package = "./;protocol";
 
 message AgentMetrics {
   string agentId = 1;
-  repeated MetricData txProcessing = 2;
-  repeated MetricData blockProcessing = 3;
+  float findingRatePct = 2;
+  int32 thresholdMs = 3;
+  MetricContainer txProcessing = 4;
+  MetricContainer blockProcessing = 5;
+}
+
+message MetricContainer {
+  int64 average = 1;
+  repeated MetricData data = 2;
 }
 
 message MetricData {

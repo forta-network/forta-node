@@ -108,13 +108,10 @@ type QueryConfig struct {
 	PublishTo PublisherConfig `yaml:"publishTo" json:"publishTo"`
 }
 type ScannerConfig struct {
-	ChainID      int            `yaml:"chainId" json:"chainId"`
-	StartBlock   int            `yaml:"startBlock" json:"startBlock"`
-	EndBlock     int            `yaml:"endBlock" json:"endBlock"`
-	Ethereum     EthereumConfig `yaml:"ethereum" json:"ethereum"`
-	AgentMetrics struct {
-		ThresholdMs int `yaml:"thresholdMs" json:"thresholdMs" validate:"omitempty,min=1"`
-	} `yaml:"agentMetrics" json:"agentMetrics"`
+	ChainID    int            `yaml:"chainId" json:"chainId"`
+	StartBlock int            `yaml:"startBlock" json:"startBlock"`
+	EndBlock   int            `yaml:"endBlock" json:"endBlock"`
+	Ethereum   EthereumConfig `yaml:"ethereum" json:"ethereum"`
 }
 
 type TraceConfig struct {
@@ -165,9 +162,15 @@ type PublisherConfig struct {
 	IPFS            *IPFSConfig      `yaml:"ipfs" json:"ipfs" validate:"required_unless=SkipPublish true"`
 	Batch           BatchConfig      `yaml:"batch" json:"batch"`
 	TestAlerts      TestAlertsConfig `yaml:"testAlerts" json:"testAlerts"`
-	AgentMetrics    struct {
-		FlushIntervalSeconds int `yaml:"flushIntervalSeconds" json:"flushIntervalSeconds" validate:"omitempty,min=1"`
-	} `yaml:"agentMetrics" json:"agentMetrics"`
+}
+
+type AgentMetricsConfig struct {
+	FlushIntervalSeconds int `yaml:"flushIntervalSeconds" json:"flushIntervalSeconds" validate:"omitempty,min=1"`
+	ThresholdMs          int `yaml:"thresholdMs" json:"thresholdMs" validate:"omitempty,min=1"`
+}
+
+type AgentsConfig struct {
+	Metrics AgentMetricsConfig `yaml:"metrics" json:"metrics"`
 }
 
 type Config struct {
@@ -185,6 +188,7 @@ type Config struct {
 	Trace        TraceConfig        `yaml:"trace" json:"trace"`
 	JsonRpcProxy JsonRpcProxyConfig `yaml:"jsonRpcProxy" json:"jsonRpcProxy"`
 	Log          LogConfig          `yaml:"log" json:"log"`
+	Agents       AgentsConfig       `yaml:"agents" json:"agents"`
 }
 
 func ParseBigInt(num int) *big.Int {
