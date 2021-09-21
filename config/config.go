@@ -164,6 +164,12 @@ type PublisherConfig struct {
 	TestAlerts      TestAlertsConfig `yaml:"testAlerts" json:"testAlerts"`
 }
 
+type ResourcesConfig struct {
+	DisableAgentLimits bool    `yaml:"disableAgentLimits" json:"disableAgentLimits"`
+	AgentMaxMemoryMiB  int     `yaml:"agentMaxMemoryMib" json:"agentMaxMemoryMib" validate:"omitempty,min=100"`
+	AgentMaxCPUs       float64 `yaml:"agentMaxCpus" json:"agentMaxCpus" validate:"omitempty,gt=0"`
+}
+
 type AgentMetricsConfig struct {
 	FlushIntervalSeconds int `yaml:"flushIntervalSeconds" json:"flushIntervalSeconds" validate:"omitempty,min=1"`
 	ThresholdMs          int `yaml:"thresholdMs" json:"thresholdMs" validate:"omitempty,min=1"`
@@ -182,13 +188,14 @@ type Config struct {
 	LocalAgentsPath string         `yaml:"-" json:"-"`
 	LocalAgents     []*AgentConfig `yaml:"-" json:"localAgents"`
 
-	Registry     RegistryConfig     `yaml:"registry" json:"registry"`
-	Scanner      ScannerConfig      `yaml:"scanner" json:"scanner"`
-	Query        QueryConfig        `yaml:"query" json:"query"`
-	Trace        TraceConfig        `yaml:"trace" json:"trace"`
-	JsonRpcProxy JsonRpcProxyConfig `yaml:"jsonRpcProxy" json:"jsonRpcProxy"`
-	Log          LogConfig          `yaml:"log" json:"log"`
-	Agents       AgentsConfig       `yaml:"agents" json:"agents"`
+	Registry        RegistryConfig     `yaml:"registry" json:"registry"`
+	Scanner         ScannerConfig      `yaml:"scanner" json:"scanner"`
+	Query           QueryConfig        `yaml:"query" json:"query"`
+	Trace           TraceConfig        `yaml:"trace" json:"trace"`
+	JsonRpcProxy    JsonRpcProxyConfig `yaml:"jsonRpcProxy" json:"jsonRpcProxy"`
+	Log             LogConfig          `yaml:"log" json:"log"`
+	ResourcesConfig ResourcesConfig    `yaml:"resources" json:"resources"`
+	Agents          AgentsConfig       `yaml:"agents" json:"agents"`
 }
 
 func ParseBigInt(num int) *big.Int {
