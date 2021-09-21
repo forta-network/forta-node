@@ -233,7 +233,7 @@ func (agent *Agent) makeMetricData(startTime *time.Time) (calc metricCalc) {
 	calc.Duration = now.Sub(*startTime)
 	calc.MetricData = &protocol.MetricData{
 		Timestamp: now.Format(time.RFC3339),
-		Number:    calc.Duration.Milliseconds(),
+		Value:     float64(calc.Duration.Milliseconds()),
 	}
 	return
 }

@@ -55,6 +55,9 @@ func (ama *AgentMetricsAggregator) PutTxProcessingData(agentID string, data *pro
 
 	for _, agentMetrics := range ama.allMetrics {
 		if agentMetrics.AgentMetrics.AgentId == agentID {
+			if agentMetrics.TxProcessing == nil {
+				agentMetrics.TxProcessing = &protocol.MetricContainer{}
+			}
 			agentMetrics.AgentMetrics.TxProcessing.Data = append(agentMetrics.AgentMetrics.TxProcessing.Data, data)
 			return
 		}
@@ -75,6 +78,9 @@ func (ama *AgentMetricsAggregator) PutBlockProcessingData(agentID string, data *
 
 	for _, agentMetrics := range ama.allMetrics {
 		if agentMetrics.AgentMetrics.AgentId == agentID {
+			if agentMetrics.BlockProcessing == nil {
+				agentMetrics.BlockProcessing = &protocol.MetricContainer{}
+			}
 			agentMetrics.AgentMetrics.BlockProcessing.Data = append(agentMetrics.AgentMetrics.BlockProcessing.Data, data)
 			return
 		}
@@ -90,15 +96,25 @@ func (ama *AgentMetricsAggregator) PutBlockProcessingData(agentID string, data *
 // CountFinding increases the right counter depending on the nil or existing alert.
 func (ama *AgentMetricsAggregator) CountFinding(agentID string, hasAlert bool) {
 	for _, agentMetrics := range ama.allMetrics {
-		if agentMetrics.AgentId != agentID {
-			continue
+		if agentMetrics.AgentId == agentID {
+			if hasAlert {
+				agentMetrics.FindingCount++
+			} else {
+				agentMetrics.NoFindingCount++
+			}
+			return
 		}
-		if hasAlert {
-			agentMetrics.FindingCount++
-		} else {
-			agentMetrics.NoFindingCount++
-		}
-		return
+	}
+	if hasAlert {
+		ama.allMetrics = append(ama.allMetrics, &metricsContainer{
+			FindingCount: 1,
+			AgentMetrics: &protocol.AgentMetrics{AgentId: agentID},
+		})
+	} else {
+		ama.allMetrics = append(ama.allMetrics, &metricsContainer{
+			NoFindingCount: 1,
+			AgentMetrics:   &protocol.AgentMetrics{AgentId: agentID},
+		})
 	}
 }
 
@@ -117,6 +133,7 @@ func (ama *AgentMetricsAggregator) TryFlush() []*protocol.AgentMetrics {
 
 	var allMetrics []*protocol.AgentMetrics
 	for _, container := range allContainers {
+		container.ThresholdMs = int32(ama.thresholdMs)
 		allMetrics = append(allMetrics, container.AgentMetrics)
 	}
 
@@ -130,33 +147,42 @@ type allAgentMetrics []*metricsContainer
 func (allMetrics allAgentMetrics) Fix(thresholdMs int) {
 	allMetrics.CalculateAverages()
 	allMetrics.RemoveLowValues(thresholdMs)
+	allMetrics.CalculateFindingRates()
 }
 
 func (allMetrics allAgentMetrics) CalculateAverages() {
 	for _, agentMetrics := range allMetrics {
-		agentMetrics.TxProcessing.Average = avgMetricArray(agentMetrics.TxProcessing.Data)
-		agentMetrics.BlockProcessing.Average = avgMetricArray(agentMetrics.BlockProcessing.Data)
+		if agentMetrics.TxProcessing != nil {
+			agentMetrics.TxProcessing.Average = avgMetricArray(agentMetrics.TxProcessing.Data)
+		}
+		if agentMetrics.BlockProcessing != nil {
+			agentMetrics.BlockProcessing.Average = avgMetricArray(agentMetrics.BlockProcessing.Data)
+		}
 	}
 }
 
 func avgMetricArray(data []*protocol.MetricData) int64 {
-	var sum int64
+	var sum float64
 	for _, dataPoint := range data {
-		sum += dataPoint.Number
+		sum += dataPoint.Value
 	}
-	return sum / int64(len(data))
+	return int64(sum) / int64(len(data))
 }
 
 func (allMetrics allAgentMetrics) RemoveLowValues(thresholdMs int) {
 	for _, agentMetrics := range allMetrics {
-		agentMetrics.TxProcessing.Data = reduceMetricArray(agentMetrics.TxProcessing.Data, thresholdMs)
-		agentMetrics.BlockProcessing.Data = reduceMetricArray(agentMetrics.BlockProcessing.Data, thresholdMs)
+		if agentMetrics.TxProcessing != nil {
+			agentMetrics.TxProcessing.Data = reduceMetricArray(agentMetrics.TxProcessing.Data, thresholdMs)
+		}
+		if agentMetrics.BlockProcessing != nil {
+			agentMetrics.BlockProcessing.Data = reduceMetricArray(agentMetrics.BlockProcessing.Data, thresholdMs)
+		}
 	}
 }
 
 func reduceMetricArray(oldData []*protocol.MetricData, threshold int) (newData []*protocol.MetricData) {
 	for _, dataPoint := range oldData {
-		if dataPoint.Number >= int64(threshold) {
+		if dataPoint.Value >= float64(threshold) {
 			newData = append(newData, dataPoint)
 		}
 	}

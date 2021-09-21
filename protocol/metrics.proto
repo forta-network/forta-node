@@ -19,5 +19,5 @@ message MetricContainer {
 
 message MetricData {
   string timestamp = 1;
-  int64 number = 2;
+  double value = 2;
 }
