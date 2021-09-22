@@ -39,13 +39,14 @@ const (
 // AlertListener allows retrieval of alerts from the database
 type AlertListener struct {
 	protocol.UnimplementedQueryNodeServer
-	ctx             context.Context
-	store           store.AlertStore
-	cfg             AlertListenerConfig
-	contract        AlertsContract
-	ipfs            IPFS
-	ethClient       EthClient
-	testAlertLogger TestAlertLogger
+	ctx               context.Context
+	store             store.AlertStore
+	cfg               AlertListenerConfig
+	contract          AlertsContract
+	ipfs              IPFS
+	ethClient         EthClient
+	testAlertLogger   TestAlertLogger
+	metricsAggregator *AgentMetricsAggregator
 
 	port          int
 	skipEmpty     bool
@@ -83,6 +84,7 @@ type AlertListenerConfig struct {
 	ChainID         int
 	Key             *keystore.Key
 	PublisherConfig config.PublisherConfig
+	MetricsConfig   config.AgentMetricsConfig
 }
 
 func (al *AlertListener) Notify(ctx context.Context, req *protocol.NotifyRequest) (*protocol.NotifyResponse, error) {
@@ -354,8 +356,12 @@ func (al *AlertListener) prepareLatestBatch() {
 			var blockNum string
 			if notif.EvalBlockRequest != nil {
 				blockNum = notif.EvalBlockRequest.Event.BlockNumber
+				al.metricsAggregator.PutBlockProcessingData(notif.AgentInfo.Id, notif.EvalBlockResponse.Metric)
+				al.metricsAggregator.CountFinding(notif.AgentInfo.Id, hasAlert)
 			} else {
 				blockNum = notif.EvalTxRequest.Event.Block.BlockNumber
+				al.metricsAggregator.PutTxProcessingData(notif.AgentInfo.Id, notif.EvalTxResponse.Metric)
+				al.metricsAggregator.CountFinding(notif.AgentInfo.Id, hasAlert)
 			}
 
 			notifBlockNum, err := hexutil.DecodeUint64(blockNum)
@@ -395,6 +401,8 @@ func (al *AlertListener) prepareLatestBatch() {
 		batch.Data.BlockEnd = latestBlock
 		al.latestBlock = latestBlock
 	}
+
+	batch.Data.Metrics = al.metricsAggregator.TryFlush()
 
 	al.batchCh <- (*protocol.SignedAlertBatch)(batch)
 }
@@ -485,13 +493,14 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertList
 	}
 
 	return &AlertListener{
-		ctx:             ctx,
-		store:           store,
-		cfg:             cfg,
-		contract:        ats,
-		ipfs:            ipfsClient,
-		ethClient:       ethClient,
-		testAlertLogger: testAlertLogger,
+		ctx:               ctx,
+		store:             store,
+		cfg:               cfg,
+		contract:          ats,
+		ipfs:              ipfsClient,
+		ethClient:         ethClient,
+		testAlertLogger:   testAlertLogger,
+		metricsAggregator: NewMetricsAggregator(cfg.MetricsConfig.FlushIntervalSeconds, cfg.MetricsConfig.ThresholdMs),
 
 		port:          cfg.Port,
 		skipEmpty:     cfg.PublisherConfig.Batch.SkipEmpty,

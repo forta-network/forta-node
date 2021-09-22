@@ -31,7 +31,7 @@ type AgentPool struct {
 }
 
 // NewAgentPool creates a new agent pool.
-func NewAgentPool(msgClient clients.MessageClient) *AgentPool {
+func NewAgentPool(cfg config.ScannerConfig, msgClient clients.MessageClient) *AgentPool {
 	agentPool := &AgentPool{
 		txResults:    make(chan *scanner.TxResult, DefaultBufferSize),
 		blockResults: make(chan *scanner.BlockResult, DefaultBufferSize),
@@ -42,6 +42,7 @@ func NewAgentPool(msgClient clients.MessageClient) *AgentPool {
 			return client
 		},
 	}
+
 	agentPool.registerMessageHandlers()
 	go agentPool.logAgentChanBuffersLoop()
 	return agentPool
