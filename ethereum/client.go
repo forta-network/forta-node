@@ -156,7 +156,14 @@ func (e streamEthClient) TraceBlock(ctx context.Context, number *big.Int) ([]dom
 	log.Debugf(name)
 	var result []domain.Trace
 	err := withBackoff(ctx, name, func(ctx context.Context) error {
-		return e.rpcClient.CallContext(ctx, &result, traceBlock, utils.BigIntToHex(number))
+		err := e.rpcClient.CallContext(ctx, &result, traceBlock, utils.BigIntToHex(number))
+		if err != nil {
+			return err
+		}
+		if len(result) == 0 {
+			return ErrNotFound
+		}
+		return nil
 	}, RetryOptions{
 		MinBackoff:     pointDur(5 * time.Second),
 		MaxElapsedTime: pointDur(12 * time.Hour),
