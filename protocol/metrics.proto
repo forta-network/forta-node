@@ -7,8 +7,10 @@ option go_package = "./;protocol";
 message AgentMetrics {
   string agentId = 1;
   float findingRatePct = 2;
-  MetricSummary txProcessing = 3;
-  MetricSummary blockProcessing = 4;
+  uint32 responseCount = 3;
+  uint32 errorCount = 4;
+  MetricSummary txProcessing = 5;
+  MetricSummary blockProcessing = 6;
 }
 
 message MetricData {

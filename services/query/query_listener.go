@@ -369,10 +369,12 @@ func (al *AlertListener) prepareLatestBatch() {
 				blockNum = notif.EvalBlockRequest.Event.BlockNumber
 				al.metricsAggregator.PutBlockProcessingData(notif.AgentInfo.Id, notif.EvalBlockResponse.Metric)
 				al.metricsAggregator.CountFinding(notif.AgentInfo.Id, hasAlert)
+				al.metricsAggregator.CountResponse(notif.AgentInfo.Id, notif.EvalBlockResponse.Status)
 			} else {
 				blockNum = notif.EvalTxRequest.Event.Block.BlockNumber
 				al.metricsAggregator.PutTxProcessingData(notif.AgentInfo.Id, notif.EvalTxResponse.Metric)
 				al.metricsAggregator.CountFinding(notif.AgentInfo.Id, hasAlert)
+				al.metricsAggregator.CountResponse(notif.AgentInfo.Id, notif.EvalTxResponse.Status)
 			}
 
 			notifBlockNum, err := hexutil.DecodeUint64(blockNum)

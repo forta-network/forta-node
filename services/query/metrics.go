@@ -108,6 +108,32 @@ func (ama *AgentMetricsAggregator) CountFinding(agentID string, hasAlert bool) {
 	}
 }
 
+// CountResponse counts the response by checking the response status.
+func (ama *AgentMetricsAggregator) CountResponse(agentID string, status protocol.ResponseStatus) {
+	isError := status == protocol.ResponseStatus_ERROR
+
+	for _, agentMetrics := range ama.allMetrics {
+		if agentMetrics.AgentId != agentID {
+			continue
+		}
+		agentMetrics.ResponseCount++
+		if isError {
+			agentMetrics.ErrorCount++
+		}
+		return
+	}
+
+	if isError {
+		ama.allMetrics = append(ama.allMetrics, &metricsContainer{
+			AgentMetrics: protocol.AgentMetrics{AgentId: agentID, ResponseCount: 1, ErrorCount: 1},
+		})
+	} else {
+		ama.allMetrics = append(ama.allMetrics, &metricsContainer{
+			AgentMetrics: protocol.AgentMetrics{AgentId: agentID, ResponseCount: 1},
+		})
+	}
+}
+
 // TryFlush checks the flushing condition(s) an returns metrics accordingly.
 func (ama *AgentMetricsAggregator) TryFlush() []*protocol.AgentMetrics {
 	now := time.Now()

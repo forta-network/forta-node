@@ -61,6 +61,10 @@ func TestAgentMetricsAggregator(t *testing.T) {
 		blockProcessingP95   float64 = 20
 	)
 
+	// Agent 1: Count two responses with one error status
+	aggregator.CountResponse(testAgentID1, protocol.ResponseStatus_ERROR)
+	aggregator.CountResponse(testAgentID1, protocol.ResponseStatus_SUCCESS)
+
 	// Agent 1: 1 out of 3 alert notifs have a finding
 	var expectedFindingRatePct1 float32 = 33.33
 	aggregator.CountFinding(testAgentID1, false)
@@ -101,6 +105,8 @@ func TestAgentMetricsAggregator(t *testing.T) {
 
 	metrics1 := metrics[0]
 	r.Equal(testAgentID1, metrics1.AgentId)
+	r.Equal(uint32(1), metrics1.ErrorCount)
+	r.Equal(uint32(2), metrics1.ResponseCount)
 	r.Equal(expectedFindingRatePct1, metrics1.FindingRatePct)
 
 	r.Equal(txProcessingAvg, metrics1.TxProcessing.Average)
