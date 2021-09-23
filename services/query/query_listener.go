@@ -500,7 +500,7 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertList
 		ipfs:              ipfsClient,
 		ethClient:         ethClient,
 		testAlertLogger:   testAlertLogger,
-		metricsAggregator: NewMetricsAggregator(cfg.MetricsConfig.FlushIntervalSeconds, cfg.MetricsConfig.ThresholdMs),
+		metricsAggregator: NewMetricsAggregator(cfg.MetricsConfig.FlushIntervalSeconds),
 
 		port:          cfg.Port,
 		skipEmpty:     cfg.PublisherConfig.Batch.SkipEmpty,

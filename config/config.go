@@ -172,7 +172,6 @@ type ResourcesConfig struct {
 
 type AgentMetricsConfig struct {
 	FlushIntervalSeconds int `yaml:"flushIntervalSeconds" json:"flushIntervalSeconds" validate:"omitempty,min=1"`
-	ThresholdMs          int `yaml:"thresholdMs" json:"thresholdMs" validate:"omitempty,min=1"`
 }
 
 type AgentsConfig struct {

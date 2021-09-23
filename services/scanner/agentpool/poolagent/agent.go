@@ -24,8 +24,7 @@ const (
 
 // Agent receives blocks and transactions, and produces results.
 type Agent struct {
-	config           config.AgentConfig
-	metricsThreshold time.Duration
+	config config.AgentConfig
 
 	txRequests    chan *protocol.EvaluateTxRequest // never closed - deallocated when agent is discarded
 	txResults     chan<- *scanner.TxResult

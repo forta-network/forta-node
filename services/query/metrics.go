@@ -2,15 +2,16 @@ package query
 
 import (
 	"math"
+	"sort"
 	"time"
 
 	"github.com/forta-network/forta-node/protocol"
+	"github.com/shopspring/decimal"
 )
 
 // Constants
 const (
-	DefaultFlushInterval              = time.Minute
-	DefaultMetricsThresholdDurationMs = 50
+	DefaultFlushInterval = time.Minute
 )
 
 // AgentMetricsAggregator aggregates agent metrics and returns them when the available data
@@ -19,31 +20,26 @@ type AgentMetricsAggregator struct {
 	allMetrics    []*metricsContainer
 	flushInterval time.Duration
 	lastFlush     time.Time
-	thresholdMs   int
 }
 
 type metricsContainer struct {
-	FindingCount   int64
-	NoFindingCount int64
-	*protocol.AgentMetrics
+	FindingCount    int64
+	NoFindingCount  int64
+	TxProcessing    []*protocol.MetricData
+	BlockProcessing []*protocol.MetricData
+	protocol.AgentMetrics
 }
 
 // NewAgentMetricsAggregator creates a new agent metrics aggregator.
-func NewMetricsAggregator(flushIntervalSeconds, thresholdMs int) *AgentMetricsAggregator {
+func NewMetricsAggregator(flushIntervalSeconds int) *AgentMetricsAggregator {
 	flushInterval := DefaultFlushInterval
 	if flushIntervalSeconds > 0 {
 		flushInterval = (time.Duration)(flushIntervalSeconds) * time.Second
 	}
 
-	threshold := DefaultMetricsThresholdDurationMs
-	if thresholdMs > 0 {
-		threshold = thresholdMs
-	}
-
 	return &AgentMetricsAggregator{
 		flushInterval: flushInterval,
 		lastFlush:     time.Now(), // avoid flushing immediately
-		thresholdMs:   threshold,
 	}
 }
 
@@ -54,18 +50,15 @@ func (ama *AgentMetricsAggregator) PutTxProcessingData(agentID string, data *pro
 	}
 
 	for _, agentMetrics := range ama.allMetrics {
-		if agentMetrics.AgentMetrics.AgentId == agentID {
-			if agentMetrics.TxProcessing == nil {
-				agentMetrics.TxProcessing = &protocol.MetricContainer{}
-			}
-			agentMetrics.AgentMetrics.TxProcessing.Data = append(agentMetrics.AgentMetrics.TxProcessing.Data, data)
+		if agentMetrics.AgentId == agentID {
+			agentMetrics.TxProcessing = append(agentMetrics.TxProcessing, data)
 			return
 		}
 	}
 	ama.allMetrics = append(ama.allMetrics, &metricsContainer{
-		AgentMetrics: &protocol.AgentMetrics{
-			AgentId:      agentID,
-			TxProcessing: &protocol.MetricContainer{Data: []*protocol.MetricData{data}},
+		TxProcessing: []*protocol.MetricData{data},
+		AgentMetrics: protocol.AgentMetrics{
+			AgentId: agentID,
 		},
 	})
 }
@@ -78,17 +71,14 @@ func (ama *AgentMetricsAggregator) PutBlockProcessingData(agentID string, data *
 
 	for _, agentMetrics := range ama.allMetrics {
 		if agentMetrics.AgentMetrics.AgentId == agentID {
-			if agentMetrics.BlockProcessing == nil {
-				agentMetrics.BlockProcessing = &protocol.MetricContainer{}
-			}
-			agentMetrics.AgentMetrics.BlockProcessing.Data = append(agentMetrics.AgentMetrics.BlockProcessing.Data, data)
+			agentMetrics.BlockProcessing = append(agentMetrics.BlockProcessing, data)
 			return
 		}
 	}
 	ama.allMetrics = append(ama.allMetrics, &metricsContainer{
-		AgentMetrics: &protocol.AgentMetrics{
-			AgentId:         agentID,
-			BlockProcessing: &protocol.MetricContainer{Data: []*protocol.MetricData{data}},
+		BlockProcessing: []*protocol.MetricData{data},
+		AgentMetrics: protocol.AgentMetrics{
+			AgentId: agentID,
 		},
 	})
 }
@@ -108,12 +98,12 @@ func (ama *AgentMetricsAggregator) CountFinding(agentID string, hasAlert bool) {
 	if hasAlert {
 		ama.allMetrics = append(ama.allMetrics, &metricsContainer{
 			FindingCount: 1,
-			AgentMetrics: &protocol.AgentMetrics{AgentId: agentID},
+			AgentMetrics: protocol.AgentMetrics{AgentId: agentID},
 		})
 	} else {
 		ama.allMetrics = append(ama.allMetrics, &metricsContainer{
 			NoFindingCount: 1,
-			AgentMetrics:   &protocol.AgentMetrics{AgentId: agentID},
+			AgentMetrics:   protocol.AgentMetrics{AgentId: agentID},
 		})
 	}
 }
@@ -125,7 +115,7 @@ func (ama *AgentMetricsAggregator) TryFlush() []*protocol.AgentMetrics {
 		return nil
 	}
 
-	(allAgentMetrics)(ama.allMetrics).Fix(ama.thresholdMs)
+	(allAgentMetrics)(ama.allMetrics).Fix()
 
 	ama.lastFlush = now
 	allContainers := ama.allMetrics
@@ -133,8 +123,7 @@ func (ama *AgentMetricsAggregator) TryFlush() []*protocol.AgentMetrics {
 
 	var allMetrics []*protocol.AgentMetrics
 	for _, container := range allContainers {
-		container.ThresholdMs = int32(ama.thresholdMs)
-		allMetrics = append(allMetrics, container.AgentMetrics)
+		allMetrics = append(allMetrics, &container.AgentMetrics)
 	}
 
 	return allMetrics
@@ -144,49 +133,45 @@ func (ama *AgentMetricsAggregator) TryFlush() []*protocol.AgentMetrics {
 // before we publish them.
 type allAgentMetrics []*metricsContainer
 
-func (allMetrics allAgentMetrics) Fix(thresholdMs int) {
-	allMetrics.CalculateAverages()
-	allMetrics.RemoveLowValues(thresholdMs)
+func (allMetrics allAgentMetrics) Fix() {
+	allMetrics.CreateSummaries()
 	allMetrics.CalculateFindingRates()
+	allMetrics.CalculateAverages()
+	allMetrics.FindMaxValues()
+	allMetrics.CalculateP95()
+	allMetrics.PutCounts()
+	allMetrics.FindStartEndTimes()
+}
+
+func (allMetrics allAgentMetrics) CreateSummaries() {
+	for _, agentMetrics := range allMetrics {
+		if agentMetrics.TxProcessing != nil {
+			agentMetrics.AgentMetrics.TxProcessing = &protocol.MetricSummary{}
+		}
+		if agentMetrics.BlockProcessing != nil {
+			agentMetrics.AgentMetrics.BlockProcessing = &protocol.MetricSummary{}
+		}
+	}
 }
 
 func (allMetrics allAgentMetrics) CalculateAverages() {
 	for _, agentMetrics := range allMetrics {
 		if agentMetrics.TxProcessing != nil {
-			agentMetrics.TxProcessing.Average = avgMetricArray(agentMetrics.TxProcessing.Data)
+			agentMetrics.AgentMetrics.TxProcessing.Average = avgMetricArray(agentMetrics.TxProcessing)
 		}
 		if agentMetrics.BlockProcessing != nil {
-			agentMetrics.BlockProcessing.Average = avgMetricArray(agentMetrics.BlockProcessing.Data)
+			agentMetrics.AgentMetrics.BlockProcessing.Average = avgMetricArray(agentMetrics.BlockProcessing)
 		}
 	}
 }
 
-func avgMetricArray(data []*protocol.MetricData) int64 {
-	var sum float64
+func avgMetricArray(data []*protocol.MetricData) float64 {
+	sum := decimal.NewFromInt(0)
 	for _, dataPoint := range data {
-		sum += dataPoint.Value
+		sum = sum.Add(decimal.NewFromFloat(dataPoint.Value))
 	}
-	return int64(sum) / int64(len(data))
-}
-
-func (allMetrics allAgentMetrics) RemoveLowValues(thresholdMs int) {
-	for _, agentMetrics := range allMetrics {
-		if agentMetrics.TxProcessing != nil {
-			agentMetrics.TxProcessing.Data = reduceMetricArray(agentMetrics.TxProcessing.Data, thresholdMs)
-		}
-		if agentMetrics.BlockProcessing != nil {
-			agentMetrics.BlockProcessing.Data = reduceMetricArray(agentMetrics.BlockProcessing.Data, thresholdMs)
-		}
-	}
-}
-
-func reduceMetricArray(oldData []*protocol.MetricData, threshold int) (newData []*protocol.MetricData) {
-	for _, dataPoint := range oldData {
-		if dataPoint.Value >= float64(threshold) {
-			newData = append(newData, dataPoint)
-		}
-	}
-	return
+	f, _ := sum.Div(decimal.NewFromInt32(int32(len(data)))).Round(2).Float64()
+	return f
 }
 
 func (allMetrics allAgentMetrics) CalculateFindingRates() {
@@ -200,4 +185,89 @@ func calculateRatePct(dividend, divisor int64) float64 {
 	const toPct = 100
 	res := float64(dividend*decimals*toPct) / float64(divisor)
 	return math.Round(res) / float64(decimals)
+}
+
+func (allMetrics allAgentMetrics) FindMaxValues() {
+	for _, agentMetrics := range allMetrics {
+		findMetricsMax(agentMetrics)
+	}
+}
+
+func findMetricsMax(agentMetrics *metricsContainer) {
+	if agentMetrics.TxProcessing != nil {
+		agentMetrics.AgentMetrics.TxProcessing.Max = maxDataPoint(agentMetrics.TxProcessing)
+	}
+	if agentMetrics.BlockProcessing != nil {
+		agentMetrics.AgentMetrics.BlockProcessing.Max = maxDataPoint(agentMetrics.BlockProcessing)
+	}
+}
+
+func maxDataPoint(data []*protocol.MetricData) float64 {
+	var max float64
+	for _, dataPoint := range data {
+		if dataPoint.Value > max {
+			max = dataPoint.Value
+		}
+	}
+	return max
+}
+
+func (allMetrics allAgentMetrics) CalculateP95() {
+	for _, agentMetrics := range allMetrics {
+		if agentMetrics.TxProcessing != nil {
+			agentMetrics.AgentMetrics.TxProcessing.P95 = calcP95(agentMetrics.TxProcessing)
+		}
+		if agentMetrics.BlockProcessing != nil {
+			agentMetrics.AgentMetrics.BlockProcessing.P95 = calcP95(agentMetrics.BlockProcessing)
+		}
+	}
+}
+
+func calcP95(data []*protocol.MetricData) float64 {
+	switch len(data) {
+	case 0:
+		return 0
+	case 1:
+		return data[0].Value
+	}
+
+	k := len(data)
+	k95, _ := decimal.NewFromInt32(int32(k)).Mul(decimal.NewFromFloat32(0.95)).Floor().BigFloat().Int64()
+	sort.Slice(data, func(i, j int) bool {
+		return data[i].Value < data[j].Value
+	})
+	return data[k95-1].Value
+}
+
+func (allMetrics allAgentMetrics) PutCounts() {
+	for _, agentMetrics := range allMetrics {
+		if agentMetrics.TxProcessing != nil {
+			agentMetrics.AgentMetrics.TxProcessing.Count = int32(len(agentMetrics.TxProcessing))
+		}
+		if agentMetrics.BlockProcessing != nil {
+			agentMetrics.AgentMetrics.BlockProcessing.Count = int32(len(agentMetrics.BlockProcessing))
+		}
+	}
+}
+
+func (allMetrics allAgentMetrics) FindStartEndTimes() {
+	for _, agentMetrics := range allMetrics {
+		if agentMetrics.TxProcessing != nil {
+			agentMetrics.AgentMetrics.TxProcessing.StartTimestamp, agentMetrics.AgentMetrics.TxProcessing.EndTimestamp = findStartEndTs(agentMetrics.TxProcessing)
+		}
+		if agentMetrics.BlockProcessing != nil {
+			agentMetrics.AgentMetrics.BlockProcessing.StartTimestamp, agentMetrics.AgentMetrics.BlockProcessing.EndTimestamp = findStartEndTs(agentMetrics.BlockProcessing)
+		}
+	}
+}
+
+func findStartEndTs(data []*protocol.MetricData) (startTs, endTs string) {
+	sort.Slice(data, func(i, j int) bool {
+		t1, _ := time.Parse(time.RFC3339, data[i].Timestamp)
+		t2, _ := time.Parse(time.RFC3339, data[j].Timestamp)
+		return t1.Before(t2)
+	})
+	startTs = data[0].Timestamp
+	endTs = data[len(data)-1].Timestamp
+	return
 }

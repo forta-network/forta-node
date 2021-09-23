@@ -7,17 +7,20 @@ option go_package = "./;protocol";
 message AgentMetrics {
   string agentId = 1;
   float findingRatePct = 2;
-  int32 thresholdMs = 3;
-  MetricContainer txProcessing = 4;
-  MetricContainer blockProcessing = 5;
-}
-
-message MetricContainer {
-  int64 average = 1;
-  repeated MetricData data = 2;
+  MetricSummary txProcessing = 3;
+  MetricSummary blockProcessing = 4;
 }
 
 message MetricData {
   string timestamp = 1;
   double value = 2;
+}
+
+message MetricSummary {
+  string startTimestamp = 1;
+  string endTimestamp = 2;
+  double max = 3;
+  double average = 4;
+  double p95 = 5;
+  int32 count = 6;
 }
