@@ -93,6 +93,11 @@ func (al *AlertListener) Notify(ctx context.Context, req *protocol.NotifyRequest
 }
 
 func (al *AlertListener) publishNextBatch(batch *protocol.SignedAlertBatch) error {
+	// flush only if we are publishing so we can make the best use of aggregated metrics
+	if _, skip := al.shouldSkipPublishing(batch); !skip {
+		batch.Data.Metrics = al.metricsAggregator.TryFlush()
+	}
+
 	signature, err := security.SignProtoMessage(al.cfg.Key, batch)
 	if err != nil {
 		return fmt.Errorf("failed to sign alert batch: %v", err)
@@ -105,6 +110,7 @@ func (al *AlertListener) publishNextBatch(batch *protocol.SignedAlertBatch) erro
 	}
 	log.Tracef("alert payload: %s", string(buf.Bytes()))
 
+	// save with blank tx hash for now
 	al.storeBatchWithTxHash(batch.Data, "")
 	if al.skipPublish {
 		log.Infof("alert batch: blockStart=%d, blockEnd=%d, alertCount=%d, maxSeverity=%s", batch.Data.BlockStart, batch.Data.BlockEnd, batch.Data.AlertCount, batch.Data.MaxSeverity.String())
@@ -112,9 +118,9 @@ func (al *AlertListener) publishNextBatch(batch *protocol.SignedAlertBatch) erro
 		return nil
 	}
 
-	// if no alerts, and skipEmpty is true, then save with blank txHash
-	if al.skipEmpty && batch.Data.AlertCount == uint32(0) {
-		log.Info("skipping batch, because there are no alerts and skipEmpty is enabled")
+	// if we should really skip this batch due to other reasons, then we just leave it in the db with blank tx hash
+	if reason, skip := al.shouldSkipPublishing(batch); skip {
+		log.WithField("reason", reason).Info("skipping batch")
 		return nil
 	}
 
@@ -139,6 +145,11 @@ func (al *AlertListener) publishNextBatch(batch *protocol.SignedAlertBatch) erro
 	// Store all block and transaction alerts.
 	al.storeBatchWithTxHash(batch.Data, tx.Hash().Hex())
 	return nil
+}
+
+func (al *AlertListener) shouldSkipPublishing(batch *protocol.SignedAlertBatch) (string, bool) {
+	return "because there are no alerts and skipEmpty is enabled",
+		al.skipEmpty && batch.Data.AlertCount == uint32(0)
 }
 
 func (al *AlertListener) publishBatches() {
@@ -401,8 +412,6 @@ func (al *AlertListener) prepareLatestBatch() {
 		batch.Data.BlockEnd = latestBlock
 		al.latestBlock = latestBlock
 	}
-
-	batch.Data.Metrics = al.metricsAggregator.TryFlush()
 
 	al.batchCh <- (*protocol.SignedAlertBatch)(batch)
 }
