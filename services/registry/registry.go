@@ -223,7 +223,7 @@ func (rs *RegistryService) getLatestAgents() ([]*config.AgentConfig, error) {
 		if !disabled {
 			agentCfg, err := rs.makeAgentConfig(agentID, agentRef)
 			if err != nil {
-				log.WithError(err).Errorf("could not load agent (skipping): %s, %s", agentIDString, agentRef)
+				log.WithError(err).Errorf("could not load agent (skipping) (%s, %s): %v", agentIDString, agentRef, err)
 				continue
 			}
 			agentConfigs = append(agentConfigs, &agentCfg)
@@ -257,7 +257,8 @@ func (rs *RegistryService) makeAgentConfig(agentID [32]byte, ref string) (agentC
 	var ok bool
 	agentCfg.Image, ok = utils.ValidateImageRef(rs.cfg.Registry.ContainerRegistry, agentData.Manifest.ImageReference)
 	if !ok {
-		log.Warnf("invalid agent reference - skipping: %s", agentCfg.Image)
+		err = fmt.Errorf("invalid agent reference - skipping: %s", agentData.Manifest.ImageReference)
+		return
 	}
 	agentCfg.Manifest = ref
 

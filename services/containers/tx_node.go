@@ -219,7 +219,7 @@ func (t *TxNodeService) ensureLocalImage(name, ref string, requireAuth bool) err
 	}
 	err := client.PullImage(t.ctx, ref)
 	if err != nil {
-		return fmt.Errorf("failed to pull image (%s): %v", name, ref)
+		return fmt.Errorf("failed to pull image (%s, %s): %v", name, ref, err)
 	}
 	log.Infof("pulled image for '%s': %s", name, ref)
 	return nil
