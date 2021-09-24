@@ -223,7 +223,7 @@ func (agent *Agent) processBlocks() {
 }
 
 func calculateResponseTime(startTime *time.Time) (timestamp string, latencyMs uint32, duration time.Duration) {
-	now := time.Now()
+	now := time.Now().UTC()
 	return now.Format(time.RFC3339), uint32(duration.Milliseconds()), duration
 }
 
