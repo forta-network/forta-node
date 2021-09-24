@@ -7,16 +7,14 @@ option go_package = "./;protocol";
 message AgentMetrics {
   string agentId = 1;
   string timestamp = 2;
-  uint32 findingCount = 3;
-  uint32 responseCount = 4;
-  uint32 errorCount = 5;
-  MetricSummary txProcessingLatencyMs = 6;
-  MetricSummary blockProcessingLatencyMs = 7;
+  repeated MetricSummary metrics = 3;
 }
 
 message MetricSummary {
-  uint32 count = 1;
-  double max = 2;
-  double average = 3;
-  double p95 = 4;
+  string name = 1;
+  uint32 count = 2;
+  double max = 3;
+  double average = 4;
+  double sum = 5;
+  double p95 = 6;
 }
