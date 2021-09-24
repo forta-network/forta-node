@@ -170,15 +170,6 @@ type ResourcesConfig struct {
 	AgentMaxCPUs       float64 `yaml:"agentMaxCpus" json:"agentMaxCpus" validate:"omitempty,gt=0"`
 }
 
-type AgentMetricsConfig struct {
-	FlushIntervalSeconds int `yaml:"flushIntervalSeconds" json:"flushIntervalSeconds" validate:"omitempty,min=1"`
-	ThresholdMs          int `yaml:"thresholdMs" json:"thresholdMs" validate:"omitempty,min=1"`
-}
-
-type AgentsConfig struct {
-	Metrics AgentMetricsConfig `yaml:"metrics" json:"metrics"`
-}
-
 type Config struct {
 	Development     bool           `yaml:"-" json:"-"`
 	FortaDir        string         `yaml:"-" json:"-"`
@@ -195,7 +186,6 @@ type Config struct {
 	JsonRpcProxy    JsonRpcProxyConfig `yaml:"jsonRpcProxy" json:"jsonRpcProxy"`
 	Log             LogConfig          `yaml:"log" json:"log"`
 	ResourcesConfig ResourcesConfig    `yaml:"resources" json:"resources"`
-	Agents          AgentsConfig       `yaml:"agents" json:"agents"`
 }
 
 func ParseBigInt(num int) *big.Int {

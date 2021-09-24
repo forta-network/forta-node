@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package network.forta;
 
-import public "metrics.proto";
-
 option go_package = "./;protocol";
 
 service Agent {
@@ -75,7 +73,8 @@ message EvaluateTxResponse {
   repeated Error errors = 2;
   repeated Finding findings = 3;
   map<string, string> metadata = 4;
-  MetricData metric = 5;
+  string timestamp = 5;
+  uint32 latencyMs = 6;
 }
 
 message EvaluateBlockResponse {
@@ -83,7 +82,8 @@ message EvaluateBlockResponse {
   repeated Error errors = 2;
   repeated Finding findings = 3;
   map<string, string> metadata = 4;
-  MetricData metric = 5;
+  string timestamp = 5;
+  uint32 latencyMs = 6;
 }
 
 message BlockEvent {

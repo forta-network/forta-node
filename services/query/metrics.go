@@ -1,140 +1,115 @@
 package query
 
 import (
-	"math"
+	"sort"
 	"time"
 
 	"github.com/forta-network/forta-node/protocol"
+	"github.com/forta-network/forta-node/utils"
+	"github.com/shopspring/decimal"
 )
 
-// Constants
-const (
-	DefaultFlushInterval              = time.Minute
-	DefaultMetricsThresholdDurationMs = 50
+// Adjustable package settings
+var (
+	DefaultBucketInterval = time.Minute
 )
 
-// AgentMetricsAggregator aggregates agent metrics and returns them when the available data
-// hits up to a buffer limit.
+// AgentMetricsAggregator aggregates agents' metrics and produces a list of summary of them when flushed.
 type AgentMetricsAggregator struct {
-	allMetrics    []*metricsContainer
-	flushInterval time.Duration
-	lastFlush     time.Time
-	thresholdMs   int
+	buckets   []*metricsBucket
+	lastFlush time.Time
 }
 
-type metricsContainer struct {
-	FindingCount   int64
-	NoFindingCount int64
-	*protocol.AgentMetrics
+type metricsBucket struct {
+	Time                   time.Time
+	TxProcessingLatency    []uint32
+	BlockProcessingLatency []uint32
+	protocol.AgentMetrics
 }
 
 // NewAgentMetricsAggregator creates a new agent metrics aggregator.
-func NewMetricsAggregator(flushIntervalSeconds, thresholdMs int) *AgentMetricsAggregator {
-	flushInterval := DefaultFlushInterval
-	if flushIntervalSeconds > 0 {
-		flushInterval = (time.Duration)(flushIntervalSeconds) * time.Second
-	}
-
-	threshold := DefaultMetricsThresholdDurationMs
-	if thresholdMs > 0 {
-		threshold = thresholdMs
-	}
-
+func NewMetricsAggregator() *AgentMetricsAggregator {
 	return &AgentMetricsAggregator{
-		flushInterval: flushInterval,
-		lastFlush:     time.Now(), // avoid flushing immediately
-		thresholdMs:   threshold,
+		lastFlush: time.Now(), // avoid flushing immediately
 	}
 }
 
-// PutTxProcessingData puts tx processing metric data of an agent.
-func (ama *AgentMetricsAggregator) PutTxProcessingData(agentID string, data *protocol.MetricData) {
-	if data == nil {
-		return
-	}
-
-	for _, agentMetrics := range ama.allMetrics {
-		if agentMetrics.AgentMetrics.AgentId == agentID {
-			if agentMetrics.TxProcessing == nil {
-				agentMetrics.TxProcessing = &protocol.MetricContainer{}
-			}
-			agentMetrics.AgentMetrics.TxProcessing.Data = append(agentMetrics.AgentMetrics.TxProcessing.Data, data)
-			return
+func (ama *AgentMetricsAggregator) findBucket(agentID string, t time.Time) *metricsBucket {
+	bucketTime := FindClosestBucketTime(t)
+	for _, bucket := range ama.buckets {
+		if bucket.AgentId != agentID {
+			continue
 		}
+		if !bucket.Time.Equal(bucketTime) {
+			continue
+		}
+		return bucket
 	}
-	ama.allMetrics = append(ama.allMetrics, &metricsContainer{
-		AgentMetrics: &protocol.AgentMetrics{
-			AgentId:      agentID,
-			TxProcessing: &protocol.MetricContainer{Data: []*protocol.MetricData{data}},
-		},
-	})
+	bucket := &metricsBucket{Time: bucketTime}
+	bucket.AgentId = agentID
+	bucket.Timestamp = utils.FormatTime(bucketTime)
+	ama.buckets = append(ama.buckets, bucket)
+	return bucket
 }
 
-// PutBlockProcessingData puts block processing metric data of an agent.
-func (ama *AgentMetricsAggregator) PutBlockProcessingData(agentID string, data *protocol.MetricData) {
-	if data == nil {
-		return
-	}
-
-	for _, agentMetrics := range ama.allMetrics {
-		if agentMetrics.AgentMetrics.AgentId == agentID {
-			if agentMetrics.BlockProcessing == nil {
-				agentMetrics.BlockProcessing = &protocol.MetricContainer{}
-			}
-			agentMetrics.AgentMetrics.BlockProcessing.Data = append(agentMetrics.AgentMetrics.BlockProcessing.Data, data)
-			return
-		}
-	}
-	ama.allMetrics = append(ama.allMetrics, &metricsContainer{
-		AgentMetrics: &protocol.AgentMetrics{
-			AgentId:         agentID,
-			BlockProcessing: &protocol.MetricContainer{Data: []*protocol.MetricData{data}},
-		},
-	})
+// FindClosestBucketTime finds the closest bucket time. If it is per minute and the time is 15:15:15,
+// then the closest is 15:15:00.
+func FindClosestBucketTime(t time.Time) time.Time {
+	ts := t.UnixNano()
+	rem := ts % int64(DefaultBucketInterval)
+	return time.Unix(0, ts-rem)
 }
 
-// CountFinding increases the right counter depending on the nil or existing alert.
-func (ama *AgentMetricsAggregator) CountFinding(agentID string, hasAlert bool) {
-	for _, agentMetrics := range ama.allMetrics {
-		if agentMetrics.AgentId == agentID {
-			if hasAlert {
-				agentMetrics.FindingCount++
-			} else {
-				agentMetrics.NoFindingCount++
-			}
-			return
-		}
+type agentResponse protocol.EvaluateTxResponse
+
+// AggregateFromTxResponse aggregates metrics from a tx response.
+func (ama *AgentMetricsAggregator) AggregateFromTxResponse(agentID string, resp *protocol.EvaluateTxResponse) {
+	t, _ := time.Parse(time.RFC3339, resp.Timestamp)
+	bucket := ama.findBucket(agentID, t)
+	bucket.TxProcessingLatency = append(bucket.TxProcessingLatency, resp.LatencyMs)
+	if bucket.TxProcessingLatencyMs == nil {
+		bucket.TxProcessingLatencyMs = &protocol.MetricSummary{}
 	}
-	if hasAlert {
-		ama.allMetrics = append(ama.allMetrics, &metricsContainer{
-			FindingCount: 1,
-			AgentMetrics: &protocol.AgentMetrics{AgentId: agentID},
-		})
-	} else {
-		ama.allMetrics = append(ama.allMetrics, &metricsContainer{
-			NoFindingCount: 1,
-			AgentMetrics:   &protocol.AgentMetrics{AgentId: agentID},
-		})
+	bucket.TxProcessingLatencyMs.Count++
+	ama.aggregateFromAgentResponse(bucket, (*agentResponse)(resp))
+}
+
+// AggregateFromBlockResponse aggregates metrics from a block response.
+func (ama *AgentMetricsAggregator) AggregateFromBlockResponse(agentID string, resp *protocol.EvaluateBlockResponse) {
+	t, _ := time.Parse(time.RFC3339, resp.Timestamp)
+	bucket := ama.findBucket(agentID, t)
+	bucket.BlockProcessingLatency = append(bucket.BlockProcessingLatency, resp.LatencyMs)
+	if bucket.BlockProcessingLatencyMs == nil {
+		bucket.BlockProcessingLatencyMs = &protocol.MetricSummary{}
 	}
+	bucket.BlockProcessingLatencyMs.Count++
+	ama.aggregateFromAgentResponse(bucket, (*agentResponse)(resp))
+}
+
+func (ama *AgentMetricsAggregator) aggregateFromAgentResponse(bucket *metricsBucket, resp *agentResponse) {
+	bucket.ResponseCount++
+	if resp.Status == protocol.ResponseStatus_ERROR {
+		bucket.ErrorCount++
+	}
+	bucket.FindingCount += uint32(len(resp.Findings))
 }
 
 // TryFlush checks the flushing condition(s) an returns metrics accordingly.
 func (ama *AgentMetricsAggregator) TryFlush() []*protocol.AgentMetrics {
 	now := time.Now()
-	if now.Sub(ama.lastFlush) < ama.flushInterval {
+	if now.Sub(ama.lastFlush) < DefaultBucketInterval {
 		return nil
 	}
 
-	(allAgentMetrics)(ama.allMetrics).Fix(ama.thresholdMs)
-
 	ama.lastFlush = now
-	allContainers := ama.allMetrics
-	ama.allMetrics = make([]*metricsContainer, 0)
+	buckets := ama.buckets
+	ama.buckets = nil
+
+	(allAgentMetrics)(buckets).Fix()
 
 	var allMetrics []*protocol.AgentMetrics
-	for _, container := range allContainers {
-		container.ThresholdMs = int32(ama.thresholdMs)
-		allMetrics = append(allMetrics, container.AgentMetrics)
+	for _, bucket := range buckets {
+		allMetrics = append(allMetrics, &bucket.AgentMetrics)
 	}
 
 	return allMetrics
@@ -142,62 +117,85 @@ func (ama *AgentMetricsAggregator) TryFlush() []*protocol.AgentMetrics {
 
 // allAgentMetrics is an alias type for post-processing aggregated in-memory metrics
 // before we publish them.
-type allAgentMetrics []*metricsContainer
+type allAgentMetrics []*metricsBucket
 
-func (allMetrics allAgentMetrics) Fix(thresholdMs int) {
+func (allMetrics allAgentMetrics) Fix() {
+	sort.Slice(allMetrics, func(i, j int) bool {
+		return allMetrics[i].Time.Before(allMetrics[j].Time)
+	})
 	allMetrics.CalculateAverages()
-	allMetrics.RemoveLowValues(thresholdMs)
-	allMetrics.CalculateFindingRates()
+	allMetrics.FindMaxValues()
+	allMetrics.CalculateP95()
 }
 
 func (allMetrics allAgentMetrics) CalculateAverages() {
 	for _, agentMetrics := range allMetrics {
-		if agentMetrics.TxProcessing != nil {
-			agentMetrics.TxProcessing.Average = avgMetricArray(agentMetrics.TxProcessing.Data)
+		if agentMetrics.TxProcessingLatency != nil {
+			agentMetrics.AgentMetrics.TxProcessingLatencyMs.Average = avgMetricArray(agentMetrics.TxProcessingLatency)
 		}
-		if agentMetrics.BlockProcessing != nil {
-			agentMetrics.BlockProcessing.Average = avgMetricArray(agentMetrics.BlockProcessing.Data)
+		if agentMetrics.BlockProcessingLatency != nil {
+			agentMetrics.AgentMetrics.BlockProcessingLatencyMs.Average = avgMetricArray(agentMetrics.BlockProcessingLatency)
 		}
 	}
 }
 
-func avgMetricArray(data []*protocol.MetricData) int64 {
-	var sum float64
+func avgMetricArray(data []uint32) float64 {
+	sum := decimal.NewFromInt(0)
 	for _, dataPoint := range data {
-		sum += dataPoint.Value
+		sum = sum.Add(decimal.NewFromInt32(int32(dataPoint)))
 	}
-	return int64(sum) / int64(len(data))
+	f, _ := sum.Div(decimal.NewFromInt32(int32(len(data)))).Round(2).Float64()
+	return f
 }
 
-func (allMetrics allAgentMetrics) RemoveLowValues(thresholdMs int) {
+func (allMetrics allAgentMetrics) FindMaxValues() {
 	for _, agentMetrics := range allMetrics {
-		if agentMetrics.TxProcessing != nil {
-			agentMetrics.TxProcessing.Data = reduceMetricArray(agentMetrics.TxProcessing.Data, thresholdMs)
-		}
-		if agentMetrics.BlockProcessing != nil {
-			agentMetrics.BlockProcessing.Data = reduceMetricArray(agentMetrics.BlockProcessing.Data, thresholdMs)
-		}
+		findMetricsMax(agentMetrics)
 	}
 }
 
-func reduceMetricArray(oldData []*protocol.MetricData, threshold int) (newData []*protocol.MetricData) {
-	for _, dataPoint := range oldData {
-		if dataPoint.Value >= float64(threshold) {
-			newData = append(newData, dataPoint)
-		}
+func findMetricsMax(agentMetrics *metricsBucket) {
+	if agentMetrics.TxProcessingLatency != nil {
+		agentMetrics.AgentMetrics.TxProcessingLatencyMs.Max = maxDataPoint(agentMetrics.TxProcessingLatency)
 	}
-	return
+	if agentMetrics.BlockProcessingLatency != nil {
+		agentMetrics.AgentMetrics.BlockProcessingLatencyMs.Max = maxDataPoint(agentMetrics.BlockProcessingLatency)
+	}
 }
 
-func (allMetrics allAgentMetrics) CalculateFindingRates() {
+func maxDataPoint(data []uint32) float64 {
+	var max float64
+	for _, dataPoint := range data {
+		if float64(dataPoint) > max {
+			max = float64(dataPoint)
+		}
+	}
+	return max
+}
+
+func (allMetrics allAgentMetrics) CalculateP95() {
 	for _, agentMetrics := range allMetrics {
-		agentMetrics.FindingRatePct = float32(calculateRatePct(agentMetrics.FindingCount, agentMetrics.FindingCount+agentMetrics.NoFindingCount))
+		if agentMetrics.TxProcessingLatency != nil {
+			agentMetrics.AgentMetrics.TxProcessingLatencyMs.P95 = calcP95(agentMetrics.TxProcessingLatency)
+		}
+		if agentMetrics.BlockProcessingLatency != nil {
+			agentMetrics.AgentMetrics.BlockProcessingLatencyMs.P95 = calcP95(agentMetrics.BlockProcessingLatency)
+		}
 	}
 }
 
-func calculateRatePct(dividend, divisor int64) float64 {
-	const decimals = 100
-	const toPct = 100
-	res := float64(dividend*decimals*toPct) / float64(divisor)
-	return math.Round(res) / float64(decimals)
+func calcP95(data []uint32) float64 {
+	switch len(data) {
+	case 0:
+		return 0
+	case 1:
+		return float64(data[0])
+	}
+
+	k := len(data)
+	k95, _ := decimal.NewFromInt32(int32(k)).Mul(decimal.NewFromFloat32(0.95)).Floor().BigFloat().Int64()
+	sort.Slice(data, func(i, j int) bool {
+		return data[i] < data[j]
+	})
+	return float64(data[k95-1])
 }

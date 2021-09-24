@@ -24,8 +24,7 @@ const (
 
 // Agent receives blocks and transactions, and produces results.
 type Agent struct {
-	config           config.AgentConfig
-	metricsThreshold time.Duration
+	config config.AgentConfig
 
 	txRequests    chan *protocol.EvaluateTxRequest // never closed - deallocated when agent is discarded
 	txResults     chan<- *scanner.TxResult
@@ -162,9 +161,9 @@ func (agent *Agent) processTransactions() {
 		resp, err := agent.client.EvaluateTx(ctx, request)
 		cancel()
 		if err == nil {
-			metricCalc := agent.makeMetricData(&startTime)
-			resp.Metric = metricCalc.MetricData
-			lg.WithField("duration", metricCalc.Duration).Debugf("request successful")
+			var duration time.Duration
+			resp.Timestamp, resp.LatencyMs, duration = calculateResponseTime(&startTime)
+			lg.WithField("duration", duration).Debugf("request successful")
 			resp.Metadata["imageHash"] = agent.config.ImageHash()
 			agent.txResults <- &scanner.TxResult{
 				AgentConfig: agent.config,
@@ -201,9 +200,9 @@ func (agent *Agent) processBlocks() {
 		resp, err := agent.client.EvaluateBlock(ctx, request)
 		cancel()
 		if err == nil {
-			metricCalc := agent.makeMetricData(&startTime)
-			resp.Metric = metricCalc.MetricData
-			lg.WithField("duration", metricCalc.Duration).Debugf("request successful")
+			var duration time.Duration
+			resp.Timestamp, resp.LatencyMs, duration = calculateResponseTime(&startTime)
+			lg.WithField("duration", duration).Debugf("request successful")
 			resp.Metadata["imageHash"] = agent.config.ImageHash()
 			agent.blockResults <- &scanner.BlockResult{
 				AgentConfig: agent.config,
@@ -223,19 +222,9 @@ func (agent *Agent) processBlocks() {
 	}
 }
 
-type metricCalc struct {
-	Duration   time.Duration
-	MetricData *protocol.MetricData
-}
-
-func (agent *Agent) makeMetricData(startTime *time.Time) (calc metricCalc) {
-	now := time.Now()
-	calc.Duration = now.Sub(*startTime)
-	calc.MetricData = &protocol.MetricData{
-		Timestamp: now.Format(time.RFC3339),
-		Value:     float64(calc.Duration.Milliseconds()),
-	}
-	return
+func calculateResponseTime(startTime *time.Time) (timestamp string, latencyMs uint32, duration time.Duration) {
+	now := time.Now().UTC()
+	return now.Format(time.RFC3339), uint32(duration.Milliseconds()), duration
 }
 
 // ShouldProcessBlock tells if the agent should process block.
