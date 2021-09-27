@@ -207,10 +207,10 @@ func setCountMetric(summary *protocol.MetricSummary, count uint32) {
 	summary.Count = count
 	if count > 0 {
 		summary.Average = 1
+		summary.Max = 1
+		summary.P95 = 1
+		summary.Sum = float64(count)
 	}
-	summary.Max = 1
-	summary.P95 = 1
-	summary.Sum = float64(count)
 }
 
 func avgMetricArray(data []uint32) float64 {
