@@ -41,6 +41,17 @@ func init() {
 	testBucketTime4 = query.FindClosestBucketTime(testTime4)
 }
 
+type Metrics protocol.AgentMetrics
+
+func (metrics *Metrics) GetMetric(name string) *protocol.MetricSummary {
+	for _, summary := range metrics.Metrics {
+		if summary.Name == name {
+			return summary
+		}
+	}
+	return nil
+}
+
 func TestAgentMetricsAggregator(t *testing.T) {
 	r := require.New(t)
 
@@ -79,11 +90,13 @@ func TestAgentMetricsAggregator(t *testing.T) {
 		txProcessingCount uint32  = 3
 		txProcessingMax   float64 = 34
 		txProcessingP95   float64 = 10
+		txProcessingSum   float64 = 45
 
 		txProcessing2Avg   float64 = 45
 		txProcessing2Count uint32  = 1
 		txProcessing2Max   float64 = 45
 		txProcessing2P95   float64 = 45
+		txProcessing2Sum   float64 = 45
 	)
 
 	// Bucket 2: 2 findings, no error responses
@@ -100,6 +113,7 @@ func TestAgentMetricsAggregator(t *testing.T) {
 		blockProcessingCount uint32  = 1
 		blockProcessingMax   float64 = 20
 		blockProcessingP95   float64 = 20
+		blockProcessingSum   float64 = 20
 	)
 
 	// Agent 1: First the blocks and then the txs
@@ -134,67 +148,97 @@ func TestAgentMetricsAggregator(t *testing.T) {
 	b, _ := json.MarshalIndent(metrics, "", "  ")
 	t.Log("flushed metrics:", string(b))
 
-	metrics1 := metrics[0] // Agent 1, bucket 1
+	metrics1 := (*Metrics)(metrics[0]) // Agent 1, bucket 1
 	r.Equal(testAgentID1, metrics1.AgentId)
-	r.Equal(uint32(1), metrics1.ErrorCount)
-	r.Equal(uint32(3), metrics1.ResponseCount)
-	r.Equal(uint32(3), metrics1.FindingCount)
+	r.Equal(uint32(1), metrics1.GetMetric(query.MetricTxError).Count)
+	r.Equal(uint32(3), metrics1.GetMetric(query.MetricFinding).Count)
+	r.Equal(uint32(3), metrics1.GetMetric(query.MetricTxRequest).Count)
+	r.Equal(uint32(2), metrics1.GetMetric(query.MetricTxSuccess).Count)
 
-	r.Equal(txProcessingAvg, metrics1.TxProcessingLatencyMs.Average)
-	r.Equal(txProcessingCount, metrics1.TxProcessingLatencyMs.Count)
-	r.Equal(txProcessingMax, metrics1.TxProcessingLatencyMs.Max)
-	r.Equal(txProcessingP95, metrics1.TxProcessingLatencyMs.P95)
+	txLatencyMetric1 := metrics1.GetMetric(query.MetricTxLatency)
+	r.Equal(txProcessingAvg, txLatencyMetric1.Average)
+	r.Equal(txProcessingCount, txLatencyMetric1.Count)
+	r.Equal(txProcessingMax, txLatencyMetric1.Max)
+	r.Equal(txProcessingP95, txLatencyMetric1.P95)
+	r.Equal(txProcessingSum, txLatencyMetric1.Sum)
+
 	r.Equal(utils.FormatTime(testBucketTime1), metrics1.Timestamp)
 
-	r.Nil(metrics1.BlockProcessingLatencyMs)
+	r.Nil(metrics1.GetMetric(query.MetricBlockLatency))
+	r.Nil(metrics1.GetMetric(query.MetricBlockError))
+	r.Nil(metrics1.GetMetric(query.MetricBlockSuccess))
+	r.Nil(metrics1.GetMetric(query.MetricBlockRequest))
 
-	metrics2 := metrics[1] // Agent 2, bucket 1
+	metrics2 := (*Metrics)(metrics[1]) // Agent 2, bucket 1
 	r.Equal(testAgentID2, metrics2.AgentId)
-	r.Equal(uint32(1), metrics2.ErrorCount)
-	r.Equal(uint32(3), metrics2.ResponseCount)
-	r.Equal(uint32(3), metrics2.FindingCount)
-
-	r.Equal(txProcessingAvg, metrics2.TxProcessingLatencyMs.Average)
-	r.Equal(txProcessingCount, metrics2.TxProcessingLatencyMs.Count)
-	r.Equal(txProcessingMax, metrics2.TxProcessingLatencyMs.Max)
-	r.Equal(txProcessingP95, metrics2.TxProcessingLatencyMs.P95)
 	r.Equal(utils.FormatTime(testBucketTime1), metrics2.Timestamp)
 
-	r.Nil(metrics2.BlockProcessingLatencyMs)
+	r.Equal(uint32(1), metrics2.GetMetric(query.MetricTxError).Count)
+	r.Equal(uint32(3), metrics2.GetMetric(query.MetricFinding).Count)
+	r.Equal(uint32(3), metrics2.GetMetric(query.MetricTxRequest).Count)
+	r.Equal(uint32(2), metrics2.GetMetric(query.MetricTxSuccess).Count)
 
-	metrics3 := metrics[2] // Agent 1, bucket 2
+	txLatencyMetric2 := metrics2.GetMetric(query.MetricTxLatency)
+	r.Equal(txProcessingAvg, txLatencyMetric2.Average)
+	r.Equal(txProcessingCount, txLatencyMetric2.Count)
+	r.Equal(txProcessingMax, txLatencyMetric2.Max)
+	r.Equal(txProcessingP95, txLatencyMetric2.P95)
+	r.Equal(txProcessingSum, txLatencyMetric2.Sum)
+
+	r.Nil(metrics2.GetMetric(query.MetricBlockLatency))
+	r.Nil(metrics2.GetMetric(query.MetricBlockError))
+	r.Nil(metrics2.GetMetric(query.MetricBlockSuccess))
+	r.Nil(metrics2.GetMetric(query.MetricBlockRequest))
+
+	metrics3 := (*Metrics)(metrics[2]) // Agent 1, bucket 2
 	r.Equal(testAgentID1, metrics3.AgentId)
-	r.Equal(uint32(0), metrics3.ErrorCount)
-	r.Equal(uint32(2), metrics3.ResponseCount)
-	r.Equal(uint32(2), metrics3.FindingCount)
-
-	r.Equal(txProcessing2Avg, metrics3.TxProcessingLatencyMs.Average)
-	r.Equal(txProcessing2Count, metrics3.TxProcessingLatencyMs.Count)
-	r.Equal(txProcessing2Max, metrics3.TxProcessingLatencyMs.Max)
-	r.Equal(txProcessing2P95, metrics3.TxProcessingLatencyMs.P95)
 	r.Equal(utils.FormatTime(testBucketTime4), metrics3.Timestamp)
 
-	r.Equal(blockProcessingAvg, metrics3.BlockProcessingLatencyMs.Average)
-	r.Equal(blockProcessingCount, metrics3.BlockProcessingLatencyMs.Count)
-	r.Equal(blockProcessingMax, metrics3.BlockProcessingLatencyMs.Max)
-	r.Equal(blockProcessingP95, metrics3.BlockProcessingLatencyMs.P95)
-	r.Equal(utils.FormatTime(testBucketTime4), metrics3.Timestamp)
+	r.Equal(uint32(2), metrics3.GetMetric(query.MetricFinding).Count)
+	r.Equal(uint32(0), metrics3.GetMetric(query.MetricTxError).Count)
+	r.Equal(uint32(1), metrics3.GetMetric(query.MetricTxRequest).Count)
+	r.Equal(uint32(1), metrics3.GetMetric(query.MetricTxSuccess).Count)
+	r.Equal(uint32(0), metrics3.GetMetric(query.MetricBlockError).Count)
+	r.Equal(uint32(1), metrics3.GetMetric(query.MetricBlockRequest).Count)
+	r.Equal(uint32(1), metrics3.GetMetric(query.MetricBlockSuccess).Count)
 
-	metrics4 := metrics[3] // Agent 2, bucket 2
+	txLatencyMetric3 := metrics3.GetMetric(query.MetricTxLatency)
+	r.Equal(txProcessing2Avg, txLatencyMetric3.Average)
+	r.Equal(txProcessing2Count, txLatencyMetric3.Count)
+	r.Equal(txProcessing2Max, txLatencyMetric3.Max)
+	r.Equal(txProcessing2P95, txLatencyMetric3.P95)
+	r.Equal(txProcessing2Sum, txLatencyMetric3.Sum)
+
+	blockLatencyMetric3 := metrics3.GetMetric(query.MetricBlockLatency)
+	r.Equal(blockProcessingAvg, blockLatencyMetric3.Average)
+	r.Equal(blockProcessingCount, blockLatencyMetric3.Count)
+	r.Equal(blockProcessingMax, blockLatencyMetric3.Max)
+	r.Equal(blockProcessingP95, blockLatencyMetric3.P95)
+	r.Equal(blockProcessingSum, blockLatencyMetric3.Sum)
+
+	metrics4 := (*Metrics)(metrics[3]) // Agent 1, bucket 2
 	r.Equal(testAgentID2, metrics4.AgentId)
-	r.Equal(uint32(0), metrics4.ErrorCount)
-	r.Equal(uint32(2), metrics4.ResponseCount)
-	r.Equal(uint32(2), metrics4.FindingCount)
-
-	r.Equal(txProcessing2Avg, metrics4.TxProcessingLatencyMs.Average)
-	r.Equal(txProcessing2Count, metrics4.TxProcessingLatencyMs.Count)
-	r.Equal(txProcessing2Max, metrics4.TxProcessingLatencyMs.Max)
-	r.Equal(txProcessing2P95, metrics4.TxProcessingLatencyMs.P95)
 	r.Equal(utils.FormatTime(testBucketTime4), metrics4.Timestamp)
 
-	r.Equal(blockProcessingAvg, metrics4.BlockProcessingLatencyMs.Average)
-	r.Equal(blockProcessingCount, metrics4.BlockProcessingLatencyMs.Count)
-	r.Equal(blockProcessingMax, metrics4.BlockProcessingLatencyMs.Max)
-	r.Equal(blockProcessingP95, metrics4.BlockProcessingLatencyMs.P95)
-	r.Equal(utils.FormatTime(testBucketTime4), metrics4.Timestamp)
+	r.Equal(uint32(2), metrics4.GetMetric(query.MetricFinding).Count)
+	r.Equal(uint32(0), metrics4.GetMetric(query.MetricTxError).Count)
+	r.Equal(uint32(1), metrics4.GetMetric(query.MetricTxRequest).Count)
+	r.Equal(uint32(1), metrics4.GetMetric(query.MetricTxSuccess).Count)
+	r.Equal(uint32(0), metrics4.GetMetric(query.MetricBlockError).Count)
+	r.Equal(uint32(1), metrics4.GetMetric(query.MetricBlockRequest).Count)
+	r.Equal(uint32(1), metrics4.GetMetric(query.MetricBlockSuccess).Count)
+
+	txLatencyMetric4 := metrics4.GetMetric(query.MetricTxLatency)
+	r.Equal(txProcessing2Avg, txLatencyMetric4.Average)
+	r.Equal(txProcessing2Count, txLatencyMetric4.Count)
+	r.Equal(txProcessing2Max, txLatencyMetric4.Max)
+	r.Equal(txProcessing2P95, txLatencyMetric4.P95)
+	r.Equal(txProcessing2Sum, txLatencyMetric4.Sum)
+
+	blockLatencyMetric4 := metrics4.GetMetric(query.MetricBlockLatency)
+	r.Equal(blockProcessingAvg, blockLatencyMetric4.Average)
+	r.Equal(blockProcessingCount, blockLatencyMetric4.Count)
+	r.Equal(blockProcessingMax, blockLatencyMetric4.Max)
+	r.Equal(blockProcessingP95, blockLatencyMetric4.P95)
+	r.Equal(blockProcessingSum, blockLatencyMetric4.Sum)
 }
