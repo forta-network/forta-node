@@ -31,6 +31,7 @@ require (
 	github.com/ipfs/go-ipfs-api v0.2.0
 	github.com/klauspost/compress v1.13.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.8 // indirect
+	github.com/mitchellh/mapstructure v1.4.2
 	github.com/multiformats/go-multihash v0.0.15 // indirect
 	github.com/nats-io/nats-server/v2 v2.3.2 // indirect
 	github.com/nats-io/nats.go v1.11.1-0.20210623165838-4b75fc59ae30
