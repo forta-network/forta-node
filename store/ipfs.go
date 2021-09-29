@@ -1,4 +1,4 @@
-package registry
+package store
 
 import (
 	"encoding/json"

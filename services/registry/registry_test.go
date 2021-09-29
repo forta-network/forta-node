@@ -2,8 +2,6 @@ package registry
 
 import (
 	"fmt"
-	"github.com/forta-network/forta-node/utils"
-	"math/big"
 	"testing"
 
 	"golang.org/x/sync/semaphore"
@@ -11,8 +9,8 @@ import (
 	"github.com/forta-network/forta-node/clients/messaging"
 	mock_clients "github.com/forta-network/forta-node/clients/mocks"
 	"github.com/forta-network/forta-node/config"
-	"github.com/forta-network/forta-node/domain"
-	mock_registry "github.com/forta-network/forta-node/services/registry/mocks"
+	mock_store "github.com/forta-network/forta-node/store/mocks"
+
 	"github.com/forta-network/forta-node/services/registry/regtypes"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -27,16 +25,11 @@ const (
 	testAgentRef          = "QmWacxPov5FVCyvnpXroDJ76urakzN4ckpFhhRzpsAkRek"
 	testImageRef          = "bafybeide7cspdmxqjcpa3qvrayvfpiix2it4v6mjejjc22q72zbq7rm4re@sha256:cdd4ddccf5e9c740eb4144bcc68e3ea3a056789ec7453e94a6416dcfc80937a4"
 	testContainerRegistry = "some.reg.io"
-	testAgentLength       = 1
 )
 
 var (
 	testScannerAddress = common.HexToAddress(testScannerAddressStr)
-	testAgentID        = common.HexToHash(testAgentIDStr)
 	testAgentFile      = &regtypes.AgentFile{}
-	testVersion1       = [32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-	testVersion2       = [32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-	testAgentLengthBig = big.NewInt(testAgentLength)
 )
 
 // TestSuite runs the test suite.
@@ -50,10 +43,8 @@ func TestSuite(t *testing.T) {
 type Suite struct {
 	r *require.Assertions
 
-	scannerReg *mock_registry.MockScannerRegistryCaller
-	ipfsClient *mock_registry.MockIPFSClient
-	ethClient  *mock_registry.MockEthClient
-	msgClient  *mock_clients.MockMessageClient
+	registryStore *mock_store.MockRegistryStore
+	msgClient     *mock_clients.MockMessageClient
 
 	service *RegistryService
 
@@ -63,16 +54,12 @@ type Suite struct {
 // SetupTest sets up the test.
 func (s *Suite) SetupTest() {
 	s.r = require.New(s.T())
-	s.scannerReg = mock_registry.NewMockScannerRegistryCaller(gomock.NewController(s.T()))
-	s.ipfsClient = mock_registry.NewMockIPFSClient(gomock.NewController(s.T()))
-	s.ethClient = mock_registry.NewMockEthClient(gomock.NewController(s.T()))
+	s.registryStore = mock_store.NewMockRegistryStore(gomock.NewController(s.T()))
 	s.msgClient = mock_clients.NewMockMessageClient(gomock.NewController(s.T()))
 	s.service = &RegistryService{
 		scannerAddress: testScannerAddress,
 		msgClient:      s.msgClient,
-		scannerReg:     s.scannerReg,
-		ipfsClient:     s.ipfsClient,
-		ethClient:      s.ethClient,
+		registryStore:  s.registryStore,
 		done:           make(chan struct{}),
 		sem:            semaphore.NewWeighted(1),
 	}
@@ -104,48 +91,21 @@ func (ac agentConfigs) String() string {
 	return fmt.Sprintf("%+v", ([]*config.AgentConfig)(ac))
 }
 
-func (s *Suite) TestDifferentVersion() {
-	// Given that the last known version is 1
-	s.service.version = utils.Bytes32ToHex(testVersion1)
-	// When the last version is returned as 2 at the time of checking
-	s.scannerReg.EXPECT().GetAgentListHash(nil, s.service.scannerAddress).Return(testVersion2, nil)
-	// Then
-	s.shouldUpdateAgents()
-
-	s.NoError(s.service.publishLatestAgents())
-}
-
-func (s *Suite) shouldUpdateAgents() {
-	s.ethClient.EXPECT().BlockByNumber(gomock.Any(), gomock.Any()).Return(&domain.Block{Number: "0x1"}, nil)
-	s.scannerReg.EXPECT().AgentLength(gomock.Any(), testScannerAddress).Return(testAgentLengthBig, nil)
-	s.scannerReg.EXPECT().AgentAt(gomock.Any(), testScannerAddress, big.NewInt(testAgentLength-1)).
-		Return(testAgentID, big.NewInt(0), false, testAgentRef, false, nil)
-	s.ipfsClient.EXPECT().GetAgentFile(testAgentRef).Return(testAgentFile, nil)
-	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, (agentConfigs)([]*config.AgentConfig{
+func (s *Suite) TestPublishChanges() {
+	configs := (agentConfigs)([]*config.AgentConfig{
 		{
 			ID:    testAgentIDStr,
 			Image: fmt.Sprintf("%s/%s", testContainerRegistry, testImageRef),
 		},
-	}))
-}
+	})
 
-func (s *Suite) TestFirstTime() {
-	// Given that there is no last known version
-	s.service.version = ""
-	// When the last version is returned as anything
-	s.scannerReg.EXPECT().GetAgentListHash(nil, s.service.scannerAddress).Return(testVersion2, nil)
-	// Then
-	s.shouldUpdateAgents()
+	s.registryStore.EXPECT().GetAgentsIfChanged(s.service.scannerAddress.Hex()).Return(configs, true, nil)
+	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, configs)
 
 	s.NoError(s.service.publishLatestAgents())
 }
 
-func (s *Suite) TestSameVersion() {
-	// Given that the last known version is 1
-	s.service.version = utils.Bytes32ToHex(testVersion1)
-	// When the last version is returned as the same
-	s.scannerReg.EXPECT().GetAgentListHash(nil, s.service.scannerAddress).Return(testVersion1, nil)
-	// Then it should silently skip
-
+func (s *Suite) TestDoNotPublishChanges() {
+	s.registryStore.EXPECT().GetAgentsIfChanged(s.service.scannerAddress.Hex()).Return(nil, false, nil)
 	s.NoError(s.service.publishLatestAgents())
 }
