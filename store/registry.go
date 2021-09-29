@@ -19,10 +19,6 @@ type RegistryStore interface {
 	GetAgentsIfChanged(scanner string) ([]*config.AgentConfig, bool, error)
 }
 
-type IPFSClient interface {
-	GetAgentFile(cid string) (*regtypes.AgentFile, error)
-}
-
 type registryStore struct {
 	ctx        context.Context
 	eth        ethereum.Client

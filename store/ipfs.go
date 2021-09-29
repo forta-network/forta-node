@@ -8,6 +8,10 @@ import (
 	"github.com/forta-network/forta-node/services/registry/regtypes"
 )
 
+type IPFSClient interface {
+	GetAgentFile(cid string) (*regtypes.AgentFile, error)
+}
+
 type ipfsClient struct {
 	gatewayURL string
 }
