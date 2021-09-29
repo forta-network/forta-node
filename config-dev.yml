@@ -5,7 +5,7 @@ registry:
   ethereum:
     websocketUrl: "REGISTRY_WSS_URL"
     jsonRpcUrl: "REGISTRY_API_URL"
-  contractAddress: "0x38C1e080BeEb26eeA91932178E62987598230271"
+  contractAddress: "0x35114341a8BdD015D4D00aEe1848F0c723464359"
   containerRegistry: disco-dev.forta.network
   username: discouser
   password: discopass
@@ -34,7 +34,7 @@ query:
       skipEmpty: true
       intervalSeconds: 15
       maxAlerts: 100
-    contractAddress: "0xf4746faBc1D5E751248Ea3AC87ceB13C432F0C1A"
+    contractAddress: "0xC0556fC048B0F189F412DBba536aBD1a4ebD1349"
     ipfs:
       gatewayUrl: "http://ipfs.forta.internal:5001"
     ethereum:
