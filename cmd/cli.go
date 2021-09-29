@@ -6,9 +6,11 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/forta-network/forta-node/config"
+	"github.com/mitchellh/mapstructure"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/spf13/cobra"
@@ -165,9 +167,32 @@ func initConfig() {
 	cfg.LocalAgentsPath = path.Join(cfg.FortaDir, config.DefaultLocalAgentsFileName)
 	cfg.LocalAgents, _ = readLocalAgents()
 
+	// Inject our decode hook(s) to do extra stuff on the values before we unmarshal.
+	decoderOpts := viper.DecodeHook(
+		mapstructure.ComposeDecodeHookFunc(
+			mapstructure.StringToTimeDurationHookFunc(),
+			mapstructure.StringToSliceHookFunc(","),
+			resolveEnvVarsHookFunc,
+		),
+	)
+
 	viper.ReadInConfig()
-	viper.Unmarshal(&cfg)
+	viper.Unmarshal(&cfg, decoderOpts)
+
 	config.InitLogLevel(cfg)
+}
+
+var configEnvVarRegexp = regexp.MustCompile(`\$[A-Z0-9_]+`)
+
+func resolveEnvVarsHookFunc(from reflect.Kind, to reflect.Kind, data interface{}) (interface{}, error) {
+	if from != reflect.String {
+		return data, nil
+	}
+
+	// Resolve $ENV_VAR expressions to the values from the host OS environment.
+	return configEnvVarRegexp.ReplaceAllStringFunc(data.(string), func(match string) string {
+		return os.Getenv(match[1:])
+	}), nil
 }
 
 func validateConfig() error {
