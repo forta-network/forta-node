@@ -56,6 +56,7 @@ message Finding {
     EXPLOIT = 1;
     SUSPICIOUS = 2;
     DEGRADED = 3;
+    INFORMATION = 4;
   }
 
   string protocol = 1;
@@ -199,6 +200,7 @@ message TransactionEvent {
     string gasUsed = 1;
     string address = 2;
     string code = 3;
+    string output = 4;
   }
 
   message Trace {
