@@ -2,6 +2,7 @@ package feeds
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/forta-network/forta-node/domain"
 
@@ -10,8 +11,10 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
+const AlertBatchSignature = "AlertBatch(bytes32,address,uint256,uint256,uint256,uint256,uint256,string)"
+
 //AlertBatchTopic is the topic value for the AlertBatch event, which can be used for filtering
-const AlertBatchTopic = "0x36cde681f44e056b0e848fa24ffca3217ac9323460feeacf1a8ad8da28daf924"
+var AlertBatchTopic = crypto.Keccak256Hash([]byte(AlertBatchSignature)).Hex()
 
 type alertFeed struct {
 	ctx context.Context
