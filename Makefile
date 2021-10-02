@@ -22,6 +22,7 @@ mocks:
 	mockgen -source clients/interfaces.go -destination clients/mocks/mock_clients.go
 	mockgen -source feeds/interfaces.go -destination feeds/mocks/mock_feeds.go
 	mockgen -source services/registry/registry.go -destination services/registry/mocks/mock_registry.go
+	mockgen -source store/registry.go -destination store/mocks/mock_registry.go
 
 test:
 	go test -v -count=1 ./...
@@ -31,7 +32,7 @@ run:
 
 abigen:
 	abigen --abi ./contracts/agent_registry.json --out ./contracts/agent_registry.go --pkg contracts --type AgentRegistry
-	abigen --abi ./contracts/scanner_registry.json --out ./contracts/scanner_registry.go --pkg contracts --type ScannerRegistry
+	abigen --abi ./contracts/dispatch.json --out ./contracts/dispatch.go --pkg contracts --type Dispatch
 	abigen --abi ./contracts/alerts.json --out ./contracts/alerts.go --pkg contracts --type Alerts
 
 build-local: ## Build for local installation from source

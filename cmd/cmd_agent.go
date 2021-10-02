@@ -1,24 +1,24 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/forta-network/forta-node/store"
 	"io/ioutil"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/fatih/color"
 	"github.com/forta-network/forta-node/config"
-	"github.com/forta-network/forta-node/services/registry"
 	"github.com/spf13/cobra"
 )
 
 func handleFortaAgentAdd(cmd *cobra.Command, args []string) error {
-	reg := registry.New(cfg, common.HexToAddress(cfg.Registry.ContractAddress), nil)
-	if err := reg.Init(); err != nil {
-		return fmt.Errorf("failed to initialize")
+	reg, err := store.NewRegistryStore(context.Background(), cfg)
+	if err != nil {
+		return fmt.Errorf("failed to initialize registry")
 	}
 
-	agentCfg, err := reg.FindAgentGlobally(args[0], parsedArgs.Version)
+	agentCfg, err := reg.FindAgentGlobally(args[0])
 	if err != nil {
 		return fmt.Errorf("failed to load the agent: %v", err)
 	}
@@ -40,7 +40,7 @@ func handleFortaAgentAdd(cmd *cobra.Command, args []string) error {
 	// Two cases to add append an agent:
 	//  1. Different agent
 	//  2. Same agent, different image (i.e. different version)
-	cfg.LocalAgents = append(cfg.LocalAgents, &agentCfg)
+	cfg.LocalAgents = append(cfg.LocalAgents, agentCfg)
 
 	if err := writeLocalAgents(cfg.LocalAgents); err != nil {
 		return fmt.Errorf("failed to write the local agents file: %v", err)
