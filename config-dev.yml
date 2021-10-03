@@ -5,7 +5,7 @@ registry:
   ethereum:
     websocketUrl: "REGISTRY_WSS_URL"
     jsonRpcUrl: "REGISTRY_API_URL"
-  contractAddress: "0x35114341a8BdD015D4D00aEe1848F0c723464359"
+  contractAddress: "0x77Db997b9Ad5e14386aB367fa47de073b3743248"
   containerRegistry: disco-dev.forta.network
   username: discouser
   password: discopass

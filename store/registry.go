@@ -168,6 +168,7 @@ func NewRegistryStore(ctx context.Context, cfg config.Config) (*registryStore, e
 	return &registryStore{
 		ctx:        ctx,
 		eth:        ethClient,
+		cfg:        cfg,
 		dispatch:   d,
 		agents:     ar,
 		ipfsClient: &ipfsClient{ipfsURL},
