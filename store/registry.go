@@ -43,7 +43,7 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 		}
 		// get it again, so that the block is fixed throughout iteration
 		// this avoids getting the opts (getBlock) in the normal nothing-changed case
-		length, _, err := rs.getAgentListHash(opts, scanner)
+		length, hash, err := rs.getAgentListHash(opts, scanner)
 		if err != nil {
 			return nil, false, err
 		}
@@ -63,7 +63,7 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 			}
 			agts = append(agts, agtCfg)
 		}
-
+		rs.version = hash
 		return agts, true, nil
 	}
 	return nil, false, nil
