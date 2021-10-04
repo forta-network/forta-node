@@ -52,7 +52,7 @@ publishes alerts about them`,
 	cmdFortaRun = &cobra.Command{
 		Use:   "run",
 		Short: "launch the node",
-		RunE:  withInitialized(withValidConfig(handleFortaRun)),
+		RunE:  withContractAddresses(withInitialized(withValidConfig(handleFortaRun))),
 	}
 
 	cmdFortaAccount = &cobra.Command{
@@ -87,7 +87,7 @@ publishes alerts about them`,
 	cmdFortaAgentAdd = &cobra.Command{
 		Use:   "add",
 		Short: "try an agent by adding it to the local list",
-		RunE:  withDevOnly(withInitialized(withValidConfig(handleFortaAgentAdd))),
+		RunE:  withAgentRegContractAddress(withDevOnly(withInitialized(withValidConfig(handleFortaAgentAdd)))),
 	}
 
 	cmdFortaImages = &cobra.Command{
@@ -242,6 +242,24 @@ func withDevOnly(handler func(*cobra.Command, []string) error) func(*cobra.Comma
 	return func(cmd *cobra.Command, args []string) error {
 		if !cfg.Development {
 			return nil // no-op feature if not a dev run
+		}
+		return handler(cmd, args)
+	}
+}
+
+func withContractAddresses(handler func(*cobra.Command, []string) error) func(*cobra.Command, []string) error {
+	return func(cmd *cobra.Command, args []string) error {
+		if err := useEnsDefaults(); err != nil {
+			return err
+		}
+		return handler(cmd, args)
+	}
+}
+
+func withAgentRegContractAddress(handler func(*cobra.Command, []string) error) func(*cobra.Command, []string) error {
+	return func(cmd *cobra.Command, args []string) error {
+		if err := useEnsAgentReg(); err != nil {
+			return err
 		}
 		return handler(cmd, args)
 	}

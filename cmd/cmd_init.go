@@ -68,13 +68,12 @@ registry:
   ethereum:
     websocketUrl: <fill in this and remove other>
     jsonRpcUrl: <fill in this and remove other>
-  contractAddress: {{ .DefaultDispatcherRegistryContractAddress }} # Auto-set to default
+  # contractAddress: <fill in this to override auto-set default>
   containerRegistry: {{ .DiscoSubdomain }} # Auto-set
   username: discouser
   password: discopass
 
 scanner:
-  scannerImage: forta-network/forta-scanner
   chainId: <fill in correctly>
   # startBlock: 123 <if you do not fill this in, it will start from the latest block>
   # endBlock: 123 <fill this in and enable if you really need>
@@ -83,7 +82,6 @@ scanner:
     jsonRpcUrl: <fill in this and remove other>
 
 jsonRpcProxy:
-  jsonRpcImage: forta-network/forta-json-rpc
   ethereum:
     websocketUrl: <fill in this and remove other>
     jsonRpcUrl: <fill in this and remove other>
@@ -95,7 +93,6 @@ trace:
   #   jsonRpcUrl: <fill in this and remove other>
 
 query:
-  queryImage: forta-network/forta-query
   port: 8778
   publishTo:
     skipPublish: true # Make this false when your config is ready for publishing
@@ -103,7 +100,7 @@ query:
       skipEmpty: false
       intervalSeconds: 15
       maxAlerts: 100
-    contractAddress: {{ .DefaultAlertContractAddress }} # Auto-set to default
+		# contractAddress: <fill in this to override auto-set default>
     # ipfs:
     #   gatewayUrl: <set this to get ready for publishing>
     #   username: <set if needed>

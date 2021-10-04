@@ -22,3 +22,7 @@ func greenBold(str string, args ...interface{}) {
 func redBold(str string, args ...interface{}) {
 	toStderr(color.New(color.Bold, color.FgRed).Sprintf(str, args...))
 }
+
+func whiteBold(str string, args ...interface{}) {
+	color.New(color.Bold, color.FgWhite).Printf(str, args...)
+}

@@ -3,6 +3,8 @@ package store
 import (
 	"context"
 	"fmt"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -11,7 +13,6 @@ import (
 	"github.com/forta-network/forta-node/ethereum"
 	"github.com/forta-network/forta-node/services/registry/regtypes"
 	"github.com/forta-network/forta-node/utils"
-	"math/big"
 )
 
 type RegistryStore interface {
@@ -135,7 +136,7 @@ func (rs *registryStore) optsWithLatestBlock() (*bind.CallOpts, error) {
 }
 
 func NewRegistryStore(ctx context.Context, cfg config.Config) (*registryStore, error) {
-	agentRegAddress := config.GetEnvDefaults(cfg.Development).DefaultAgentRegistryContractAddress
+	agentRegAddress := cfg.AgentRegistryContractAddress
 
 	rpc, err := ethereum.NewRpcClient(cfg.Registry.Ethereum.JsonRpcUrl)
 	if err != nil {

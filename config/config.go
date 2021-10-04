@@ -171,13 +171,14 @@ type ResourcesConfig struct {
 }
 
 type Config struct {
-	Development     bool           `yaml:"-" json:"-"`
-	FortaDir        string         `yaml:"-" json:"-"`
-	ConfigPath      string         `yaml:"-" json:"-"`
-	KeyDirPath      string         `yaml:"-" json:"-"`
-	Passphrase      string         `yaml:"-" json:"-"`
-	LocalAgentsPath string         `yaml:"-" json:"-"`
-	LocalAgents     []*AgentConfig `yaml:"-" json:"localAgents"`
+	Development                  bool           `yaml:"-" json:"-"`
+	FortaDir                     string         `yaml:"-" json:"-"`
+	ConfigPath                   string         `yaml:"-" json:"-"`
+	KeyDirPath                   string         `yaml:"-" json:"-"`
+	Passphrase                   string         `yaml:"-" json:"-"`
+	LocalAgentsPath              string         `yaml:"-" json:"-"`
+	LocalAgents                  []*AgentConfig `yaml:"-" json:"localAgents"`
+	AgentRegistryContractAddress string         `yaml:"-" json:"agentRegistry"`
 
 	Registry        RegistryConfig     `yaml:"registry" json:"registry"`
 	Scanner         ScannerConfig      `yaml:"scanner" json:"scanner"`
@@ -244,26 +245,33 @@ func readFile(filename string, cfg *Config) error {
 
 // EnvDefaults contain default values for one env.
 type EnvDefaults struct {
-	DefaultAgentRegistryContractAddress      string
-	DefaultDispatcherRegistryContractAddress string
-	DefaultAlertContractAddress              string
-	DiscoSubdomain                           string
+	DiscoSubdomain string
 }
 
 // GetEnvDefaults returns the default values for an env.
 func GetEnvDefaults(development bool) EnvDefaults {
 	if development {
 		return EnvDefaults{
-			DefaultAgentRegistryContractAddress:      "0xa3a0ea252d3cf18b30c3ada0e013671beedb4262",
-			DefaultDispatcherRegistryContractAddress: "0x35114341a8BdD015D4D00aEe1848F0c723464359",
-			DefaultAlertContractAddress:              "0xC0556fC048B0F189F412DBba536aBD1a4ebD1349",
-			DiscoSubdomain:                           "disco-dev",
+			DiscoSubdomain: "disco-dev",
 		}
 	}
 	return EnvDefaults{
-		DefaultAgentRegistryContractAddress:      "0xFE1927bF5bc338e4884A0d406e33921e8058d75d",
-		DefaultDispatcherRegistryContractAddress: "0x1Ad235EF22Dd15d291ecD4b44a5739aD4F61b3A5",
-		DefaultAlertContractAddress:              "0x8c06716460e4A6E8Ca6a0bfe7190b1a6A059eA2F",
-		DiscoSubdomain:                           "disco",
+		DiscoSubdomain: "disco",
+	}
+}
+
+// ENS contains the default names.
+type ENS struct {
+	Dispatch string
+	Alerts   string
+	Agents   string
+}
+
+// GetENSNames returns the default ENS names.
+func GetENSNames() *ENS {
+	return &ENS{
+		Dispatch: "dispatch.forta.eth",
+		Alerts:   "alerts.forta.eth",
+		Agents:   "agents.registries.forta.eth",
 	}
 }
