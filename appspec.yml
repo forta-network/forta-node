@@ -9,6 +9,9 @@ hooks:
       timeout: 300
       runas: forta
   AfterInstall:
+    - location: scripts/install.sh
+      timeout: 500
+      runas: root
     - location: scripts/set-permissions.sh
       timeout: 300
       runas: root
