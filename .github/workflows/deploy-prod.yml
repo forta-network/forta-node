@@ -47,12 +47,11 @@ jobs:
           REVISION: ${{ github.sha }}
         run: |
           aws s3 cp forta "s3://$BUCKET_NAME/forta-$REVISION"
-      
+
       - name: Prepare Distribution
         run: |
           mkdir dist
           cp forta dist/
-          cp config-prod.yml dist/config.yml
           cp appspec.yml dist/
           cp -R scripts dist/
       - name: Zip Distribution

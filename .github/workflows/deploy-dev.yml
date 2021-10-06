@@ -64,7 +64,6 @@ jobs:
       - name: Prepare Distribution
         run: |
           mkdir dist
-          aws s3 cp --recursive s3://dev-forta-codedeploy/configs dist/configs
           cp forta dist/
           cp appspec.yml dist/
           cp -R scripts dist/
