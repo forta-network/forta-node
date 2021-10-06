@@ -3,8 +3,6 @@ os: linux
 files:
   - source: forta
     destination: /usr/local/bin/
-  - source: configs
-    destination: /etc/forta/
 hooks:
   BeforeInstall:
     - location: scripts/stop-server.sh

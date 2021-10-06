@@ -26,7 +26,7 @@ if [ -z "$privateKeyItem" ]; then
 	privateKeyJson=$(echo $privateKeyJson | jq -RM) # escape so we can put it into another JSON
 	dynamoItemTpl='{NodeName:{S:$name},EthereumAddress:{S:$address},PrivateKeyJson:{S:$privKeyJson},FileName:{S:$keyFileName},Network:{S:$networkName}}'
 	privateKeyItem=$(jq -ncM --arg name "$nodeName" --arg address "$ethereumAddress" --arg privKeyJson "$privateKeyJson" --arg keyFileName "$privateKeyFileName" --arg networkName "$networkName" "$dynamoItemTpl")
-    aws dynamodb put-item --region $region --table-name $privateKeysTable --item "$privateKeyItem"
+	aws dynamodb put-item --region $region --table-name $privateKeysTable --item "$privateKeyItem"
 fi
 privateKeyJson=$(echo $privateKeyItem | jq -r '.PrivateKeyJson.S')
 privateKeyFileName=$(echo $privateKeyItem | jq -r '.FileName.S')
