@@ -21,6 +21,11 @@ mainnetApiUrlId="${envPrefix}_mainnet_api_url"
 mainnetApiUrlUnsafe=$(aws secretsmanager --region $region get-secret-value --secret-id $mainnetApiUrlId |jq -r '.SecretString')
 mainnetApiUrl=$(printf '%s\n' "$mainnetApiUrlUnsafe" | sed -e 's/[]\/$*.^[]/\\&/g');
 
+# get config file name and config file
+configFileName=$(aws ec2 describe-tags --region $region --filters "Name=resource-id,Values=$instanceId" "Name=key,Values=FortaConfig" | jq -r '.Tags[0].Value')
+configBucketName="$envPrefix-forta-codedeploy"
+aws s3 cp --region $region "s3://$configBucketName/configs/$configFileName" "/etc/forta/config.yml" 
+
 sed -i "s/ALCHEMY_URL/$apiUrl/g" /etc/forta/config.yml
 sed -i "s/REGISTRY_API_URL/$registryApiUrl/g" /etc/forta/config.yml
 sed -i "s/REGISTRY_WSS_URL/$registryWssUrl/g" /etc/forta/config.yml

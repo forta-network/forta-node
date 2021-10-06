@@ -33,10 +33,5 @@ privateKeyFileName=$(echo $privateKeyItem | jq -r '.FileName.S')
 # write the private key file to ensure it exists in the right place
 cat "$privateKeyJson" > "$HOME/.forta/.keys/$privateKeyFileName"
 
-# get config file name and config file
-configFileName=$(aws ec2 describe-tags --region $region --filters "Name=resource-id,Values=$instanceId" "Name=key,Values=FortaConfig" | jq -r '.Tags[0].Value')
-configBucketName="$envPrefix-forta-codedeploy"
-aws s3 cp --region $region "s3://$configBucketName/configs/$configFileName" "$HOME/.forta/config.yml" 
-
 nohup \
-	forta --passphrase $passphrase run > /dev/null 2> /tmp/forta.log < /dev/null &
+	forta --config "/etc/forta/config.yml" --passphrase $passphrase run > /dev/null 2> /tmp/forta.log < /dev/null &
