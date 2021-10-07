@@ -81,11 +81,13 @@ func (t *TxNodeService) handleAgentRun(payload messaging.AgentPayload) error {
 		}
 
 		if err := t.startAgent(agent); err != nil {
-			return err
+			log.Errorf("failed to start agent: %v", err)
+			continue
 		}
+
+		// Broadcast the agent status.
+		t.msgClient.Publish(messaging.SubjectAgentsStatusRunning, messaging.AgentPayload{agent})
 	}
-	// Broadcast the agent statuses.
-	t.msgClient.Publish(messaging.SubjectAgentsStatusRunning, payload)
 	return nil
 }
 
