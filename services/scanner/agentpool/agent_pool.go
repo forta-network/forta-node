@@ -26,7 +26,7 @@ type AgentPool struct {
 	txResults    chan *scanner.TxResult
 	blockResults chan *scanner.BlockResult
 	msgClient    clients.MessageClient
-	dialer       func(config.AgentConfig) clients.AgentClient
+	dialer       func(config.AgentConfig) (clients.AgentClient, error)
 	mu           sync.RWMutex
 }
 
@@ -36,10 +36,12 @@ func NewAgentPool(cfg config.ScannerConfig, msgClient clients.MessageClient) *Ag
 		txResults:    make(chan *scanner.TxResult, DefaultBufferSize),
 		blockResults: make(chan *scanner.BlockResult, DefaultBufferSize),
 		msgClient:    msgClient,
-		dialer: func(ac config.AgentConfig) clients.AgentClient {
+		dialer: func(ac config.AgentConfig) (clients.AgentClient, error) {
 			client := agentgrpc.NewClient()
-			client.MustDial(ac)
-			return client
+			if err := client.Dial(ac); err != nil {
+				return nil, err
+			}
+			return client, nil
 		},
 	}
 
@@ -230,14 +232,24 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	log.Debug("handleStatusRunning")
 	// If an agent was added before and just started to run, we should mark as ready.
+	var agentsToStop []config.AgentConfig
 	for _, agentCfg := range payload {
 		for _, agent := range ap.agents {
 			if agent.Config().ContainerName() == agentCfg.ContainerName() {
-				agent.SetClient(ap.dialer(agent.Config()))
+				c, err := ap.dialer(agent.Config())
+				if err != nil {
+					log.WithField("agent", agent.Config().ID).WithError(err).Error("handleStatusRunning: error while dialing")
+					agentsToStop = append(agentsToStop, agent.Config())
+					continue
+				}
+				agent.SetClient(c)
 				agent.SetReady()
 				agent.StartProcessing()
 			}
 		}
+	}
+	if len(agentsToStop) > 0 {
+		ap.msgClient.Publish(messaging.SubjectAgentsActionStop, agentsToStop)
 	}
 	return nil
 }

@@ -252,6 +252,20 @@ func (mr *MockAgentClientMockRecorder) Close() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockAgentClient)(nil).Close))
 }
 
+// Dial mocks base method.
+func (m *MockAgentClient) Dial(arg0 config.AgentConfig) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Dial", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Dial indicates an expected call of Dial.
+func (mr *MockAgentClientMockRecorder) Dial(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dial", reflect.TypeOf((*MockAgentClient)(nil).Dial), arg0)
+}
+
 // EvaluateBlock mocks base method.
 func (m *MockAgentClient) EvaluateBlock(ctx context.Context, in *protocol.EvaluateBlockRequest, opts ...grpc.CallOption) (*protocol.EvaluateBlockResponse, error) {
 	m.ctrl.T.Helper()
@@ -310,16 +324,4 @@ func (mr *MockAgentClientMockRecorder) Initialize(ctx, in interface{}, opts ...i
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, in}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Initialize", reflect.TypeOf((*MockAgentClient)(nil).Initialize), varargs...)
-}
-
-// MustDial mocks base method.
-func (m *MockAgentClient) MustDial(arg0 config.AgentConfig) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "MustDial", arg0)
-}
-
-// MustDial indicates an expected call of MustDial.
-func (mr *MockAgentClientMockRecorder) MustDial(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MustDial", reflect.TypeOf((*MockAgentClient)(nil).MustDial), arg0)
 }

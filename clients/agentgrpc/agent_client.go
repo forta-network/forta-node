@@ -22,8 +22,8 @@ func NewClient() *Client {
 	return &Client{}
 }
 
-// MustDial dials an agent using the config.
-func (client *Client) MustDial(cfg config.AgentConfig) {
+// Dial dials an agent using the config.
+func (client *Client) Dial(cfg config.AgentConfig) error {
 	var (
 		conn *grpc.ClientConn
 		err  error
@@ -38,11 +38,13 @@ func (client *Client) MustDial(cfg config.AgentConfig) {
 		time.Sleep(time.Second * 2)
 	}
 	if err != nil {
-		log.Panic(err)
+		log.Error(err)
+		return err
 	}
 	client.conn = conn
 	client.AgentClient = protocol.NewAgentClient(conn)
 	log.Debugf("connected to agent: %s", cfg.ContainerName())
+	return nil
 }
 
 // Close implements io.Closer.

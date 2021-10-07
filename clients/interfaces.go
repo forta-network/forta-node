@@ -29,7 +29,7 @@ type MessageClient interface {
 
 // AgentClient makes the gRPC requests to evaluate block and txs and receive results.
 type AgentClient interface {
-	MustDial(config.AgentConfig)
+	Dial(config.AgentConfig) error
 	protocol.AgentClient
 	io.Closer
 }
