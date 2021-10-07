@@ -77,6 +77,7 @@ func (t *TxNodeService) handleAgentRun(payload messaging.AgentPayload) error {
 		_, ok := t.getContainerUnsafe(agent.ContainerName())
 		if ok {
 			log.Infof("agent container '%s' is already running - skipped", agent.ContainerName())
+			t.msgClient.Publish(messaging.SubjectAgentsStatusRunning, messaging.AgentPayload{agent})
 			continue
 		}
 
