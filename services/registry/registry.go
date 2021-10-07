@@ -163,7 +163,10 @@ func (rs *RegistryService) publishLatestAgents() error {
 		// opts is nil so we get the latest scanner list version
 		version, err := rs.scannerReg.GetAgentListHash(nil, rs.scannerAddress)
 		if err != nil {
-			log.WithField("scannerAddress", rs.scannerAddress).Error(err)
+			log.WithFields(log.Fields{
+				"scannerAddress":  rs.scannerAddress,
+				"contractAddress": rs.cfg.Registry.ContractAddress,
+			}).Error(err)
 			return fmt.Errorf("failed to get the scanner list agents version: %v", err)
 		}
 		versionStr := utils.Bytes32ToHex(version)
