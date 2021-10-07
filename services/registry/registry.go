@@ -144,7 +144,7 @@ func (rs *RegistryService) FindAgentGlobally(agentID string, version uint64) (co
 func (rs *RegistryService) start() error {
 	go func() {
 		//TODO: possibly make this configurable, but 15s per block is normal
-		ticker := time.NewTicker(15 * time.Second)
+		ticker := time.NewTicker(1 * time.Minute)
 		for {
 			if err := rs.publishLatestAgents(); err != nil {
 				log.Errorf("failed to publish the latest agents: %v", err)
@@ -161,28 +161,17 @@ func (rs *RegistryService) publishLatestAgents() error {
 	if rs.sem.TryAcquire(1) {
 		defer rs.sem.Release(1)
 		// opts is nil so we get the latest scanner list version
-		version, err := rs.scannerReg.GetAgentListHash(nil, rs.scannerAddress)
+		c, err := rs.getLatestAgents()
 		if err != nil {
 			log.WithFields(log.Fields{
 				"scannerAddress":  rs.scannerAddress,
 				"contractAddress": rs.cfg.Registry.ContractAddress,
 			}).Error(err)
-			return fmt.Errorf("failed to get the scanner list agents version: %v", err)
+			return fmt.Errorf("failed to get latest agents: %v", err)
 		}
-		versionStr := utils.Bytes32ToHex(version)
-		// if versions change, then get the full list of agents
-		if rs.version == "" || rs.version != versionStr {
-			log.Infof("registry: agent version changed %s->%s", rs.version, versionStr)
-			rs.version = versionStr
-			rs.agentsConfigs, err = rs.getLatestAgents()
-			if err != nil {
-				return fmt.Errorf("failed to get latest agents: %v", err)
-			}
-			log.Infof("registry: publishing %d agents", len(rs.agentsConfigs))
-			rs.msgClient.Publish(messaging.SubjectAgentsVersionsLatest, rs.agentsConfigs)
-		} else {
-			log.Info("registry: no agent changes detected")
-		}
+		rs.agentsConfigs = c
+		log.Infof("registry: publishing %d agents", len(rs.agentsConfigs))
+		rs.msgClient.Publish(messaging.SubjectAgentsVersionsLatest, rs.agentsConfigs)
 	}
 	return nil
 }
