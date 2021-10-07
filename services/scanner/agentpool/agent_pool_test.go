@@ -47,8 +47,8 @@ func (s *Suite) SetupTest() {
 		txResults:    make(chan *scanner.TxResult, DefaultBufferSize),
 		blockResults: make(chan *scanner.BlockResult, DefaultBufferSize),
 		msgClient:    s.msgClient,
-		dialer: func(agentCfg config.AgentConfig) clients.AgentClient {
-			return s.agentClient
+		dialer: func(agentCfg config.AgentConfig) (clients.AgentClient, error) {
+			return s.agentClient, nil
 		},
 	}
 }
