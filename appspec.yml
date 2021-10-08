@@ -3,14 +3,15 @@ os: linux
 files:
   - source: forta
     destination: /usr/local/bin/
-  - source: config.yml
-    destination: /etc/forta/
 hooks:
   BeforeInstall:
     - location: scripts/stop-server.sh
       timeout: 300
       runas: forta
   AfterInstall:
+    - location: scripts/install.sh
+      timeout: 500
+      runas: root
     - location: scripts/set-permissions.sh
       timeout: 300
       runas: root
