@@ -16,6 +16,7 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"github.com/forta-network/forta-node/utils/workers"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -67,6 +68,7 @@ func (dcl DockerContainerList) FindByID(id string) (*types.Container, bool) {
 
 type dockerClient struct {
 	cli      *client.Client
+	workers  *workers.Workers
 	username string
 	password string
 }
@@ -90,7 +92,14 @@ func registryAuthValue(username, password string) string {
 	return base64.StdEncoding.EncodeToString(jsonBytes)
 }
 
+// PullImage pulls an image using the given ref.
 func (d *dockerClient) PullImage(ctx context.Context, refStr string) error {
+	return d.workers.Execute(workers.WorkFunc(func() ([]interface{}, error) {
+		return nil, d.pullImage(ctx, refStr)
+	})).Error
+}
+
+func (d *dockerClient) pullImage(ctx context.Context, refStr string) error {
 	r, err := d.cli.ImagePull(ctx, refStr, types.ImagePullOptions{
 		RegistryAuth: registryAuthValue(d.username, d.password),
 	})
@@ -353,6 +362,7 @@ func NewAuthDockerClient(username, password string) (*dockerClient, error) {
 	}
 	return &dockerClient{
 		cli:      cli,
+		workers:  workers.New(10),
 		username: username,
 		password: password,
 	}, nil
