@@ -77,15 +77,18 @@ func (t *TxNodeService) handleAgentRun(payload messaging.AgentPayload) error {
 		_, ok := t.getContainerUnsafe(agent.ContainerName())
 		if ok {
 			log.Infof("agent container '%s' is already running - skipped", agent.ContainerName())
+			t.msgClient.Publish(messaging.SubjectAgentsStatusRunning, messaging.AgentPayload{agent})
 			continue
 		}
 
 		if err := t.startAgent(agent); err != nil {
-			return err
+			log.Errorf("failed to start agent: %v", err)
+			continue
 		}
+
+		// Broadcast the agent status.
+		t.msgClient.Publish(messaging.SubjectAgentsStatusRunning, messaging.AgentPayload{agent})
 	}
-	// Broadcast the agent statuses.
-	t.msgClient.Publish(messaging.SubjectAgentsStatusRunning, payload)
 	return nil
 }
 
