@@ -28,16 +28,9 @@ var (
 	_ = event.NewSubscription
 )
 
-// AgentRegistryMetadataAgentMetadata is an auto generated low-level Go binding around an user-defined struct.
-type AgentRegistryMetadataAgentMetadata struct {
-	Version  *big.Int
-	Metadata string
-	ChainIds []*big.Int
-}
-
 // AgentRegistryMetaData contains all meta data concerning the AgentRegistry contract.
 var AgentRegistryMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newAddressManager\",\"type\":\"address\"}],\"name\":\"AccessManagerUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"commit\",\"type\":\"bytes32\"}],\"name\":\"AgentCommitted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"agentId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"enumAgentRegistryEnable.Permission\",\"name\":\"permission\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"enabled\",\"type\":\"bool\"}],\"name\":\"AgentEnabled\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"agentId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint256[]\",\"name\":\"chainIds\",\"type\":\"uint256[]\"}],\"name\":\"AgentUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"router\",\"type\":\"address\"}],\"name\":\"RouterUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"agentId\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"uint256[]\",\"name\":\"chainIds\",\"type\":\"uint256[]\"}],\"name\":\"createAgent\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"agentId\",\"type\":\"uint256\"},{\"internalType\":\"enumAgentRegistryEnable.Permission\",\"name\":\"permission\",\"type\":\"uint8\"}],\"name\":\"disableAgent\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"agentId\",\"type\":\"uint256\"},{\"internalType\":\"enumAgentRegistryEnable.Permission\",\"name\":\"permission\",\"type\":\"uint8\"}],\"name\":\"enableAgent\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"agentId\",\"type\":\"uint256\"}],\"name\":\"getAgent\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"version\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"uint256[]\",\"name\":\"chainIds\",\"type\":\"uint256[]\"}],\"internalType\":\"structAgentRegistryMetadata.AgentMetadata\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getAgentByChainAndIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getAgentByIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAgentCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"}],\"name\":\"getAgentCountByChain\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"__manager\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"__router\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"__name\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"__symbol\",\"type\":\"string\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"agentId\",\"type\":\"uint256\"}],\"name\":\"isEnabled\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes[]\",\"name\":\"data\",\"type\":\"bytes[]\"}],\"name\":\"multicall\",\"outputs\":[{\"internalType\":\"bytes[]\",\"name\":\"results\",\"type\":\"bytes[]\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"commit\",\"type\":\"bytes32\"}],\"name\":\"prepareAgent\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newManager\",\"type\":\"address\"}],\"name\":\"setAccessManager\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"ensRegistry\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"ensName\",\"type\":\"string\"}],\"name\":\"setName\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newRouter\",\"type\":\"address\"}],\"name\":\"setRouter\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"tokenURI\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"agentId\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"uint256[]\",\"name\":\"chainIds\",\"type\":\"uint256[]\"}],\"name\":\"updateAgent\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newAddressManager\",\"type\":\"address\"}],\"name\":\"AccessManagerUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"commit\",\"type\":\"bytes32\"}],\"name\":\"AgentCommitted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"agentId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"bool\",\"name\":\"enabled\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"enumAgentRegistryEnable.Permission\",\"name\":\"permission\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"value\",\"type\":\"bool\"}],\"name\":\"AgentEnabled\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"agentId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"by\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint256[]\",\"name\":\"chainIds\",\"type\":\"uint256[]\"}],\"name\":\"AgentUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"router\",\"type\":\"address\"}],\"name\":\"RouterUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"agentId\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"uint256[]\",\"name\":\"chainIds\",\"type\":\"uint256[]\"}],\"name\":\"createAgent\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"agentId\",\"type\":\"uint256\"},{\"internalType\":\"enumAgentRegistryEnable.Permission\",\"name\":\"permission\",\"type\":\"uint8\"}],\"name\":\"disableAgent\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"agentId\",\"type\":\"uint256\"},{\"internalType\":\"enumAgentRegistryEnable.Permission\",\"name\":\"permission\",\"type\":\"uint8\"}],\"name\":\"enableAgent\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"agentId\",\"type\":\"uint256\"}],\"name\":\"getAgent\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"version\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"uint256[]\",\"name\":\"chainIds\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getAgentByChainAndIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getAgentByIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAgentCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"}],\"name\":\"getAgentCountByChain\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"__manager\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"__router\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"__name\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"__symbol\",\"type\":\"string\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"agentId\",\"type\":\"uint256\"}],\"name\":\"isEnabled\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes[]\",\"name\":\"data\",\"type\":\"bytes[]\"}],\"name\":\"multicall\",\"outputs\":[{\"internalType\":\"bytes[]\",\"name\":\"results\",\"type\":\"bytes[]\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"commit\",\"type\":\"bytes32\"}],\"name\":\"prepareAgent\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newManager\",\"type\":\"address\"}],\"name\":\"setAccessManager\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"ensRegistry\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"ensName\",\"type\":\"string\"}],\"name\":\"setName\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newRouter\",\"type\":\"address\"}],\"name\":\"setRouter\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"tokenURI\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"agentId\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"uint256[]\",\"name\":\"chainIds\",\"type\":\"uint256[]\"}],\"name\":\"updateAgent\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]",
 }
 
 // AgentRegistryABI is the input ABI used to generate the binding from.
@@ -250,32 +243,51 @@ func (_AgentRegistry *AgentRegistryCallerSession) BalanceOf(owner common.Address
 
 // GetAgent is a free data retrieval call binding the contract method 0x2de5aaf7.
 //
-// Solidity: function getAgent(uint256 agentId) view returns((uint256,string,uint256[]))
-func (_AgentRegistry *AgentRegistryCaller) GetAgent(opts *bind.CallOpts, agentId *big.Int) (AgentRegistryMetadataAgentMetadata, error) {
+// Solidity: function getAgent(uint256 agentId) view returns(uint256 version, string metadata, uint256[] chainIds)
+func (_AgentRegistry *AgentRegistryCaller) GetAgent(opts *bind.CallOpts, agentId *big.Int) (struct {
+	Version  *big.Int
+	Metadata string
+	ChainIds []*big.Int
+}, error) {
 	var out []interface{}
 	err := _AgentRegistry.contract.Call(opts, &out, "getAgent", agentId)
 
+	outstruct := new(struct {
+		Version  *big.Int
+		Metadata string
+		ChainIds []*big.Int
+	})
 	if err != nil {
-		return *new(AgentRegistryMetadataAgentMetadata), err
+		return *outstruct, err
 	}
 
-	out0 := *abi.ConvertType(out[0], new(AgentRegistryMetadataAgentMetadata)).(*AgentRegistryMetadataAgentMetadata)
+	outstruct.Version = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	outstruct.Metadata = *abi.ConvertType(out[1], new(string)).(*string)
+	outstruct.ChainIds = *abi.ConvertType(out[2], new([]*big.Int)).(*[]*big.Int)
 
-	return out0, err
+	return *outstruct, err
 
 }
 
 // GetAgent is a free data retrieval call binding the contract method 0x2de5aaf7.
 //
-// Solidity: function getAgent(uint256 agentId) view returns((uint256,string,uint256[]))
-func (_AgentRegistry *AgentRegistrySession) GetAgent(agentId *big.Int) (AgentRegistryMetadataAgentMetadata, error) {
+// Solidity: function getAgent(uint256 agentId) view returns(uint256 version, string metadata, uint256[] chainIds)
+func (_AgentRegistry *AgentRegistrySession) GetAgent(agentId *big.Int) (struct {
+	Version  *big.Int
+	Metadata string
+	ChainIds []*big.Int
+}, error) {
 	return _AgentRegistry.Contract.GetAgent(&_AgentRegistry.CallOpts, agentId)
 }
 
 // GetAgent is a free data retrieval call binding the contract method 0x2de5aaf7.
 //
-// Solidity: function getAgent(uint256 agentId) view returns((uint256,string,uint256[]))
-func (_AgentRegistry *AgentRegistryCallerSession) GetAgent(agentId *big.Int) (AgentRegistryMetadataAgentMetadata, error) {
+// Solidity: function getAgent(uint256 agentId) view returns(uint256 version, string metadata, uint256[] chainIds)
+func (_AgentRegistry *AgentRegistryCallerSession) GetAgent(agentId *big.Int) (struct {
+	Version  *big.Int
+	Metadata string
+	ChainIds []*big.Int
+}, error) {
 	return _AgentRegistry.Contract.GetAgent(&_AgentRegistry.CallOpts, agentId)
 }
 
@@ -1501,39 +1513,48 @@ func (it *AgentRegistryAgentEnabledIterator) Close() error {
 // AgentRegistryAgentEnabled represents a AgentEnabled event raised by the AgentRegistry contract.
 type AgentRegistryAgentEnabled struct {
 	AgentId    *big.Int
-	Permission uint8
 	Enabled    bool
+	Permission uint8
+	Value      bool
 	Raw        types.Log // Blockchain specific contextual infos
 }
 
-// FilterAgentEnabled is a free log retrieval operation binding the contract event 0x9aae0324e55c8e6801ea6ce0a07d77640a94e8a03658c6b34aa55d48a51ec4ef.
+// FilterAgentEnabled is a free log retrieval operation binding the contract event 0xb3910705ae5b4ecc20f77ab0d947aafd48ed7328af2294ca08dea714b041d641.
 //
-// Solidity: event AgentEnabled(uint256 indexed agentId, uint8 permission, bool enabled)
-func (_AgentRegistry *AgentRegistryFilterer) FilterAgentEnabled(opts *bind.FilterOpts, agentId []*big.Int) (*AgentRegistryAgentEnabledIterator, error) {
+// Solidity: event AgentEnabled(uint256 indexed agentId, bool indexed enabled, uint8 permission, bool value)
+func (_AgentRegistry *AgentRegistryFilterer) FilterAgentEnabled(opts *bind.FilterOpts, agentId []*big.Int, enabled []bool) (*AgentRegistryAgentEnabledIterator, error) {
 
 	var agentIdRule []interface{}
 	for _, agentIdItem := range agentId {
 		agentIdRule = append(agentIdRule, agentIdItem)
 	}
+	var enabledRule []interface{}
+	for _, enabledItem := range enabled {
+		enabledRule = append(enabledRule, enabledItem)
+	}
 
-	logs, sub, err := _AgentRegistry.contract.FilterLogs(opts, "AgentEnabled", agentIdRule)
+	logs, sub, err := _AgentRegistry.contract.FilterLogs(opts, "AgentEnabled", agentIdRule, enabledRule)
 	if err != nil {
 		return nil, err
 	}
 	return &AgentRegistryAgentEnabledIterator{contract: _AgentRegistry.contract, event: "AgentEnabled", logs: logs, sub: sub}, nil
 }
 
-// WatchAgentEnabled is a free log subscription operation binding the contract event 0x9aae0324e55c8e6801ea6ce0a07d77640a94e8a03658c6b34aa55d48a51ec4ef.
+// WatchAgentEnabled is a free log subscription operation binding the contract event 0xb3910705ae5b4ecc20f77ab0d947aafd48ed7328af2294ca08dea714b041d641.
 //
-// Solidity: event AgentEnabled(uint256 indexed agentId, uint8 permission, bool enabled)
-func (_AgentRegistry *AgentRegistryFilterer) WatchAgentEnabled(opts *bind.WatchOpts, sink chan<- *AgentRegistryAgentEnabled, agentId []*big.Int) (event.Subscription, error) {
+// Solidity: event AgentEnabled(uint256 indexed agentId, bool indexed enabled, uint8 permission, bool value)
+func (_AgentRegistry *AgentRegistryFilterer) WatchAgentEnabled(opts *bind.WatchOpts, sink chan<- *AgentRegistryAgentEnabled, agentId []*big.Int, enabled []bool) (event.Subscription, error) {
 
 	var agentIdRule []interface{}
 	for _, agentIdItem := range agentId {
 		agentIdRule = append(agentIdRule, agentIdItem)
 	}
+	var enabledRule []interface{}
+	for _, enabledItem := range enabled {
+		enabledRule = append(enabledRule, enabledItem)
+	}
 
-	logs, sub, err := _AgentRegistry.contract.WatchLogs(opts, "AgentEnabled", agentIdRule)
+	logs, sub, err := _AgentRegistry.contract.WatchLogs(opts, "AgentEnabled", agentIdRule, enabledRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1565,9 +1586,9 @@ func (_AgentRegistry *AgentRegistryFilterer) WatchAgentEnabled(opts *bind.WatchO
 	}), nil
 }
 
-// ParseAgentEnabled is a log parse operation binding the contract event 0x9aae0324e55c8e6801ea6ce0a07d77640a94e8a03658c6b34aa55d48a51ec4ef.
+// ParseAgentEnabled is a log parse operation binding the contract event 0xb3910705ae5b4ecc20f77ab0d947aafd48ed7328af2294ca08dea714b041d641.
 //
-// Solidity: event AgentEnabled(uint256 indexed agentId, uint8 permission, bool enabled)
+// Solidity: event AgentEnabled(uint256 indexed agentId, bool indexed enabled, uint8 permission, bool value)
 func (_AgentRegistry *AgentRegistryFilterer) ParseAgentEnabled(log types.Log) (*AgentRegistryAgentEnabled, error) {
 	event := new(AgentRegistryAgentEnabled)
 	if err := _AgentRegistry.contract.UnpackLog(event, "AgentEnabled", log); err != nil {
@@ -1647,39 +1668,48 @@ func (it *AgentRegistryAgentUpdatedIterator) Close() error {
 // AgentRegistryAgentUpdated represents a AgentUpdated event raised by the AgentRegistry contract.
 type AgentRegistryAgentUpdated struct {
 	AgentId  *big.Int
+	By       common.Address
 	Metadata string
 	ChainIds []*big.Int
 	Raw      types.Log // Blockchain specific contextual infos
 }
 
-// FilterAgentUpdated is a free log retrieval operation binding the contract event 0x808318fff0e666157af89dad699f694ddee6735f06dba7769a172a8251d34b3f.
+// FilterAgentUpdated is a free log retrieval operation binding the contract event 0x334f6d330b99b468cd5f1185b6926d611b5471d99134d7cd171f7541f2e6bff6.
 //
-// Solidity: event AgentUpdated(uint256 indexed agentId, string metadata, uint256[] chainIds)
-func (_AgentRegistry *AgentRegistryFilterer) FilterAgentUpdated(opts *bind.FilterOpts, agentId []*big.Int) (*AgentRegistryAgentUpdatedIterator, error) {
+// Solidity: event AgentUpdated(uint256 indexed agentId, address indexed by, string metadata, uint256[] chainIds)
+func (_AgentRegistry *AgentRegistryFilterer) FilterAgentUpdated(opts *bind.FilterOpts, agentId []*big.Int, by []common.Address) (*AgentRegistryAgentUpdatedIterator, error) {
 
 	var agentIdRule []interface{}
 	for _, agentIdItem := range agentId {
 		agentIdRule = append(agentIdRule, agentIdItem)
 	}
+	var byRule []interface{}
+	for _, byItem := range by {
+		byRule = append(byRule, byItem)
+	}
 
-	logs, sub, err := _AgentRegistry.contract.FilterLogs(opts, "AgentUpdated", agentIdRule)
+	logs, sub, err := _AgentRegistry.contract.FilterLogs(opts, "AgentUpdated", agentIdRule, byRule)
 	if err != nil {
 		return nil, err
 	}
 	return &AgentRegistryAgentUpdatedIterator{contract: _AgentRegistry.contract, event: "AgentUpdated", logs: logs, sub: sub}, nil
 }
 
-// WatchAgentUpdated is a free log subscription operation binding the contract event 0x808318fff0e666157af89dad699f694ddee6735f06dba7769a172a8251d34b3f.
+// WatchAgentUpdated is a free log subscription operation binding the contract event 0x334f6d330b99b468cd5f1185b6926d611b5471d99134d7cd171f7541f2e6bff6.
 //
-// Solidity: event AgentUpdated(uint256 indexed agentId, string metadata, uint256[] chainIds)
-func (_AgentRegistry *AgentRegistryFilterer) WatchAgentUpdated(opts *bind.WatchOpts, sink chan<- *AgentRegistryAgentUpdated, agentId []*big.Int) (event.Subscription, error) {
+// Solidity: event AgentUpdated(uint256 indexed agentId, address indexed by, string metadata, uint256[] chainIds)
+func (_AgentRegistry *AgentRegistryFilterer) WatchAgentUpdated(opts *bind.WatchOpts, sink chan<- *AgentRegistryAgentUpdated, agentId []*big.Int, by []common.Address) (event.Subscription, error) {
 
 	var agentIdRule []interface{}
 	for _, agentIdItem := range agentId {
 		agentIdRule = append(agentIdRule, agentIdItem)
 	}
+	var byRule []interface{}
+	for _, byItem := range by {
+		byRule = append(byRule, byItem)
+	}
 
-	logs, sub, err := _AgentRegistry.contract.WatchLogs(opts, "AgentUpdated", agentIdRule)
+	logs, sub, err := _AgentRegistry.contract.WatchLogs(opts, "AgentUpdated", agentIdRule, byRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1711,9 +1741,9 @@ func (_AgentRegistry *AgentRegistryFilterer) WatchAgentUpdated(opts *bind.WatchO
 	}), nil
 }
 
-// ParseAgentUpdated is a log parse operation binding the contract event 0x808318fff0e666157af89dad699f694ddee6735f06dba7769a172a8251d34b3f.
+// ParseAgentUpdated is a log parse operation binding the contract event 0x334f6d330b99b468cd5f1185b6926d611b5471d99134d7cd171f7541f2e6bff6.
 //
-// Solidity: event AgentUpdated(uint256 indexed agentId, string metadata, uint256[] chainIds)
+// Solidity: event AgentUpdated(uint256 indexed agentId, address indexed by, string metadata, uint256[] chainIds)
 func (_AgentRegistry *AgentRegistryFilterer) ParseAgentUpdated(log types.Log) (*AgentRegistryAgentUpdated, error) {
 	event := new(AgentRegistryAgentUpdated)
 	if err := _AgentRegistry.contract.UnpackLog(event, "AgentUpdated", log); err != nil {
