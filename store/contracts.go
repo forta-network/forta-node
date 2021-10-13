@@ -2,7 +2,6 @@ package store
 
 import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/forta-protocol/forta-node/contracts"
 	"math/big"
 )
 
@@ -23,5 +22,9 @@ type dispatch interface {
 }
 
 type agentRegistry interface {
-	GetAgent(opts *bind.CallOpts, agentId *big.Int) (contracts.AgentRegistryMetadataAgentMetadata, error)
+	GetAgent(opts *bind.CallOpts, agentId *big.Int) (struct {
+		Version  *big.Int
+		Metadata string
+		ChainIds []*big.Int
+	}, error)
 }
