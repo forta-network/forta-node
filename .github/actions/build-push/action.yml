@@ -1,0 +1,31 @@
+name: 'Build and push images'
+description: 'Build and push container images'
+inputs:
+  registry:
+    description: 'Disco host'
+    required: true
+  name:
+    description: 'Name of container to build'
+    required: true
+outputs:
+  image-reference:
+    description: 'Reference of the built and pushed image'
+    value: ${{ steps.build-and-push.outputs.image-reference }}
+runs:
+  using: "composite"
+  steps:
+    - name: Login to Forta Disco
+      uses: docker/login-action@v1
+      with:
+        registry: ${{ inputs.registry }}
+        username: discouser
+        password: discopass
+    - name: Build and push container
+      id: build-and-push
+      shell: bash
+      env:
+        REGISTRY: ${{ inputs.registry }}
+        IMAGE_NAME: ${{ inputs.name }}
+      run: |
+        IMAGE_REF=$(./scripts/build_and_push.sh "$REGISTRY" "$IMAGE_NAME")
+        echo "::set-output name=image-reference::$IMAGE_REF"
