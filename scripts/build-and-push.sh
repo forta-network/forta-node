@@ -4,12 +4,9 @@ set -e
 
 REGISTRY="$1"
 IMAGE_NAME="$2"
+FULL_IMAGE_NAME="$REGISTRY/forta-$IMAGE_NAME"
 
-push_and_find_digest() {
-	PUSH_OUTPUT=$(docker push "$REGISTRY/$1")
-	DIGEST=$(echo "$PUSH_OUTPUT" | grep -oE '([0-9a-z]{64})')
-}
-
-docker build -t "$REGISTRY/forta-$IMAGE_NAME" -f "Dockerfile.$IMAGE_NAME" .
-push_and_find_digest "$IMAGE_NAME"
+docker build -t "$FULL_IMAGE_NAME" -f "Dockerfile.$IMAGE_NAME" .
+PUSH_OUTPUT=$(docker push "$FULL_IMAGE_NAME")
+DIGEST=$(echo "$PUSH_OUTPUT" | grep -oE '([0-9a-z]{64})')
 echo "$REGISTRY/$DIGEST"
