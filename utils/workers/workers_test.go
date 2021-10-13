@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/forta-network/forta-node/utils/workers"
+	"github.com/forta-protocol/forta-node/utils/workers"
 	"github.com/stretchr/testify/require"
 )
 

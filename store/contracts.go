@@ -2,7 +2,7 @@ package store
 
 import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/forta-network/forta-node/contracts"
+	"github.com/forta-protocol/forta-node/contracts"
 	"math/big"
 )
 

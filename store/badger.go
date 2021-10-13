@@ -7,7 +7,7 @@ import (
 	"time"
 
 	badger "github.com/dgraph-io/badger/v3"
-	"github.com/forta-network/forta-node/protocol"
+	"github.com/forta-protocol/forta-node/protocol"
 	"github.com/golang/protobuf/proto"
 )
 

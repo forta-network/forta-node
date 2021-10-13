@@ -4,9 +4,9 @@ import (
 	"context"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/forta-network/forta-node/domain"
+	"github.com/forta-protocol/forta-node/domain"
 
-	"github.com/forta-network/forta-node/contracts"
+	"github.com/forta-protocol/forta-node/contracts"
 
 	"github.com/ethereum/go-ethereum/core/types"
 )

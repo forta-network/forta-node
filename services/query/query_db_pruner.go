@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/forta-network/forta-node/store"
+	"github.com/forta-protocol/forta-node/store"
 )
 
 // DBPruner periodically prunes db of old records

@@ -1,8 +1,8 @@
 package containers
 
 import (
-	"github.com/forta-network/forta-node/clients"
-	"github.com/forta-network/forta-node/utils"
+	"github.com/forta-protocol/forta-node/clients"
+	"github.com/forta-protocol/forta-node/utils"
 
 	"fmt"
 	"time"

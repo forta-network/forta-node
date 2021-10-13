@@ -8,11 +8,11 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/forta-network/forta-node/config"
-	"github.com/forta-network/forta-node/contracts"
-	"github.com/forta-network/forta-node/ethereum"
-	"github.com/forta-network/forta-node/services/registry/regtypes"
-	"github.com/forta-network/forta-node/utils"
+	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-protocol/forta-node/contracts"
+	"github.com/forta-protocol/forta-node/ethereum"
+	"github.com/forta-protocol/forta-node/services/registry/regtypes"
+	"github.com/forta-protocol/forta-node/utils"
 )
 
 type RegistryStore interface {

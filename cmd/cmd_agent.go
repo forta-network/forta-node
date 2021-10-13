@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/forta-network/forta-node/store"
+	"github.com/forta-protocol/forta-node/store"
 	"io/ioutil"
 
 	"github.com/fatih/color"
-	"github.com/forta-network/forta-node/config"
+	"github.com/forta-protocol/forta-node/config"
 	"github.com/spf13/cobra"
 )
 

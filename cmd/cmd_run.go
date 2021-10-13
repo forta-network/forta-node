@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/forta-network/forta-node/cmd/runner"
+	"github.com/forta-protocol/forta-node/cmd/runner"
 
 	"github.com/spf13/cobra"
 )

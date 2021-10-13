@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/forta-network/forta-node/protocol"
+	"github.com/forta-protocol/forta-node/protocol"
 )
 
 func TestFormat(t *testing.T) {

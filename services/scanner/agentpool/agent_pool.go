@@ -4,13 +4,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/forta-network/forta-node/clients"
-	"github.com/forta-network/forta-node/clients/agentgrpc"
-	"github.com/forta-network/forta-node/clients/messaging"
-	"github.com/forta-network/forta-node/config"
-	"github.com/forta-network/forta-node/protocol"
-	"github.com/forta-network/forta-node/services/scanner"
-	"github.com/forta-network/forta-node/services/scanner/agentpool/poolagent"
+	"github.com/forta-protocol/forta-node/clients"
+	"github.com/forta-protocol/forta-node/clients/agentgrpc"
+	"github.com/forta-protocol/forta-node/clients/messaging"
+	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-protocol/forta-node/protocol"
+	"github.com/forta-protocol/forta-node/services/scanner"
+	"github.com/forta-protocol/forta-node/services/scanner/agentpool/poolagent"
 	log "github.com/sirupsen/logrus"
 )
 

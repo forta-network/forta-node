@@ -9,7 +9,7 @@ import (
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/forta-network/forta-node/config"
+	"github.com/forta-protocol/forta-node/config"
 )
 
 // JsonRpcProxy proxies requests from agents to json-rpc endpoint
