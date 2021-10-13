@@ -27,5 +27,5 @@ runs:
         REGISTRY: ${{ inputs.registry }}
         IMAGE_NAME: ${{ inputs.name }}
       run: |
-        IMAGE_REF=$(./scripts/build_and_push.sh "$REGISTRY" "$IMAGE_NAME")
+        IMAGE_REF=$(./scripts/build-and-push.sh "$REGISTRY" "$IMAGE_NAME")
         echo "::set-output name=image-reference::$IMAGE_REF"
