@@ -3,9 +3,9 @@
 set -e
 set -o pipefail
 
-SCANNER_IMAGE='forta-network/forta-scanner:latest'
-QUERY_IMAGE='forta-network/forta-query:latest'
-JSON_RPC_IMAGE='forta-network/forta-json-rpc:latest'
+SCANNER_IMAGE='forta-protocol/forta-scanner:latest'
+QUERY_IMAGE='forta-protocol/forta-query:latest'
+JSON_RPC_IMAGE='forta-protocol/forta-json-rpc:latest'
 
 docker build -t "$SCANNER_IMAGE" -f Dockerfile.scanner .
 docker build -t "$QUERY_IMAGE" -f Dockerfile.query .

@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/forta-network/forta-node/config"
-	"github.com/forta-network/forta-node/store"
+	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-protocol/forta-node/store"
 )
 
 const (

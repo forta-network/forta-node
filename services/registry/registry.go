@@ -3,16 +3,16 @@ package registry
 import (
 	"context"
 	"fmt"
-	"github.com/forta-network/forta-node/store"
+	"github.com/forta-protocol/forta-node/store"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/forta-network/forta-node/clients"
-	"github.com/forta-network/forta-node/clients/messaging"
-	"github.com/forta-network/forta-node/config"
-	"github.com/forta-network/forta-node/ethereum"
-	"github.com/forta-network/forta-node/services/registry/regtypes"
+	"github.com/forta-protocol/forta-node/clients"
+	"github.com/forta-protocol/forta-node/clients/messaging"
+	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-protocol/forta-node/ethereum"
+	"github.com/forta-protocol/forta-node/services/registry/regtypes"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/semaphore"
 )

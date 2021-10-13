@@ -16,7 +16,7 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	"github.com/forta-network/forta-node/utils/workers"
+	"github.com/forta-protocol/forta-node/utils/workers"
 	log "github.com/sirupsen/logrus"
 )
 

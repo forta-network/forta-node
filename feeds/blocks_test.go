@@ -10,9 +10,9 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/forta-network/forta-node/domain"
-	mocks "github.com/forta-network/forta-node/ethereum/mocks"
-	"github.com/forta-network/forta-node/utils"
+	"github.com/forta-protocol/forta-node/domain"
+	mocks "github.com/forta-protocol/forta-node/ethereum/mocks"
+	"github.com/forta-protocol/forta-node/utils"
 )
 
 var testErr = errors.New("test")

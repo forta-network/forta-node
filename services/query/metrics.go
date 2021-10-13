@@ -4,8 +4,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/forta-network/forta-node/protocol"
-	"github.com/forta-network/forta-node/utils"
+	"github.com/forta-protocol/forta-node/protocol"
+	"github.com/forta-protocol/forta-node/utils"
 	"github.com/shopspring/decimal"
 )
 

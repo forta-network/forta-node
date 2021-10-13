@@ -1,7 +1,7 @@
 package messaging
 
 import (
-	"github.com/forta-network/forta-node/config"
+	"github.com/forta-protocol/forta-node/config"
 )
 
 // Message types

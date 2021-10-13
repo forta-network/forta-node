@@ -9,8 +9,8 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/forta-network/forta-node/protocol"
-	"github.com/forta-network/forta-node/utils"
+	"github.com/forta-protocol/forta-node/protocol"
+	"github.com/forta-protocol/forta-node/utils"
 )
 
 type EventType string
