@@ -32,7 +32,7 @@ import (
 
 const (
 	defaultInterval        = time.Second * 15
-	defaultBatchLimit      = 500
+	defaultBatchLimit      = 1000
 	defaultBatchBufferSize = 100
 )
 
