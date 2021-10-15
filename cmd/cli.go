@@ -1,8 +1,11 @@
 package cmd
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"reflect"
@@ -10,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/forta-protocol/forta-node/config"
-	"github.com/mitchellh/mapstructure"
+	"gopkg.in/yaml.v3"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/spf13/cobra"
@@ -149,41 +152,41 @@ func initConfig() {
 	viper.BindEnv(keyFortaDevelopment)
 	viper.AutomaticEnv()
 
-	if cfg.FortaDir = viper.GetString(keyFortaDir); cfg.FortaDir == "" {
+	fortaDir := viper.GetString(keyFortaDir)
+	if fortaDir == "" {
 		home, err := os.UserHomeDir()
 		cobra.CheckErr(err)
-		cfg.FortaDir = path.Join(home, ".forta")
+		fortaDir = path.Join(home, ".forta")
 	}
 
-	cfg.ConfigPath = viper.GetString(keyFortaConfigFile)
-	if cfg.ConfigPath == "" {
-		cfg.ConfigPath = path.Join(cfg.FortaDir, "config.yml")
+	configPath := viper.GetString(keyFortaConfigFile)
+	if configPath == "" {
+		configPath = path.Join(fortaDir, "config.yml")
 	}
-	viper.SetConfigFile(cfg.ConfigPath)
 
+	configBytes, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		log.Fatalf("failed to read the config file at %s: %v", configPath, err)
+	}
+	if err := yaml.Unmarshal(configBytes, &cfg); err != nil {
+		log.Fatalf("failed to unmarshal the config bytes: %v", err)
+	}
+
+	cfg.FortaDir = fortaDir
+	cfg.ConfigPath = configPath
 	cfg.KeyDirPath = path.Join(cfg.FortaDir, config.DefaultKeysDirName)
 	cfg.Development = !viper.GetBool(keyFortaDevelopment)
 	cfg.Passphrase = viper.GetString(keyFortaPassphrase)
 	cfg.LocalAgentsPath = path.Join(cfg.FortaDir, config.DefaultLocalAgentsFileName)
 	cfg.LocalAgents, _ = readLocalAgents()
 
-	// Inject our decode hook(s) to do extra stuff on the values before we unmarshal.
-	decoderOpts := viper.DecodeHook(
-		mapstructure.ComposeDecodeHookFunc(
-			mapstructure.StringToTimeDurationHookFunc(),
-			mapstructure.StringToSliceHookFunc(","),
-			resolveEnvVarsHookFunc,
-		),
-	)
-
-	viper.ReadInConfig()
-	viper.Unmarshal(&cfg, decoderOpts)
-
+	viper.ReadConfig(bytes.NewBuffer(configBytes))
 	config.InitLogLevel(cfg)
 }
 
 var configEnvVarRegexp = regexp.MustCompile(`\$[A-Z0-9_]+`)
 
+// TODO: viper.Unmarshal is a mess. Use this again somehow with a custom hook.
 func resolveEnvVarsHookFunc(from reflect.Kind, to reflect.Kind, data interface{}) (interface{}, error) {
 	if from != reflect.String {
 		return data, nil

@@ -170,6 +170,11 @@ type ResourcesConfig struct {
 	AgentMaxCPUs       float64 `yaml:"agentMaxCpus" json:"agentMaxCpus" validate:"omitempty,gt=0"`
 }
 
+type ENSConfig struct {
+	ContractAddress string          `yaml:"contractAddress" json:"contractAddress" validate:"omitempty,eth_addr"`
+	Ethereum        *EthereumConfig `yaml:"ethereum" json:"ethereum"`
+}
+
 type Config struct {
 	Development                  bool           `yaml:"-" json:"-"`
 	FortaDir                     string         `yaml:"-" json:"-"`
@@ -187,6 +192,7 @@ type Config struct {
 	JsonRpcProxy    JsonRpcProxyConfig `yaml:"jsonRpcProxy" json:"jsonRpcProxy"`
 	Log             LogConfig          `yaml:"log" json:"log"`
 	ResourcesConfig ResourcesConfig    `yaml:"resources" json:"resources"`
+	ENSConfig       ENSConfig          `yaml:"ens" json:"ens"`
 }
 
 func ParseBigInt(num int) *big.Int {
