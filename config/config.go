@@ -7,8 +7,8 @@ import (
 	"os"
 	"path"
 
-	"github.com/forta-network/forta-node/protocol"
-	"github.com/forta-network/forta-node/utils"
+	"github.com/forta-protocol/forta-node/protocol"
+	"github.com/forta-protocol/forta-node/utils"
 	"gopkg.in/yaml.v3"
 
 	log "github.com/sirupsen/logrus"

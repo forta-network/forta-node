@@ -2,18 +2,18 @@ package registry
 
 import (
 	"fmt"
-	"github.com/forta-network/forta-node/utils"
+	"github.com/forta-protocol/forta-node/utils"
 	"math/big"
 	"testing"
 
 	"golang.org/x/sync/semaphore"
 
-	"github.com/forta-network/forta-node/clients/messaging"
-	mock_clients "github.com/forta-network/forta-node/clients/mocks"
-	"github.com/forta-network/forta-node/config"
-	"github.com/forta-network/forta-node/domain"
-	mock_registry "github.com/forta-network/forta-node/services/registry/mocks"
-	"github.com/forta-network/forta-node/services/registry/regtypes"
+	"github.com/forta-protocol/forta-node/clients/messaging"
+	mock_clients "github.com/forta-protocol/forta-node/clients/mocks"
+	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-protocol/forta-node/domain"
+	mock_registry "github.com/forta-protocol/forta-node/services/registry/mocks"
+	"github.com/forta-protocol/forta-node/services/registry/regtypes"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/mock/gomock"

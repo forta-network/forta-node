@@ -1,8 +1,8 @@
 package scanner
 
 import (
-	"github.com/forta-network/forta-node/config"
-	"github.com/forta-network/forta-node/protocol"
+	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-protocol/forta-node/protocol"
 )
 
 // TxResult contains request and response data.

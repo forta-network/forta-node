@@ -4,8 +4,8 @@ import (
 	"context"
 	"io"
 
-	"github.com/forta-network/forta-node/config"
-	"github.com/forta-network/forta-node/protocol"
+	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-protocol/forta-node/protocol"
 )
 
 // DockerClient is a client interface for interacting with docker

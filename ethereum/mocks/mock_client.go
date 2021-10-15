@@ -11,7 +11,7 @@ import (
 
 	ethereum "github.com/ethereum/go-ethereum"
 	types "github.com/ethereum/go-ethereum/core/types"
-	domain "github.com/forta-network/forta-node/domain"
+	domain "github.com/forta-protocol/forta-node/domain"
 	gomock "github.com/golang/mock/gomock"
 )
 

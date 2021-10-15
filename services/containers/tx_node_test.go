@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/forta-network/forta-node/clients"
-	"github.com/forta-network/forta-node/clients/messaging"
-	mock_clients "github.com/forta-network/forta-node/clients/mocks"
-	"github.com/forta-network/forta-node/config"
+	"github.com/forta-protocol/forta-node/clients"
+	"github.com/forta-protocol/forta-node/clients/messaging"
+	mock_clients "github.com/forta-protocol/forta-node/clients/mocks"
+	"github.com/forta-protocol/forta-node/config"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"

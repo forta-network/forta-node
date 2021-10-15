@@ -3,12 +3,12 @@ package agentpool
 import (
 	"testing"
 
-	"github.com/forta-network/forta-node/clients"
-	"github.com/forta-network/forta-node/clients/messaging"
-	mock_clients "github.com/forta-network/forta-node/clients/mocks"
-	"github.com/forta-network/forta-node/config"
-	"github.com/forta-network/forta-node/protocol"
-	"github.com/forta-network/forta-node/services/scanner"
+	"github.com/forta-protocol/forta-node/clients"
+	"github.com/forta-protocol/forta-node/clients/messaging"
+	mock_clients "github.com/forta-protocol/forta-node/clients/mocks"
+	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-protocol/forta-node/protocol"
+	"github.com/forta-protocol/forta-node/services/scanner"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"

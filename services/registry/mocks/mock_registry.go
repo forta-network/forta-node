@@ -13,8 +13,8 @@ import (
 	bind "github.com/ethereum/go-ethereum/accounts/abi/bind"
 	common "github.com/ethereum/go-ethereum/common"
 	types "github.com/ethereum/go-ethereum/core/types"
-	domain "github.com/forta-network/forta-node/domain"
-	regtypes "github.com/forta-network/forta-node/services/registry/regtypes"
+	domain "github.com/forta-protocol/forta-node/domain"
+	regtypes "github.com/forta-protocol/forta-node/services/registry/regtypes"
 	gomock "github.com/golang/mock/gomock"
 )
 

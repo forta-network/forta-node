@@ -7,8 +7,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/fatih/color"
-	"github.com/forta-network/forta-node/config"
-	"github.com/forta-network/forta-node/services/registry"
+	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-protocol/forta-node/services/registry"
 	"github.com/spf13/cobra"
 )
 

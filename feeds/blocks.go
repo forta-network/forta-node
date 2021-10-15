@@ -8,9 +8,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/forta-network/forta-node/domain"
-	"github.com/forta-network/forta-node/ethereum"
-	"github.com/forta-network/forta-node/utils"
+	"github.com/forta-protocol/forta-node/domain"
+	"github.com/forta-protocol/forta-node/ethereum"
+	"github.com/forta-protocol/forta-node/utils"
 )
 
 var ErrEndBlockReached = errors.New("end block reached")

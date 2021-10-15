@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/forta-network/forta-node/protocol"
-	"github.com/forta-network/forta-node/store"
+	"github.com/forta-protocol/forta-node/protocol"
+	"github.com/forta-protocol/forta-node/store"
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/gorilla/mux"

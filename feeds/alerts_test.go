@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/forta-network/forta-node/domain"
+	"github.com/forta-protocol/forta-node/domain"
 
-	"github.com/forta-network/forta-node/contracts"
+	"github.com/forta-protocol/forta-node/contracts"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"

@@ -11,11 +11,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/forta-network/forta-node/clients"
-	"github.com/forta-network/forta-node/domain"
-	"github.com/forta-network/forta-node/protocol"
-	"github.com/forta-network/forta-node/store"
-	"github.com/forta-network/forta-node/utils"
+	"github.com/forta-protocol/forta-node/clients"
+	"github.com/forta-protocol/forta-node/domain"
+	"github.com/forta-protocol/forta-node/protocol"
+	"github.com/forta-protocol/forta-node/store"
+	"github.com/forta-protocol/forta-node/utils"
 )
 
 // BlockAnalyzerService reads TX info, calls agents, and emits results

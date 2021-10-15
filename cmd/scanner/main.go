@@ -8,16 +8,16 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	gethlog "github.com/ethereum/go-ethereum/log"
 
-	"github.com/forta-network/forta-node/clients"
-	"github.com/forta-network/forta-node/clients/messaging"
-	"github.com/forta-network/forta-node/config"
-	"github.com/forta-network/forta-node/ethereum"
-	"github.com/forta-network/forta-node/feeds"
-	"github.com/forta-network/forta-node/security"
-	"github.com/forta-network/forta-node/services"
-	"github.com/forta-network/forta-node/services/registry"
-	"github.com/forta-network/forta-node/services/scanner"
-	"github.com/forta-network/forta-node/services/scanner/agentpool"
+	"github.com/forta-protocol/forta-node/clients"
+	"github.com/forta-protocol/forta-node/clients/messaging"
+	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-protocol/forta-node/ethereum"
+	"github.com/forta-protocol/forta-node/feeds"
+	"github.com/forta-protocol/forta-node/security"
+	"github.com/forta-protocol/forta-node/services"
+	"github.com/forta-protocol/forta-node/services/registry"
+	"github.com/forta-protocol/forta-node/services/scanner"
+	"github.com/forta-protocol/forta-node/services/scanner/agentpool"
 )
 
 func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, cfg config.Config) (*scanner.TxStreamService, feeds.BlockFeed, error) {
