@@ -177,7 +177,9 @@ func initConfig() {
 	)
 
 	viper.ReadInConfig()
-	viper.Unmarshal(&cfg, decoderOpts)
+	if err := viper.Unmarshal(&cfg, decoderOpts); err != nil {
+		fmt.Printf("failed to unmarshal the config: %v\n", err)
+	}
 
 	config.InitLogLevel(cfg)
 }
