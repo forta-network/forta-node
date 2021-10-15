@@ -24,6 +24,7 @@ type logFeed struct {
 	topics     [][]string
 	addresses  []string
 	client     eth.Client
+	offset     int
 }
 
 func (l *logFeed) ForEachLog(handler func(blk *domain.Block, logEntry types.Log) error, finishBlockHandler func(blk *domain.Block) error) error {
@@ -73,6 +74,17 @@ func (l *logFeed) ForEachLog(handler func(blk *domain.Block, logEntry types.Log)
 				}
 			}
 
+			// if offset is set, get previous block instead
+			if l.offset > 0 {
+				pastBlockNum := currentBlock.Sub(currentBlock, big.NewInt(int64(l.offset)))
+				pastBlock, err := l.client.BlockByNumber(l.ctx, pastBlockNum)
+				if err != nil {
+					log.WithError(err).Error("error while getting past block")
+					return err
+				}
+				blk = pastBlock
+			}
+
 			q := ethereum.FilterQuery{
 				FromBlock: currentBlock,
 				ToBlock:   currentBlock,
@@ -108,6 +120,7 @@ type LogFeedConfig struct {
 	Addresses  []string
 	StartBlock *big.Int
 	EndBlock   *big.Int
+	offset     int
 }
 
 func NewLogFeed(ctx context.Context, client eth.Client, cfg LogFeedConfig) (*logFeed, error) {
@@ -118,5 +131,6 @@ func NewLogFeed(ctx context.Context, client eth.Client, cfg LogFeedConfig) (*log
 		addresses:  cfg.Addresses,
 		startBlock: cfg.StartBlock,
 		endBlock:   cfg.EndBlock,
+		offset:     cfg.offset,
 	}, nil
 }
