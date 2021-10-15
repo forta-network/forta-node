@@ -119,7 +119,7 @@ type LogFeedConfig struct {
 	Addresses  []string
 	StartBlock *big.Int
 	EndBlock   *big.Int
-	offset     int
+	Offset     int
 }
 
 func NewLogFeed(ctx context.Context, client eth.Client, cfg LogFeedConfig) (*logFeed, error) {
@@ -130,6 +130,6 @@ func NewLogFeed(ctx context.Context, client eth.Client, cfg LogFeedConfig) (*log
 		addresses:  cfg.Addresses,
 		startBlock: cfg.StartBlock,
 		endBlock:   cfg.EndBlock,
-		offset:     cfg.offset,
+		offset:     cfg.Offset,
 	}, nil
 }
