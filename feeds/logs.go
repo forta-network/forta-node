@@ -76,8 +76,7 @@ func (l *logFeed) ForEachLog(handler func(blk *domain.Block, logEntry types.Log)
 
 			// if offset is set, get previous block instead
 			if l.offset > 0 {
-				pastBlockNum := currentBlock.Sub(currentBlock, big.NewInt(int64(l.offset)))
-				pastBlock, err := l.client.BlockByNumber(l.ctx, pastBlockNum)
+				pastBlock, err := l.client.BlockByNumber(l.ctx, big.NewInt(currentBlock.Int64()-int64(l.offset)))
 				if err != nil {
 					log.WithError(err).Error("error while getting past block")
 					return err
