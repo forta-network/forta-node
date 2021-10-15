@@ -1,25 +1,25 @@
 package workers
 
-// Workers receive work, execute and send results back.
-type Workers struct {
-	work chan *Work
+// Group receives work, execute and send results back.
+type Group struct {
+	in chan *Work
 }
 
-// New creates new workers.
-func New(size int) *Workers {
-	workers := &Workers{
-		work: make(chan *Work),
+// New creates new worker group.
+func New(size int) *Group {
+	group := &Group{
+		in: make(chan *Work),
 	}
 
 	for i := 0; i < size; i++ {
-		go workers.listenAndExecute()
+		go group.listenAndExecute()
 	}
 
-	return workers
+	return group
 }
 
-func (workers *Workers) listenAndExecute() {
-	for work := range workers.work {
+func (group *Group) listenAndExecute() {
+	for work := range group.in {
 		values, error := work.Func()
 		work.OutputsCh <- &Output{
 			Values: values,
@@ -30,9 +30,9 @@ func (workers *Workers) listenAndExecute() {
 }
 
 // Execute sends work to listening goroutines.
-func (workers *Workers) Execute(f WorkFunc) *Output {
+func (group *Group) Execute(f WorkFunc) *Output {
 	outputsCh := make(chan *Output)
-	workers.work <- &Work{
+	group.in <- &Work{
 		Func:      f,
 		OutputsCh: outputsCh,
 	}

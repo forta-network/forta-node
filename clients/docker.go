@@ -68,7 +68,7 @@ func (dcl DockerContainerList) FindByID(id string) (*types.Container, bool) {
 
 type dockerClient struct {
 	cli      *client.Client
-	workers  *workers.Workers
+	workers  *workers.Group
 	username string
 	password string
 }
@@ -94,9 +94,9 @@ func registryAuthValue(username, password string) string {
 
 // PullImage pulls an image using the given ref.
 func (d *dockerClient) PullImage(ctx context.Context, refStr string) error {
-	return d.workers.Execute(workers.WorkFunc(func() ([]interface{}, error) {
+	return d.workers.Execute(func() ([]interface{}, error) {
 		return nil, d.pullImage(ctx, refStr)
-	})).Error
+	}).Error
 }
 
 func (d *dockerClient) pullImage(ctx context.Context, refStr string) error {
