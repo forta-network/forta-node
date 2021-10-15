@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -59,9 +60,10 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 			}
 			agtCfg, err := rs.makeAgentConfig(common.Bytes2Hex(res.AgentId.Bytes()), res.Metadata)
 			if err != nil {
-				return nil, false, err
+				log.WithError(err).Warn("could not parse config for agent")
+			} else {
+				agts = append(agts, agtCfg)
 			}
-			agts = append(agts, agtCfg)
 		}
 		rs.version = hash
 		return agts, true, nil
@@ -110,7 +112,7 @@ func (rs *registryStore) makeAgentConfig(agentID string, ref string) (*config.Ag
 
 	image, ok := utils.ValidateImageRef(rs.cfg.Registry.ContainerRegistry, agentData.Manifest.ImageReference)
 	if !ok {
-		err = fmt.Errorf("invalid agent reference - skipping: %s", agentData.Manifest.ImageReference)
+		err = fmt.Errorf("invalid agent reference: %v", agentData.Manifest.ImageReference)
 		return nil, err
 	}
 
