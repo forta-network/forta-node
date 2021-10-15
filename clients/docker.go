@@ -350,7 +350,8 @@ func NewDockerClient() (*dockerClient, error) {
 		return nil, err
 	}
 	return &dockerClient{
-		cli: cli,
+		cli:     cli,
+		workers: workers.New(10),
 	}, nil
 }
 
