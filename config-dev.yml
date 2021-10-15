@@ -44,3 +44,7 @@ log:
   level: info
   maxLogSize: 50m
   maxLogFiles: 10
+
+ens:
+  ethereum:
+    jsonRpcUrl: "REGISTRY_API_URL"

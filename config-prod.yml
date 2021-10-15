@@ -46,3 +46,8 @@ log:
   level: debug
   maxLogSize: 50m
   maxLogFiles: 10
+
+ens:
+  contractAddress: "0x08f42fcc52a9C2F391bF507C4E8688D0b53e1bd7"
+  ethereum:
+    jsonRpcUrl: "https://polygon-rpc.com/"
