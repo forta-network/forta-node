@@ -43,7 +43,7 @@ func ensureLatestContractAddresses() error {
 
 	ens, err := store.DialENSStoreAt(getRegRpcUrl(), cfg.ENSConfig.ContractAddress)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot resolve contract addresses from ENS: %v", err)
 	}
 
 	names := config.GetENSNames()
