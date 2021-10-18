@@ -460,6 +460,10 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertList
 		txOpts.GasPrice = big.NewInt(*cfg.PublisherConfig.GasPriceGwei * params.GWei)
 	}
 
+	if cfg.PublisherConfig.GasLimit != nil {
+		txOpts.GasLimit = *cfg.PublisherConfig.GasLimit
+	}
+
 	contract, err := contracts.NewAlertsTransactor(common.HexToAddress(cfg.PublisherConfig.ContractAddress), ethClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize the alerts contract: %v", err)
