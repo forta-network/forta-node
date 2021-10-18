@@ -17,7 +17,12 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
+	ipfsapi "github.com/ipfs/go-ipfs-api"
+	log "github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
+
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/contracts"
 	"github.com/forta-protocol/forta-node/protocol"
@@ -25,9 +30,6 @@ import (
 	"github.com/forta-protocol/forta-node/services/query/testalerts"
 	"github.com/forta-protocol/forta-node/store"
 	"github.com/forta-protocol/forta-node/utils"
-	ipfsapi "github.com/ipfs/go-ipfs-api"
-	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 )
 
 const (
@@ -452,6 +454,10 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertList
 	if err != nil {
 		log.Errorf("error while creating keyed transactor for listener: %s", err.Error())
 		return nil, err
+	}
+
+	if cfg.PublisherConfig.GasPriceGwei != nil {
+		txOpts.GasPrice = big.NewInt(*cfg.PublisherConfig.GasPriceGwei * params.GWei)
 	}
 
 	contract, err := contracts.NewAlertsTransactor(common.HexToAddress(cfg.PublisherConfig.ContractAddress), ethClient)
