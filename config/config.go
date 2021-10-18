@@ -162,6 +162,8 @@ type PublisherConfig struct {
 	IPFS            *IPFSConfig      `yaml:"ipfs" json:"ipfs" validate:"required_unless=SkipPublish true"`
 	Batch           BatchConfig      `yaml:"batch" json:"batch"`
 	TestAlerts      TestAlertsConfig `yaml:"testAlerts" json:"testAlerts"`
+	GasPriceGwei    *int64           `yaml:"gasPriceGwei" json:"gasPriceGwei"`
+	GasLimit        *uint64          `yaml:"gasLimit" json:"gasLimit"`
 }
 
 type ResourcesConfig struct {
