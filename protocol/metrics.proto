@@ -18,3 +18,10 @@ message MetricSummary {
   double sum = 5;
   double p95 = 6;
 }
+
+message AgentMetric {
+  string agentId = 1;
+  string timestamp = 2;
+  string name = 3;
+  double value = 4;
+}

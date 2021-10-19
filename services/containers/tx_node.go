@@ -117,6 +117,7 @@ func (t *TxNodeService) start() error {
 		Env: map[string]string{
 			config.EnvConfig:   cfgJson,
 			config.EnvFortaDir: config.DefaultContainerFortaDirPath,
+			config.EnvNatsHost: config.DockerNatsContainerName,
 		},
 		Ports: map[string]string{
 			fmt.Sprintf("%d", t.config.Config.Query.Port): "80",

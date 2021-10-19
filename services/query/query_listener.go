@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/forta-protocol/forta-node/clients/messaging"
 	"io"
 	"math/big"
 	"net"
@@ -50,6 +51,7 @@ type AlertListener struct {
 	ethClient         EthClient
 	testAlertLogger   TestAlertLogger
 	metricsAggregator *AgentMetricsAggregator
+	messageClient     *messaging.Client
 
 	port          int
 	skipEmpty     bool
@@ -152,6 +154,10 @@ func (al *AlertListener) publishNextBatch(batch *protocol.SignedAlertBatch) erro
 func (al *AlertListener) shouldSkipPublishing(batch *protocol.SignedAlertBatch) (string, bool) {
 	return "because there are no alerts and skipEmpty is enabled",
 		al.skipEmpty && batch.Data.AlertCount == uint32(0)
+}
+
+func (al *AlertListener) listenForMetrics() {
+	al.messageClient.Subscribe(messaging.SubjectMetricAgent, al.metricsAggregator.AddAgentMetric)
 }
 
 func (al *AlertListener) publishBatches() {
@@ -426,6 +432,7 @@ func (al *AlertListener) Start() error {
 
 	go al.prepareBatches()
 	go al.publishBatches()
+	go al.listenForMetrics()
 
 	return grpcServer.Serve(lis)
 }
@@ -439,7 +446,7 @@ func (al *AlertListener) Name() string {
 	return "AlertListener"
 }
 
-func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertListenerConfig) (*AlertListener, error) {
+func NewAlertListener(ctx context.Context, store store.AlertStore, mc *messaging.Client, cfg AlertListenerConfig) (*AlertListener, error) {
 	rpcClient, err := rpc.Dial(cfg.PublisherConfig.Ethereum.JsonRpcUrl)
 	if err != nil {
 		return nil, err
@@ -518,6 +525,7 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertList
 		ethClient:         ethClient,
 		testAlertLogger:   testAlertLogger,
 		metricsAggregator: NewMetricsAggregator(),
+		messageClient:     mc,
 
 		port:          cfg.Port,
 		skipEmpty:     cfg.PublisherConfig.Batch.SkipEmpty,

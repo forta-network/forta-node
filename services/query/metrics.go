@@ -1,25 +1,14 @@
 package query
 
 import (
+	"github.com/forta-protocol/forta-node/metrics"
+	log "github.com/sirupsen/logrus"
 	"sort"
 	"time"
 
 	"github.com/forta-protocol/forta-node/protocol"
 	"github.com/forta-protocol/forta-node/utils"
 	"github.com/shopspring/decimal"
-)
-
-// Metric fields
-const (
-	MetricFinding      = "finding"
-	MetricTxRequest    = "tx.request"
-	MetricTxLatency    = "tx.latency"
-	MetricTxError      = "tx.error"
-	MetricTxSuccess    = "tx.success"
-	MetricBlockRequest = "block.request"
-	MetricBlockLatency = "block.latency"
-	MetricBlockError   = "block.error"
-	MetricBlockSuccess = "block.success"
 )
 
 // Adjustable package settings
@@ -38,6 +27,7 @@ type metricsBucket struct {
 	FindingCount    uint32
 	TxProcessing    agentResponseMetrics
 	BlockProcessing agentResponseMetrics
+	StopCount       uint32
 	protocol.AgentMetrics
 }
 
@@ -93,6 +83,19 @@ func FindClosestBucketTime(t time.Time) time.Time {
 }
 
 type agentResponse protocol.EvaluateTxResponse
+
+func (ama *AgentMetricsAggregator) AddAgentMetric(m *protocol.AgentMetric) error {
+	t, _ := time.Parse(time.RFC3339, m.Timestamp)
+	bucket := ama.findBucket(m.AgentId, t)
+
+	// one can add other metrics here
+	if m.Name == metrics.MetricStop {
+		bucket.StopCount += uint32(m.Value)
+	} else {
+		log.WithField("metric", m.Name).Warn("unsupported metric name")
+	}
+	return nil
+}
 
 // AggregateFromTxResponse aggregates metrics from a tx response.
 func (ama *AgentMetricsAggregator) AggregateFromTxResponse(agentID string, resp *protocol.EvaluateTxResponse) {
@@ -159,7 +162,7 @@ func (allMetrics allAgentMetrics) PrepareLatencyMetrics() {
 	for _, agentMetrics := range allMetrics {
 		if len(agentMetrics.TxProcessing.Latency) > 0 {
 			latencyNums := agentMetrics.TxProcessing.Latency
-			txLatency := agentMetrics.CreateAndGetSummary(MetricTxLatency)
+			txLatency := agentMetrics.CreateAndGetSummary(metrics.MetricTxLatency)
 			txLatency.Count = uint32(len(latencyNums))
 			txLatency.Average = avgMetricArray(latencyNums)
 			txLatency.Max = maxDataPoint(latencyNums)
@@ -168,7 +171,7 @@ func (allMetrics allAgentMetrics) PrepareLatencyMetrics() {
 		}
 		if len(agentMetrics.BlockProcessing.Latency) > 0 {
 			latencyNums := agentMetrics.BlockProcessing.Latency
-			blockLatency := agentMetrics.CreateAndGetSummary(MetricBlockLatency)
+			blockLatency := agentMetrics.CreateAndGetSummary(metrics.MetricBlockLatency)
 			blockLatency.Count = uint32(len(latencyNums))
 			blockLatency.Average = avgMetricArray(latencyNums)
 			blockLatency.Max = maxDataPoint(latencyNums)
@@ -180,24 +183,27 @@ func (allMetrics allAgentMetrics) PrepareLatencyMetrics() {
 
 func (allMetrics allAgentMetrics) PrepareCountMetrics() {
 	for _, agentMetrics := range allMetrics {
-		finding := agentMetrics.CreateAndGetSummary(MetricFinding)
+		finding := agentMetrics.CreateAndGetSummary(metrics.MetricFinding)
 		setCountMetric(finding, agentMetrics.FindingCount)
 
+		stop := agentMetrics.CreateAndGetSummary(metrics.MetricStop)
+		setCountMetric(stop, agentMetrics.StopCount)
+
 		if len(agentMetrics.TxProcessing.Latency) > 0 {
-			request := agentMetrics.CreateAndGetSummary(MetricTxRequest)
+			request := agentMetrics.CreateAndGetSummary(metrics.MetricTxRequest)
 			setCountMetric(request, agentMetrics.TxProcessing.Request)
-			success := agentMetrics.CreateAndGetSummary(MetricTxSuccess)
+			success := agentMetrics.CreateAndGetSummary(metrics.MetricTxSuccess)
 			setCountMetric(success, agentMetrics.TxProcessing.Success)
-			errorM := agentMetrics.CreateAndGetSummary(MetricTxError)
+			errorM := agentMetrics.CreateAndGetSummary(metrics.MetricTxError)
 			setCountMetric(errorM, agentMetrics.TxProcessing.Error)
 		}
 
 		if len(agentMetrics.BlockProcessing.Latency) > 0 {
-			request := agentMetrics.CreateAndGetSummary(MetricBlockRequest)
+			request := agentMetrics.CreateAndGetSummary(metrics.MetricBlockRequest)
 			setCountMetric(request, agentMetrics.BlockProcessing.Request)
-			success := agentMetrics.CreateAndGetSummary(MetricBlockSuccess)
+			success := agentMetrics.CreateAndGetSummary(metrics.MetricBlockSuccess)
 			setCountMetric(success, agentMetrics.BlockProcessing.Success)
-			errorM := agentMetrics.CreateAndGetSummary(MetricBlockError)
+			errorM := agentMetrics.CreateAndGetSummary(metrics.MetricBlockError)
 			setCountMetric(errorM, agentMetrics.BlockProcessing.Error)
 		}
 	}
