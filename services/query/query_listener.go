@@ -25,6 +25,7 @@ import (
 
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/contracts"
+	"github.com/forta-protocol/forta-node/ethereum"
 	"github.com/forta-protocol/forta-node/protocol"
 	"github.com/forta-protocol/forta-node/security"
 	"github.com/forta-protocol/forta-node/services/query/testalerts"
@@ -464,7 +465,7 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, cfg AlertList
 		txOpts.GasLimit = *cfg.PublisherConfig.GasLimit
 	}
 
-	contract, err := contracts.NewAlertsTransactor(common.HexToAddress(cfg.PublisherConfig.ContractAddress), ethClient)
+	contract, err := contracts.NewAlertsTransactor(common.HexToAddress(cfg.PublisherConfig.ContractAddress), ethereum.NewContractBackend(rpcClient))
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize the alerts contract: %v", err)
 	}
