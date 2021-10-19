@@ -50,7 +50,7 @@ func NewClient(name, natsURL string) *Client {
 
 // AgentsHandler handles agents.* subjects.
 type AgentsHandler func(AgentPayload) error
-type AgentMetricHandler func(metric *protocol.AgentMetric) error
+type AgentMetricHandler func(*protocol.AgentMetric) error
 
 // Subscribe subscribes the consumer to this client.
 func (client *Client) Subscribe(subject string, handler interface{}) {
