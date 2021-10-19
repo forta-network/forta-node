@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
-
+	"fmt"
+	"github.com/forta-protocol/forta-node/clients/messaging"
 	log "github.com/sirupsen/logrus"
+	"os"
 
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/security"
@@ -17,11 +19,17 @@ func initApi(ctx context.Context, as store.AlertStore, cfg config.Config) (*quer
 }
 
 func initListener(ctx context.Context, as store.AlertStore, cfg config.Config) (*query.AlertListener, error) {
+	natsHost := os.Getenv(config.EnvNatsHost)
+	if natsHost == "" {
+		return nil, fmt.Errorf("%s is a required env var", config.EnvNatsHost)
+	}
+	mc := messaging.NewClient("metrics", fmt.Sprintf("%s:%s", natsHost, config.DefaultNatsPort))
+
 	key, err := security.LoadKey(config.DefaultContainerKeyDirPath)
 	if err != nil {
 		return nil, err
 	}
-	return query.NewAlertListener(ctx, as, query.AlertListenerConfig{
+	return query.NewAlertListener(ctx, as, mc, query.AlertListenerConfig{
 		Port:            8770,
 		ChainID:         cfg.Scanner.ChainID,
 		Key:             key,
@@ -34,6 +42,7 @@ func initPruner(ctx context.Context, as store.AlertStore, cfg config.Config) (*q
 }
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
+
 	as, err := store.NewBadgerAlertStore()
 	if err != nil {
 		log.Errorf("Error while initializing BadgerDB: %s", err.Error())

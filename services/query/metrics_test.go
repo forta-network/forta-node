@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	mtx "github.com/forta-protocol/forta-node/metrics"
 	"github.com/forta-protocol/forta-node/protocol"
 	"github.com/forta-protocol/forta-node/services/query"
 	"github.com/forta-protocol/forta-node/utils"
@@ -132,6 +133,13 @@ func TestAgentMetricsAggregator(t *testing.T) {
 		aggregator.AggregateFromBlockResponse(testAgentID2, blockResp)
 	}
 
+	_ = aggregator.AddAgentMetric(&protocol.AgentMetric{
+		AgentId:   testAgentID2,
+		Timestamp: utils.FormatTime(testTime1),
+		Name:      mtx.MetricStop,
+		Value:     1,
+	})
+
 	// Ensure that we have waited long enough until the flush interval.
 	time.Sleep(query.DefaultBucketInterval * 2)
 
@@ -150,12 +158,13 @@ func TestAgentMetricsAggregator(t *testing.T) {
 
 	metrics1 := (*Metrics)(metrics[0]) // Agent 1, bucket 1
 	r.Equal(testAgentID1, metrics1.AgentId)
-	r.Equal(uint32(1), metrics1.GetMetric(query.MetricTxError).Count)
-	r.Equal(uint32(3), metrics1.GetMetric(query.MetricFinding).Count)
-	r.Equal(uint32(3), metrics1.GetMetric(query.MetricTxRequest).Count)
-	r.Equal(uint32(2), metrics1.GetMetric(query.MetricTxSuccess).Count)
+	r.Equal(uint32(1), metrics1.GetMetric(mtx.MetricTxError).Count)
+	r.Equal(uint32(3), metrics1.GetMetric(mtx.MetricFinding).Count)
+	r.Equal(uint32(3), metrics1.GetMetric(mtx.MetricTxRequest).Count)
+	r.Equal(uint32(2), metrics1.GetMetric(mtx.MetricTxSuccess).Count)
+	r.Equal(uint32(0), metrics1.GetMetric(mtx.MetricStop).Count)
 
-	txLatencyMetric1 := metrics1.GetMetric(query.MetricTxLatency)
+	txLatencyMetric1 := metrics1.GetMetric(mtx.MetricTxLatency)
 	r.Equal(txProcessingAvg, txLatencyMetric1.Average)
 	r.Equal(txProcessingCount, txLatencyMetric1.Count)
 	r.Equal(txProcessingMax, txLatencyMetric1.Max)
@@ -164,52 +173,53 @@ func TestAgentMetricsAggregator(t *testing.T) {
 
 	r.Equal(utils.FormatTime(testBucketTime1), metrics1.Timestamp)
 
-	r.Nil(metrics1.GetMetric(query.MetricBlockLatency))
-	r.Nil(metrics1.GetMetric(query.MetricBlockError))
-	r.Nil(metrics1.GetMetric(query.MetricBlockSuccess))
-	r.Nil(metrics1.GetMetric(query.MetricBlockRequest))
+	r.Nil(metrics1.GetMetric(mtx.MetricBlockLatency))
+	r.Nil(metrics1.GetMetric(mtx.MetricBlockError))
+	r.Nil(metrics1.GetMetric(mtx.MetricBlockSuccess))
+	r.Nil(metrics1.GetMetric(mtx.MetricBlockRequest))
 
 	metrics2 := (*Metrics)(metrics[1]) // Agent 2, bucket 1
 	r.Equal(testAgentID2, metrics2.AgentId)
 	r.Equal(utils.FormatTime(testBucketTime1), metrics2.Timestamp)
 
-	r.Equal(uint32(1), metrics2.GetMetric(query.MetricTxError).Count)
-	r.Equal(uint32(3), metrics2.GetMetric(query.MetricFinding).Count)
-	r.Equal(uint32(3), metrics2.GetMetric(query.MetricTxRequest).Count)
-	r.Equal(uint32(2), metrics2.GetMetric(query.MetricTxSuccess).Count)
+	r.Equal(uint32(1), metrics2.GetMetric(mtx.MetricTxError).Count)
+	r.Equal(uint32(3), metrics2.GetMetric(mtx.MetricFinding).Count)
+	r.Equal(uint32(3), metrics2.GetMetric(mtx.MetricTxRequest).Count)
+	r.Equal(uint32(2), metrics2.GetMetric(mtx.MetricTxSuccess).Count)
+	r.Equal(uint32(1), metrics2.GetMetric(mtx.MetricStop).Count)
 
-	txLatencyMetric2 := metrics2.GetMetric(query.MetricTxLatency)
+	txLatencyMetric2 := metrics2.GetMetric(mtx.MetricTxLatency)
 	r.Equal(txProcessingAvg, txLatencyMetric2.Average)
 	r.Equal(txProcessingCount, txLatencyMetric2.Count)
 	r.Equal(txProcessingMax, txLatencyMetric2.Max)
 	r.Equal(txProcessingP95, txLatencyMetric2.P95)
 	r.Equal(txProcessingSum, txLatencyMetric2.Sum)
 
-	r.Nil(metrics2.GetMetric(query.MetricBlockLatency))
-	r.Nil(metrics2.GetMetric(query.MetricBlockError))
-	r.Nil(metrics2.GetMetric(query.MetricBlockSuccess))
-	r.Nil(metrics2.GetMetric(query.MetricBlockRequest))
+	r.Nil(metrics2.GetMetric(mtx.MetricBlockLatency))
+	r.Nil(metrics2.GetMetric(mtx.MetricBlockError))
+	r.Nil(metrics2.GetMetric(mtx.MetricBlockSuccess))
+	r.Nil(metrics2.GetMetric(mtx.MetricBlockRequest))
 
 	metrics3 := (*Metrics)(metrics[2]) // Agent 1, bucket 2
 	r.Equal(testAgentID1, metrics3.AgentId)
 	r.Equal(utils.FormatTime(testBucketTime4), metrics3.Timestamp)
 
-	r.Equal(uint32(2), metrics3.GetMetric(query.MetricFinding).Count)
-	r.Equal(uint32(0), metrics3.GetMetric(query.MetricTxError).Count)
-	r.Equal(uint32(1), metrics3.GetMetric(query.MetricTxRequest).Count)
-	r.Equal(uint32(1), metrics3.GetMetric(query.MetricTxSuccess).Count)
-	r.Equal(uint32(0), metrics3.GetMetric(query.MetricBlockError).Count)
-	r.Equal(uint32(1), metrics3.GetMetric(query.MetricBlockRequest).Count)
-	r.Equal(uint32(1), metrics3.GetMetric(query.MetricBlockSuccess).Count)
+	r.Equal(uint32(2), metrics3.GetMetric(mtx.MetricFinding).Count)
+	r.Equal(uint32(0), metrics3.GetMetric(mtx.MetricTxError).Count)
+	r.Equal(uint32(1), metrics3.GetMetric(mtx.MetricTxRequest).Count)
+	r.Equal(uint32(1), metrics3.GetMetric(mtx.MetricTxSuccess).Count)
+	r.Equal(uint32(0), metrics3.GetMetric(mtx.MetricBlockError).Count)
+	r.Equal(uint32(1), metrics3.GetMetric(mtx.MetricBlockRequest).Count)
+	r.Equal(uint32(1), metrics3.GetMetric(mtx.MetricBlockSuccess).Count)
 
-	txLatencyMetric3 := metrics3.GetMetric(query.MetricTxLatency)
+	txLatencyMetric3 := metrics3.GetMetric(mtx.MetricTxLatency)
 	r.Equal(txProcessing2Avg, txLatencyMetric3.Average)
 	r.Equal(txProcessing2Count, txLatencyMetric3.Count)
 	r.Equal(txProcessing2Max, txLatencyMetric3.Max)
 	r.Equal(txProcessing2P95, txLatencyMetric3.P95)
 	r.Equal(txProcessing2Sum, txLatencyMetric3.Sum)
 
-	blockLatencyMetric3 := metrics3.GetMetric(query.MetricBlockLatency)
+	blockLatencyMetric3 := metrics3.GetMetric(mtx.MetricBlockLatency)
 	r.Equal(blockProcessingAvg, blockLatencyMetric3.Average)
 	r.Equal(blockProcessingCount, blockLatencyMetric3.Count)
 	r.Equal(blockProcessingMax, blockLatencyMetric3.Max)
@@ -220,22 +230,22 @@ func TestAgentMetricsAggregator(t *testing.T) {
 	r.Equal(testAgentID2, metrics4.AgentId)
 	r.Equal(utils.FormatTime(testBucketTime4), metrics4.Timestamp)
 
-	r.Equal(uint32(2), metrics4.GetMetric(query.MetricFinding).Count)
-	r.Equal(uint32(0), metrics4.GetMetric(query.MetricTxError).Count)
-	r.Equal(uint32(1), metrics4.GetMetric(query.MetricTxRequest).Count)
-	r.Equal(uint32(1), metrics4.GetMetric(query.MetricTxSuccess).Count)
-	r.Equal(uint32(0), metrics4.GetMetric(query.MetricBlockError).Count)
-	r.Equal(uint32(1), metrics4.GetMetric(query.MetricBlockRequest).Count)
-	r.Equal(uint32(1), metrics4.GetMetric(query.MetricBlockSuccess).Count)
+	r.Equal(uint32(2), metrics4.GetMetric(mtx.MetricFinding).Count)
+	r.Equal(uint32(0), metrics4.GetMetric(mtx.MetricTxError).Count)
+	r.Equal(uint32(1), metrics4.GetMetric(mtx.MetricTxRequest).Count)
+	r.Equal(uint32(1), metrics4.GetMetric(mtx.MetricTxSuccess).Count)
+	r.Equal(uint32(0), metrics4.GetMetric(mtx.MetricBlockError).Count)
+	r.Equal(uint32(1), metrics4.GetMetric(mtx.MetricBlockRequest).Count)
+	r.Equal(uint32(1), metrics4.GetMetric(mtx.MetricBlockSuccess).Count)
 
-	txLatencyMetric4 := metrics4.GetMetric(query.MetricTxLatency)
+	txLatencyMetric4 := metrics4.GetMetric(mtx.MetricTxLatency)
 	r.Equal(txProcessing2Avg, txLatencyMetric4.Average)
 	r.Equal(txProcessing2Count, txLatencyMetric4.Count)
 	r.Equal(txProcessing2Max, txLatencyMetric4.Max)
 	r.Equal(txProcessing2P95, txLatencyMetric4.P95)
 	r.Equal(txProcessing2Sum, txLatencyMetric4.Sum)
 
-	blockLatencyMetric4 := metrics4.GetMetric(query.MetricBlockLatency)
+	blockLatencyMetric4 := metrics4.GetMetric(mtx.MetricBlockLatency)
 	r.Equal(blockProcessingAvg, blockLatencyMetric4.Average)
 	r.Equal(blockProcessingCount, blockLatencyMetric4.Count)
 	r.Equal(blockProcessingMax, blockLatencyMetric4.Max)
