@@ -23,6 +23,7 @@ mocks:
 	mockgen -source feeds/interfaces.go -destination feeds/mocks/mock_feeds.go
 	mockgen -source services/registry/registry.go -destination services/registry/mocks/mock_registry.go
 	mockgen -source store/registry.go -destination store/mocks/mock_registry.go
+	mockgen -source ethereum/contract_backend.go -destination ethereum/mocks/mock_ethclient.go
 
 test:
 	go test -v -count=1 ./...
