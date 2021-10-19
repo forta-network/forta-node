@@ -157,7 +157,7 @@ func (al *AlertListener) shouldSkipPublishing(batch *protocol.SignedAlertBatch) 
 }
 
 func (al *AlertListener) listenForMetrics() {
-	al.messageClient.Subscribe(messaging.SubjectMetricAgent, al.metricsAggregator.AddAgentMetric)
+	al.messageClient.Subscribe(messaging.SubjectMetricAgent, messaging.AgentMetricHandler(al.metricsAggregator.AddAgentMetric))
 }
 
 func (al *AlertListener) publishBatches() {
