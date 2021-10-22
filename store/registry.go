@@ -58,7 +58,7 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 			if err != nil {
 				return nil, false, err
 			}
-			agtCfg, err := rs.makeAgentConfig(common.Bytes2Hex(res.AgentId.Bytes()), res.Metadata)
+			agtCfg, err := rs.makeAgentConfig(utils.BytesToHex(res.AgentId.Bytes()), res.Metadata)
 			if err != nil {
 				log.WithError(err).Warn("could not parse config for agent")
 			} else {

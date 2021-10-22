@@ -18,3 +18,7 @@ func HexToBigInt(hex string) (*big.Int, error) {
 func Bytes32ToHex(b [32]byte) string {
 	return common.BytesToHash(b[:]).Hex()
 }
+
+func BytesToHex(b []byte) string {
+	return common.BytesToHash(b).Hex()
+}
