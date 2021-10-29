@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	gethlog "github.com/ethereum/go-ethereum/log"
@@ -33,11 +34,17 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 		return nil, nil, fmt.Errorf("trace requires a JsonRpcUrl if enabled")
 	}
 
+	var rateLimit *time.Ticker
+	if cfg.Scanner.BlockRateLimit > 0 {
+		rateLimit = time.NewTicker(time.Duration(cfg.Scanner.BlockRateLimit) * time.Millisecond)
+	}
+
 	blockFeed, err := feeds.NewBlockFeed(ctx, ethClient, traceClient, feeds.BlockFeedConfig{
-		Start:   startBlock,
-		End:     endBlock,
-		ChainID: chainID,
-		Tracing: cfg.Trace.Enabled,
+		Start:     startBlock,
+		End:       endBlock,
+		ChainID:   chainID,
+		Tracing:   cfg.Trace.Enabled,
+		RateLimit: rateLimit,
 	})
 	if err != nil {
 		return nil, nil, err

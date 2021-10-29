@@ -10,7 +10,7 @@ import (
 // BlockFeed is a subscribable feed of blocks.
 type BlockFeed interface {
 	Start()
-	StartRange(start int64, end int64)
+	StartRange(start int64, end int64, rate int64)
 	IsStarted() bool
 	Subscribe(handler func(evt *domain.BlockEvent) error) <-chan error
 }

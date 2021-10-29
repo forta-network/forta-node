@@ -47,18 +47,26 @@ func (a *API) startBlocks(w http.ResponseWriter, r *http.Request) {
 		writeMessage(w, "already started")
 	} else {
 		start := r.URL.Query().Get("start")
-		end := r.URL.Query().Get("end")
 		start64, err := strconv.ParseInt(start, 10, 64)
 		if err != nil {
 			writeError(w, 400, "?start is required and must be integer")
 			return
 		}
+
+		end := r.URL.Query().Get("end")
 		end64, err := strconv.ParseInt(end, 10, 64)
 		if err != nil {
 			writeError(w, 400, "?end is required and must be integer")
 			return
 		}
-		a.feed.StartRange(start64, end64)
+
+		rate := r.URL.Query().Get("rate")
+		rate64, err := strconv.ParseInt(rate, 10, 64)
+		if err != nil {
+			writeError(w, 400, "?end is required and must be integer")
+			return
+		}
+		a.feed.StartRange(start64, end64, rate64)
 		writeMessage(w, "ok")
 	}
 }

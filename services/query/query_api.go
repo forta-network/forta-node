@@ -2,6 +2,7 @@ package query
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -134,6 +135,49 @@ func parseQueryRequest(r *http.Request) (*store.AlertQueryRequest, error) {
 	return request, nil
 }
 
+type agentReport struct {
+	AlertCounts map[string]int64 `json:"alertCounts"`
+}
+
+//getAgentReport returns numbers of alerts by agents
+func (t *AlertApi) getAgentReport(w http.ResponseWriter, r *http.Request) {
+	queryReq, err := parseQueryRequest(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	report := &agentReport{
+		AlertCounts: make(map[string]int64),
+	}
+	alerts, err := t.store.QueryAlerts(queryReq)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	for len(alerts.Alerts) > 0 {
+		for _, a := range alerts.Alerts {
+			if _, ok := report.AlertCounts[a.Alert.Agent.Id]; !ok {
+				report.AlertCounts[a.Alert.Agent.Id] = 0
+			}
+			report.AlertCounts[a.Alert.Agent.Id]++
+		}
+		queryReq.PageToken = alerts.NextPageToken
+		if alerts.NextPageToken == "" {
+			break
+		}
+		alerts, err = t.store.QueryAlerts(queryReq)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+	}
+
+	b, _ := json.Marshal(report)
+	w.WriteHeader(200)
+	_, _ = w.Write(b)
+}
+
 func (t *AlertApi) getAlerts(w http.ResponseWriter, r *http.Request) {
 	queryReq, err := parseQueryRequest(r)
 	if err != nil {
@@ -164,6 +208,7 @@ func (t *AlertApi) getAlerts(w http.ResponseWriter, r *http.Request) {
 func (t *AlertApi) Start() error {
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/alerts", t.getAlerts)
+	router.HandleFunc("/report/agents", t.getAgentReport)
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},

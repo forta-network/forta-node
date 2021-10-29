@@ -113,6 +113,7 @@ type ScannerConfig struct {
 	EndBlock         int            `yaml:"endBlock" json:"endBlock"`
 	Ethereum         EthereumConfig `yaml:"ethereum" json:"ethereum"`
 	DisableAutostart bool           `yaml:"disableAutostart" json:"disableAutostart"`
+	BlockRateLimit   int            `yaml:"blockRateLimit" json:"blockRateLimit"`
 }
 
 type TraceConfig struct {

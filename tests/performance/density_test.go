@@ -34,6 +34,7 @@ type TestConfig struct {
 	agentCount int
 	start      int64
 	end        int64
+	rate       int64
 }
 
 type TestContext struct {
@@ -45,7 +46,11 @@ type TestContext struct {
 }
 
 func (tc *TestContext) runBlocks() {
-	url := fmt.Sprintf("http://localhost:8989/start?start=%d&end=%d", tc.cfg.start, tc.cfg.end)
+	url := fmt.Sprintf("http://localhost:8989/start?start=%d&end=%d&rate=%d",
+		tc.cfg.start,
+		tc.cfg.end,
+		tc.cfg.rate,
+	)
 	resp, err := http.Get(url)
 	assert.NoError(tc.t, err)
 	assert.Equal(tc.t, 200, resp.StatusCode)
@@ -92,13 +97,16 @@ func NewTestContext(t *testing.T, cfg *TestConfig) *TestContext {
 }
 
 func TestPerformance(t *testing.T) {
+	startDate := time.Now()
 	tctx := NewTestContext(t, &TestConfig{
-		agentCount: 1,
+		agentCount: 3,
 		start:      13513743,
-		end:        13513743,
+		end:        13513753,
+		rate:       15000,
 	})
 	assert.NoError(t, tctx.Setup())
 	tctx.runBlocks()
+	t.Logf("startDate: %d000", startDate.Unix())
 	// start agents
 	// are they started?
 	// trigger start
