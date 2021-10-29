@@ -30,6 +30,7 @@ type blockFeed struct {
 	cache       utils.Cache
 	chainID     *big.Int
 	tracing     bool
+	started     bool
 }
 
 type BlockFeedConfig struct {
@@ -72,11 +73,30 @@ func (bf *blockFeed) initialize() error {
 	return nil
 }
 
+func (bf *blockFeed) IsStarted() bool {
+	return bf.started
+}
+
 func (bf *blockFeed) Start() {
-	go bf.loop()
+	if !bf.started {
+		go bf.loop()
+	}
+}
+
+//StartRange runs a specific set of blocks synchronously
+func (bf *blockFeed) StartRange(start int64, end int64) {
+	if !bf.started {
+		bf.start = big.NewInt(start)
+		bf.end = big.NewInt(end)
+		go bf.loop()
+	}
 }
 
 func (bf *blockFeed) loop() {
+	bf.started = true
+	defer func() {
+		bf.started = false
+	}()
 	err := bf.forEachBlock()
 	if err == nil {
 		return

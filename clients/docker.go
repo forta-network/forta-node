@@ -58,9 +58,21 @@ type DockerContainerList []types.Container
 
 // FindByID finds the container by the ID.
 func (dcl DockerContainerList) FindByID(id string) (*types.Container, bool) {
-	for _, container := range dcl {
-		if container.ID == id {
-			return &container, true
+	for _, c := range dcl {
+		if c.ID == id {
+			return &c, true
+		}
+	}
+	return nil, false
+}
+
+// FindByName finds the container by the name.
+func (dcl DockerContainerList) FindByName(name string) (*types.Container, bool) {
+	for _, c := range dcl {
+		for _, n := range c.Names {
+			if n == name || n == fmt.Sprintf("/%s", name) {
+				return &c, true
+			}
 		}
 	}
 	return nil, false

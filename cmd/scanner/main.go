@@ -135,15 +135,24 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	}
 
 	// Start the main block feed so all transaction feeds can start consuming.
-	blockFeed.Start()
+	if !cfg.Scanner.DisableAutostart {
+		blockFeed.Start()
+	}
 
-	return []services.Service{
+	svcs := []services.Service{
 		txStream,
 		txAnalyzer,
 		blockAnalyzer,
+		scanner.NewScannerAPI(ctx, blockFeed),
 		scanner.NewTxLogger(ctx),
-		registryService,
-	}, nil
+	}
+
+	// for performance tests, this flag avoids using registry service
+	if !cfg.Registry.Disabled {
+		svcs = append(svcs, registryService)
+	}
+
+	return svcs, nil
 }
 
 func main() {

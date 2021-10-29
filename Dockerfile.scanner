@@ -14,4 +14,6 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /go/app/main /go/app/cmd/s
 FROM base
 COPY --from=go-builder /go/app/main /main
 
+EXPOSE 80
+
 CMD ["/main"]

@@ -42,6 +42,11 @@ func (bf *mockBlockFeed) Subscribe(handler func(evt *domain.BlockEvent) error) <
 // Start implements the BlockFeed interface.
 func (bf *mockBlockFeed) Start() {}
 
+// IsStarted implements the BlockFeed interface.
+func (bf *mockBlockFeed) IsStarted() bool {
+	return true
+}
+
 // NewMockBlockFeed returns a new mockBlockFeed for tests
 func NewMockBlockFeed(blocks []*domain.BlockEvent) *mockBlockFeed {
 	return &mockBlockFeed{blocks}

@@ -8,6 +8,7 @@ import (
 const (
 	SubjectAgentsVersionsLatest = "agents.versions.latest"
 	SubjectAgentsActionRun      = "agents.action.run"
+	SubjectAgentReady           = "agent.ready"
 	SubjectAgentsActionStop     = "agents.action.stop"
 	SubjectAgentsStatusRunning  = "agents.status.running"
 	SubjectAgentsStatusStopped  = "agents.status.stopped"

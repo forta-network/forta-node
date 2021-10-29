@@ -73,6 +73,10 @@ func (t *TxNodeService) handleAgentRun(payload messaging.AgentPayload) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
+	log.WithFields(log.Fields{
+		"payload": payload[0].ID,
+	}).Infof("handle agent run")
+
 	for _, agent := range payload {
 		_, ok := t.getContainerUnsafe(agent.ContainerName())
 		if ok {
