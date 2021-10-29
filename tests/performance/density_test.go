@@ -1,3 +1,5 @@
+//+build perf_test
+
 package performance
 
 import (
