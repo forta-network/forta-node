@@ -47,6 +47,9 @@ func (bf *mockBlockFeed) IsStarted() bool {
 	return true
 }
 
+// StartRange implements the BlockFeed interface.
+func (bf *mockBlockFeed) StartRange(start int64, end int64, rate int64) {}
+
 // NewMockBlockFeed returns a new mockBlockFeed for tests
 func NewMockBlockFeed(blocks []*domain.BlockEvent) *mockBlockFeed {
 	return &mockBlockFeed{blocks}
