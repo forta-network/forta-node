@@ -4,15 +4,20 @@ package performance
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/forta-protocol/forta-node/clients"
-	"github.com/forta-protocol/forta-node/clients/messaging"
-	"github.com/forta-protocol/forta-node/config"
-	"github.com/stretchr/testify/assert"
+	"io"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/forta-protocol/forta-node/clients"
+	"github.com/forta-protocol/forta-node/clients/messaging"
+	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-protocol/forta-node/services/query"
 )
 
 func generateAgents(count int) []*config.AgentConfig {
@@ -33,29 +38,39 @@ func agentId(index int) string {
 }
 
 type TestConfig struct {
-	agentCount int
-	start      int64
-	end        int64
-	rate       int64
+	host           string
+	agentCount     int
+	start          int64
+	end            int64
+	rate           int64
+	expectedAlerts int64
 }
 
 type TestContext struct {
 	t         *testing.T
 	cfg       *TestConfig
 	msgClient clients.MessageClient
+	startDate time.Time
 
 	ready []config.AgentConfig
+	agts  []*config.AgentConfig
 }
 
-func (tc *TestContext) runBlocks() {
-	url := fmt.Sprintf("http://localhost:8989/start?start=%d&end=%d&rate=%d",
+func (tc *TestContext) runBlocks() error {
+	url := fmt.Sprintf("http://%s:8989/start?start=%d&end=%d&rate=%d",
+		tc.cfg.host,
 		tc.cfg.start,
 		tc.cfg.end,
 		tc.cfg.rate,
 	)
 	resp, err := http.Get(url)
-	assert.NoError(tc.t, err)
-	assert.Equal(tc.t, 200, resp.StatusCode)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("%s returned %d", url, resp.StatusCode)
+	}
+	return err
 }
 
 func (tc *TestContext) handleReady(payload messaging.AgentPayload) error {
@@ -79,14 +94,60 @@ func (tc *TestContext) waitForReady(duration time.Duration) error {
 }
 
 func (tc *TestContext) Setup() error {
-	agts := generateAgents(tc.cfg.agentCount)
+	tc.startDate = time.Now()
+	tc.agts = generateAgents(tc.cfg.agentCount)
 	tc.msgClient.Subscribe(messaging.SubjectAgentReady, messaging.AgentsHandler(tc.handleReady))
-	tc.runAgents(agts)
+	tc.runAgents()
 	return tc.waitForReady(5 * time.Minute)
 }
 
-func (tc *TestContext) runAgents(agts []*config.AgentConfig) {
-	tc.msgClient.Publish(messaging.SubjectAgentsVersionsLatest, agts)
+func (tc *TestContext) runAgents() {
+	tc.msgClient.Publish(messaging.SubjectAgentsVersionsLatest, tc.agts)
+}
+
+func (tc *TestContext) getResults() (*query.AgentReport, error) {
+	url := fmt.Sprintf("http://%s:8778/report/agents?startDate=%d000",
+		tc.cfg.host,
+		tc.startDate.Unix(),
+	)
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("%s returned %d", url, resp.StatusCode)
+	}
+	var report query.AgentReport
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(b, &report)
+	if err != nil {
+		return nil, err
+	}
+	return &report, nil
+}
+
+func (tc *TestContext) verifyResults() error {
+	// wait enough time for blocks to be processed
+	blockCount := tc.cfg.end - tc.cfg.start
+	<-time.Tick(time.Duration((blockCount+1)*tc.cfg.rate) * time.Millisecond)
+	results, err := tc.getResults()
+	if err != nil {
+		return err
+	}
+
+	for _, agt := range tc.agts {
+		if r, ok := results.AlertCounts[agt.ID]; !ok {
+			return fmt.Errorf("%s not found", agt.ID)
+		} else {
+			if r != tc.cfg.expectedAlerts {
+				return fmt.Errorf("%s had %d instead of %d alerts", agt.ID, r, tc.cfg.expectedAlerts)
+			}
+		}
+	}
+	return nil
 }
 
 func NewTestContext(t *testing.T, cfg *TestConfig) *TestContext {
@@ -99,17 +160,15 @@ func NewTestContext(t *testing.T, cfg *TestConfig) *TestContext {
 }
 
 func TestPerformance(t *testing.T) {
-	startDate := time.Now()
 	tctx := NewTestContext(t, &TestConfig{
-		agentCount: 3,
-		start:      13513743,
-		end:        13513753,
-		rate:       15000,
+		host:           "localhost",
+		agentCount:     3,
+		start:          13513743,
+		end:            13513753,
+		rate:           15000,
+		expectedAlerts: 337,
 	})
 	assert.NoError(t, tctx.Setup())
-	tctx.runBlocks()
-	t.Logf("startDate: %d000", startDate.Unix())
-	// start agents
-	// are they started?
-	// trigger start
+	assert.NoError(t, tctx.runBlocks())
+	assert.NoError(t, tctx.verifyResults())
 }

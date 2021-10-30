@@ -135,7 +135,7 @@ func parseQueryRequest(r *http.Request) (*store.AlertQueryRequest, error) {
 	return request, nil
 }
 
-type agentReport struct {
+type AgentReport struct {
 	AlertCounts map[string]int64 `json:"alertCounts"`
 }
 
@@ -147,7 +147,7 @@ func (t *AlertApi) getAgentReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	report := &agentReport{
+	report := &AgentReport{
 		AlertCounts: make(map[string]int64),
 	}
 	alerts, err := t.store.QueryAlerts(queryReq)
