@@ -66,6 +66,7 @@ func (s *Suite) TestStartProcessStop() {
 	// Given that there are no agents running
 	// When the latest list is received,
 	// Then a "run" action should be published
+	s.msgClient.EXPECT().Publish(messaging.SubjectAgentReady, gomock.Any())
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsActionRun, gomock.Any())
 	s.r.NoError(s.ap.handleAgentVersionsUpdate(agentPayload))
 
