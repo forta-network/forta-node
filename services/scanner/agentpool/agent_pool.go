@@ -252,7 +252,7 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 		}
 	}
 	if len(agentsReady) > 0 {
-		ap.msgClient.Publish(messaging.SubjectAgentReady, agentsReady)
+		ap.msgClient.Publish(messaging.SubjectAgentsStatusAttached, agentsReady)
 	}
 	if len(agentsToStop) > 0 {
 		ap.msgClient.Publish(messaging.SubjectAgentsActionStop, agentsToStop)
