@@ -96,7 +96,7 @@ func (tc *TestContext) waitForReady(duration time.Duration) error {
 func (tc *TestContext) Setup() error {
 	tc.startDate = time.Now()
 	tc.agts = generateAgents(tc.cfg.agentCount)
-	tc.msgClient.Subscribe(messaging.SubjectAgentReady, messaging.AgentsHandler(tc.handleReady))
+	tc.msgClient.Subscribe(messaging.SubjectAgentsStatusAttached, messaging.AgentsHandler(tc.handleReady))
 	tc.runAgents()
 	return tc.waitForReady(5 * time.Minute)
 }
