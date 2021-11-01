@@ -10,6 +10,7 @@ const (
 	SubjectAgentsActionRun      = "agents.action.run"
 	SubjectAgentsActionStop     = "agents.action.stop"
 	SubjectAgentsStatusRunning  = "agents.status.running"
+	SubjectAgentsStatusAttached = "agents.status.attached"
 	SubjectAgentsStatusStopped  = "agents.status.stopped"
 	SubjectMetricAgent          = "metric.agent"
 )

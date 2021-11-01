@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -30,13 +31,16 @@ type blockFeed struct {
 	cache       utils.Cache
 	chainID     *big.Int
 	tracing     bool
+	started     bool
+	rateLimit   *time.Ticker
 }
 
 type BlockFeedConfig struct {
-	Start   *big.Int
-	End     *big.Int
-	ChainID *big.Int
-	Tracing bool
+	Start     *big.Int
+	End       *big.Int
+	ChainID   *big.Int
+	RateLimit *time.Ticker
+	Tracing   bool
 }
 
 func (bf *blockFeed) initialize() error {
@@ -72,11 +76,33 @@ func (bf *blockFeed) initialize() error {
 	return nil
 }
 
+func (bf *blockFeed) IsStarted() bool {
+	return bf.started
+}
+
 func (bf *blockFeed) Start() {
-	go bf.loop()
+	if !bf.started {
+		go bf.loop()
+	}
+}
+
+//StartRange runs a specific set of blocks synchronously
+func (bf *blockFeed) StartRange(start int64, end int64, rate int64) {
+	if !bf.started {
+		if rate > 0 {
+			bf.rateLimit = time.NewTicker(time.Duration(rate) * time.Millisecond)
+		}
+		bf.start = big.NewInt(start)
+		bf.end = big.NewInt(end)
+		go bf.loop()
+	}
 }
 
 func (bf *blockFeed) loop() {
+	bf.started = true
+	defer func() {
+		bf.started = false
+	}()
 	err := bf.forEachBlock()
 	if err == nil {
 		return
@@ -194,6 +220,9 @@ func (bf *blockFeed) forEachBlock() error {
 			}
 		}
 		blockNum.Add(blockNum, increment)
+		if bf.rateLimit != nil {
+			<-bf.rateLimit.C
+		}
 	}
 }
 
@@ -207,6 +236,7 @@ func NewBlockFeed(ctx context.Context, client ethereum.Client, traceClient ether
 		cache:       utils.NewCache(10000),
 		chainID:     cfg.ChainID,
 		tracing:     cfg.Tracing,
+		rateLimit:   cfg.RateLimit,
 	}
 	if err := bf.initialize(); err != nil {
 		return nil, err

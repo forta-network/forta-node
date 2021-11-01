@@ -157,6 +157,9 @@ func (t *TxNodeService) start() error {
 			config.EnvQueryNode: config.DockerQueryContainerName,
 			config.EnvNatsHost:  config.DockerNatsContainerName,
 		},
+		Ports: map[string]string{
+			"8989": "80",
+		},
 		Volumes: map[string]string{
 			t.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
 		},

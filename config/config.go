@@ -108,10 +108,12 @@ type QueryConfig struct {
 	PublishTo PublisherConfig `yaml:"publishTo" json:"publishTo"`
 }
 type ScannerConfig struct {
-	ChainID    int            `yaml:"chainId" json:"chainId"`
-	StartBlock int            `yaml:"startBlock" json:"startBlock"`
-	EndBlock   int            `yaml:"endBlock" json:"endBlock"`
-	Ethereum   EthereumConfig `yaml:"ethereum" json:"ethereum"`
+	ChainID          int            `yaml:"chainId" json:"chainId"`
+	StartBlock       int            `yaml:"startBlock" json:"startBlock"`
+	EndBlock         int            `yaml:"endBlock" json:"endBlock"`
+	Ethereum         EthereumConfig `yaml:"ethereum" json:"ethereum"`
+	DisableAutostart bool           `yaml:"disableAutostart" json:"disableAutostart"`
+	BlockRateLimit   int            `yaml:"blockRateLimit" json:"blockRateLimit"`
 }
 
 type TraceConfig struct {
@@ -136,6 +138,7 @@ type RegistryConfig struct {
 	ContainerRegistry string         `yaml:"containerRegistry" json:"containerRegistry" validate:"hostname"`
 	Username          string         `yaml:"username" json:"username"`
 	Password          string         `yaml:"password" json:"password"`
+	Disabled          bool           `yaml:"disabled" json:"disabled"` // for testing situations
 }
 
 type IPFSConfig struct {

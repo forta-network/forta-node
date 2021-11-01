@@ -233,6 +233,8 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	log.Debug("handleStatusRunning")
 	// If an agent was added before and just started to run, we should mark as ready.
 	var agentsToStop []config.AgentConfig
+	var agentsReady []config.AgentConfig
+
 	for _, agentCfg := range payload {
 		for _, agent := range ap.agents {
 			if agent.Config().ContainerName() == agentCfg.ContainerName() {
@@ -245,8 +247,12 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 				agent.SetClient(c)
 				agent.SetReady()
 				agent.StartProcessing()
+				agentsReady = append(agentsReady, agent.Config())
 			}
 		}
+	}
+	if len(agentsReady) > 0 {
+		ap.msgClient.Publish(messaging.SubjectAgentsStatusAttached, agentsReady)
 	}
 	if len(agentsToStop) > 0 {
 		ap.msgClient.Publish(messaging.SubjectAgentsActionStop, agentsToStop)
