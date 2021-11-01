@@ -145,12 +145,9 @@ func (tc *TestContext) verifyResults() error {
 	}
 
 	for _, agt := range tc.agts {
-		if r, ok := results.AlertCounts[agt.ID]; !ok {
-			return fmt.Errorf("%s not found", agt.ID)
-		} else {
-			if r != tc.cfg.expectedAlerts {
-				return fmt.Errorf("%s had %d instead of %d alerts", agt.ID, r, tc.cfg.expectedAlerts)
-			}
+		count := results.GetAlertCount(agt.ID)
+		if count != tc.cfg.expectedAlerts {
+			return fmt.Errorf("%s had %d instead of %d alerts", agt.ID, count, tc.cfg.expectedAlerts)
 		}
 	}
 	return nil
