@@ -90,7 +90,7 @@ func (tc *TestContext) waitForReady(duration time.Duration) error {
 		default:
 			if len(tc.ready) == tc.cfg.agentCount {
 				// sanity sleep
-				time.Tick(5 * time.Second)
+				time.Sleep(5 * time.Second)
 				return nil
 			}
 		}
@@ -138,7 +138,8 @@ func (tc *TestContext) getResults() (*query.AgentReport, error) {
 func (tc *TestContext) verifyResults() error {
 	// wait enough time for blocks to be processed
 	blockCount := tc.cfg.end - tc.cfg.start
-	<-time.Tick(time.Duration((blockCount+1)*tc.cfg.rate) * time.Millisecond)
+
+	time.Sleep(time.Duration((blockCount+1)*tc.cfg.rate) * time.Millisecond)
 	results, err := tc.getResults()
 	if err != nil {
 		return err
@@ -172,7 +173,7 @@ func NewTestContext(t *testing.T, cfg *TestConfig) *TestContext {
 
 func TestPerformance(t *testing.T) {
 	tctx := NewTestContext(t, &TestConfig{
-		host:           "localhost", //"54.90.96.23",
+		host:           "54.90.96.23",
 		image:          "disco.forta.network/bafybeibwzulzj5ua46w5gjwulivrvjbp24blio4tz4zlyzgu4pp6o7qpjy@sha256:a423779dfc43e3588579f5aa703d074413c734cb24495334776e01749f63dda9",
 		manifest:       "QmReurJ6XsKQNkWxw7DaSTTnZcmZia2P9J7ptUQo8DT3Mk",
 		agentCount:     3,
