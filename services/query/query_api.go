@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/forta-protocol/forta-node/utils"
 	"net/http"
 	"strconv"
 	"strings"
@@ -136,7 +137,8 @@ func parseQueryRequest(r *http.Request) (*store.AlertQueryRequest, error) {
 }
 
 type AgentReport struct {
-	AlertCounts map[string]int64 `json:"alertCounts"`
+	AlertCounts map[string]int64           `json:"alertCounts"`
+	BlockCounts map[int64]map[string]int64 `json:"blockCounts"`
 }
 
 //getAgentReport returns numbers of alerts by agents
@@ -149,6 +151,7 @@ func (t *AlertApi) getAgentReport(w http.ResponseWriter, r *http.Request) {
 
 	report := &AgentReport{
 		AlertCounts: make(map[string]int64),
+		BlockCounts: make(map[int64]map[string]int64),
 	}
 	alerts, err := t.store.QueryAlerts(queryReq)
 	if err != nil {
@@ -161,6 +164,18 @@ func (t *AlertApi) getAgentReport(w http.ResponseWriter, r *http.Request) {
 				report.AlertCounts[a.Alert.Agent.Id] = 0
 			}
 			report.AlertCounts[a.Alert.Agent.Id]++
+			bn, err := utils.HexToBigInt(a.BlockNumber)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, err)
+				return
+			}
+			if _, ok := report.BlockCounts[bn.Int64()]; !ok {
+				report.BlockCounts[bn.Int64()] = make(map[string]int64)
+			}
+			if _, ok := report.BlockCounts[bn.Int64()][a.Alert.Agent.Id]; !ok {
+				report.BlockCounts[bn.Int64()][a.Alert.Agent.Id] = 0
+			}
+			report.BlockCounts[bn.Int64()][a.Alert.Agent.Id]++
 		}
 		queryReq.PageToken = alerts.NextPageToken
 		if alerts.NextPageToken == "" {
