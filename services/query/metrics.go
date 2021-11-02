@@ -84,6 +84,24 @@ func (ama *AgentMetricsAggregator) AddAgentMetrics(ms *protocol.AgentMetricList)
 	return nil
 }
 
+// ForceFlush flushes without asking questions
+func (ama *AgentMetricsAggregator) ForceFlush() []*protocol.AgentMetrics {
+	now := time.Now()
+
+	ama.lastFlush = now
+	buckets := ama.buckets
+	ama.buckets = nil
+
+	(allAgentMetrics)(buckets).Fix()
+
+	var allMetrics []*protocol.AgentMetrics
+	for _, bucket := range buckets {
+		allMetrics = append(allMetrics, &bucket.AgentMetrics)
+	}
+
+	return allMetrics
+}
+
 // TryFlush checks the flushing condition(s) an returns metrics accordingly.
 func (ama *AgentMetricsAggregator) TryFlush() []*protocol.AgentMetrics {
 	now := time.Now()
