@@ -24,7 +24,7 @@ func TestAgentMetricsAggregator(t *testing.T) {
 	testTime1 := testNow
 	//testBucketTime1 := query.FindClosestBucketTime(testTime1)
 
-	err := aggregator.AddAgentMetrics([]*protocol.AgentMetric{
+	err := aggregator.AddAgentMetrics(&protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{
 		{
 			AgentId:   "agentID",
 			Timestamp: utils.FormatTime(testTime1),
@@ -55,7 +55,7 @@ func TestAgentMetricsAggregator(t *testing.T) {
 			Name:      "test.metric",
 			Value:     5,
 		},
-	})
+	}})
 	assert.NoError(t, err)
 
 	time.Sleep(query.DefaultBucketInterval * 2)

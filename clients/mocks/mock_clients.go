@@ -12,6 +12,7 @@ import (
 	config "github.com/forta-protocol/forta-node/config"
 	protocol "github.com/forta-protocol/forta-node/protocol"
 	gomock "github.com/golang/mock/gomock"
+	proto "github.com/golang/protobuf/proto"
 	grpc "google.golang.org/grpc"
 )
 
@@ -201,6 +202,18 @@ func (m *MockMessageClient) Publish(subject string, payload interface{}) {
 func (mr *MockMessageClientMockRecorder) Publish(subject, payload interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Publish", reflect.TypeOf((*MockMessageClient)(nil).Publish), subject, payload)
+}
+
+// PublishProto mocks base method.
+func (m *MockMessageClient) PublishProto(subject string, payload proto.Message) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "PublishProto", subject, payload)
+}
+
+// PublishProto indicates an expected call of PublishProto.
+func (mr *MockMessageClientMockRecorder) PublishProto(subject, payload interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishProto", reflect.TypeOf((*MockMessageClient)(nil).PublishProto), subject, payload)
 }
 
 // Subscribe mocks base method.

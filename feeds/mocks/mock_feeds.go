@@ -36,6 +36,20 @@ func (m *MockBlockFeed) EXPECT() *MockBlockFeedMockRecorder {
 	return m.recorder
 }
 
+// IsStarted mocks base method.
+func (m *MockBlockFeed) IsStarted() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsStarted")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsStarted indicates an expected call of IsStarted.
+func (mr *MockBlockFeedMockRecorder) IsStarted() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsStarted", reflect.TypeOf((*MockBlockFeed)(nil).IsStarted))
+}
+
 // Start mocks base method.
 func (m *MockBlockFeed) Start() {
 	m.ctrl.T.Helper()
@@ -46,6 +60,18 @@ func (m *MockBlockFeed) Start() {
 func (mr *MockBlockFeedMockRecorder) Start() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockBlockFeed)(nil).Start))
+}
+
+// StartRange mocks base method.
+func (m *MockBlockFeed) StartRange(start, end, rate int64) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "StartRange", start, end, rate)
+}
+
+// StartRange indicates an expected call of StartRange.
+func (mr *MockBlockFeedMockRecorder) StartRange(start, end, rate interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartRange", reflect.TypeOf((*MockBlockFeed)(nil).StartRange), start, end, rate)
 }
 
 // Subscribe mocks base method.
