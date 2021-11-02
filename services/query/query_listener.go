@@ -157,7 +157,7 @@ func (al *AlertListener) shouldSkipPublishing(batch *protocol.SignedAlertBatch) 
 }
 
 func (al *AlertListener) listenForMetrics() {
-	al.messageClient.Subscribe(messaging.SubjectMetricAgent, messaging.AgentMetricHandler(al.metricsAggregator.AddAgentMetric))
+	al.messageClient.Subscribe(messaging.SubjectMetricAgent, messaging.AgentMetricHandler(al.metricsAggregator.AddAgentMetrics))
 }
 
 func (al *AlertListener) publishBatches() {
@@ -375,10 +375,8 @@ func (al *AlertListener) prepareLatestBatch() {
 			var blockNum string
 			if notif.EvalBlockRequest != nil {
 				blockNum = notif.EvalBlockRequest.Event.BlockNumber
-				al.metricsAggregator.AggregateFromBlockResponse(notif.AgentInfo.Id, notif.EvalBlockResponse)
 			} else {
 				blockNum = notif.EvalTxRequest.Event.Block.BlockNumber
-				al.metricsAggregator.AggregateFromTxResponse(notif.AgentInfo.Id, notif.EvalTxResponse)
 			}
 
 			notifBlockNum, err := hexutil.DecodeUint64(blockNum)

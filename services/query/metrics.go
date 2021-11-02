@@ -1,8 +1,7 @@
 package query
 
 import (
-	"github.com/forta-protocol/forta-node/metrics"
-	log "github.com/sirupsen/logrus"
+	"github.com/forta-protocol/forta-node/clients/messaging"
 	"sort"
 	"time"
 
@@ -23,11 +22,8 @@ type AgentMetricsAggregator struct {
 }
 
 type metricsBucket struct {
-	Time            time.Time
-	FindingCount    uint32
-	TxProcessing    agentResponseMetrics
-	BlockProcessing agentResponseMetrics
-	StopCount       uint32
+	Time           time.Time
+	MetricCounters map[string][]uint32
 	protocol.AgentMetrics
 }
 
@@ -40,13 +36,6 @@ func (mb *metricsBucket) CreateAndGetSummary(name string) *protocol.MetricSummar
 	summary := &protocol.MetricSummary{Name: name}
 	mb.Metrics = append(mb.Metrics, summary)
 	return summary
-}
-
-type agentResponseMetrics struct {
-	Request uint32
-	Success uint32
-	Error   uint32
-	Latency []uint32
 }
 
 // NewAgentMetricsAggregator creates a new agent metrics aggregator.
@@ -67,7 +56,10 @@ func (ama *AgentMetricsAggregator) findBucket(agentID string, t time.Time) *metr
 		}
 		return bucket
 	}
-	bucket := &metricsBucket{Time: bucketTime}
+	bucket := &metricsBucket{
+		Time:           bucketTime,
+		MetricCounters: make(map[string][]uint32),
+	}
 	bucket.AgentId = agentID
 	bucket.Timestamp = utils.FormatTime(bucketTime)
 	ama.buckets = append(ama.buckets, bucket)
@@ -84,45 +76,13 @@ func FindClosestBucketTime(t time.Time) time.Time {
 
 type agentResponse protocol.EvaluateTxResponse
 
-func (ama *AgentMetricsAggregator) AddAgentMetric(m *protocol.AgentMetric) error {
-	t, _ := time.Parse(time.RFC3339, m.Timestamp)
-	bucket := ama.findBucket(m.AgentId, t)
-
-	// one can add other metrics here
-	if m.Name == metrics.MetricStop {
-		bucket.StopCount += uint32(m.Value)
-	} else {
-		log.WithField("metric", m.Name).Warn("unsupported metric name")
+func (ama *AgentMetricsAggregator) AddAgentMetrics(ms messaging.AgentMetricPayload) error {
+	for _, m := range ms {
+		t, _ := time.Parse(time.RFC3339, m.Timestamp)
+		bucket := ama.findBucket(m.AgentId, t)
+		bucket.MetricCounters[m.Name] = append(bucket.MetricCounters[m.Name], uint32(m.Value))
 	}
 	return nil
-}
-
-// AggregateFromTxResponse aggregates metrics from a tx response.
-func (ama *AgentMetricsAggregator) AggregateFromTxResponse(agentID string, resp *protocol.EvaluateTxResponse) {
-	t, _ := time.Parse(time.RFC3339, resp.Timestamp)
-	bucket := ama.findBucket(agentID, t)
-	bucket.TxProcessing.Latency = append(bucket.TxProcessing.Latency, resp.LatencyMs)
-	bucket.TxProcessing.Request++
-	if resp.Status == protocol.ResponseStatus_ERROR {
-		bucket.TxProcessing.Error++
-	} else {
-		bucket.TxProcessing.Success++
-	}
-	bucket.FindingCount += uint32(len(resp.Findings))
-}
-
-// AggregateFromBlockResponse aggregates metrics from a block response.
-func (ama *AgentMetricsAggregator) AggregateFromBlockResponse(agentID string, resp *protocol.EvaluateBlockResponse) {
-	t, _ := time.Parse(time.RFC3339, resp.Timestamp)
-	bucket := ama.findBucket(agentID, t)
-	bucket.BlockProcessing.Latency = append(bucket.BlockProcessing.Latency, resp.LatencyMs)
-	bucket.BlockProcessing.Request++
-	if resp.Status == protocol.ResponseStatus_ERROR {
-		bucket.BlockProcessing.Error++
-	} else {
-		bucket.BlockProcessing.Success++
-	}
-	bucket.FindingCount += uint32(len(resp.Findings))
 }
 
 // TryFlush checks the flushing condition(s) an returns metrics accordingly.
@@ -154,68 +114,21 @@ func (allMetrics allAgentMetrics) Fix() {
 	sort.Slice(allMetrics, func(i, j int) bool {
 		return allMetrics[i].Time.Before(allMetrics[j].Time)
 	})
-	allMetrics.PrepareLatencyMetrics()
-	allMetrics.PrepareCountMetrics()
+	allMetrics.PrepareMetrics()
 }
 
-func (allMetrics allAgentMetrics) PrepareLatencyMetrics() {
+func (allMetrics allAgentMetrics) PrepareMetrics() {
 	for _, agentMetrics := range allMetrics {
-		if len(agentMetrics.TxProcessing.Latency) > 0 {
-			latencyNums := agentMetrics.TxProcessing.Latency
-			txLatency := agentMetrics.CreateAndGetSummary(metrics.MetricTxLatency)
-			txLatency.Count = uint32(len(latencyNums))
-			txLatency.Average = avgMetricArray(latencyNums)
-			txLatency.Max = maxDataPoint(latencyNums)
-			txLatency.P95 = calcP95(latencyNums)
-			txLatency.Sum = sumNums(latencyNums)
+		for metricName, list := range agentMetrics.MetricCounters {
+			if len(list) > 0 {
+				summary := agentMetrics.CreateAndGetSummary(metricName)
+				summary.Count = uint32(len(list))
+				summary.Average = avgMetricArray(list)
+				summary.Max = maxDataPoint(list)
+				summary.P95 = calcP95(list)
+				summary.Sum = sumNums(list)
+			}
 		}
-		if len(agentMetrics.BlockProcessing.Latency) > 0 {
-			latencyNums := agentMetrics.BlockProcessing.Latency
-			blockLatency := agentMetrics.CreateAndGetSummary(metrics.MetricBlockLatency)
-			blockLatency.Count = uint32(len(latencyNums))
-			blockLatency.Average = avgMetricArray(latencyNums)
-			blockLatency.Max = maxDataPoint(latencyNums)
-			blockLatency.P95 = calcP95(latencyNums)
-			blockLatency.Sum = sumNums(latencyNums)
-		}
-	}
-}
-
-func (allMetrics allAgentMetrics) PrepareCountMetrics() {
-	for _, agentMetrics := range allMetrics {
-		finding := agentMetrics.CreateAndGetSummary(metrics.MetricFinding)
-		setCountMetric(finding, agentMetrics.FindingCount)
-
-		stop := agentMetrics.CreateAndGetSummary(metrics.MetricStop)
-		setCountMetric(stop, agentMetrics.StopCount)
-
-		if len(agentMetrics.TxProcessing.Latency) > 0 {
-			request := agentMetrics.CreateAndGetSummary(metrics.MetricTxRequest)
-			setCountMetric(request, agentMetrics.TxProcessing.Request)
-			success := agentMetrics.CreateAndGetSummary(metrics.MetricTxSuccess)
-			setCountMetric(success, agentMetrics.TxProcessing.Success)
-			errorM := agentMetrics.CreateAndGetSummary(metrics.MetricTxError)
-			setCountMetric(errorM, agentMetrics.TxProcessing.Error)
-		}
-
-		if len(agentMetrics.BlockProcessing.Latency) > 0 {
-			request := agentMetrics.CreateAndGetSummary(metrics.MetricBlockRequest)
-			setCountMetric(request, agentMetrics.BlockProcessing.Request)
-			success := agentMetrics.CreateAndGetSummary(metrics.MetricBlockSuccess)
-			setCountMetric(success, agentMetrics.BlockProcessing.Success)
-			errorM := agentMetrics.CreateAndGetSummary(metrics.MetricBlockError)
-			setCountMetric(errorM, agentMetrics.BlockProcessing.Error)
-		}
-	}
-}
-
-func setCountMetric(summary *protocol.MetricSummary, count uint32) {
-	summary.Count = count
-	if count > 0 {
-		summary.Average = 1
-		summary.Max = 1
-		summary.P95 = 1
-		summary.Sum = float64(count)
 	}
 }
 

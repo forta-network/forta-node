@@ -80,6 +80,13 @@ func (tc *TestContext) handleReady(payload messaging.AgentPayload) error {
 	return nil
 }
 
+func (tc *TestContext) handleAgentMetrics(payload messaging.AgentMetricPayload) error {
+	//for _, m := range payload {
+	//	tc.t.Logf("%s %s: %s=%v", m.Timestamp, m.AgentId, m.Name, m.Value)
+	//}
+	return nil
+}
+
 func (tc *TestContext) waitForReady(duration time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), duration)
 	defer cancel()
@@ -101,6 +108,8 @@ func (tc *TestContext) Setup() error {
 	tc.startDate = time.Now()
 	tc.agts = tc.generateAgents(tc.cfg.agentCount)
 	tc.msgClient.Subscribe(messaging.SubjectAgentsStatusAttached, messaging.AgentsHandler(tc.handleReady))
+	tc.msgClient.Subscribe(messaging.SubjectMetricAgent, messaging.AgentMetricHandler(tc.handleAgentMetrics))
+
 	tc.runAgents()
 	return tc.waitForReady(5 * time.Minute)
 }
@@ -170,20 +179,18 @@ func NewTestContext(t *testing.T, cfg *TestConfig) *TestContext {
 
 func TestPerformance(t *testing.T) {
 	tctx := NewTestContext(t, &TestConfig{
-		host:           "54.90.96.23",
+		host:           "localhost",
 		image:          "disco.forta.network/bafybeibwzulzj5ua46w5gjwulivrvjbp24blio4tz4zlyzgu4pp6o7qpjy@sha256:a423779dfc43e3588579f5aa703d074413c734cb24495334776e01749f63dda9",
 		manifest:       "QmReurJ6XsKQNkWxw7DaSTTnZcmZia2P9J7ptUQo8DT3Mk",
-		agentCount:     3,
-		start:          13513750,
+		agentCount:     1,
+		start:          13513743,
 		end:            13513753,
 		rate:           15000,
-		expectedAlerts: 318,
+		expectedAlerts: 325,
 	})
 
 	assert.NoError(t, tctx.Setup())
 	assert.NoError(t, tctx.runBlocks())
-	err := tctx.verifyResults()
-	tctx.cleanUp()
-	assert.NoError(t, err)
+	assert.NoError(t, tctx.verifyResults())
 
 }

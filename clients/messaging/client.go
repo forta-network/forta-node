@@ -1,12 +1,8 @@
 package messaging
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/forta-protocol/forta-node/protocol"
-	"github.com/golang/protobuf/jsonpb"
-
 	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
 )
@@ -50,7 +46,7 @@ func NewClient(name, natsURL string) *Client {
 
 // AgentsHandler handles agents.* subjects.
 type AgentsHandler func(AgentPayload) error
-type AgentMetricHandler func(*protocol.AgentMetric) error
+type AgentMetricHandler func(AgentMetricPayload) error
 
 // Subscribe subscribes the consumer to this client.
 func (client *Client) Subscribe(subject string, handler interface{}) {
@@ -69,12 +65,12 @@ func (client *Client) Subscribe(subject string, handler interface{}) {
 			}
 			err = h(payload)
 		case AgentMetricHandler:
-			var payload protocol.AgentMetric
-			err = jsonpb.Unmarshal(bytes.NewReader(m.Data), &payload)
+			var payload AgentMetricPayload
+			err = json.Unmarshal(m.Data, &payload)
 			if err != nil {
 				break
 			}
-			err = h(&payload)
+			err = h(payload)
 		default:
 			logger.Panicf("no handler found")
 		}
