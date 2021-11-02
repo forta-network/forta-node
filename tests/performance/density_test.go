@@ -5,6 +5,7 @@ package performance
 import (
 	"context"
 	"fmt"
+	"github.com/forta-protocol/forta-node/protocol"
 	"github.com/goccy/go-json"
 	"io"
 	"net/http"
@@ -80,7 +81,7 @@ func (tc *TestContext) handleReady(payload messaging.AgentPayload) error {
 	return nil
 }
 
-func (tc *TestContext) handleAgentMetrics(payload messaging.AgentMetricPayload) error {
+func (tc *TestContext) handleAgentMetrics(payload *protocol.AgentMetricList) error {
 	//for _, m := range payload {
 	//	tc.t.Logf("%s %s: %s=%v", m.Timestamp, m.AgentId, m.Name, m.Value)
 	//}

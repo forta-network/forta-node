@@ -15,63 +15,75 @@ var (
 )
 
 func init() {
-	query.DefaultBucketInterval = time.Second
+	query.DefaultBucketInterval = time.Millisecond
 }
 
-func TestAgentMetricsAggregator(t *testing.T) {
-	aggregator := query.NewMetricsAggregator()
+type MetricsMathTest struct {
+	metrics  []float64
+	expected *protocol.MetricSummary
+}
 
-	testTime1 := testNow
-	//testBucketTime1 := query.FindClosestBucketTime(testTime1)
+func TestAgentMetricsAggregator_math(t *testing.T) {
 
-	err := aggregator.AddAgentMetrics(&protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{
+	tests := []*MetricsMathTest{
 		{
-			AgentId:   "agentID",
-			Timestamp: utils.FormatTime(testTime1),
-			Name:      "test.metric",
-			Value:     1,
+			metrics: []float64{1, 2, 3, 4, 5},
+			expected: &protocol.MetricSummary{
+				Name:    "test.metric",
+				Count:   5,
+				Max:     5,
+				Average: 3,
+				Sum:     15,
+				P95:     4,
+			},
 		},
 		{
-			AgentId:   "agentID",
-			Timestamp: utils.FormatTime(testTime1),
-			Name:      "test.metric",
-			Value:     2,
+			metrics: []float64{1, 10, 34},
+			expected: &protocol.MetricSummary{
+				Name:    "test.metric",
+				Count:   3,
+				Max:     34,
+				Average: 15,
+				Sum:     45,
+				P95:     10,
+			},
 		},
 		{
-			AgentId:   "agentID",
-			Timestamp: utils.FormatTime(testTime1),
-			Name:      "test.metric",
-			Value:     3,
+			metrics: []float64{45},
+			expected: &protocol.MetricSummary{
+				Name:    "test.metric",
+				Count:   1,
+				Max:     45,
+				Average: 45,
+				Sum:     45,
+				P95:     45,
+			},
 		},
-		{
-			AgentId:   "agentID",
-			Timestamp: utils.FormatTime(testTime1),
-			Name:      "test.metric",
-			Value:     4,
-		},
-		{
-			AgentId:   "agentID",
-			Timestamp: utils.FormatTime(testTime1),
-			Name:      "test.metric",
-			Value:     5,
-		},
-	}})
-	assert.NoError(t, err)
+	}
 
-	time.Sleep(query.DefaultBucketInterval * 2)
+	for _, test := range tests {
+		testTime1 := testNow
 
-	res := aggregator.TryFlush()
+		var metrics []*protocol.AgentMetric
+		for _, val := range test.metrics {
+			metrics = append(metrics, &protocol.AgentMetric{
+				AgentId:   "agentID",
+				Timestamp: utils.FormatTime(testTime1),
+				Name:      "test.metric",
+				Value:     val,
+			})
+		}
 
-	assert.Len(t, res, 1)
-	assert.Len(t, res[0].Metrics, 1)
+		aggregator := query.NewMetricsAggregator()
+		err := aggregator.AddAgentMetrics(&protocol.AgentMetricList{Metrics: metrics})
+		assert.NoError(t, err)
+		time.Sleep(query.DefaultBucketInterval * 2)
 
-	assert.Equal(t, &protocol.MetricSummary{
-		Name:    "test.metric",
-		Count:   5,
-		Max:     5,
-		Average: 3,
-		Sum:     15,
-		P95:     4,
-	}, res[0].Metrics[0])
+		res := aggregator.TryFlush()
+
+		assert.Len(t, res, 1)
+		assert.Len(t, res[0].Metrics, 1)
+		assert.Equal(t, res[0].Metrics[0], test.expected)
+	}
 
 }
