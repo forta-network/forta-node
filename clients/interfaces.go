@@ -2,6 +2,7 @@ package clients
 
 import (
 	"context"
+	"github.com/golang/protobuf/proto"
 	"io"
 
 	"github.com/forta-protocol/forta-node/config"
@@ -25,6 +26,7 @@ type DockerClient interface {
 type MessageClient interface {
 	Subscribe(subject string, handler interface{})
 	Publish(subject string, payload interface{})
+	PublishProto(subject string, payload proto.Message)
 }
 
 // AgentClient makes the gRPC requests to evaluate block and txs and receive results.

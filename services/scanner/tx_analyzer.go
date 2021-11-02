@@ -49,7 +49,7 @@ func (t *TxAnalyzerService) calculateAlertID(result *TxResult, f *protocol.Findi
 
 func (t *TxAnalyzerService) publishMetrics(result *TxResult) {
 	m := metrics.GetTxMetrics(result.AgentConfig, result.Response)
-	t.cfg.MsgClient.Publish(messaging.SubjectMetricAgent, m)
+	t.cfg.MsgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: m})
 }
 
 func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {

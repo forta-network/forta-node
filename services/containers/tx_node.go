@@ -2,8 +2,8 @@ package containers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"github.com/goccy/go-json"
 	"path"
 	"sync"
 

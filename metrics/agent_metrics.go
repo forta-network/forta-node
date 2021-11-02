@@ -18,10 +18,10 @@ const (
 	MetricStop         = "agent.stop"
 )
 
-func createMetrics(agentID, timestamp string, metricMap map[string]float64) []protocol.AgentMetric {
-	var res []protocol.AgentMetric
+func createMetrics(agentID, timestamp string, metricMap map[string]float64) []*protocol.AgentMetric {
+	var res []*protocol.AgentMetric
 	for name, value := range metricMap {
-		res = append(res, protocol.AgentMetric{
+		res = append(res, &protocol.AgentMetric{
 			AgentId:   agentID,
 			Timestamp: timestamp,
 			Name:      name,
@@ -31,7 +31,7 @@ func createMetrics(agentID, timestamp string, metricMap map[string]float64) []pr
 	return res
 }
 
-func GetBlockMetrics(agt config.AgentConfig, resp *protocol.EvaluateBlockResponse) []protocol.AgentMetric {
+func GetBlockMetrics(agt config.AgentConfig, resp *protocol.EvaluateBlockResponse) []*protocol.AgentMetric {
 	metrics := make(map[string]float64)
 
 	metrics[MetricBlockRequest] = 1
@@ -47,7 +47,7 @@ func GetBlockMetrics(agt config.AgentConfig, resp *protocol.EvaluateBlockRespons
 	return createMetrics(agt.ID, resp.Timestamp, metrics)
 }
 
-func GetTxMetrics(agt config.AgentConfig, resp *protocol.EvaluateTxResponse) []protocol.AgentMetric {
+func GetTxMetrics(agt config.AgentConfig, resp *protocol.EvaluateTxResponse) []*protocol.AgentMetric {
 	metrics := make(map[string]float64)
 
 	metrics[MetricTxRequest] = 1

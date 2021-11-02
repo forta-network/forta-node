@@ -46,7 +46,7 @@ func (t *BlockAnalyzerService) calculateAlertID(result *BlockResult, f *protocol
 
 func (t *BlockAnalyzerService) publishMetrics(result *BlockResult) {
 	m := metrics.GetBlockMetrics(result.AgentConfig, result.Response)
-	t.cfg.MsgClient.Publish(messaging.SubjectMetricAgent, m)
+	t.cfg.MsgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: m})
 }
 
 func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {

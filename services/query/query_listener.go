@@ -3,9 +3,9 @@ package query
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/forta-protocol/forta-node/clients/messaging"
+	"github.com/goccy/go-json"
 	"io"
 	"math/big"
 	"net"

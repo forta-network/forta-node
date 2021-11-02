@@ -1,7 +1,6 @@
 package query
 
 import (
-	"github.com/forta-protocol/forta-node/clients/messaging"
 	"sort"
 	"time"
 
@@ -76,8 +75,8 @@ func FindClosestBucketTime(t time.Time) time.Time {
 
 type agentResponse protocol.EvaluateTxResponse
 
-func (ama *AgentMetricsAggregator) AddAgentMetrics(ms messaging.AgentMetricPayload) error {
-	for _, m := range ms {
+func (ama *AgentMetricsAggregator) AddAgentMetrics(ms *protocol.AgentMetricList) error {
+	for _, m := range ms.Metrics {
 		t, _ := time.Parse(time.RFC3339, m.Timestamp)
 		bucket := ama.findBucket(m.AgentId, t)
 		bucket.MetricCounters[m.Name] = append(bucket.MetricCounters[m.Name], uint32(m.Value))

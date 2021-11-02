@@ -20,4 +20,4 @@ const (
 type AgentPayload []config.AgentConfig
 
 // AgentMetricPayload is the message payload for metrics.
-type AgentMetricPayload []*protocol.AgentMetric
+type AgentMetricPayload *protocol.AgentMetricList

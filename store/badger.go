@@ -1,9 +1,9 @@
 package store
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/goccy/go-json"
 	"time"
 
 	badger "github.com/dgraph-io/badger/v3"
