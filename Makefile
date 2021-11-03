@@ -28,6 +28,9 @@ mocks:
 test:
 	go test -v -count=1 ./...
 
+perf-test:
+	go test ./... -tags=perf_test
+
 run:
 	go build -o forta . && ./forta --passphrase 123
 

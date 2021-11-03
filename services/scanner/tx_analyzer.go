@@ -2,6 +2,8 @@ package scanner
 
 import (
 	"context"
+	"github.com/forta-protocol/forta-node/clients/messaging"
+	"github.com/forta-protocol/forta-node/metrics"
 	"strings"
 	"time"
 
@@ -27,6 +29,7 @@ type TxAnalyzerServiceConfig struct {
 	TxChannel   <-chan *domain.TransactionEvent
 	AlertSender clients.AlertSender
 	AgentPool   AgentPool
+	MsgClient   clients.MessageClient
 }
 
 func (t *TxAnalyzerService) calculateAlertID(result *TxResult, f *protocol.Finding) string {
@@ -42,6 +45,11 @@ func (t *TxAnalyzerService) calculateAlertID(result *TxResult, f *protocol.Findi
 		result.AgentConfig.Image,
 		strings.Join(utils.MapKeys(result.Request.Event.Addresses), "")}, "")
 	return crypto.Keccak256Hash([]byte(idStr)).Hex()
+}
+
+func (t *TxAnalyzerService) publishMetrics(result *TxResult) {
+	m := metrics.GetTxMetrics(result.AgentConfig, result.Response)
+	t.cfg.MsgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: m})
 }
 
 func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
@@ -75,8 +83,6 @@ func (t *TxAnalyzerService) Start() error {
 	log.Infof("Starting %s", t.Name())
 	grp, ctx := errgroup.WithContext(t.ctx)
 
-	//TODO: change this protocol when we know more about query-node delivery
-	// Gear 2: receive result from agent
 	grp.Go(func() error {
 		for result := range t.cfg.AgentPool.TxResults() {
 			if ctx.Err() != nil {
@@ -98,7 +104,6 @@ func (t *TxAnalyzerService) Start() error {
 					log.WithError(err).Error("failed to notify without alert")
 					return err
 				}
-				continue
 			}
 
 			//TODO: validate finding returned is well-formed
@@ -114,6 +119,7 @@ func (t *TxAnalyzerService) Start() error {
 					return err
 				}
 			}
+			t.publishMetrics(result)
 		}
 		return nil
 	})

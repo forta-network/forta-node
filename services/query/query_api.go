@@ -2,12 +2,14 @@ package query
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"github.com/goccy/go-json"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/forta-protocol/forta-node/utils"
 
 	"github.com/forta-protocol/forta-node/protocol"
 	"github.com/forta-protocol/forta-node/store"
@@ -136,7 +138,32 @@ func parseQueryRequest(r *http.Request) (*store.AlertQueryRequest, error) {
 }
 
 type AgentReport struct {
-	AlertCounts map[string]int64 `json:"alertCounts"`
+	AlertCounts []*Count                   `json:"alertCounts"`
+	BlockCounts map[int64]map[string]int64 `json:"blockCounts"`
+}
+
+func (ar *AgentReport) IncrementAlertCount(agentID string) {
+	for _, ac := range ar.AlertCounts {
+		if ac.ID == agentID {
+			ac.Count++
+			return
+		}
+	}
+	ar.AlertCounts = append(ar.AlertCounts, &Count{ID: agentID, Count: 1})
+}
+
+func (ar *AgentReport) GetAlertCount(agentID string) int64 {
+	for _, ac := range ar.AlertCounts {
+		if ac.ID == agentID {
+			return ac.Count
+		}
+	}
+	return 0
+}
+
+type Count struct {
+	ID    string `json:"id"`
+	Count int64  `json:"count"`
 }
 
 //getAgentReport returns numbers of alerts by agents
@@ -148,7 +175,7 @@ func (t *AlertApi) getAgentReport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	report := &AgentReport{
-		AlertCounts: make(map[string]int64),
+		BlockCounts: make(map[int64]map[string]int64),
 	}
 	alerts, err := t.store.QueryAlerts(queryReq)
 	if err != nil {
@@ -157,10 +184,19 @@ func (t *AlertApi) getAgentReport(w http.ResponseWriter, r *http.Request) {
 	}
 	for len(alerts.Alerts) > 0 {
 		for _, a := range alerts.Alerts {
-			if _, ok := report.AlertCounts[a.Alert.Agent.Id]; !ok {
-				report.AlertCounts[a.Alert.Agent.Id] = 0
+			report.IncrementAlertCount(a.Alert.Agent.Id)
+			bn, err := utils.HexToBigInt(a.BlockNumber)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, err)
+				return
 			}
-			report.AlertCounts[a.Alert.Agent.Id]++
+			if _, ok := report.BlockCounts[bn.Int64()]; !ok {
+				report.BlockCounts[bn.Int64()] = make(map[string]int64)
+			}
+			if _, ok := report.BlockCounts[bn.Int64()][a.Alert.Agent.Id]; !ok {
+				report.BlockCounts[bn.Int64()][a.Alert.Agent.Id] = 0
+			}
+			report.BlockCounts[bn.Int64()][a.Alert.Agent.Id]++
 		}
 		queryReq.PageToken = alerts.NextPageToken
 		if alerts.NextPageToken == "" {

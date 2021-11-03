@@ -2,6 +2,7 @@ package messaging
 
 import (
 	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-protocol/forta-node/protocol"
 )
 
 // Message types
@@ -17,3 +18,6 @@ const (
 
 // AgentPayload is the message payload.
 type AgentPayload []config.AgentConfig
+
+// AgentMetricPayload is the message payload for metrics.
+type AgentMetricPayload *protocol.AgentMetricList

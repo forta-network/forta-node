@@ -179,13 +179,14 @@ func (agent *Agent) processTransactions() {
 			lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down agent")
 			agent.Close()
 			agent.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{agent.config})
-			agent.msgClient.Publish(messaging.SubjectMetricAgent, protocol.AgentMetric{
-				AgentId:   agent.config.ID,
-				Timestamp: time.Now().Format(time.RFC3339),
-				Name:      metrics.MetricStop,
-				Value:     1,
+			agent.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{
+				Metrics: []*protocol.AgentMetric{{
+					AgentId:   agent.config.ID,
+					Timestamp: time.Now().Format(time.RFC3339),
+					Name:      metrics.MetricStop,
+					Value:     1,
+				}},
 			})
-
 			return
 		}
 	}

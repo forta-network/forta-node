@@ -16,6 +16,7 @@ require (
 	github.com/ethereum/go-ethereum v1.10.7
 	github.com/fatih/color v1.12.0
 	github.com/go-playground/validator/v10 v10.9.0
+	github.com/goccy/go-json v0.7.10
 	github.com/golang/glog v0.0.0-20210429001901-424d2337a529 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/mock v1.6.0

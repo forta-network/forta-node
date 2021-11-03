@@ -2,6 +2,8 @@ package scanner
 
 import (
 	"context"
+	"github.com/forta-protocol/forta-node/clients/messaging"
+	"github.com/forta-protocol/forta-node/metrics"
 	"strings"
 	"time"
 
@@ -29,6 +31,7 @@ type BlockAnalyzerServiceConfig struct {
 	BlockChannel <-chan *domain.BlockEvent
 	AlertSender  clients.AlertSender
 	AgentPool    AgentPool
+	MsgClient    clients.MessageClient
 }
 
 func (t *BlockAnalyzerService) calculateAlertID(result *BlockResult, f *protocol.Finding) string {
@@ -39,6 +42,11 @@ func (t *BlockAnalyzerService) calculateAlertID(result *BlockResult, f *protocol
 		f.Severity.String(),
 		result.AgentConfig.ID}, "")
 	return crypto.Keccak256Hash([]byte(idStr)).Hex()
+}
+
+func (t *BlockAnalyzerService) publishMetrics(result *BlockResult) {
+	m := metrics.GetBlockMetrics(result.AgentConfig, result.Response)
+	t.cfg.MsgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: m})
 }
 
 func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
@@ -102,7 +110,6 @@ func (t *BlockAnalyzerService) Start() error {
 					log.WithError(err).Error("failed to notify without alert")
 					return err
 				}
-				continue
 			}
 
 			for _, f := range result.Response.Findings {
@@ -117,6 +124,7 @@ func (t *BlockAnalyzerService) Start() error {
 					return err
 				}
 			}
+			t.publishMetrics(result)
 		}
 		return nil
 	})

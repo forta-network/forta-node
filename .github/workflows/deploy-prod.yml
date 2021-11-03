@@ -23,6 +23,7 @@ jobs:
     steps:
       - name: Clear artifacts
         uses: kolpav/purge-artifacts-action@v1
+        continue-on-error: true
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           expire-in: 7days
@@ -51,6 +52,7 @@ jobs:
           echo "json-rpc=${{ needs.containers.outputs.json-rpc-image-ref }}"
       - name: Clear artifacts
         uses: kolpav/purge-artifacts-action@v1
+        continue-on-error: true
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           expire-in: 7days

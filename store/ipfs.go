@@ -1,8 +1,8 @@
 package store
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/goccy/go-json"
 	"net/http"
 
 	"github.com/forta-protocol/forta-node/services/registry/regtypes"

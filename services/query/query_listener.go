@@ -3,9 +3,9 @@ package query
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/forta-protocol/forta-node/clients/messaging"
+	"github.com/goccy/go-json"
 	"io"
 	"math/big"
 	"net"
@@ -48,7 +48,6 @@ type AlertListener struct {
 	cfg               AlertListenerConfig
 	contract          AlertsContract
 	ipfs              IPFS
-	ethClient         EthClient
 	testAlertLogger   TestAlertLogger
 	metricsAggregator *AgentMetricsAggregator
 	messageClient     *messaging.Client
@@ -58,7 +57,6 @@ type AlertListener struct {
 	skipPublish   bool
 	batchInterval time.Duration
 	batchLimit    int
-	latestBlock   uint64
 	latestChainID uint64
 	notifCh       chan *protocol.NotifyRequest
 	batchCh       chan *protocol.SignedAlertBatch
@@ -157,7 +155,7 @@ func (al *AlertListener) shouldSkipPublishing(batch *protocol.SignedAlertBatch) 
 }
 
 func (al *AlertListener) listenForMetrics() {
-	al.messageClient.Subscribe(messaging.SubjectMetricAgent, messaging.AgentMetricHandler(al.metricsAggregator.AddAgentMetric))
+	al.messageClient.Subscribe(messaging.SubjectMetricAgent, messaging.AgentMetricHandler(al.metricsAggregator.AddAgentMetrics))
 }
 
 func (al *AlertListener) publishBatches() {
@@ -375,10 +373,8 @@ func (al *AlertListener) prepareLatestBatch() {
 			var blockNum string
 			if notif.EvalBlockRequest != nil {
 				blockNum = notif.EvalBlockRequest.Event.BlockNumber
-				al.metricsAggregator.AggregateFromBlockResponse(notif.AgentInfo.Id, notif.EvalBlockResponse)
 			} else {
 				blockNum = notif.EvalTxRequest.Event.Block.BlockNumber
-				al.metricsAggregator.AggregateFromTxResponse(notif.AgentInfo.Id, notif.EvalTxResponse)
 			}
 
 			notifBlockNum, err := hexutil.DecodeUint64(blockNum)
@@ -406,17 +402,6 @@ func (al *AlertListener) prepareLatestBatch() {
 		if done {
 			break
 		}
-	}
-
-	if batch.Data.BlockStart == 0 {
-		latestBlock, err := al.ethClient.BlockNumber(al.ctx)
-		if err != nil {
-			log.Errorf("failed to get the latest block for batch: %v", err)
-			return
-		}
-		batch.Data.BlockStart = al.latestBlock
-		batch.Data.BlockEnd = latestBlock
-		al.latestBlock = latestBlock
 	}
 
 	al.batchCh <- (*protocol.SignedAlertBatch)(batch)
@@ -496,11 +481,6 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, mc *messaging
 		ipfsClient = ipfsapi.NewShellWithClient(cfg.PublisherConfig.IPFS.GatewayURL, http.DefaultClient)
 	}
 
-	latestBlock, err := ethClient.BlockNumber(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get the latest block: %v", err)
-	}
-
 	batchInterval := defaultInterval
 	if cfg.PublisherConfig.Batch.IntervalSeconds != nil {
 		batchInterval = (time.Duration)(*cfg.PublisherConfig.Batch.IntervalSeconds) * time.Second
@@ -522,7 +502,6 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, mc *messaging
 		cfg:               cfg,
 		contract:          ats,
 		ipfs:              ipfsClient,
-		ethClient:         ethClient,
 		testAlertLogger:   testAlertLogger,
 		metricsAggregator: NewMetricsAggregator(),
 		messageClient:     mc,
@@ -532,7 +511,6 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, mc *messaging
 		skipPublish:   cfg.PublisherConfig.SkipPublish,
 		batchInterval: batchInterval,
 		batchLimit:    batchLimit,
-		latestBlock:   latestBlock,
 		notifCh:       make(chan *protocol.NotifyRequest, defaultBatchLimit),
 		batchCh:       make(chan *protocol.SignedAlertBatch, defaultBatchBufferSize),
 	}, nil

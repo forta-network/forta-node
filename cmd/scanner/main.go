@@ -61,7 +61,7 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 	return txStream, blockFeed, nil
 }
 
-func initTxAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.TxStreamService, ap *agentpool.AgentPool) (*scanner.TxAnalyzerService, error) {
+func initTxAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.TxStreamService, ap *agentpool.AgentPool, msgClient clients.MessageClient) (*scanner.TxAnalyzerService, error) {
 	qn := os.Getenv(config.EnvQueryNode)
 	if qn == "" {
 		return nil, fmt.Errorf("%s is a required env var", config.EnvQueryNode)
@@ -70,10 +70,11 @@ func initTxAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSend
 		TxChannel:   stream.ReadOnlyTxStream(),
 		AlertSender: as,
 		AgentPool:   ap,
+		MsgClient:   msgClient,
 	})
 }
 
-func initBlockAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.TxStreamService, ap *agentpool.AgentPool) (*scanner.BlockAnalyzerService, error) {
+func initBlockAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.TxStreamService, ap *agentpool.AgentPool, msgClient clients.MessageClient) (*scanner.BlockAnalyzerService, error) {
 	qn := os.Getenv(config.EnvQueryNode)
 	if qn == "" {
 		return nil, fmt.Errorf("%s is a required env var", config.EnvQueryNode)
@@ -82,6 +83,7 @@ func initBlockAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertS
 		BlockChannel: stream.ReadOnlyBlockStream(),
 		AlertSender:  as,
 		AgentPool:    ap,
+		MsgClient:    msgClient,
 	})
 }
 
@@ -132,11 +134,11 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 
 	registryService := registry.New(cfg, key.Address, msgClient)
 	agentPool := agentpool.NewAgentPool(cfg.Scanner, msgClient)
-	txAnalyzer, err := initTxAnalyzer(ctx, cfg, as, txStream, agentPool)
+	txAnalyzer, err := initTxAnalyzer(ctx, cfg, as, txStream, agentPool, msgClient)
 	if err != nil {
 		return nil, err
 	}
-	blockAnalyzer, err := initBlockAnalyzer(ctx, cfg, as, txStream, agentPool)
+	blockAnalyzer, err := initBlockAnalyzer(ctx, cfg, as, txStream, agentPool, msgClient)
 	if err != nil {
 		return nil, err
 	}

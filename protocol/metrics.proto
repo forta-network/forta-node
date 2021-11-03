@@ -25,3 +25,7 @@ message AgentMetric {
   string name = 3;
   double value = 4;
 }
+
+message AgentMetricList {
+  repeated AgentMetric Metrics = 1;
+}

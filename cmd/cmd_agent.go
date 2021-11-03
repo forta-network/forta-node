@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/forta-protocol/forta-node/store"
+	"github.com/goccy/go-json"
 	"io/ioutil"
 
 	"github.com/fatih/color"

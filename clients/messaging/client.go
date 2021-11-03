@@ -1,12 +1,10 @@
 package messaging
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"github.com/forta-protocol/forta-node/protocol"
-	"github.com/golang/protobuf/jsonpb"
-
+	"github.com/goccy/go-json"
+	"github.com/golang/protobuf/proto"
 	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
 )
@@ -50,7 +48,7 @@ func NewClient(name, natsURL string) *Client {
 
 // AgentsHandler handles agents.* subjects.
 type AgentsHandler func(AgentPayload) error
-type AgentMetricHandler func(*protocol.AgentMetric) error
+type AgentMetricHandler func(*protocol.AgentMetricList) error
 
 // Subscribe subscribes the consumer to this client.
 func (client *Client) Subscribe(subject string, handler interface{}) {
@@ -69,8 +67,8 @@ func (client *Client) Subscribe(subject string, handler interface{}) {
 			}
 			err = h(payload)
 		case AgentMetricHandler:
-			var payload protocol.AgentMetric
-			err = jsonpb.Unmarshal(bytes.NewReader(m.Data), &payload)
+			var payload protocol.AgentMetricList
+			err = proto.Unmarshal(m.Data, &payload)
 			if err != nil {
 				break
 			}
@@ -96,6 +94,16 @@ func (client *Client) Subscribe(subject string, handler interface{}) {
 func (client *Client) Publish(subject string, payload interface{}) {
 	logger := client.logger.WithField("subject", subject)
 	data, _ := json.Marshal(payload)
+	if err := client.nc.Publish(subject, data); err != nil {
+		logger.Errorf("failed to publish msg: %v", err)
+	}
+	logger.Debugf("published: %s", string(data))
+}
+
+// PublishProto publishes new messages.
+func (client *Client) PublishProto(subject string, payload proto.Message) {
+	logger := client.logger.WithField("subject", subject)
+	data, _ := proto.Marshal(payload)
 	if err := client.nc.Publish(subject, data); err != nil {
 		logger.Errorf("failed to publish msg: %v", err)
 	}

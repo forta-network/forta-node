@@ -2,8 +2,8 @@ package scanner
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/forta-protocol/forta-node/feeds"
+	"github.com/goccy/go-json"
 	"net/http"
 	"strconv"
 
