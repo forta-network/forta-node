@@ -199,7 +199,7 @@ func TestPerformance(t *testing.T) {
 		host:           "54.90.96.23",
 		image:          "disco.forta.network/bafybeibwzulzj5ua46w5gjwulivrvjbp24blio4tz4zlyzgu4pp6o7qpjy@sha256:a423779dfc43e3588579f5aa703d074413c734cb24495334776e01749f63dda9",
 		manifest:       "QmReurJ6XsKQNkWxw7DaSTTnZcmZia2P9J7ptUQo8DT3Mk",
-		agentCount:     40,
+		agentCount:     30,
 		start:          13513743,
 		end:            13513753,
 		rate:           15000,
