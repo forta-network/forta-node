@@ -43,7 +43,7 @@ query:
     path: "/tmp/forta-alerts"
 
 log:
-  level: debug
+  level: info
   maxLogSize: 50m
   maxLogFiles: 10
 
