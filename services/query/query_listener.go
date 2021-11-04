@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -52,6 +53,7 @@ type AlertListener struct {
 	metricsAggregator *AgentMetricsAggregator
 	messageClient     *messaging.Client
 
+	initialize    sync.Once
 	port          int
 	skipEmpty     bool
 	skipPublish   bool
@@ -407,6 +409,16 @@ func (al *AlertListener) prepareLatestBatch() {
 	al.batchCh <- (*protocol.SignedAlertBatch)(batch)
 }
 
+// on connection of first agent, start publishing batches (no agents = no batches)
+func (al *AlertListener) handleReady(cfgs messaging.AgentPayload) error {
+	al.initialize.Do(func() {
+		go al.prepareBatches()
+		go al.publishBatches()
+		go al.listenForMetrics()
+	})
+	return nil
+}
+
 func (al *AlertListener) Start() error {
 	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", al.port))
 	if err != nil {
@@ -415,9 +427,7 @@ func (al *AlertListener) Start() error {
 	grpcServer := grpc.NewServer()
 	protocol.RegisterQueryNodeServer(grpcServer, al)
 
-	go al.prepareBatches()
-	go al.publishBatches()
-	go al.listenForMetrics()
+	al.messageClient.Subscribe(messaging.SubjectAgentsStatusAttached, messaging.AgentsHandler(al.handleReady))
 
 	return grpcServer.Serve(lis)
 }
