@@ -2,9 +2,11 @@ package store
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"math/big"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -52,6 +54,7 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 		scannerID := common.HexToHash(scanner).Big()
 
 		var i int64
+		var failedLoadingAny bool
 		for i = 0; i < length.Int64(); i++ {
 			pos := big.NewInt(i)
 			res, err := rs.dispatch.AgentRefAt(opts, scannerID, pos)
@@ -60,11 +63,18 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 			}
 			agtCfg, err := rs.makeAgentConfig(utils.BytesToHex(res.AgentId.Bytes()), res.Metadata)
 			if err != nil {
+				failedLoadingAny = true
 				log.WithError(err).Warn("could not parse config for agent")
 			} else {
 				agts = append(agts, agtCfg)
 			}
 		}
+
+		// failed to load all: not doing this can cause getting stuck with the latest hash and zero agents
+		if len(agts) == 0 && failedLoadingAny {
+			return nil, false, errors.New("loaded zero agents")
+		}
+
 		rs.version = hash
 		return agts, true, nil
 	}
