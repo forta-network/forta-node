@@ -69,6 +69,8 @@ func (s *Suite) TestStartProcessStop() {
 	// Then a "run" action should be published
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusAttached, gomock.Any())
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsActionRun, gomock.Any())
+	s.msgClient.EXPECT().Publish(messaging.SubjectMetricAgent, gomock.Any())
+
 	s.r.NoError(s.ap.handleAgentVersionsUpdate(agentPayload))
 
 	// Given that the agent is known to the pool but it is not ready yet

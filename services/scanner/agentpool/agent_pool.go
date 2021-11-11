@@ -1,6 +1,7 @@
 package agentpool
 
 import (
+	"github.com/forta-protocol/forta-node/metrics"
 	"sync"
 	"time"
 
@@ -103,6 +104,14 @@ func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 		case agent.TxRequestCh() <- req:
 		default: // do not try to send if the buffer is full
 			lg.WithField("agent", agent.Config().ID).Warn("agent request buffer is full - skipping")
+			ap.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{
+				Metrics: []*protocol.AgentMetric{{
+					AgentId:   agent.Config().ID,
+					Timestamp: time.Now().Format(time.RFC3339),
+					Name:      metrics.MetricTxDrop,
+					Value:     1,
+				}},
+			})
 		}
 		lg.WithFields(log.Fields{
 			"agent":    agent.Config().ID,
@@ -149,6 +158,14 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 		case agent.BlockRequestCh() <- req:
 		default: // do not try to send if the buffer is full
 			lg.WithField("agent", agent.Config().ID).Warn("agent request buffer is full - skipping")
+			ap.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{
+				Metrics: []*protocol.AgentMetric{{
+					AgentId:   agent.Config().ID,
+					Timestamp: time.Now().Format(time.RFC3339),
+					Name:      metrics.MetricBlockDrop,
+					Value:     1,
+				}},
+			})
 		}
 		lg.WithFields(log.Fields{
 			"agent":    agent.Config().ID,
