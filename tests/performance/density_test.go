@@ -104,7 +104,7 @@ func (tc *TestContext) waitForReady(duration time.Duration) error {
 	}
 }
 
-func (tc *TestContext) Setup() error {
+func (tc *TestContext) setup() error {
 	tc.startDate = time.Now()
 	tc.agts = tc.generateAgents(tc.cfg.agentCount)
 	tc.msgClient.Subscribe(messaging.SubjectAgentsStatusAttached, messaging.AgentsHandler(tc.handleReady))
@@ -146,7 +146,7 @@ func (tc *TestContext) getResults() (*query.AgentReport, error) {
 
 func (tc *TestContext) waitForBlocks() error {
 	blockCount := tc.cfg.end - tc.cfg.start
-	time.Sleep(time.Duration((blockCount+1)*tc.cfg.rate) * time.Millisecond)
+	time.Sleep(time.Duration((blockCount+2)*tc.cfg.rate) * time.Millisecond)
 	return nil
 }
 
@@ -182,23 +182,32 @@ func NewTestContext(t *testing.T, cfg *TestConfig) *TestContext {
 
 func (tc *TestContext) printMetrics() error {
 	metrics := tc.metrics.ForceFlush()
+	findings := []string{""}
 	for _, m := range metrics {
 		var lines []string
 		for _, ms := range m.Metrics {
 			lines = append(lines, fmt.Sprintf("%s: [count: %d, max: %.2f, p95: %.2f, sum: %.2f, average: %.2f]", ms.Name, ms.Count, ms.Max, ms.P95, ms.Sum, ms.Average))
+			if ms.Name == "finding" {
+				findings = append(findings, fmt.Sprintf("%s: %.2f", m.AgentId, ms.Sum))
+			}
 		}
 		sort.Strings(lines)
 		lines = append([]string{fmt.Sprintf("Agent ID: %s", m.AgentId)}, lines...)
 		tc.t.Log(strings.Join(lines, "\n"))
 	}
+	tc.t.Log(strings.Join(findings, "\n"))
 	return nil
+}
+
+func now() string {
+	return time.Now().UTC().Format(time.RFC3339)
 }
 
 func TestPerformance(t *testing.T) {
 	tctx := NewTestContext(t, &TestConfig{
-		host:           "54.90.96.23",
-		image:          "disco.forta.network/bafybeibwzulzj5ua46w5gjwulivrvjbp24blio4tz4zlyzgu4pp6o7qpjy@sha256:a423779dfc43e3588579f5aa703d074413c734cb24495334776e01749f63dda9",
-		manifest:       "QmReurJ6XsKQNkWxw7DaSTTnZcmZia2P9J7ptUQo8DT3Mk",
+		host:           "dev.ethereum-mainnet.node-2.forta.network",
+		image:          "disco-dev.forta.network/bafybeidsjzb6zjjj72zm75m3gylhr5gki3uwrh3hb5cpvaxomskrxmkjcq@sha256:6ead4f28d87e5ab2c443f74fa9510ee90148ad731c472559967c421b5d22d830",
+		manifest:       "bafybeif3i3lcxl7odag4b3fuy566xajqjmrvuq6vzynggjqnq5eecfat3m",
 		agentCount:     30,
 		start:          13513743,
 		end:            13513753,
@@ -206,9 +215,12 @@ func TestPerformance(t *testing.T) {
 		expectedAlerts: 325,
 	})
 
-	assert.NoError(t, tctx.Setup())
+	t.Logf("%s, start setup", now())
+	assert.NoError(t, tctx.setup())
+	t.Logf("%s, start blocks", now())
 	assert.NoError(t, tctx.runBlocks())
 	assert.NoError(t, tctx.waitForBlocks())
+	t.Logf("%s, start cleanup", now())
 	assert.NoError(t, tctx.printMetrics())
 
 	_, err := tctx.getResults()
