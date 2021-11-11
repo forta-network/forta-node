@@ -28,6 +28,7 @@ type AgentPool struct {
 	msgClient    clients.MessageClient
 	dialer       func(config.AgentConfig) (clients.AgentClient, error)
 	mu           sync.RWMutex
+	activeAgents chan int
 }
 
 // NewAgentPool creates a new agent pool.
@@ -43,6 +44,7 @@ func NewAgentPool(cfg config.ScannerConfig, msgClient clients.MessageClient) *Ag
 			}
 			return client, nil
 		},
+		activeAgents: make(chan int, cfg.AgentWidth),
 	}
 
 	agentPool.registerMessageHandlers()
@@ -194,7 +196,7 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 			found = found || (agent.Config().ContainerName() == agentCfg.ContainerName())
 		}
 		if !found {
-			newAgents = append(newAgents, poolagent.New(agentCfg, ap.msgClient, ap.txResults, ap.blockResults))
+			newAgents = append(newAgents, poolagent.New(agentCfg, ap.msgClient, ap.txResults, ap.blockResults, ap.activeAgents))
 			agentsToRun = append(agentsToRun, agentCfg)
 		}
 	}
