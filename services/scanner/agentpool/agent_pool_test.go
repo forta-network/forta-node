@@ -50,6 +50,7 @@ func (s *Suite) SetupTest() {
 		dialer: func(agentCfg config.AgentConfig) (clients.AgentClient, error) {
 			return s.agentClient, nil
 		},
+		activeAgents: make(chan int, 1000),
 	}
 }
 

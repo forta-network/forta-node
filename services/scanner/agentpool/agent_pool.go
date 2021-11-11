@@ -44,7 +44,12 @@ func NewAgentPool(cfg config.ScannerConfig, msgClient clients.MessageClient) *Ag
 			}
 			return client, nil
 		},
-		activeAgents: make(chan int, cfg.AgentWidth),
+	}
+
+	if cfg.AgentWidth == 0 {
+		agentPool.activeAgents = make(chan int, 1000)
+	} else {
+		agentPool.activeAgents = make(chan int, cfg.AgentWidth)
 	}
 
 	agentPool.registerMessageHandlers()
