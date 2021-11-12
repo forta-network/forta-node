@@ -165,6 +165,9 @@ func (agent *Agent) processTransaction(lg *log.Entry, request *protocol.Evaluate
 		var duration time.Duration
 		resp.Timestamp, resp.LatencyMs, duration = calculateResponseTime(&startTime)
 		lg.WithField("duration", duration).Debugf("request successful")
+		if resp.Metadata == nil {
+			resp.Metadata = make(map[string]string)
+		}
 		resp.Metadata["imageHash"] = agent.config.ImageHash()
 		agent.txResults <- &scanner.TxResult{
 			AgentConfig: agent.config,
@@ -224,6 +227,9 @@ func (agent *Agent) processBlock(lg *log.Entry, request *protocol.EvaluateBlockR
 		var duration time.Duration
 		resp.Timestamp, resp.LatencyMs, duration = calculateResponseTime(&startTime)
 		lg.WithField("duration", duration).Debugf("request successful")
+		if resp.Metadata == nil {
+			resp.Metadata = make(map[string]string)
+		}
 		resp.Metadata["imageHash"] = agent.config.ImageHash()
 		agent.blockResults <- &scanner.BlockResult{
 			AgentConfig: agent.config,
