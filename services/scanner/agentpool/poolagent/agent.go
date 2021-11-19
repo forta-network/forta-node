@@ -2,11 +2,12 @@ package poolagent
 
 import (
 	"context"
-	"github.com/forta-protocol/forta-node/metrics"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/forta-protocol/forta-node/metrics"
 
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/messaging"
@@ -93,7 +94,9 @@ func (agent *Agent) BlockRequestCh() chan<- *protocol.EvaluateBlockRequest {
 func (agent *Agent) Close() error {
 	agent.closeOnce.Do(func() {
 		close(agent.closed) // never close this anywhere else
-		agent.client.Close()
+		if agent.client != nil {
+			agent.client.Close()
+		}
 	})
 	return nil
 }
