@@ -196,6 +196,7 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 		if !found {
 			newAgents = append(newAgents, poolagent.New(agentCfg, ap.msgClient, ap.txResults, ap.blockResults))
 			agentsToRun = append(agentsToRun, agentCfg)
+			log.WithField("agent", agentCfg.ID).Info("will trigger start")
 		}
 	}
 
@@ -214,6 +215,7 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 		if !found {
 			agent.Close()
 			agentsToStop = append(agentsToStop, agent.Config())
+			log.WithField("agent", agent.Config().ID).WithField("image", agent.Config().Image).Info("will trigger stop")
 		} else {
 			newAgents = append(newAgents, agent)
 		}
@@ -247,6 +249,7 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 				agent.SetClient(c)
 				agent.SetReady()
 				agent.StartProcessing()
+				log.WithField("agent", agent.Config().ID).WithField("image", agent.Config().Image).Info("attached")
 				agentsReady = append(agentsReady, agent.Config())
 			}
 		}
@@ -270,14 +273,14 @@ func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
 		var stopped bool
 		for _, agentCfg := range payload {
 			if agent.Config().ContainerName() == agentCfg.ContainerName() {
-				log.WithField("agent", agent.Config().ID).Debug("stopping")
 				agent.Close()
+				log.WithField("agent", agent.Config().ID).WithField("image", agent.Config().Image).Info("detached")
 				stopped = true
 				break
 			}
 		}
 		if !stopped {
-			log.WithField("agent", agent.Config().ID).Debug("not stopped")
+			log.WithField("agent", agent.Config().ID).WithField("image", agent.Config().Image).Debug("not stopped")
 			newAgents = append(newAgents, agent)
 		}
 	}
