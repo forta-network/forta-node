@@ -44,7 +44,7 @@ it is sufficient to just build any of the changed containers or the CLI binary. 
 $ go build -o forta .
 ```
 
-### CLI-only the CLI using a specific version of Go
+### CLI-only build using a specific version of Go
 
 Edit Go image version at build stage inside `Dockerfile.cli` and then:
 
