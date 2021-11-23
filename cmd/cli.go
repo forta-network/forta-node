@@ -166,10 +166,10 @@ func initConfig() {
 
 	configBytes, err := ioutil.ReadFile(configPath)
 	if err != nil {
-		log.Fatalf("failed to read the config file at %s: %v", configPath, err)
+		log.Printf("failed to read the config file at %s: %v", configPath, err)
 	}
 	if err := yaml.Unmarshal(configBytes, &cfg); err != nil {
-		log.Fatalf("failed to unmarshal the config bytes: %v", err)
+		log.Printf("failed to unmarshal the config bytes: %v", err)
 	}
 
 	cfg.FortaDir = fortaDir
