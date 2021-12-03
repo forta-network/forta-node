@@ -1,16 +1,24 @@
-![Go](https://github.com/github.com/forta-protocol/forta-node/workflows/Go/badge.svg)
-![Deploy Dev](https://github.com/github.com/forta-protocol/forta-node/actions/workflows/deploy-dev.yml/badge.svg)
+![Go](https://github.com/forta-protocol/forta-node/actions/workflows/go.yml/badge.svg)
+![Deploy Dev](https://github.com/forta-protocol/forta-node/actions/workflows/deploy-dev.yml/badge.svg)
 
-## forta-node
+# forta-node
 
-#### Dependencies
+Forta node CLI is a Docker container supervisor that runs and manages multiple services and
+agents to scan a blockchain network and produce alerts.
 
-1. [Install Docker](https://docs.docker.com/get-docker/)
+## Dependencies
+
+1. [Install Docker](https://docs.docker.com/get-docker/) and start Docker service
 2. [Install golang 1.16](https://golang.org/doc/install)
-3. [Install Protobuf Compiler](https://grpc.io/docs/protoc-installation/)
-4. Start Docker Service
 
-#### Libraries to install
+## Dependencies for local development
+
+### Tools
+
+Install [Protobuf Compiler](https://grpc.io/docs/protoc-installation/).
+
+### Go libraries
+
 ```shell
 $ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc 
 ```
@@ -18,37 +26,75 @@ $ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
 $ go install github.com/golang/mock/mockgen@v1.5.0
 ```
 
-#### Build Node
+## Build and install
+
+### Full build & install using local version of Go
 
 ```shell
-$ make build
+$ make install
 ```
 
-#### Run Node
+It takes a while to build all of the container images. For a faster iteration in local development,
+it is sufficient to just build any of the changed containers or the CLI binary. The CLI requires
+`forta-protocol/forta-<service>:latest` containers to be available by default and uses the local ones.
+
+### CLI-only build using the local version of Go
 
 ```shell
-$ ./forta
+$ go build -o forta .
 ```
 
-#### Stop Node
+### CLI-only build using a specific version of Go
+
+Edit Go image version at build stage inside `Dockerfile.cli` and then:
+
+```shell
+$ make main
+```
+
+## Run the node
+
+### Initialize
+
+```shell
+$ forta init
+```
+
+- This will create a Forta node directory under `~/.forta` by default. You can use the `--dir` flag
+to override it.
+- Fix the default `config.yml` in Forta dir. You can use the `--config` flag if you want to use a different config file.
+
+See `forta account` command in the CLI help output if you need to work with a specific private key.
+
+### Run
+
+Provide `FORTA_PASSPHRASE` env var or the flag `--passphrase` so your private key can be decrypted on startup.
+
+```shell
+$ forta run
+```
+
+### View logs
+
+CLI and supervisor logs are made available via stdout. Logs for the rest of the node services and
+agents can be inspected by doing:
+
+```shell
+$ docker ps # see the running containers from here
+$ docker logs -f <container_id>
+```
+
+### Stop
 
 ```
 CTRL-C
 ```
 
-#### View Logs
+### See local alerts
 
-```shell
-$ docker logs -f CONTAINER_ID
-```
+Use the port in config (`query.port`) to access the local alerts API:
 
-#### Get Alerts
 
 ```shell
 $ curl -s http://localhost:8778/alerts
 ```
-
-
-#### Configuration
-
-See config.yml for configuration (Docs TBD)
