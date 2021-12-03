@@ -48,4 +48,4 @@ build-remote: ## Try the "remote" containers option for build
 
 .PHONY: install
 install: build-local ## Single install target for local installation
-	cp forta /usr/bin/forta
+	cp forta /usr/local/bin/forta

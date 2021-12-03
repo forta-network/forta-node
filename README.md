@@ -31,7 +31,7 @@ $ go install github.com/golang/mock/mockgen@v1.5.0
 ### Full build & install using local version of Go
 
 ```shell
-$ sudo make install
+$ make install
 ```
 
 It takes a while to build all of the container images. For a faster iteration in local development,
