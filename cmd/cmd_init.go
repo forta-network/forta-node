@@ -45,6 +45,11 @@ func handleFortaInit(cmd *cobra.Command, args []string) error {
 	}
 
 	if !isKeyInitialized() {
+		if len(cfg.Passphrase) == 0 {
+			yellowBold("Please provide a passphrase to initialize and keep it.\n\n")
+			return cmd.Help()
+		}
+
 		ks := keystore.NewKeyStore(cfg.KeyDirPath, keystore.StandardScryptN, keystore.StandardScryptP)
 		acct, err := ks.NewAccount(cfg.Passphrase)
 		if err != nil {
@@ -100,7 +105,7 @@ query:
       skipEmpty: false
       intervalSeconds: 15
       maxAlerts: 100
-		# contractAddress: <fill in this to override auto-set default>
+    # contractAddress: <fill in this to override auto-set default>
     # ipfs:
     #   gatewayUrl: <set this to get ready for publishing>
     #   username: <set if needed>
