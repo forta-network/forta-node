@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"reflect"
@@ -135,7 +134,6 @@ func init() {
 	viper.BindPFlag(keyFortaPassphrase, cmdForta.PersistentFlags().Lookup("passphrase"))
 
 	// forta account import
-
 	cmdFortaAccountImport.Flags().String("file", "", "path to a file that contains a private key hex")
 	cmdFortaAccountImport.MarkFlagRequired("file")
 
@@ -164,13 +162,8 @@ func initConfig() {
 		configPath = path.Join(fortaDir, "config.yml")
 	}
 
-	configBytes, err := ioutil.ReadFile(configPath)
-	if err != nil {
-		log.Printf("failed to read the config file at %s: %v", configPath, err)
-	}
-	if err := yaml.Unmarshal(configBytes, &cfg); err != nil {
-		log.Printf("failed to unmarshal the config bytes: %v", err)
-	}
+	configBytes, _ := ioutil.ReadFile(configPath)
+	yaml.Unmarshal(configBytes, &cfg)
 
 	cfg.FortaDir = fortaDir
 	cfg.ConfigPath = configPath
