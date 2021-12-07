@@ -31,7 +31,6 @@ import (
 	"github.com/forta-protocol/forta-node/protocol"
 	"github.com/forta-protocol/forta-node/security"
 	"github.com/forta-protocol/forta-node/services/query/testalerts"
-	"github.com/forta-protocol/forta-node/store"
 	"github.com/forta-protocol/forta-node/utils"
 )
 
@@ -45,7 +44,6 @@ const (
 type AlertListener struct {
 	protocol.UnimplementedQueryNodeServer
 	ctx               context.Context
-	store             store.AlertStore
 	cfg               AlertListenerConfig
 	contract          AlertsContract
 	ipfs              IPFS
@@ -115,7 +113,6 @@ func (al *AlertListener) publishNextBatch(batch *protocol.SignedAlertBatch) erro
 	log.Tracef("alert payload: %s", string(buf.Bytes()))
 
 	// save with blank tx hash for now
-	al.storeBatchWithTxHash(batch.Data, "")
 	if al.skipPublish {
 		log.Infof("alert batch: blockStart=%d, blockEnd=%d, alertCount=%d, maxSeverity=%s", batch.Data.BlockStart, batch.Data.BlockEnd, batch.Data.AlertCount, batch.Data.MaxSeverity.String())
 		log.Info("skipping batch, because skipPublish is enabled")
@@ -132,7 +129,17 @@ func (al *AlertListener) publishNextBatch(batch *protocol.SignedAlertBatch) erro
 	if err != nil {
 		return fmt.Errorf("failed to store alert data to ipfs: %v", err)
 	}
-	log.Infof("alert batch: blockStart=%d, blockEnd=%d, alertCount=%d, maxSeverity=%s, ref=%s", batch.Data.BlockStart, batch.Data.BlockEnd, batch.Data.AlertCount, batch.Data.MaxSeverity.String(), cid)
+
+	logger := log.WithFields(
+		log.Fields{
+			"blockStart":  batch.Data.BlockStart,
+			"blockEnd":    batch.Data.BlockEnd,
+			"alertCount":  batch.Data.AlertCount,
+			"maxSeverity": batch.Data.MaxSeverity.String(),
+			"ref":         cid,
+			"metrics":     len(batch.Data.Metrics),
+		},
+	)
 
 	tx, err := al.contract.AddAlertBatch(
 		big.NewInt(0).SetUint64(batch.Data.ChainId),
@@ -143,11 +150,16 @@ func (al *AlertListener) publishNextBatch(batch *protocol.SignedAlertBatch) erro
 		cid,
 	)
 	if err != nil {
+		logger.WithError(err).Error("alert while sending batch")
 		return fmt.Errorf("failed to send the alert tx: %v", err)
 	}
 
-	// Store all block and transaction alerts.
-	al.storeBatchWithTxHash(batch.Data, tx.Hash().Hex())
+	logger.WithFields(
+		log.Fields{
+			"tx": tx.Hash().Hex(),
+		},
+	).Info("alert batch")
+
 	return nil
 }
 
@@ -173,30 +185,6 @@ func (al *AlertListener) publishBatches() {
 func (al *AlertListener) prepareBatches() {
 	for {
 		al.prepareLatestBatch()
-	}
-}
-
-func (al *AlertListener) storeBatchWithTxHash(batch *protocol.AlertBatch, txHash string) {
-	for _, result := range batch.Results {
-		for _, blockRes := range result.Results {
-			for _, alert := range blockRes.Alerts {
-				al.storeAlertWithTxHash(alert, txHash)
-			}
-		}
-		for _, txs := range result.Transactions {
-			for _, txRes := range txs.Results {
-				for _, alert := range txRes.Alerts {
-					al.storeAlertWithTxHash(alert, txHash)
-				}
-			}
-		}
-	}
-}
-
-func (al *AlertListener) storeAlertWithTxHash(alert *protocol.SignedAlert, txHash string) {
-	alert.PublishedWithTx = txHash
-	if err := al.store.AddAlert(alert); err != nil {
-		log.Errorf("failed to store the alert: %v", err)
 	}
 }
 
@@ -441,7 +429,7 @@ func (al *AlertListener) Name() string {
 	return "AlertListener"
 }
 
-func NewAlertListener(ctx context.Context, store store.AlertStore, mc *messaging.Client, cfg AlertListenerConfig) (*AlertListener, error) {
+func NewAlertListener(ctx context.Context, mc *messaging.Client, cfg AlertListenerConfig) (*AlertListener, error) {
 	rpcClient, err := rpc.Dial(cfg.PublisherConfig.Ethereum.JsonRpcUrl)
 	if err != nil {
 		return nil, err
@@ -508,7 +496,6 @@ func NewAlertListener(ctx context.Context, store store.AlertStore, mc *messaging
 
 	return &AlertListener{
 		ctx:               ctx,
-		store:             store,
 		cfg:               cfg,
 		contract:          ats,
 		ipfs:              ipfsClient,
