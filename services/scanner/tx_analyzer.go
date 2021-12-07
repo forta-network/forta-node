@@ -11,7 +11,6 @@ import (
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/domain"
 	"github.com/forta-protocol/forta-node/protocol"
-	"github.com/forta-protocol/forta-node/store"
 	"github.com/forta-protocol/forta-node/utils"
 
 	"github.com/google/uuid"
@@ -66,7 +65,7 @@ func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *pr
 	return &protocol.Alert{
 		Id:        alertID,
 		Finding:   f,
-		Timestamp: ts.Format(store.AlertTimeFormat),
+		Timestamp: ts.Format(utils.AlertTimeFormat),
 		Type:      protocol.AlertType_TRANSACTION,
 		Agent:     result.AgentConfig.ToAgentInfo(),
 		Tags: map[string]string{

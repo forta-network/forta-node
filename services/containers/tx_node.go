@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/goccy/go-json"
-	"path"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -12,7 +11,6 @@ import (
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/store"
 )
 
 // TxNodeService manages the safe-node docker container as a service
@@ -68,11 +66,6 @@ func (t *TxNodeService) start() error {
 	}
 	cfgJson := string(cfgBytes)
 
-	alertsDBPath := t.config.Config.Query.DB.Path
-	if len(alertsDBPath) == 0 {
-		alertsDBPath = path.Join(t.config.Config.FortaDir, "alertsdb")
-	}
-
 	if err := t.client.Prune(t.ctx); err != nil {
 		return err
 	}
@@ -103,7 +96,6 @@ func (t *TxNodeService) start() error {
 	}
 
 	queryContainerVolumes := map[string]string{
-		alertsDBPath:             store.DBPath,
 		t.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
 	}
 	// Mount the test alerts dir only if we really should write test alerts to a file.
