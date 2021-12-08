@@ -92,10 +92,6 @@ func (ac AgentConfig) GrpcPort() string {
 	return "50051"
 }
 
-type DBConfig struct {
-	Path string `yaml:"path" json:"path"`
-}
-
 type EthereumConfig struct {
 	JsonRpcUrl   string            `yaml:"jsonRpcUrl" json:"jsonRpcUrl" validate:"omitempty,url"`
 	WebsocketUrl string            `yaml:"websocketUrl" json:"websocketUrl" validate:"required_without=JsonRpcUrl"`
@@ -104,7 +100,6 @@ type EthereumConfig struct {
 
 type QueryConfig struct {
 	Port      int             `yaml:"port" json:"port" validate:"max=65535"`
-	DB        DBConfig        `yaml:"db" json:"db"`
 	PublishTo PublisherConfig `yaml:"publishTo" json:"publishTo"`
 }
 type ScannerConfig struct {
