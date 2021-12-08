@@ -1,8 +1,11 @@
 package metrics
 
 import (
+	"github.com/forta-protocol/forta-node/clients"
+	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/protocol"
+	"time"
 )
 
 const (
@@ -11,12 +14,31 @@ const (
 	MetricTxLatency    = "tx.latency"
 	MetricTxError      = "tx.error"
 	MetricTxSuccess    = "tx.success"
+	MetricTxDrop       = "tx.drop"
 	MetricBlockRequest = "block.request"
 	MetricBlockLatency = "block.latency"
 	MetricBlockError   = "block.error"
 	MetricBlockSuccess = "block.success"
+	MetricBlockDrop    = "block.drop"
 	MetricStop         = "agent.stop"
 )
+
+func SendAgentMetrics(client clients.MessageClient, ms []*protocol.AgentMetric) {
+	if len(ms) > 0 {
+		client.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{
+			Metrics: ms,
+		})
+	}
+}
+
+func CreateAgentMetric(agentID, metric string, value float64) *protocol.AgentMetric {
+	return &protocol.AgentMetric{
+		AgentId:   agentID,
+		Timestamp: time.Now().Format(time.RFC3339),
+		Name:      metric,
+		Value:     value,
+	}
+}
 
 func createMetrics(agentID, timestamp string, metricMap map[string]float64) []*protocol.AgentMetric {
 	var res []*protocol.AgentMetric
