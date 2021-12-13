@@ -18,7 +18,8 @@ jobs:
         image-name: [
             "scanner",
             "query",
-            "json-rpc"
+            "json-rpc",
+            "updater"
         ]
     steps:
       - name: Clear artifacts

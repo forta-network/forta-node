@@ -3,8 +3,9 @@ package containers
 import (
 	"context"
 	"fmt"
-	"github.com/goccy/go-json"
 	"sync"
+
+	"github.com/goccy/go-json"
 
 	log "github.com/sirupsen/logrus"
 
@@ -26,8 +27,12 @@ type TxNodeService struct {
 
 	scannerContainer *clients.DockerContainer
 	jsonRpcContainer *clients.DockerContainer
-	containers       []*clients.DockerContainer
-	mu               sync.RWMutex
+	queryContainer   *clients.DockerContainer
+	updaterContainer *clients.DockerContainer
+	images           config.FortaImages
+
+	containers []*clients.DockerContainer
+	mu         sync.RWMutex
 }
 
 type TxNodeServiceConfig struct {
@@ -103,9 +108,9 @@ func (t *TxNodeService) start() error {
 	if !testAlertsCfg.Disable && len(testAlertsCfg.WebhookURL) == 0 && len(t.config.Config.LocalAgents) > 0 {
 		queryContainerVolumes["/tmp"] = "/test-alerts"
 	}
-	queryContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
+	t.queryContainer, err = t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerQueryContainerName,
-		Image: config.DockerQueryContainerImage,
+		Image: t.images.Publisher,
 		Env: map[string]string{
 			config.EnvConfig:   cfgJson,
 			config.EnvFortaDir: config.DefaultContainerFortaDirPath,
@@ -128,7 +133,7 @@ func (t *TxNodeService) start() error {
 
 	t.jsonRpcContainer, err = t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerJSONRPCProxyContainerName,
-		Image: config.DockerJSONRPCProxyContainerImage,
+		Image: t.images.Proxy,
 		Env: map[string]string{
 			config.EnvConfig: cfgJson,
 		},
@@ -142,7 +147,7 @@ func (t *TxNodeService) start() error {
 
 	t.scannerContainer, err = t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerScannerContainerName,
-		Image: config.DockerScannerContainerImage,
+		Image: t.images.Scanner,
 		Env: map[string]string{
 			config.EnvConfig:    cfgJson,
 			config.EnvFortaDir:  config.DefaultContainerFortaDirPath,
@@ -166,7 +171,29 @@ func (t *TxNodeService) start() error {
 		return err
 	}
 
-	t.addContainerUnsafe(natsContainer, queryContainer, t.jsonRpcContainer, t.scannerContainer)
+	t.updaterContainer, err = t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
+		Name:  config.DockerUpdaterContainerName,
+		Image: t.images.Updater,
+		Env: map[string]string{
+			config.EnvConfig:   cfgJson,
+			config.EnvFortaDir: config.DefaultContainerFortaDirPath,
+			config.EnvNatsHost: config.DockerNatsContainerName,
+		},
+		Volumes: map[string]string{
+			t.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
+		},
+		Files: map[string][]byte{
+			"passphrase": []byte(t.config.Passphrase),
+		},
+		NetworkID:   nodeNetwork,
+		MaxLogFiles: t.maxLogFiles,
+		MaxLogSize:  t.maxLogSize,
+	})
+	if err != nil {
+		return err
+	}
+
+	t.addContainerUnsafe(natsContainer, t.queryContainer, t.jsonRpcContainer, t.scannerContainer)
 
 	return nil
 }
@@ -222,9 +249,13 @@ func (t *TxNodeService) ensureLocalImage(name, ref string, requireAuth bool) err
 }
 
 func (t *TxNodeService) Stop() error {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
+	t.mu.Lock()
+	defer t.mu.Unlock()
 
+	return t.stopUnsafe()
+}
+
+func (t *TxNodeService) stopUnsafe() error {
 	ctx := context.Background()
 	for _, cnt := range t.containers {
 		if err := t.client.StopContainer(ctx, cnt.ID); err != nil {
@@ -234,6 +265,25 @@ func (t *TxNodeService) Stop() error {
 		}
 	}
 	return nil
+}
+
+func (t *TxNodeService) handleImagesLatest(payload messaging.ImagesPayload) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	if payload.Scanner == t.images.Scanner {
+		log.Info("same image ref received - skipping container update")
+		return nil
+	}
+	t.images = (config.FortaImages)(payload)
+
+	// TODO: Don't stop the agents and NATS, reattach new node containers to the existing networks.
+	if err := t.stopUnsafe(); err != nil {
+		return nil
+	}
+	t.containers = nil
+
+	return t.start()
 }
 
 func (t *TxNodeService) Name() string {
@@ -254,5 +304,6 @@ func NewTxNodeService(ctx context.Context, cfg TxNodeServiceConfig) (*TxNodeServ
 		client:     dockerClient,
 		authClient: dockerAuthClient,
 		config:     cfg,
+		images:     config.GetFortaImageReferences(),
 	}, nil
 }

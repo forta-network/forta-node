@@ -14,6 +14,7 @@ const (
 	SubjectAgentsStatusAttached = "agents.status.attached"
 	SubjectAgentsStatusStopped  = "agents.status.stopped"
 	SubjectMetricAgent          = "metric.agent"
+	SubjectImagesLatest         = "images.latest"
 )
 
 // AgentPayload is the message payload.
@@ -21,3 +22,6 @@ type AgentPayload []config.AgentConfig
 
 // AgentMetricPayload is the message payload for metrics.
 type AgentMetricPayload *protocol.AgentMetricList
+
+// ImagesPayload is message payload for Forta node image references.
+type ImagesPayload config.FortaImages

@@ -2,10 +2,11 @@ package config
 
 import (
 	"fmt"
-	"github.com/goccy/go-json"
 	"math/big"
 	"os"
 	"path"
+
+	"github.com/goccy/go-json"
 
 	"github.com/forta-protocol/forta-node/protocol"
 	"github.com/forta-protocol/forta-node/utils"
@@ -38,12 +39,14 @@ var (
 	DockerScannerContainerImage      = "forta-protocol/forta-scanner:latest"
 	DockerQueryContainerImage        = "forta-protocol/forta-query:latest"
 	DockerJSONRPCProxyContainerImage = "forta-protocol/forta-json-rpc:latest"
+	DockerUpdaterContainerImage      = "forta-protocol/forta-updater:latest"
 	UseDockerImages                  = "local"
 
 	DockerNatsContainerName         = fmt.Sprintf("%s-nats", ContainerNamePrefix)
 	DockerScannerContainerName      = fmt.Sprintf("%s-scanner", ContainerNamePrefix)
 	DockerJSONRPCProxyContainerName = fmt.Sprintf("%s-json-rpc", ContainerNamePrefix)
 	DockerQueryContainerName        = fmt.Sprintf("%s-query", ContainerNamePrefix)
+	DockerUpdaterContainerName      = fmt.Sprintf("%s-updater", ContainerNamePrefix)
 
 	DockerNetworkName = DockerScannerContainerName
 
@@ -57,6 +60,24 @@ var (
 	DefaultNatsPort    = "4222"
 	DefaultIPFSGateway = "https://cloudflare-ipfs.com"
 )
+
+// FortaImages has all images references which the Forta node should be running.
+type FortaImages struct {
+	Scanner   string
+	Publisher string
+	Proxy     string
+	Updater   string
+}
+
+// GetFortaImageReferences returns the image references.
+func GetFortaImageReferences() FortaImages {
+	return FortaImages{
+		Scanner:   DockerScannerContainerImage,
+		Publisher: DockerQueryContainerImage,
+		Proxy:     DockerJSONRPCProxyContainerImage,
+		Updater:   DockerUpdaterContainerImage,
+	}
+}
 
 type AgentConfig struct {
 	ID         string  `yaml:"id" json:"id"`

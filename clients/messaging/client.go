@@ -2,6 +2,7 @@ package messaging
 
 import (
 	"fmt"
+
 	"github.com/forta-protocol/forta-node/protocol"
 	"github.com/goccy/go-json"
 	"github.com/golang/protobuf/proto"
@@ -49,6 +50,7 @@ func NewClient(name, natsURL string) *Client {
 // AgentsHandler handles agents.* subjects.
 type AgentsHandler func(AgentPayload) error
 type AgentMetricHandler func(*protocol.AgentMetricList) error
+type ImagesHandler func(ImagesPayload) error
 
 // Subscribe subscribes the consumer to this client.
 func (client *Client) Subscribe(subject string, handler interface{}) {
@@ -73,6 +75,13 @@ func (client *Client) Subscribe(subject string, handler interface{}) {
 				break
 			}
 			err = h(&payload)
+		case ImagesHandler:
+			var payload ImagesPayload
+			err = json.Unmarshal(m.Data, &payload)
+			if err != nil {
+				break
+			}
+			err = h(payload)
 		default:
 			logger.Panicf("no handler found")
 		}

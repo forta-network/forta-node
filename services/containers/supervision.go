@@ -133,4 +133,5 @@ func (t *TxNodeService) handleAgentStop(payload messaging.AgentPayload) error {
 func (t *TxNodeService) registerMessageHandlers() {
 	t.msgClient.Subscribe(messaging.SubjectAgentsActionRun, messaging.AgentsHandler(t.handleAgentRun))
 	t.msgClient.Subscribe(messaging.SubjectAgentsActionStop, messaging.AgentsHandler(t.handleAgentStop))
+	t.msgClient.Subscribe(messaging.SubjectImagesLatest, messaging.ImagesHandler(t.handleImagesLatest))
 }

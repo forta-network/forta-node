@@ -31,12 +31,16 @@ func (t *TxNodeService) healthCheck() {
 }
 
 func (t *TxNodeService) doHealthCheck() error {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
+	// get the container list from docker daemon after the lock to avoid checking against old containers
+	// if update happens concurrently
 	containersList, err := t.client.GetContainers(t.ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get containers list: %v", err)
 	}
-	t.mu.RLock()
-	defer t.mu.RUnlock()
+
 	for _, knownContainer := range t.containers {
 		var foundContainer *types.Container
 		var ok bool

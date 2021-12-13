@@ -3,6 +3,7 @@ containers:
 	docker build -t forta-protocol/forta-scanner -f Dockerfile.scanner .
 	docker build -t forta-protocol/forta-query -f Dockerfile.query .
 	docker build -t forta-protocol/forta-json-rpc -f Dockerfile.json-rpc .
+	docker build -t forta-protocol/forta-updater -f Dockerfile.updater .
 
 main:
 	docker build -t build-forta -f Dockerfile.cli .
