@@ -331,7 +331,7 @@ func (tr *TransactionResults) GetAgentAlerts(agent *protocol.AgentInfo) *protoco
 func (al *AlertListener) prepareLatestBatch() {
 	batch := &BatchData{Data: &protocol.AlertBatch{ChainId: uint64(al.cfg.ChainID)}}
 
-	timeoutCh := time.After(defaultInterval)
+	timeoutCh := time.After(al.batchInterval)
 
 	var done bool
 	var i int
