@@ -2,10 +2,11 @@ package config
 
 import (
 	"fmt"
-	"github.com/goccy/go-json"
 	"math/big"
 	"os"
 	"path"
+
+	"github.com/goccy/go-json"
 
 	"github.com/forta-protocol/forta-node/protocol"
 	"github.com/forta-protocol/forta-node/utils"
@@ -31,6 +32,7 @@ const (
 const (
 	DefaultLocalAgentsFileName = "local-agents.json"
 	DefaultKeysDirName         = ".keys"
+	DefaultFortaNodeBinaryPath = "/forta-node" // the path for the common binary in the container image
 )
 
 // Docker container names
@@ -38,6 +40,7 @@ var (
 	DockerScannerNodeImage = "forta-protocol/forta-node:latest"
 	UseDockerImages        = "local"
 
+	DockerSupervisorContainerName   = fmt.Sprintf("%s-supervisor", ContainerNamePrefix)
 	DockerNatsContainerName         = fmt.Sprintf("%s-nats", ContainerNamePrefix)
 	DockerScannerContainerName      = fmt.Sprintf("%s-scanner", ContainerNamePrefix)
 	DockerJSONRPCProxyContainerName = fmt.Sprintf("%s-json-rpc", ContainerNamePrefix)
@@ -174,14 +177,14 @@ type ENSConfig struct {
 }
 
 type Config struct {
-	Development                  bool           `yaml:"-" json:"-"`
-	FortaDir                     string         `yaml:"-" json:"-"`
-	ConfigPath                   string         `yaml:"-" json:"-"`
-	KeyDirPath                   string         `yaml:"-" json:"-"`
-	Passphrase                   string         `yaml:"-" json:"-"`
-	LocalAgentsPath              string         `yaml:"-" json:"-"`
-	LocalAgents                  []*AgentConfig `yaml:"-" json:"localAgents"`
-	AgentRegistryContractAddress string         `yaml:"-" json:"agentRegistry"`
+	Development                  bool           `yaml:"-" json:"_development"`
+	FortaDir                     string         `yaml:"-" json:"_fortaDir"`
+	ConfigPath                   string         `yaml:"-" json:"_configPath"`
+	KeyDirPath                   string         `yaml:"-" json:"_keyDirPath"`
+	Passphrase                   string         `yaml:"-" json:"_passphrase"`
+	LocalAgentsPath              string         `yaml:"-" json:"_localAgentsPath"`
+	LocalAgents                  []*AgentConfig `yaml:"-" json:"_localAgents"`
+	AgentRegistryContractAddress string         `yaml:"-" json:"_agentRegistry"`
 
 	Registry        RegistryConfig     `yaml:"registry" json:"registry"`
 	Scanner         ScannerConfig      `yaml:"scanner" json:"scanner"`

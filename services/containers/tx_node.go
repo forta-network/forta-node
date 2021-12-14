@@ -3,8 +3,10 @@ package containers
 import (
 	"context"
 	"fmt"
-	"github.com/goccy/go-json"
+	"os"
 	"sync"
+
+	"github.com/goccy/go-json"
 
 	log "github.com/sirupsen/logrus"
 
@@ -12,8 +14,6 @@ import (
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/config"
 )
-
-const FortaNodeBinary = "/forta-node"
 
 // TxNodeService manages the safe-node docker container as a service
 type TxNodeService struct {
@@ -42,9 +42,6 @@ func (t *TxNodeService) Start() error {
 		return err
 	}
 
-	t.msgClient = messaging.NewClient("cli", ":"+config.DefaultNatsPort) // accessible from localhost
-	t.registerMessageHandlers()
-
 	go t.healthCheck()
 
 	return nil
@@ -68,6 +65,11 @@ func (t *TxNodeService) start() error {
 	}
 	cfgJson := string(cfgBytes)
 
+	natsHost := os.Getenv(config.EnvNatsHost)
+	if natsHost == "" {
+		return fmt.Errorf("%s is a required env var", config.EnvNatsHost)
+	}
+
 	if err := t.client.Prune(t.ctx); err != nil {
 		return err
 	}
@@ -78,8 +80,11 @@ func (t *TxNodeService) start() error {
 		}
 	}
 
-	nodeNetwork, err := t.client.CreatePublicNetwork(t.ctx, config.DockerNetworkName)
+	nodeNetworkID, err := t.client.CreatePublicNetwork(t.ctx, config.DockerNetworkName)
 	if err != nil {
+		return err
+	}
+	if err := t.attachSupervisor(nodeNetworkID); err != nil {
 		return err
 	}
 
@@ -89,7 +94,7 @@ func (t *TxNodeService) start() error {
 		Ports: map[string]string{
 			"4222": "4222",
 		},
-		NetworkID:   nodeNetwork,
+		NetworkID:   nodeNetworkID,
 		MaxLogFiles: t.maxLogFiles,
 		MaxLogSize:  t.maxLogSize,
 	})
@@ -97,18 +102,13 @@ func (t *TxNodeService) start() error {
 		return err
 	}
 
-	queryContainerVolumes := map[string]string{
-		t.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
-	}
-	// Mount the test alerts dir only if we really should write test alerts to a file.
-	testAlertsCfg := t.config.Config.Query.PublishTo.TestAlerts
-	if !testAlertsCfg.Disable && len(testAlertsCfg.WebhookURL) == 0 && len(t.config.Config.LocalAgents) > 0 {
-		queryContainerVolumes["/tmp"] = "/test-alerts"
-	}
+	t.msgClient = messaging.NewClient("supervisor", fmt.Sprintf("%s:%s", natsHost, config.DefaultNatsPort))
+	t.registerMessageHandlers()
+
 	queryContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerPublisherContainerName,
 		Image: config.DockerScannerNodeImage,
-		Cmd:   []string{FortaNodeBinary, "publisher"},
+		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "publisher"},
 		Env: map[string]string{
 			config.EnvConfig:   cfgJson,
 			config.EnvFortaDir: config.DefaultContainerFortaDirPath,
@@ -117,11 +117,13 @@ func (t *TxNodeService) start() error {
 		Ports: map[string]string{
 			fmt.Sprintf("%d", t.config.Config.Query.Port): "80",
 		},
-		Volumes: queryContainerVolumes,
+		Volumes: map[string]string{
+			t.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
+		},
 		Files: map[string][]byte{
 			"passphrase": []byte(t.config.Passphrase),
 		},
-		NetworkID:   nodeNetwork,
+		NetworkID:   nodeNetworkID,
 		MaxLogFiles: t.maxLogFiles,
 		MaxLogSize:  t.maxLogSize,
 	})
@@ -132,11 +134,11 @@ func (t *TxNodeService) start() error {
 	t.jsonRpcContainer, err = t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerJSONRPCProxyContainerName,
 		Image: config.DockerScannerNodeImage,
-		Cmd:   []string{FortaNodeBinary, "json-rpc"},
+		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "json-rpc"},
 		Env: map[string]string{
 			config.EnvConfig: cfgJson,
 		},
-		NetworkID:   nodeNetwork,
+		NetworkID:   nodeNetworkID,
 		MaxLogFiles: t.maxLogFiles,
 		MaxLogSize:  t.maxLogSize,
 	})
@@ -147,7 +149,7 @@ func (t *TxNodeService) start() error {
 	t.scannerContainer, err = t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerScannerContainerName,
 		Image: config.DockerScannerNodeImage,
-		Cmd:   []string{FortaNodeBinary, "scanner"},
+		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "scanner"},
 		Env: map[string]string{
 			config.EnvConfig:        cfgJson,
 			config.EnvFortaDir:      config.DefaultContainerFortaDirPath,
@@ -163,7 +165,7 @@ func (t *TxNodeService) start() error {
 		Files: map[string][]byte{
 			"passphrase": []byte(t.config.Passphrase),
 		},
-		NetworkID:   nodeNetwork,
+		NetworkID:   nodeNetworkID,
 		MaxLogFiles: t.maxLogFiles,
 		MaxLogSize:  t.maxLogSize,
 	})
@@ -173,6 +175,17 @@ func (t *TxNodeService) start() error {
 
 	t.addContainerUnsafe(natsContainer, queryContainer, t.jsonRpcContainer, t.scannerContainer)
 
+	return nil
+}
+
+func (t *TxNodeService) attachSupervisor(nodeNetworkID string) error {
+	container, err := t.client.GetContainerByName(t.ctx, config.DockerSupervisorContainerName)
+	if err != nil {
+		return fmt.Errorf("failed to get supervisor container while attaching to node network: %v", err)
+	}
+	if err := t.client.AttachNetwork(t.ctx, container.ID, nodeNetworkID); err != nil {
+		return fmt.Errorf("failed to attach supervisor to node network: %v", err)
+	}
 	return nil
 }
 
@@ -200,20 +213,11 @@ func (t *TxNodeService) ensureNodeImages() error {
 }
 
 func (t *TxNodeService) ensureLocalImage(name, ref string, requireAuth bool) error {
-	if t.client.HasLocalImage(t.ctx, ref) {
-		log.Infof("found local image for '%s': %s", name, ref)
-		return nil
-	}
 	client := t.client
 	if requireAuth {
 		client = t.authClient
 	}
-	err := client.PullImage(t.ctx, ref)
-	if err != nil {
-		return fmt.Errorf("failed to pull image (%s, %s): %v", name, ref, err)
-	}
-	log.Infof("pulled image for '%s': %s", name, ref)
-	return nil
+	return client.EnsureLocalImage(t.ctx, name, ref)
 }
 
 func (t *TxNodeService) Stop() error {

@@ -4,6 +4,7 @@ import (
 	json_rpc "github.com/forta-protocol/forta-node/cmd/json-rpc"
 	"github.com/forta-protocol/forta-node/cmd/publisher"
 	"github.com/forta-protocol/forta-node/cmd/scanner"
+	"github.com/forta-protocol/forta-node/cmd/supervisor"
 	"github.com/spf13/cobra"
 )
 
@@ -14,6 +15,14 @@ var (
 			return cmd.Help()
 		},
 		SilenceUsage: true,
+	}
+
+	cmdSupervisor = &cobra.Command{
+		Use: "supervisor",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			supervisor.Run()
+			return nil
+		},
 	}
 
 	cmdScanner = &cobra.Command{
@@ -42,6 +51,7 @@ var (
 )
 
 func init() {
+	cmdFortaNode.AddCommand(cmdSupervisor)
 	cmdFortaNode.AddCommand(cmdScanner)
 	cmdFortaNode.AddCommand(cmdPublisher)
 	cmdFortaNode.AddCommand(cmdJsonRpc)

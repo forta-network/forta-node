@@ -7,9 +7,11 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/goccy/go-json"
 	"io"
 	"strings"
+	"time"
+
+	"github.com/goccy/go-json"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -27,6 +29,7 @@ var labels = map[string]string{dockerResourcesLabel: "true"}
 // Client errors
 var (
 	ErrAlreadyExistsInNetwork = errors.New("already exists in network")
+	ErrContainerNotFound      = errors.New("container not found")
 )
 
 // DockerContainer is a resulting container reference, including the ID and configuration
@@ -227,6 +230,34 @@ func (d *dockerClient) GetContainers(ctx context.Context) (DockerContainerList, 
 	})
 }
 
+// GetContainerByName gets a container by using a name lookup over all containers.
+func (d *dockerClient) GetContainerByName(ctx context.Context, name string) (*types.Container, error) {
+	containers, err := d.GetContainers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, container := range containers {
+		if container.Names[0][1:] == name {
+			return &container, nil
+		}
+	}
+	return nil, fmt.Errorf("%w with name '%s'", ErrContainerNotFound, name)
+}
+
+// GetContainerByName gets a container by using an ID lookup over all containers.
+func (d *dockerClient) GetContainerByID(ctx context.Context, id string) (*types.Container, error) {
+	containers, err := d.GetContainers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, container := range containers {
+		if container.ID == id {
+			return &container, nil
+		}
+	}
+	return nil, fmt.Errorf("%w with id '%s'", ErrContainerNotFound, id)
+}
+
 // StartContainer kicks off a container as a daemon and returns a summary of the container
 func (d *dockerClient) StartContainer(ctx context.Context, config DockerContainerConfig) (*DockerContainer, error) {
 	containers, err := d.GetContainers(ctx)
@@ -356,10 +387,61 @@ func (d *dockerClient) StopContainer(ctx context.Context, ID string) error {
 	return err
 }
 
+// InterruptContainer stops a container by sending an interrupt signal.
+func (d *dockerClient) InterruptContainer(ctx context.Context, id string) error {
+	err := d.cli.ContainerKill(ctx, id, "SIGINT")
+	if err == nil {
+		return nil
+	}
+	if strings.Contains(strings.ToLower(err.Error()), "no such container") {
+		return nil
+	}
+	return err
+}
+
+// WaitContainerExit waits for container exit by checking every second.
+func (d *dockerClient) WaitContainerExit(ctx context.Context, id string) error {
+	ticker := time.NewTicker(time.Second)
+	for range ticker.C {
+		container, err := d.GetContainerByID(ctx, id)
+		if err != nil && container.State == "running" {
+			continue
+		}
+		break
+	}
+	return nil
+}
+
+// WaitContainerPrune waits for container prune by checking every second.
+func (d *dockerClient) WaitContainerPrune(ctx context.Context, id string) error {
+	ticker := time.NewTicker(time.Second)
+	for range ticker.C {
+		_, err := d.GetContainerByID(ctx, id)
+		if err != nil && errors.Is(err, ErrContainerNotFound) {
+			return nil
+		}
+	}
+	return nil
+}
+
 // HasLocalImage checks if we have an image locally.
 func (d *dockerClient) HasLocalImage(ctx context.Context, ref string) bool {
 	_, _, err := d.cli.ImageInspectWithRaw(ctx, ref)
 	return err == nil
+}
+
+// EnsureLocalImage ensures that we have the image locally.
+func (d *dockerClient) EnsureLocalImage(ctx context.Context, name, ref string) error {
+	if d.HasLocalImage(ctx, ref) {
+		log.Infof("found local image for '%s': %s", name, ref)
+		return nil
+	}
+	err := d.PullImage(ctx, ref)
+	if err != nil {
+		return fmt.Errorf("failed to pull image (%s, %s): %v", name, ref, err)
+	}
+	log.Infof("pulled image for '%s': %s", name, ref)
+	return nil
 }
 
 // NewDockerClient creates a new docker client

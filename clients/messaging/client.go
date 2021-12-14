@@ -2,6 +2,8 @@ package messaging
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/forta-protocol/forta-node/protocol"
 	"github.com/goccy/go-json"
 	"github.com/golang/protobuf/proto"
@@ -33,8 +35,8 @@ func NewClient(name, natsURL string) *Client {
 		if err == nil {
 			break
 		}
-		err = fmt.Errorf("failed to connect to nats server: %v", err)
-		logger.Error(err)
+		logger.WithError(err).Error("failed to connect to nats server")
+		time.Sleep(time.Second * 1) // don't retry too quickly - maybe it's not up yet
 	}
 	if err != nil {
 		logger.Panic(err)
