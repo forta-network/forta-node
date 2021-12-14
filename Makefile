@@ -1,8 +1,6 @@
 containers:
 	docker pull nats:2.3.2
-	docker build -t forta-protocol/forta-scanner -f Dockerfile.scanner .
-	docker build -t forta-protocol/forta-query -f Dockerfile.query .
-	docker build -t forta-protocol/forta-json-rpc -f Dockerfile.json-rpc .
+	docker build -t forta-protocol/forta-node -f Dockerfile.node .
 
 main:
 	docker build -t build-forta -f Dockerfile.cli .

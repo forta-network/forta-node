@@ -13,6 +13,8 @@ import (
 	"github.com/forta-protocol/forta-node/config"
 )
 
+const FortaNodeBinary = "/forta-node"
+
 // TxNodeService manages the safe-node docker container as a service
 type TxNodeService struct {
 	ctx        context.Context
@@ -104,8 +106,9 @@ func (t *TxNodeService) start() error {
 		queryContainerVolumes["/tmp"] = "/test-alerts"
 	}
 	queryContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
-		Name:  config.DockerQueryContainerName,
-		Image: config.DockerQueryContainerImage,
+		Name:  config.DockerPublisherContainerName,
+		Image: config.DockerScannerNodeImage,
+		Cmd:   []string{FortaNodeBinary, "publisher"},
 		Env: map[string]string{
 			config.EnvConfig:   cfgJson,
 			config.EnvFortaDir: config.DefaultContainerFortaDirPath,
@@ -128,7 +131,8 @@ func (t *TxNodeService) start() error {
 
 	t.jsonRpcContainer, err = t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerJSONRPCProxyContainerName,
-		Image: config.DockerJSONRPCProxyContainerImage,
+		Image: config.DockerScannerNodeImage,
+		Cmd:   []string{FortaNodeBinary, "json-rpc"},
 		Env: map[string]string{
 			config.EnvConfig: cfgJson,
 		},
@@ -142,12 +146,13 @@ func (t *TxNodeService) start() error {
 
 	t.scannerContainer, err = t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerScannerContainerName,
-		Image: config.DockerScannerContainerImage,
+		Image: config.DockerScannerNodeImage,
+		Cmd:   []string{FortaNodeBinary, "scanner"},
 		Env: map[string]string{
-			config.EnvConfig:    cfgJson,
-			config.EnvFortaDir:  config.DefaultContainerFortaDirPath,
-			config.EnvQueryNode: config.DockerQueryContainerName,
-			config.EnvNatsHost:  config.DockerNatsContainerName,
+			config.EnvConfig:        cfgJson,
+			config.EnvFortaDir:      config.DefaultContainerFortaDirPath,
+			config.EnvPublisherHost: config.DockerPublisherContainerName,
+			config.EnvNatsHost:      config.DockerNatsContainerName,
 		},
 		Ports: map[string]string{
 			"8989": "80",
@@ -182,18 +187,8 @@ func (t *TxNodeService) ensureNodeImages() error {
 			Ref:  "nats:2.3.2",
 		},
 		{
-			Name:        "scanner",
-			Ref:         config.DockerScannerContainerImage,
-			RequireAuth: true,
-		},
-		{
-			Name:        "query",
-			Ref:         config.DockerQueryContainerImage,
-			RequireAuth: true,
-		},
-		{
-			Name:        "json-rpc",
-			Ref:         config.DockerJSONRPCProxyContainerImage,
+			Name:        "node",
+			Ref:         config.DockerScannerNodeImage,
 			RequireAuth: true,
 		},
 	} {

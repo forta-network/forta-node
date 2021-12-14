@@ -12,15 +12,11 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
     outputs:
-      scanner-image-ref: ${{ steps.write-output.outputs.scanner-image-ref }}
-      query-image-ref: ${{ steps.write-output.outputs.query-image-ref }}
-      json-rpc-image-ref: ${{ steps.write-output.outputs.json-rpc-image-ref }}
+      node-image-ref: ${{ steps.write-output.outputs.node-image-ref }}
     strategy:
       matrix:
         image-name: [
-          "scanner",
-          "query",
-          "json-rpc"
+          "node"
         ]
     steps:
       - name: Clear artifacts
@@ -49,9 +45,7 @@ jobs:
     steps:
       - name: Echo Image References
         run: |
-          echo "scanner=${{ needs.containers.outputs.scanner-image-ref }}"
-          echo "query=${{ needs.containers.outputs.query-image-ref }}"
-          echo "json-rpc=${{ needs.containers.outputs.json-rpc-image-ref }}"
+          echo "node=${{ needs.containers.outputs.node-image-ref }}"
       - name: Clear artifacts
         uses: kolpav/purge-artifacts-action@v1
         continue-on-error: true
@@ -66,7 +60,7 @@ jobs:
           go-version: 1.16
       - name: Create build for revision
         run: |
-          ./scripts/build.sh ${{ needs.containers.outputs.scanner-image-ref }} ${{ needs.containers.outputs.query-image-ref }} ${{ needs.containers.outputs.json-rpc-image-ref }} 'remote'
+          ./scripts/build.sh ${{ needs.containers.outputs.node-image-ref }} 'remote'
           chmod 755 forta
       - name: Configure AWS credentials (build artifact -> S3)
         uses: aws-actions/configure-aws-credentials@v1
