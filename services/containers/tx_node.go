@@ -106,9 +106,9 @@ func (t *TxNodeService) start() error {
 		queryContainerVolumes["/tmp"] = "/test-alerts"
 	}
 	queryContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
-		Name:     config.DockerPublisherContainerName,
-		Image:    config.DockerScannerNodeImage,
-		Commands: []string{FortaNodeBinary, "publisher"},
+		Name:  config.DockerPublisherContainerName,
+		Image: config.DockerScannerNodeImage,
+		Cmd:   []string{FortaNodeBinary, "publisher"},
 		Env: map[string]string{
 			config.EnvConfig:   cfgJson,
 			config.EnvFortaDir: config.DefaultContainerFortaDirPath,
@@ -130,9 +130,9 @@ func (t *TxNodeService) start() error {
 	}
 
 	t.jsonRpcContainer, err = t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
-		Name:     config.DockerJSONRPCProxyContainerName,
-		Image:    config.DockerScannerNodeImage,
-		Commands: []string{FortaNodeBinary, "json-rpc"},
+		Name:  config.DockerJSONRPCProxyContainerName,
+		Image: config.DockerScannerNodeImage,
+		Cmd:   []string{FortaNodeBinary, "json-rpc"},
 		Env: map[string]string{
 			config.EnvConfig: cfgJson,
 		},
@@ -145,9 +145,9 @@ func (t *TxNodeService) start() error {
 	}
 
 	t.scannerContainer, err = t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
-		Name:     config.DockerScannerContainerName,
-		Image:    config.DockerScannerNodeImage,
-		Commands: []string{FortaNodeBinary, "scanner"},
+		Name:  config.DockerScannerContainerName,
+		Image: config.DockerScannerNodeImage,
+		Cmd:   []string{FortaNodeBinary, "scanner"},
 		Env: map[string]string{
 			config.EnvConfig:        cfgJson,
 			config.EnvFortaDir:      config.DefaultContainerFortaDirPath,

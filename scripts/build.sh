@@ -5,4 +5,4 @@ set -o pipefail
 
 MODULE_NAME=$(grep 'module' go.mod | cut -c8-) # Get the module name from go.mod
 IMPORT="$MODULE_NAME/config"
-go build -o forta -ldflags="-X '$IMPORT.DockerScannerNodeImage=$1' -X '$IMPORT.UseDockerImages=$4'" .
+go build -o forta -ldflags="-X '$IMPORT.DockerScannerNodeImage=$1' -X '$IMPORT.UseDockerImages=$2'" .

@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         image-name: [
-          "node",
+          "node"
         ]
     steps:
       - name: Clear artifacts

@@ -51,7 +51,7 @@ type DockerContainerConfig struct {
 	MaxLogFiles    int
 	CPUQuota       int64
 	Memory         int64
-	Commands       []string
+	Cmd            []string
 }
 
 // DockerContainerList contains the full container data.
@@ -289,8 +289,8 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 		Labels: labels,
 	}
 
-	if len(config.Commands) > 0 {
-		cntCfg.Cmd = config.Commands
+	if len(config.Cmd) > 0 {
+		cntCfg.Cmd = config.Cmd
 	}
 
 	cont, err := d.cli.ContainerCreate(
