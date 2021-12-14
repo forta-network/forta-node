@@ -1,4 +1,4 @@
-package main
+package publisher
 
 import (
 	"context"
@@ -45,6 +45,6 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	}, nil
 }
 
-func main() {
-	services.ContainerMain("query", initServices)
+func Run() {
+	services.ContainerMain("publisher", initServices)
 }

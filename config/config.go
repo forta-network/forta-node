@@ -23,7 +23,7 @@ const ContainerNamePrefix = "forta"
 
 const (
 	//TODO: figure out protocol for this other than direct communication
-	EnvQueryNode = "QUERY_NODE"
+	EnvPublisherHost = "PUBLISHER_HOST"
 	// NATS node name env var
 	EnvNatsHost = "NATS_HOST"
 )
@@ -35,15 +35,13 @@ const (
 
 // Docker container names
 var (
-	DockerScannerContainerImage      = "forta-protocol/forta-scanner:latest"
-	DockerQueryContainerImage        = "forta-protocol/forta-query:latest"
-	DockerJSONRPCProxyContainerImage = "forta-protocol/forta-json-rpc:latest"
-	UseDockerImages                  = "local"
+	DockerScannerNodeImage = "forta-protocol/forta-node:latest"
+	UseDockerImages        = "local"
 
 	DockerNatsContainerName         = fmt.Sprintf("%s-nats", ContainerNamePrefix)
 	DockerScannerContainerName      = fmt.Sprintf("%s-scanner", ContainerNamePrefix)
 	DockerJSONRPCProxyContainerName = fmt.Sprintf("%s-json-rpc", ContainerNamePrefix)
-	DockerQueryContainerName        = fmt.Sprintf("%s-query", ContainerNamePrefix)
+	DockerPublisherContainerName    = fmt.Sprintf("%s-publisher", ContainerNamePrefix)
 
 	DockerNetworkName = DockerScannerContainerName
 

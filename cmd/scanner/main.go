@@ -1,4 +1,4 @@
-package main
+package scanner
 
 import (
 	"context"
@@ -62,9 +62,9 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 }
 
 func initTxAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.TxStreamService, ap *agentpool.AgentPool, msgClient clients.MessageClient) (*scanner.TxAnalyzerService, error) {
-	qn := os.Getenv(config.EnvQueryNode)
+	qn := os.Getenv(config.EnvPublisherHost)
 	if qn == "" {
-		return nil, fmt.Errorf("%s is a required env var", config.EnvQueryNode)
+		return nil, fmt.Errorf("%s is a required env var", config.EnvPublisherHost)
 	}
 	return scanner.NewTxAnalyzerService(ctx, scanner.TxAnalyzerServiceConfig{
 		TxChannel:   stream.ReadOnlyTxStream(),
@@ -75,9 +75,9 @@ func initTxAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSend
 }
 
 func initBlockAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.TxStreamService, ap *agentpool.AgentPool, msgClient clients.MessageClient) (*scanner.BlockAnalyzerService, error) {
-	qn := os.Getenv(config.EnvQueryNode)
+	qn := os.Getenv(config.EnvPublisherHost)
 	if qn == "" {
-		return nil, fmt.Errorf("%s is a required env var", config.EnvQueryNode)
+		return nil, fmt.Errorf("%s is a required env var", config.EnvPublisherHost)
 	}
 	return scanner.NewBlockAnalyzerService(ctx, scanner.BlockAnalyzerServiceConfig{
 		BlockChannel: stream.ReadOnlyBlockStream(),
@@ -88,9 +88,9 @@ func initBlockAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertS
 }
 
 func initAlertSender(ctx context.Context, key *keystore.Key) (clients.AlertSender, error) {
-	qn := os.Getenv(config.EnvQueryNode)
+	qn := os.Getenv(config.EnvPublisherHost)
 	if qn == "" {
-		return nil, fmt.Errorf("%s is a required env var", config.EnvQueryNode)
+		return nil, fmt.Errorf("%s is a required env var", config.EnvPublisherHost)
 	}
 	return clients.NewAlertSender(ctx, clients.AlertSenderConfig{
 		Key:           key,
@@ -164,8 +164,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	return svcs, nil
 }
 
-func main() {
+func Run() {
 	gethlog.Root().SetHandler(gethlog.StdoutHandler)
-
 	services.ContainerMain("scanner", initServices)
 }

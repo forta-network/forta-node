@@ -85,7 +85,7 @@ func (s *Suite) SetupTest() {
 		Name: config.DockerNatsContainerName,
 	})).Return(&clients.DockerContainer{}, nil)
 	s.dockerClient.EXPECT().StartContainer(service.ctx, (configMatcher)(clients.DockerContainerConfig{
-		Name: config.DockerQueryContainerName,
+		Name: config.DockerPublisherContainerName,
 	})).Return(&clients.DockerContainer{}, nil)
 	s.dockerClient.EXPECT().StartContainer(service.ctx, (configMatcher)(clients.DockerContainerConfig{
 		Name: config.DockerJSONRPCProxyContainerName,

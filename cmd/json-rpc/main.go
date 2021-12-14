@@ -1,4 +1,4 @@
-package main
+package json_rpc
 
 import (
 	"context"
@@ -23,6 +23,6 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	}, nil
 }
 
-func main() {
+func Run() {
 	services.ContainerMain("json-rpc", initServices)
 }
