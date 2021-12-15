@@ -74,6 +74,12 @@ func (t *TxNodeService) start() error {
 		}
 	}
 
+	supervisorContainer, err := t.client.GetContainerByName(t.ctx, config.DockerSupervisorContainerName)
+	if err != nil {
+		return fmt.Errorf("failed to get the supervisor container: %v", err)
+	}
+	commonNodeImage := supervisorContainer.Image
+
 	nodeNetworkID, err := t.client.CreatePublicNetwork(t.ctx, config.DockerNetworkName)
 	if err != nil {
 		return err
@@ -108,7 +114,7 @@ func (t *TxNodeService) start() error {
 
 	queryContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerPublisherContainerName,
-		Image: config.DockerScannerNodeImage,
+		Image: commonNodeImage,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "publisher"},
 		Env: map[string]string{
 			config.EnvConfig:   cfgJson,
@@ -134,7 +140,7 @@ func (t *TxNodeService) start() error {
 
 	t.jsonRpcContainer, err = t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerJSONRPCProxyContainerName,
-		Image: config.DockerScannerNodeImage,
+		Image: commonNodeImage,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "json-rpc"},
 		Env: map[string]string{
 			config.EnvConfig: cfgJson,
@@ -149,7 +155,7 @@ func (t *TxNodeService) start() error {
 
 	t.scannerContainer, err = t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerScannerContainerName,
-		Image: config.DockerScannerNodeImage,
+		Image: commonNodeImage,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "scanner"},
 		Env: map[string]string{
 			config.EnvConfig:        cfgJson,
