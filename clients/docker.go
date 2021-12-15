@@ -412,6 +412,23 @@ func (d *dockerClient) WaitContainerExit(ctx context.Context, id string) error {
 	return nil
 }
 
+// WaitContainerStart waits for container start by checking every second.
+func (d *dockerClient) WaitContainerStart(ctx context.Context, id string) error {
+	ticker := time.NewTicker(time.Second)
+	start := time.Now()
+	for t := range ticker.C {
+		container, err := d.GetContainerByID(ctx, id)
+		if err == nil && container != nil && container.State == "running" {
+			return nil
+		}
+		// if the conditions are not met within 30 seconds, it's a failure
+		if t.After(start.Add(time.Second * 30)) {
+			return errors.New("container did not start")
+		}
+	}
+	return nil
+}
+
 // WaitContainerPrune waits for container prune by checking every second.
 func (d *dockerClient) WaitContainerPrune(ctx context.Context, id string) error {
 	ticker := time.NewTicker(time.Second)

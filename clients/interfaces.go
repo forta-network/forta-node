@@ -23,6 +23,7 @@ type DockerClient interface {
 	StopContainer(ctx context.Context, ID string) error
 	InterruptContainer(ctx context.Context, ID string) error
 	WaitContainerExit(ctx context.Context, id string) error
+	WaitContainerStart(ctx context.Context, id string) error
 	Prune(ctx context.Context) error
 	WaitContainerPrune(ctx context.Context, id string) error
 	HasLocalImage(ctx context.Context, ref string) bool

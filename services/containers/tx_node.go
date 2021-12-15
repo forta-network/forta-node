@@ -3,7 +3,6 @@ package containers
 import (
 	"context"
 	"fmt"
-	"os"
 	"sync"
 
 	"github.com/goccy/go-json"
@@ -65,11 +64,6 @@ func (t *TxNodeService) start() error {
 	}
 	cfgJson := string(cfgBytes)
 
-	natsHost := os.Getenv(config.EnvNatsHost)
-	if natsHost == "" {
-		return fmt.Errorf("%s is a required env var", config.EnvNatsHost)
-	}
-
 	if err := t.client.Prune(t.ctx); err != nil {
 		return err
 	}
@@ -88,6 +82,7 @@ func (t *TxNodeService) start() error {
 		return err
 	}
 
+	// start nats, wait for it and connect from the supervisor
 	natsContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerNatsContainerName,
 		Image: "nats:2.3.2",
@@ -101,8 +96,10 @@ func (t *TxNodeService) start() error {
 	if err != nil {
 		return err
 	}
-
-	t.msgClient = messaging.NewClient("supervisor", fmt.Sprintf("%s:%s", natsHost, config.DefaultNatsPort))
+	if err := t.client.WaitContainerStart(t.ctx, natsContainer.ID); err != nil {
+		return fmt.Errorf("failed while waiting for nats to start: %v", err)
+	}
+	t.msgClient = messaging.NewClient("supervisor", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 	t.registerMessageHandlers()
 
 	queryContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{

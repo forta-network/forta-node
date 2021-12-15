@@ -241,6 +241,20 @@ func (mr *MockDockerClientMockRecorder) WaitContainerPrune(ctx, id interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitContainerPrune", reflect.TypeOf((*MockDockerClient)(nil).WaitContainerPrune), ctx, id)
 }
 
+// WaitContainerStart mocks base method.
+func (m *MockDockerClient) WaitContainerStart(ctx context.Context, id string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitContainerStart", ctx, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitContainerStart indicates an expected call of WaitContainerStart.
+func (mr *MockDockerClientMockRecorder) WaitContainerStart(ctx, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitContainerStart", reflect.TypeOf((*MockDockerClient)(nil).WaitContainerStart), ctx, id)
+}
+
 // MockMessageClient is a mock of MessageClient interface.
 type MockMessageClient struct {
 	ctrl     *gomock.Controller
