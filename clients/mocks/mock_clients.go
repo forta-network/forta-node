@@ -8,6 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	types "github.com/docker/docker/api/types"
 	clients "github.com/forta-protocol/forta-node/clients"
 	config "github.com/forta-protocol/forta-node/config"
 	protocol "github.com/forta-protocol/forta-node/protocol"
@@ -83,6 +84,35 @@ func (mr *MockDockerClientMockRecorder) CreatePublicNetwork(ctx, name interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePublicNetwork", reflect.TypeOf((*MockDockerClient)(nil).CreatePublicNetwork), ctx, name)
 }
 
+// EnsureLocalImage mocks base method.
+func (m *MockDockerClient) EnsureLocalImage(ctx context.Context, name, ref string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureLocalImage", ctx, name, ref)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EnsureLocalImage indicates an expected call of EnsureLocalImage.
+func (mr *MockDockerClientMockRecorder) EnsureLocalImage(ctx, name, ref interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureLocalImage", reflect.TypeOf((*MockDockerClient)(nil).EnsureLocalImage), ctx, name, ref)
+}
+
+// GetContainerByName mocks base method.
+func (m *MockDockerClient) GetContainerByName(ctx context.Context, name string) (*types.Container, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetContainerByName", ctx, name)
+	ret0, _ := ret[0].(*types.Container)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetContainerByName indicates an expected call of GetContainerByName.
+func (mr *MockDockerClientMockRecorder) GetContainerByName(ctx, name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainerByName", reflect.TypeOf((*MockDockerClient)(nil).GetContainerByName), ctx, name)
+}
+
 // GetContainers mocks base method.
 func (m *MockDockerClient) GetContainers(ctx context.Context) (clients.DockerContainerList, error) {
 	m.ctrl.T.Helper()
@@ -110,6 +140,20 @@ func (m *MockDockerClient) HasLocalImage(ctx context.Context, ref string) bool {
 func (mr *MockDockerClientMockRecorder) HasLocalImage(ctx, ref interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasLocalImage", reflect.TypeOf((*MockDockerClient)(nil).HasLocalImage), ctx, ref)
+}
+
+// InterruptContainer mocks base method.
+func (m *MockDockerClient) InterruptContainer(ctx context.Context, ID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InterruptContainer", ctx, ID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InterruptContainer indicates an expected call of InterruptContainer.
+func (mr *MockDockerClientMockRecorder) InterruptContainer(ctx, ID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InterruptContainer", reflect.TypeOf((*MockDockerClient)(nil).InterruptContainer), ctx, ID)
 }
 
 // Prune mocks base method.
@@ -167,6 +211,48 @@ func (m *MockDockerClient) StopContainer(ctx context.Context, ID string) error {
 func (mr *MockDockerClientMockRecorder) StopContainer(ctx, ID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopContainer", reflect.TypeOf((*MockDockerClient)(nil).StopContainer), ctx, ID)
+}
+
+// WaitContainerExit mocks base method.
+func (m *MockDockerClient) WaitContainerExit(ctx context.Context, id string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitContainerExit", ctx, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitContainerExit indicates an expected call of WaitContainerExit.
+func (mr *MockDockerClientMockRecorder) WaitContainerExit(ctx, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitContainerExit", reflect.TypeOf((*MockDockerClient)(nil).WaitContainerExit), ctx, id)
+}
+
+// WaitContainerPrune mocks base method.
+func (m *MockDockerClient) WaitContainerPrune(ctx context.Context, id string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitContainerPrune", ctx, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitContainerPrune indicates an expected call of WaitContainerPrune.
+func (mr *MockDockerClientMockRecorder) WaitContainerPrune(ctx, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitContainerPrune", reflect.TypeOf((*MockDockerClient)(nil).WaitContainerPrune), ctx, id)
+}
+
+// WaitContainerStart mocks base method.
+func (m *MockDockerClient) WaitContainerStart(ctx context.Context, id string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitContainerStart", ctx, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitContainerStart indicates an expected call of WaitContainerStart.
+func (mr *MockDockerClientMockRecorder) WaitContainerStart(ctx, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitContainerStart", reflect.TypeOf((*MockDockerClient)(nil).WaitContainerStart), ctx, id)
 }
 
 // MockMessageClient is a mock of MessageClient interface.
