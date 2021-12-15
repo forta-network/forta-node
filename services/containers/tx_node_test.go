@@ -3,6 +3,9 @@ package containers
 import (
 	"context"
 	"fmt"
+	"github.com/docker/docker/api/types"
+	"github.com/stretchr/testify/assert"
+	"os"
 	"testing"
 
 	"github.com/forta-protocol/forta-node/clients"
@@ -16,14 +19,15 @@ import (
 )
 
 const (
-	testImageRef           = "some.docker.registry.io/foobar@sha256:cdd4ddccf5e9c740eb4144bcc68e3ea3a056789ec7453e94a6416dcfc80937a4"
-	testNodeNetworkID      = "node-network-id"
-	testScannerContainerID = "test-scanner-container-id"
-	testProxyContainerID   = "test-proxy-container-id"
-	testAgentID            = "test-agent"
-	testAgentContainerName = "forta-agent-test-age-cdd4" // This is a result
-	testAgentNetworkID     = "test-agent-network-id"
-	testAgentContainerID   = "test-agent-container-id"
+	testImageRef              = "some.docker.registry.io/foobar@sha256:cdd4ddccf5e9c740eb4144bcc68e3ea3a056789ec7453e94a6416dcfc80937a4"
+	testNodeNetworkID         = "node-network-id"
+	testScannerContainerID    = "test-scanner-container-id"
+	testProxyContainerID      = "test-proxy-container-id"
+	testSupervisorContainerID = "test-supervisor-container-id"
+	testAgentID               = "test-agent"
+	testAgentContainerName    = "forta-agent-test-age-cdd4" // This is a result
+	testAgentNetworkID        = "test-agent-network-id"
+	testAgentContainerID      = "test-agent-container-id"
 )
 
 // TestSuite runs the test suite.
@@ -66,6 +70,7 @@ func (m configMatcher) String() string {
 
 // SetupTest sets up the test.
 func (s *Suite) SetupTest() {
+	assert.NoError(s.T(), os.Setenv(config.EnvNatsHost, config.DockerNatsContainerName))
 	s.r = require.New(s.T())
 	s.dockerClient = mock_clients.NewMockDockerClient(gomock.NewController(s.T()))
 	s.dockerAuthClient = mock_clients.NewMockDockerClient(gomock.NewController(s.T()))
@@ -94,6 +99,12 @@ func (s *Suite) SetupTest() {
 		Name: config.DockerScannerContainerName,
 	})).Return(&clients.DockerContainer{ID: testScannerContainerID}, nil)
 	s.dockerClient.EXPECT().HasLocalImage(service.ctx, gomock.Any()).Return(true).AnyTimes()
+	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerSupervisorContainerName).Return(&types.Container{ID: testSupervisorContainerID}, nil)
+	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testSupervisorContainerID, testNodeNetworkID)
+
+	s.dockerClient.EXPECT().WaitContainerStart(service.ctx, gomock.Any()).Return(nil).AnyTimes()
+	s.msgClient.EXPECT().Subscribe(messaging.SubjectAgentsActionRun, gomock.Any())
+	s.msgClient.EXPECT().Subscribe(messaging.SubjectAgentsActionStop, gomock.Any())
 
 	s.r.NoError(service.start())
 	s.service = service
@@ -114,12 +125,14 @@ func (s *Suite) TestAgentRun() {
 	agentConfig, agentPayload := testAgentData()
 	// Creates the agent network, starts the agent container, attaches the scanner and the proxy to the
 	// agent network, publishes a "running" message.
+	s.dockerAuthClient.EXPECT().EnsureLocalImage(s.service.ctx, "agent test-agent", agentConfig.Image).Return(nil)
 	s.dockerClient.EXPECT().CreatePublicNetwork(s.service.ctx, testAgentContainerName).Return(testAgentNetworkID, nil)
 	s.dockerClient.EXPECT().StartContainer(s.service.ctx, (configMatcher)(clients.DockerContainerConfig{
 		Name: agentConfig.ContainerName(),
 	})).Return(&clients.DockerContainer{Name: agentConfig.ContainerName(), ID: testAgentContainerID}, nil)
 	s.dockerClient.EXPECT().AttachNetwork(s.service.ctx, testScannerContainerID, testAgentNetworkID)
 	s.dockerClient.EXPECT().AttachNetwork(s.service.ctx, testProxyContainerID, testAgentNetworkID)
+
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusRunning, agentPayload)
 
 	s.r.NoError(s.service.handleAgentRun(agentPayload))
@@ -130,6 +143,7 @@ func (s *Suite) TestAgentRunAgain() {
 	s.TestAgentRun()
 
 	_, agentPayload := testAgentData()
+
 	// Expect it to only publish a message again to ensure the subscribers that
 	// the agent is running.
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusRunning, agentPayload)

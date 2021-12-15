@@ -96,10 +96,14 @@ func (t *TxNodeService) start() error {
 	if err != nil {
 		return err
 	}
+
 	if err := t.client.WaitContainerStart(t.ctx, natsContainer.ID); err != nil {
 		return fmt.Errorf("failed while waiting for nats to start: %v", err)
 	}
-	t.msgClient = messaging.NewClient("supervisor", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
+	// in tests, this is already set to a mock client
+	if t.msgClient == nil {
+		t.msgClient = messaging.NewClient("supervisor", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
+	}
 	t.registerMessageHandlers()
 
 	queryContainer, err := t.client.StartContainer(t.ctx, clients.DockerContainerConfig{
