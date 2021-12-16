@@ -25,7 +25,7 @@ func initListener(ctx context.Context, cfg config.Config) (*publisher.Publisher,
 	if err != nil {
 		return nil, err
 	}
-	return publisher.NewPublisher(ctx, mc, publisher.AlertListenerConfig{
+	return publisher.NewPublisher(ctx, mc, publisher.PublisherConfig{
 		Port:            8770,
 		ChainID:         cfg.Scanner.ChainID,
 		Key:             key,

@@ -45,7 +45,7 @@ const (
 type Publisher struct {
 	protocol.UnimplementedPublisherNodeServer
 	ctx               context.Context
-	cfg               AlertListenerConfig
+	cfg               PublisherConfig
 	contract          AlertsContract
 	ipfs              IPFS
 	testAlertLogger   TestAlertLogger
@@ -83,7 +83,7 @@ type IPFS interface {
 	Add(r io.Reader, options ...ipfsapi.AddOpts) (string, error)
 }
 
-type AlertListenerConfig struct {
+type PublisherConfig struct {
 	Port            int
 	ChainID         int
 	Key             *keystore.Key
@@ -430,7 +430,7 @@ func (pub *Publisher) Name() string {
 	return "Publisher"
 }
 
-func NewPublisher(ctx context.Context, mc *messaging.Client, cfg AlertListenerConfig) (*Publisher, error) {
+func NewPublisher(ctx context.Context, mc *messaging.Client, cfg PublisherConfig) (*Publisher, error) {
 	rpcClient, err := rpc.Dial(cfg.PublisherConfig.Ethereum.JsonRpcUrl)
 	if err != nil {
 		return nil, err
