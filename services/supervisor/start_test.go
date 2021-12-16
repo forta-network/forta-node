@@ -1,12 +1,13 @@
-package containers
+package supervisor
 
 import (
 	"context"
 	"fmt"
-	"github.com/docker/docker/api/types"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+
+	"github.com/docker/docker/api/types"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/messaging"
@@ -44,7 +45,7 @@ type Suite struct {
 
 	msgClient *mock_clients.MockMessageClient
 
-	service *TxNodeService
+	service *SupervisorService
 
 	suite.Suite
 }
@@ -76,7 +77,7 @@ func (s *Suite) SetupTest() {
 	s.dockerAuthClient = mock_clients.NewMockDockerClient(gomock.NewController(s.T()))
 
 	s.msgClient = mock_clients.NewMockMessageClient(gomock.NewController(s.T()))
-	service := &TxNodeService{
+	service := &SupervisorService{
 		ctx:        context.Background(),
 		client:     s.dockerClient,
 		authClient: s.dockerAuthClient,
