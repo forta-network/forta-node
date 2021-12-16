@@ -121,9 +121,6 @@ func (sup *SupervisorService) start() error {
 			config.EnvFortaDir: config.DefaultContainerFortaDirPath,
 			config.EnvNatsHost: config.DockerNatsContainerName,
 		},
-		Ports: map[string]string{
-			fmt.Sprintf("%d", sup.config.Config.Query.Port): "80",
-		},
 		Volumes: map[string]string{
 			sup.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
 		},
@@ -162,9 +159,6 @@ func (sup *SupervisorService) start() error {
 			config.EnvFortaDir:      config.DefaultContainerFortaDirPath,
 			config.EnvPublisherHost: config.DockerPublisherContainerName,
 			config.EnvNatsHost:      config.DockerNatsContainerName,
-		},
-		Ports: map[string]string{
-			"8989": "80",
 		},
 		Volumes: map[string]string{
 			sup.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
