@@ -1,10 +1,17 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/ipfs/go-cid"
+)
+
+// Image ref errors
+var (
+	ErrDiscoRefInvalid      = errors.New("invalid ipfs ref or digest in disco image ref")
+	ErrDiscoRefNotIPFSCIDv1 = errors.New("image ref not an ipfs cidv1 ref")
 )
 
 // ValidateImageRef validates an image reference. Supported formats:
@@ -21,6 +28,26 @@ func ValidateImageRef(defaultRegistry, ref string) (string, bool) {
 	}
 
 	return ref, true
+}
+
+// ValidateDiscoImageRef validates given image ref to be only a disco image ref.
+func ValidateDiscoImageRef(discoHost, ref string) (string, error) {
+	imageRef, digest := SplitImageRef(ref)
+	if len(imageRef) == 0 || len(digest) == 0 {
+		return "", ErrDiscoRefInvalid
+	}
+
+	// strip host from image ref
+	if strings.Contains(imageRef, "/") {
+		parts := strings.Split(imageRef, "/")
+		imageRef = parts[1] // strip
+	}
+
+	if !isCidv1(imageRef) {
+		return "", fmt.Errorf("%w: %s", ErrDiscoRefNotIPFSCIDv1, imageRef)
+	}
+
+	return fmt.Sprintf("%s/%s", discoHost, imageRef), nil
 }
 
 // SplitImageRef splits the full image ref to the actual <host>/<repo> and <digest>.
