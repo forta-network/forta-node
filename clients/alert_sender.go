@@ -30,12 +30,12 @@ type AlertSender interface {
 type alertSender struct {
 	ctx     context.Context
 	cfg     AlertSenderConfig
-	qClient protocol.QueryNodeClient
+	qClient protocol.PublisherNodeClient
 }
 
 type AlertSenderConfig struct {
-	Key           *keystore.Key
-	QueryNodeAddr string
+	Key               *keystore.Key
+	PublisherNodeAddr string
 }
 
 func (a *alertSender) SignAlertAndNotify(rt *AgentRoundTrip, alert *protocol.Alert, chainID, blockNumber string) error {
@@ -72,11 +72,11 @@ func (a *alertSender) NotifyWithoutAlert(rt *AgentRoundTrip, chainID, blockNumbe
 }
 
 func NewAlertSender(ctx context.Context, cfg AlertSenderConfig) (*alertSender, error) {
-	conn, err := grpc.Dial(fmt.Sprintf("%s:8770", cfg.QueryNodeAddr), grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial(fmt.Sprintf("%s:8770", cfg.PublisherNodeAddr), grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		return nil, err
 	}
-	qc := protocol.NewQueryNodeClient(conn)
+	qc := protocol.NewPublisherNodeClient(conn)
 	return &alertSender{
 		ctx:     ctx,
 		cfg:     cfg,

@@ -1,11 +1,12 @@
-package query_test
+package publisher_test
 
 import (
+	"time"
+
 	"github.com/forta-protocol/forta-node/protocol"
-	"github.com/forta-protocol/forta-node/services/query"
+	"github.com/forta-protocol/forta-node/services/publisher"
 	"github.com/forta-protocol/forta-node/utils"
 	"github.com/stretchr/testify/assert"
-	"time"
 
 	"testing"
 )
@@ -15,7 +16,7 @@ var (
 )
 
 func init() {
-	query.DefaultBucketInterval = time.Millisecond
+	publisher.DefaultBucketInterval = time.Millisecond
 }
 
 type MetricsMathTest struct {
@@ -74,10 +75,10 @@ func TestAgentMetricsAggregator_math(t *testing.T) {
 			})
 		}
 
-		aggregator := query.NewMetricsAggregator()
+		aggregator := publisher.NewMetricsAggregator()
 		err := aggregator.AddAgentMetrics(&protocol.AgentMetricList{Metrics: metrics})
 		assert.NoError(t, err)
-		time.Sleep(query.DefaultBucketInterval * 2)
+		time.Sleep(publisher.DefaultBucketInterval * 2)
 
 		res := aggregator.TryFlush()
 

@@ -6,7 +6,7 @@ import public "agent.proto";
 
 option go_package = "./;protocol";
 
-service QueryNode {
+service PublisherNode {
   rpc Notify (NotifyRequest) returns (NotifyResponse) {}
 }
 

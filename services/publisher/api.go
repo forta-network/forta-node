@@ -1,8 +1,9 @@
-package query
+package publisher
 
 import (
-	"github.com/goccy/go-json"
 	"net/http"
+
+	"github.com/goccy/go-json"
 
 	log "github.com/sirupsen/logrus"
 )

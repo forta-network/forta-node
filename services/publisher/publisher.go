@@ -1,17 +1,18 @@
-package query
+package publisher
 
 import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/forta-protocol/forta-node/clients/messaging"
-	"github.com/goccy/go-json"
 	"io"
 	"math/big"
 	"net"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/forta-protocol/forta-node/clients/messaging"
+	"github.com/goccy/go-json"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -30,7 +31,7 @@ import (
 	"github.com/forta-protocol/forta-node/ethereum"
 	"github.com/forta-protocol/forta-node/protocol"
 	"github.com/forta-protocol/forta-node/security"
-	"github.com/forta-protocol/forta-node/services/query/testalerts"
+	"github.com/forta-protocol/forta-node/services/publisher/testalerts"
 	"github.com/forta-protocol/forta-node/utils"
 )
 
@@ -40,9 +41,9 @@ const (
 	defaultBatchBufferSize = 100
 )
 
-// AlertListener allows retrieval of alerts from the database
-type AlertListener struct {
-	protocol.UnimplementedQueryNodeServer
+// Publisher receives, collects and publishes alerts.
+type Publisher struct {
+	protocol.UnimplementedPublisherNodeServer
 	ctx               context.Context
 	cfg               AlertListenerConfig
 	contract          AlertsContract
@@ -89,18 +90,18 @@ type AlertListenerConfig struct {
 	PublisherConfig config.PublisherConfig
 }
 
-func (al *AlertListener) Notify(ctx context.Context, req *protocol.NotifyRequest) (*protocol.NotifyResponse, error) {
-	al.notifCh <- req
+func (pub *Publisher) Notify(ctx context.Context, req *protocol.NotifyRequest) (*protocol.NotifyResponse, error) {
+	pub.notifCh <- req
 	return &protocol.NotifyResponse{}, nil
 }
 
-func (al *AlertListener) publishNextBatch(batch *protocol.SignedAlertBatch) error {
+func (pub *Publisher) publishNextBatch(batch *protocol.SignedAlertBatch) error {
 	// flush only if we are publishing so we can make the best use of aggregated metrics
-	if _, skip := al.shouldSkipPublishing(batch); !skip {
-		batch.Data.Metrics = al.metricsAggregator.TryFlush()
+	if _, skip := pub.shouldSkipPublishing(batch); !skip {
+		batch.Data.Metrics = pub.metricsAggregator.TryFlush()
 	}
 
-	signature, err := security.SignProtoMessage(al.cfg.Key, batch)
+	signature, err := security.SignProtoMessage(pub.cfg.Key, batch)
 	if err != nil {
 		return fmt.Errorf("failed to sign alert batch: %v", err)
 	}
@@ -113,19 +114,19 @@ func (al *AlertListener) publishNextBatch(batch *protocol.SignedAlertBatch) erro
 	log.Tracef("alert payload: %s", string(buf.Bytes()))
 
 	// save with blank tx hash for now
-	if al.skipPublish {
+	if pub.skipPublish {
 		log.Infof("alert batch: blockStart=%d, blockEnd=%d, alertCount=%d, maxSeverity=%s", batch.Data.BlockStart, batch.Data.BlockEnd, batch.Data.AlertCount, batch.Data.MaxSeverity.String())
 		log.Info("skipping batch, because skipPublish is enabled")
 		return nil
 	}
 
 	// if we should really skip this batch due to other reasons, then we just leave it in the db with blank tx hash
-	if reason, skip := al.shouldSkipPublishing(batch); skip {
+	if reason, skip := pub.shouldSkipPublishing(batch); skip {
 		log.WithField("reason", reason).Info("skipping batch")
 		return nil
 	}
 
-	cid, err := al.ipfs.Add(&buf, ipfsapi.Pin(true))
+	cid, err := pub.ipfs.Add(&buf, ipfsapi.Pin(true))
 	if err != nil {
 		return fmt.Errorf("failed to store alert data to ipfs: %v", err)
 	}
@@ -141,7 +142,7 @@ func (al *AlertListener) publishNextBatch(batch *protocol.SignedAlertBatch) erro
 		},
 	)
 
-	tx, err := al.contract.AddAlertBatch(
+	tx, err := pub.contract.AddAlertBatch(
 		big.NewInt(0).SetUint64(batch.Data.ChainId),
 		big.NewInt(0).SetUint64(batch.Data.BlockStart),
 		big.NewInt(0).SetUint64(batch.Data.BlockEnd),
@@ -163,18 +164,18 @@ func (al *AlertListener) publishNextBatch(batch *protocol.SignedAlertBatch) erro
 	return nil
 }
 
-func (al *AlertListener) shouldSkipPublishing(batch *protocol.SignedAlertBatch) (string, bool) {
+func (pub *Publisher) shouldSkipPublishing(batch *protocol.SignedAlertBatch) (string, bool) {
 	return "because there are no alerts and skipEmpty is enabled",
-		al.skipEmpty && batch.Data.AlertCount == uint32(0)
+		pub.skipEmpty && batch.Data.AlertCount == uint32(0)
 }
 
-func (al *AlertListener) listenForMetrics() {
-	al.messageClient.Subscribe(messaging.SubjectMetricAgent, messaging.AgentMetricHandler(al.metricsAggregator.AddAgentMetrics))
+func (pub *Publisher) listenForMetrics() {
+	pub.messageClient.Subscribe(messaging.SubjectMetricAgent, messaging.AgentMetricHandler(pub.metricsAggregator.AddAgentMetrics))
 }
 
-func (al *AlertListener) publishBatches() {
-	for batch := range al.batchCh {
-		if err := al.publishNextBatch(batch); err != nil {
+func (pub *Publisher) publishBatches() {
+	for batch := range pub.batchCh {
+		if err := pub.publishNextBatch(batch); err != nil {
 			log.Errorf("failed to publish alert batch: %v", err)
 			time.Sleep(time.Second * 3)
 		}
@@ -182,9 +183,9 @@ func (al *AlertListener) publishBatches() {
 	}
 }
 
-func (al *AlertListener) prepareBatches() {
+func (pub *Publisher) prepareBatches() {
 	for {
-		al.prepareLatestBatch()
+		pub.prepareLatestBatch()
 	}
 }
 
@@ -328,16 +329,16 @@ func (tr *TransactionResults) GetAgentAlerts(agent *protocol.AgentInfo) *protoco
 	return aa
 }
 
-func (al *AlertListener) prepareLatestBatch() {
-	batch := &BatchData{Data: &protocol.AlertBatch{ChainId: uint64(al.cfg.ChainID)}}
+func (pub *Publisher) prepareLatestBatch() {
+	batch := &BatchData{Data: &protocol.AlertBatch{ChainId: uint64(pub.cfg.ChainID)}}
 
-	timeoutCh := time.After(al.batchInterval)
+	timeoutCh := time.After(pub.batchInterval)
 
 	var done bool
 	var i int
-	for i < al.batchLimit {
+	for i < pub.batchLimit {
 		select {
-		case notif := <-al.notifCh:
+		case notif := <-pub.notifCh:
 			alert := notif.SignedAlert
 			hasAlert := alert != nil
 			if hasAlert {
@@ -345,10 +346,10 @@ func (al *AlertListener) prepareLatestBatch() {
 			}
 
 			if hasAlert && notif.SignedAlert.Alert.Agent.IsTest {
-				if al.cfg.PublisherConfig.TestAlerts.Disable {
+				if pub.cfg.PublisherConfig.TestAlerts.Disable {
 					continue
 				}
-				if err := al.testAlertLogger.LogTestAlert(al.ctx, notif.SignedAlert); err != nil {
+				if err := pub.testAlertLogger.LogTestAlert(pub.ctx, notif.SignedAlert); err != nil {
 					log.Warnf("failed to log test alert: %v", err)
 				}
 				continue
@@ -394,42 +395,42 @@ func (al *AlertListener) prepareLatestBatch() {
 		}
 	}
 
-	al.batchCh <- (*protocol.SignedAlertBatch)(batch)
+	pub.batchCh <- (*protocol.SignedAlertBatch)(batch)
 }
 
 // on connection of first agent, start publishing batches (no agents = no batches)
-func (al *AlertListener) handleReady(cfgs messaging.AgentPayload) error {
-	al.initialize.Do(func() {
-		go al.prepareBatches()
-		go al.publishBatches()
-		go al.listenForMetrics()
+func (pub *Publisher) handleReady(cfgs messaging.AgentPayload) error {
+	pub.initialize.Do(func() {
+		go pub.prepareBatches()
+		go pub.publishBatches()
+		go pub.listenForMetrics()
 	})
 	return nil
 }
 
-func (al *AlertListener) Start() error {
-	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", al.port))
+func (pub *Publisher) Start() error {
+	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", pub.port))
 	if err != nil {
 		return err
 	}
 	grpcServer := grpc.NewServer()
-	protocol.RegisterQueryNodeServer(grpcServer, al)
+	protocol.RegisterPublisherNodeServer(grpcServer, pub)
 
-	al.messageClient.Subscribe(messaging.SubjectAgentsStatusAttached, messaging.AgentsHandler(al.handleReady))
+	pub.messageClient.Subscribe(messaging.SubjectAgentsStatusAttached, messaging.AgentsHandler(pub.handleReady))
 
 	return grpcServer.Serve(lis)
 }
 
-func (al *AlertListener) Stop() error {
-	log.Infof("Stopping %s", al.Name())
+func (pub *Publisher) Stop() error {
+	log.Infof("Stopping %s", pub.Name())
 	return nil
 }
 
-func (al *AlertListener) Name() string {
-	return "AlertListener"
+func (pub *Publisher) Name() string {
+	return "Publisher"
 }
 
-func NewAlertListener(ctx context.Context, mc *messaging.Client, cfg AlertListenerConfig) (*AlertListener, error) {
+func NewPublisher(ctx context.Context, mc *messaging.Client, cfg AlertListenerConfig) (*Publisher, error) {
 	rpcClient, err := rpc.Dial(cfg.PublisherConfig.Ethereum.JsonRpcUrl)
 	if err != nil {
 		return nil, err
@@ -494,7 +495,7 @@ func NewAlertListener(ctx context.Context, mc *messaging.Client, cfg AlertListen
 		testAlertLogger = testalerts.NewLogger(cfg.PublisherConfig.TestAlerts.WebhookURL)
 	}
 
-	return &AlertListener{
+	return &Publisher{
 		ctx:               ctx,
 		cfg:               cfg,
 		contract:          ats,

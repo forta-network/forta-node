@@ -112,7 +112,7 @@ func (sup *SupervisorService) start() error {
 	}
 	sup.registerMessageHandlers()
 
-	queryContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
+	publisherContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerPublisherContainerName,
 		Image: commonNodeImage,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "publisher"},
@@ -180,7 +180,7 @@ func (sup *SupervisorService) start() error {
 		return err
 	}
 
-	sup.addContainerUnsafe(natsContainer, queryContainer, sup.jsonRpcContainer, sup.scannerContainer)
+	sup.addContainerUnsafe(natsContainer, publisherContainer, sup.jsonRpcContainer, sup.scannerContainer)
 
 	return nil
 }
