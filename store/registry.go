@@ -120,10 +120,9 @@ func (rs *registryStore) makeAgentConfig(agentID string, ref string) (*config.Ag
 		return nil, err
 	}
 
-	image, ok := utils.ValidateImageRef(rs.cfg.Registry.ContainerRegistry, agentData.Manifest.ImageReference)
-	if !ok {
-		err = fmt.Errorf("invalid agent reference: %v", agentData.Manifest.ImageReference)
-		return nil, err
+	image, err := utils.ValidateDiscoImageRef(rs.cfg.Registry.ContainerRegistry, agentData.Manifest.ImageReference)
+	if err != nil {
+		return nil, fmt.Errorf("invalid agent image reference '%s': %v", agentData.Manifest.ImageReference, err)
 	}
 
 	return &config.AgentConfig{
