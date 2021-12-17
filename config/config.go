@@ -83,7 +83,7 @@ type ResourcesConfig struct {
 
 type ENSConfig struct {
 	DefaultContract bool          `yaml:"defaultContract" json:"defaultContract" default:"false" `
-	ContractAddress string        `yaml:"contractAddress" json:"contractAddress" validate:"omitempty,eth_addr" default:"0x08f42fcc52a9C2F391bF507C4E8688D0b53e1bd7" `
+	ContractAddress string        `yaml:"contractAddress" json:"contractAddress" validate:"omitempty,eth_addr"`
 	JsonRpc         JsonRpcConfig `yaml:"jsonRpc" json:"jsonRpc" default:"{\"url\": \"https://polygon-rpc.com\"}" `
 }
 
@@ -127,10 +127,31 @@ func getConfigFromEnv() (Config, error) {
 
 func GetConfig() (Config, error) {
 	filePath := fmt.Sprintf("%s/%s", DefaultContainerFortaDirPath, "config.yml")
+	var cfg Config
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return getConfigFromEnv()
+		cfg, err = getConfigFromEnv()
+		if err != nil {
+			return Config{}, err
+		}
 	}
-	return getConfigFromFile(filePath)
+	cfg, err := getConfigFromFile(filePath)
+	if err != nil {
+		return Config{}, err
+	}
+	applyContextDefaults(&cfg)
+	return cfg, nil
+}
+
+// apply defaults that apply in certain contexts
+func applyContextDefaults(cfg *Config) {
+	if cfg.ChainID == 1 {
+		cfg.Trace.Enabled = true
+	}
+	if !cfg.ENSConfig.DefaultContract {
+		if cfg.ENSConfig.ContractAddress == "" {
+			cfg.ENSConfig.ContractAddress = "0x08f42fcc52a9C2F391bF507C4E8688D0b53e1bd7"
+		}
+	}
 }
 
 func getConfigFromFile(filename string) (Config, error) {
