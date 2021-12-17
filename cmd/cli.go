@@ -24,6 +24,7 @@ const (
 	keyFortaConfigFile  = "forta_config_file"
 	keyFortaPassphrase  = "forta_passphrase"
 	keyFortaDevelopment = "forta_development"
+	keyFortaExposeNats  = "forta_expose_nats"
 )
 
 var (
@@ -133,6 +134,9 @@ func init() {
 	cmdForta.PersistentFlags().String("passphrase", "", "passphrase to decrypt the private key (overrides $FORTA_PASSPHRASE)")
 	viper.BindPFlag(keyFortaPassphrase, cmdForta.PersistentFlags().Lookup("passphrase"))
 
+	cmdForta.PersistentFlags().Bool("expose-nats", false, "expose nats via public docker network")
+	viper.BindPFlag(keyFortaExposeNats, cmdForta.PersistentFlags().Lookup("expose-nats"))
+
 	// forta account import
 	cmdFortaAccountImport.Flags().String("file", "", "path to a file that contains a private key hex")
 	cmdFortaAccountImport.MarkFlagRequired("file")
@@ -148,6 +152,7 @@ func initConfig() {
 	viper.BindEnv(keyFortaConfigFile)
 	viper.BindEnv(keyFortaPassphrase)
 	viper.BindEnv(keyFortaDevelopment)
+	viper.BindEnv(keyFortaExposeNats)
 	viper.AutomaticEnv()
 
 	fortaDir := viper.GetString(keyFortaDir)
@@ -168,8 +173,10 @@ func initConfig() {
 	cfg.FortaDir = fortaDir
 	cfg.ConfigPath = configPath
 	cfg.KeyDirPath = path.Join(cfg.FortaDir, config.DefaultKeysDirName)
-	cfg.Development = !viper.GetBool(keyFortaDevelopment)
+	cfg.Development = viper.GetBool(keyFortaDevelopment)
 	cfg.Passphrase = viper.GetString(keyFortaPassphrase)
+	cfg.ExposeNats = viper.GetBool(keyFortaExposeNats)
+
 	cfg.LocalAgentsPath = path.Join(cfg.FortaDir, config.DefaultLocalAgentsFileName)
 	cfg.LocalAgents, _ = readLocalAgents()
 

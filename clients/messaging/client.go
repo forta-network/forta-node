@@ -41,6 +41,7 @@ func NewClient(name, natsURL string) *Client {
 	if err != nil {
 		logger.Panic(err)
 	}
+	logger.Info("successfully connected")
 	client := &Client{
 		logger: logger,
 		nc:     nc,

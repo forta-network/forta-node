@@ -84,8 +84,21 @@ func (sup *SupervisorService) start() error {
 	if err != nil {
 		return err
 	}
-	if err := sup.attachSupervisor(nodeNetworkID); err != nil {
+	if err := sup.attachToNetwork(config.DockerSupervisorContainerName, nodeNetworkID); err != nil {
 		return err
+	}
+
+	var natsNetworkID string
+	if sup.config.Config.ExposeNats {
+		natsNetworkID = nodeNetworkID
+	} else {
+		natsNetworkID, err = sup.client.CreateInternalNetwork(sup.ctx, config.DockerNatsContainerName)
+		if err != nil {
+			return err
+		}
+		if err := sup.attachToNetwork(config.DockerSupervisorContainerName, natsNetworkID); err != nil {
+			return err
+		}
 	}
 
 	// start nats, wait for it and connect from the supervisor
@@ -94,8 +107,10 @@ func (sup *SupervisorService) start() error {
 		Image: "nats:2.3.2",
 		Ports: map[string]string{
 			"4222": "4222",
+			"6222": "6222",
+			"8222": "8222",
 		},
-		NetworkID:   nodeNetworkID,
+		NetworkID:   natsNetworkID,
 		MaxLogFiles: sup.maxLogFiles,
 		MaxLogSize:  sup.maxLogSize,
 	})
@@ -174,13 +189,22 @@ func (sup *SupervisorService) start() error {
 		return err
 	}
 
+	if !sup.config.Config.ExposeNats {
+		if err := sup.attachToNetwork(config.DockerPublisherContainerName, natsNetworkID); err != nil {
+			return err
+		}
+		if err := sup.attachToNetwork(config.DockerScannerContainerName, natsNetworkID); err != nil {
+			return err
+		}
+	}
+
 	sup.addContainerUnsafe(natsContainer, publisherContainer, sup.jsonRpcContainer, sup.scannerContainer)
 
 	return nil
 }
 
-func (sup *SupervisorService) attachSupervisor(nodeNetworkID string) error {
-	container, err := sup.client.GetContainerByName(sup.ctx, config.DockerSupervisorContainerName)
+func (sup *SupervisorService) attachToNetwork(containerName, nodeNetworkID string) error {
+	container, err := sup.client.GetContainerByName(sup.ctx, containerName)
 	if err != nil {
 		return fmt.Errorf("failed to get supervisor container while attaching to node network: %v", err)
 	}

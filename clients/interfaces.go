@@ -16,6 +16,7 @@ type DockerClient interface {
 	PullImage(ctx context.Context, refStr string) error
 	CreatePublicNetwork(ctx context.Context, name string) (string, error)
 	CreateInternalNetwork(ctx context.Context, name string) (string, error)
+	GetNetwork(ctx context.Context, idOrName string) (types.NetworkResource, error)
 	AttachNetwork(ctx context.Context, containerID string, networkID string) error
 	GetContainers(ctx context.Context) (DockerContainerList, error)
 	GetContainerByName(ctx context.Context, name string) (*types.Container, error)

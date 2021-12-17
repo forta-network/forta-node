@@ -1,6 +1,6 @@
 containers:
-	docker pull nats:2.3.2
 	docker build -t forta-protocol/forta-node -f Dockerfile.node .
+	docker pull nats:2.3.2
 
 main:
 	docker build -t build-forta -f Dockerfile.cli .
