@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/goccy/go-json"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/forta-protocol/forta-node/clients"
@@ -56,13 +54,6 @@ func (sup *SupervisorService) start() error {
 
 	sup.maxLogSize = sup.config.Config.Log.MaxLogSize
 	sup.maxLogFiles = sup.config.Config.Log.MaxLogFiles
-
-	cfgBytes, err := json.Marshal(sup.config.Config)
-	if err != nil {
-		log.Error("cannot marshal config to json", err)
-		return err
-	}
-	cfgJson := string(cfgBytes)
 
 	if err := sup.client.Prune(sup.ctx); err != nil {
 		return err
@@ -132,7 +123,6 @@ func (sup *SupervisorService) start() error {
 		Image: commonNodeImage,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "publisher"},
 		Env: map[string]string{
-			config.EnvConfig:   cfgJson,
 			config.EnvFortaDir: config.DefaultContainerFortaDirPath,
 			config.EnvNatsHost: config.DockerNatsContainerName,
 		},
@@ -154,8 +144,8 @@ func (sup *SupervisorService) start() error {
 		Name:  config.DockerJSONRPCProxyContainerName,
 		Image: commonNodeImage,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "json-rpc"},
-		Env: map[string]string{
-			config.EnvConfig: cfgJson,
+		Volumes: map[string]string{
+			sup.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
 		},
 		NetworkID:   nodeNetworkID,
 		MaxLogFiles: sup.maxLogFiles,
@@ -170,7 +160,6 @@ func (sup *SupervisorService) start() error {
 		Image: commonNodeImage,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "scanner"},
 		Env: map[string]string{
-			config.EnvConfig:        cfgJson,
 			config.EnvFortaDir:      config.DefaultContainerFortaDirPath,
 			config.EnvPublisherHost: config.DockerPublisherContainerName,
 			config.EnvNatsHost:      config.DockerNatsContainerName,

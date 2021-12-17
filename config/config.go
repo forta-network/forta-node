@@ -109,7 +109,7 @@ type Config struct {
 	ENSConfig       ENSConfig           `yaml:"ens" json:"ens"`
 }
 
-func GetConfigFromEnv() (Config, error) {
+func getConfigFromEnv() (Config, error) {
 	cfgJson := os.Getenv(EnvConfig)
 	if cfgJson == "" {
 		return Config{}, fmt.Errorf("%s is required", EnvConfig)
@@ -124,12 +124,20 @@ func GetConfigFromEnv() (Config, error) {
 	return cfg, nil
 }
 
-func GetConfig(filename string) (Config, error) {
+func GetConfig() (Config, error) {
+	filePath := fmt.Sprintf("%s/%s", DefaultContainerFortaDirPath, "config.yml")
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return getConfigFromEnv()
+	}
+	return getConfigFromFile(filePath)
+}
+
+func getConfigFromFile(filename string) (Config, error) {
 	var cfg Config
 	if err := readFile(filename, &cfg); err != nil {
 		return Config{}, err
 	}
-	if err := defaults.Set(cfg); err != nil {
+	if err := defaults.Set(&cfg); err != nil {
 		return Config{}, err
 	}
 	return cfg, nil
