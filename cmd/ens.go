@@ -2,13 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/forta-protocol/forta-node/ens"
 	"github.com/goccy/go-json"
 	"io/ioutil"
 	"path"
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/store"
 )
 
@@ -41,29 +41,16 @@ func ensureLatestContractAddresses() error {
 
 	whiteBold("Refreshing contract address cache...\n")
 
-	ca := cfg.ENSConfig.ContractAddress
-	// if default contract is set, then use the chain's default contract
 	if cfg.ENSConfig.DefaultContract {
-		ca = ""
+		cfg.ENSConfig.ContractAddress = ""
 	}
-	ens, err := store.DialENSStoreAt(cfg.ENSConfig.JsonRpc.Url, ca)
-	if err != nil {
-		return fmt.Errorf("cannot resolve contract addresses from ENS: %v", err)
-	}
-
-	names := config.GetENSNames()
-	cache.Dispatch, err = findContractAddress(ens, names.Dispatch)
+	contracts, err := ens.ResolveFortaContracts(cfg.ENSConfig.JsonRpc.Url, cfg.ENSConfig.ContractAddress)
 	if err != nil {
 		return err
 	}
-	cache.Alerts, err = findContractAddress(ens, names.Alerts)
-	if err != nil {
-		return err
-	}
-	cache.Agents, err = findContractAddress(ens, names.Agents)
-	if err != nil {
-		return err
-	}
+	cache.Dispatch = contracts.Dispatch
+	cache.Alerts = contracts.Alerts
+	cache.Agents = contracts.Agent
 	cache.ExpiresAt = time.Now().UTC().Add(contractAddressCacheExpiry)
 
 	b, err := json.MarshalIndent(&cache, "", "  ") // indent by two spaces
@@ -77,6 +64,7 @@ func ensureLatestContractAddresses() error {
 
 	setContractAddressesFromCache(cache)
 
+	greenBold("made it this far")
 	return nil
 }
 
