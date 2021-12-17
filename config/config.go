@@ -126,15 +126,14 @@ func getConfigFromEnv() (Config, error) {
 }
 
 func GetConfig() (Config, error) {
-	filePath := fmt.Sprintf("%s/%s", DefaultContainerFortaDirPath, "config.yml")
 	var cfg Config
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+	if _, err := os.Stat(DefaultContainerConfigPath); os.IsNotExist(err) {
 		cfg, err = getConfigFromEnv()
 		if err != nil {
 			return Config{}, err
 		}
 	}
-	cfg, err := getConfigFromFile(filePath)
+	cfg, err := getConfigFromFile(DefaultContainerConfigPath)
 	if err != nil {
 		return Config{}, err
 	}

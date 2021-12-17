@@ -23,4 +23,5 @@ var (
 	DefaultContainerFortaDirPath        = "/.forta"
 	DefaultContainerKeyDirPath          = path.Join(DefaultContainerFortaDirPath, DefaultKeysDirName)
 	DefaultContainerLocalAgentsFilePath = path.Join(DefaultContainerFortaDirPath, DefaultLocalAgentsFileName)
+	DefaultContainerConfigPath          = "/forta_config.yml"
 )

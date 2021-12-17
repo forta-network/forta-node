@@ -101,6 +101,11 @@ func (sup *SupervisorService) start() error {
 		}
 	}
 
+	cfgBytes, err := os.ReadFile(config.DefaultContainerConfigPath)
+	if err != nil {
+		return err
+	}
+
 	// start nats, wait for it and connect from the supervisor
 	natsContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerNatsContainerName,
@@ -139,7 +144,8 @@ func (sup *SupervisorService) start() error {
 			sup.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
 		},
 		Files: map[string][]byte{
-			"passphrase": []byte(sup.config.Passphrase),
+			"passphrase":                      []byte(sup.config.Passphrase),
+			config.DefaultContainerConfigPath: cfgBytes,
 		},
 		NetworkID:   nodeNetworkID,
 		MaxLogFiles: sup.maxLogFiles,
@@ -155,6 +161,9 @@ func (sup *SupervisorService) start() error {
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "json-rpc"},
 		Volumes: map[string]string{
 			sup.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
+		},
+		Files: map[string][]byte{
+			config.DefaultContainerConfigPath: cfgBytes,
 		},
 		NetworkID:   nodeNetworkID,
 		MaxLogFiles: sup.maxLogFiles,
@@ -177,7 +186,8 @@ func (sup *SupervisorService) start() error {
 			sup.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
 		},
 		Files: map[string][]byte{
-			"passphrase": []byte(sup.config.Passphrase),
+			"passphrase":                      []byte(sup.config.Passphrase),
+			config.DefaultContainerConfigPath: cfgBytes,
 		},
 		NetworkID:   nodeNetworkID,
 		MaxLogFiles: sup.maxLogFiles,
