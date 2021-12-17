@@ -128,21 +128,6 @@ func (mr *MockDockerClientMockRecorder) GetContainers(ctx interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainers", reflect.TypeOf((*MockDockerClient)(nil).GetContainers), ctx)
 }
 
-// GetNetwork mocks base method.
-func (m *MockDockerClient) GetNetwork(ctx context.Context, idOrName string) (types.NetworkResource, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetNetwork", ctx, idOrName)
-	ret0, _ := ret[0].(types.NetworkResource)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetNetwork indicates an expected call of GetNetwork.
-func (mr *MockDockerClientMockRecorder) GetNetwork(ctx, idOrName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNetwork", reflect.TypeOf((*MockDockerClient)(nil).GetNetwork), ctx, idOrName)
-}
-
 // HasLocalImage mocks base method.
 func (m *MockDockerClient) HasLocalImage(ctx context.Context, ref string) bool {
 	m.ctrl.T.Helper()

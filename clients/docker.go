@@ -155,10 +155,6 @@ func (d *dockerClient) Prune(ctx context.Context) error {
 	return nil
 }
 
-func (d *dockerClient) GetNetwork(ctx context.Context, idOrName string) (types.NetworkResource, error) {
-	return d.cli.NetworkInspect(ctx, idOrName, types.NetworkInspectOptions{})
-}
-
 func (d *dockerClient) CreatePublicNetwork(ctx context.Context, name string) (string, error) {
 	return d.createNetwork(ctx, name, false)
 }
