@@ -1,4 +1,4 @@
-package containers
+package supervisor
 
 import (
 	"github.com/forta-protocol/forta-node/clients"
@@ -14,30 +14,30 @@ import (
 const defaultHealthCheckInterval = time.Second * 5
 const maxAttempts = 10
 
-func (t *TxNodeService) healthCheck() {
+func (sup *SupervisorService) healthCheck() {
 	ticker := time.NewTicker(defaultHealthCheckInterval)
 	for {
 		select {
-		case <-t.ctx.Done():
+		case <-sup.ctx.Done():
 			ticker.Stop()
 			return
 
 		case <-ticker.C:
-			if err := t.doHealthCheck(); err != nil {
+			if err := sup.doHealthCheck(); err != nil {
 				log.Errorf("failed to do health check: %v", err)
 			}
 		}
 	}
 }
 
-func (t *TxNodeService) doHealthCheck() error {
-	containersList, err := t.client.GetContainers(t.ctx)
+func (sup *SupervisorService) doHealthCheck() error {
+	containersList, err := sup.client.GetContainers(sup.ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get containers list: %v", err)
 	}
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	for _, knownContainer := range t.containers {
+	sup.mu.RLock()
+	defer sup.mu.RUnlock()
+	for _, knownContainer := range sup.containers {
 		var foundContainer *types.Container
 		var ok bool
 
@@ -49,7 +49,7 @@ func (t *TxNodeService) doHealthCheck() error {
 				notFoundErr := fmt.Errorf("healthcheck: container '%s' with id '%s' was not found (attempt=%d/%d)", knownContainer.Name, knownContainer.ID, currAttempt, maxAttempts)
 				log.Warnf(notFoundErr.Error())
 				// get containers again, so that we can get updated info
-				containersList, err = t.client.GetContainers(t.ctx)
+				containersList, err = sup.client.GetContainers(sup.ctx)
 				if err != nil {
 					return fmt.Errorf("failed to get containers list: %v", err)
 				}
@@ -66,20 +66,20 @@ func (t *TxNodeService) doHealthCheck() error {
 			log.Error(err.Error())
 			continue
 		}
-		if err := t.ensureUp(knownContainer, foundContainer); err != nil {
+		if err := sup.ensureUp(knownContainer, foundContainer); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (t *TxNodeService) ensureUp(knownContainer *clients.DockerContainer, foundContainer *types.Container) error {
+func (sup *SupervisorService) ensureUp(knownContainer *clients.DockerContainer, foundContainer *types.Container) error {
 	switch foundContainer.State {
 	case "created", "running", "restarting", "paused", "dead":
 		return nil
 	case "exited":
 		log.Warnf("starting exited container '%s'", knownContainer.Name)
-		_, err := t.client.StartContainer(t.ctx, knownContainer.Config)
+		_, err := sup.client.StartContainer(sup.ctx, knownContainer.Config)
 		if err != nil {
 			return fmt.Errorf("failed to start container '%s': %v", knownContainer.Name, err)
 		}

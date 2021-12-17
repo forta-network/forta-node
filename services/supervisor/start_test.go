@@ -1,12 +1,13 @@
-package containers
+package supervisor
 
 import (
 	"context"
 	"fmt"
-	"github.com/docker/docker/api/types"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+
+	"github.com/docker/docker/api/types"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/messaging"
@@ -22,6 +23,7 @@ const (
 	testImageRef              = "some.docker.registry.io/foobar@sha256:cdd4ddccf5e9c740eb4144bcc68e3ea3a056789ec7453e94a6416dcfc80937a4"
 	testNodeNetworkID         = "node-network-id"
 	testScannerContainerID    = "test-scanner-container-id"
+	testPublisherContainerID  = "test-publisher-container-id"
 	testProxyContainerID      = "test-proxy-container-id"
 	testSupervisorContainerID = "test-supervisor-container-id"
 	testAgentID               = "test-agent"
@@ -44,7 +46,7 @@ type Suite struct {
 
 	msgClient *mock_clients.MockMessageClient
 
-	service *TxNodeService
+	service *SupervisorService
 
 	suite.Suite
 }
@@ -76,7 +78,7 @@ func (s *Suite) SetupTest() {
 	s.dockerAuthClient = mock_clients.NewMockDockerClient(gomock.NewController(s.T()))
 
 	s.msgClient = mock_clients.NewMockMessageClient(gomock.NewController(s.T()))
-	service := &TxNodeService{
+	service := &SupervisorService{
 		ctx:        context.Background(),
 		client:     s.dockerClient,
 		authClient: s.dockerAuthClient,
@@ -86,6 +88,7 @@ func (s *Suite) SetupTest() {
 
 	s.dockerClient.EXPECT().Prune(service.ctx)
 	s.dockerClient.EXPECT().CreatePublicNetwork(service.ctx, gomock.Any()).Return(testNodeNetworkID, nil)
+	s.dockerClient.EXPECT().CreateInternalNetwork(service.ctx, gomock.Any()).Return(testNodeNetworkID, nil) // for nats
 	s.dockerClient.EXPECT().StartContainer(service.ctx, (configMatcher)(clients.DockerContainerConfig{
 		Name: config.DockerNatsContainerName,
 	})).Return(&clients.DockerContainer{}, nil)
@@ -101,6 +104,12 @@ func (s *Suite) SetupTest() {
 	s.dockerClient.EXPECT().HasLocalImage(service.ctx, gomock.Any()).Return(true).AnyTimes()
 	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerSupervisorContainerName).Return(&types.Container{ID: testSupervisorContainerID}, nil).AnyTimes()
 	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testSupervisorContainerID, testNodeNetworkID)
+	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerSupervisorContainerName).Return(&types.Container{ID: testSupervisorContainerID}, nil).AnyTimes()
+	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testSupervisorContainerID, testNodeNetworkID)
+	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerScannerContainerName).Return(&types.Container{ID: testScannerContainerID}, nil).AnyTimes()
+	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testScannerContainerID, testNodeNetworkID)
+	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerPublisherContainerName).Return(&types.Container{ID: testPublisherContainerID}, nil).AnyTimes()
+	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testPublisherContainerID, testNodeNetworkID)
 
 	s.dockerClient.EXPECT().WaitContainerStart(service.ctx, gomock.Any()).Return(nil).AnyTimes()
 	s.msgClient.EXPECT().Subscribe(messaging.SubjectAgentsActionRun, gomock.Any())

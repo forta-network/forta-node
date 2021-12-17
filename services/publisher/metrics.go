@@ -1,4 +1,4 @@
-package query
+package publisher
 
 import (
 	"sort"

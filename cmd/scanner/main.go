@@ -93,8 +93,8 @@ func initAlertSender(ctx context.Context, key *keystore.Key) (clients.AlertSende
 		return nil, fmt.Errorf("%s is a required env var", config.EnvPublisherHost)
 	}
 	return clients.NewAlertSender(ctx, clients.AlertSenderConfig{
-		Key:           key,
-		QueryNodeAddr: qn,
+		Key:               key,
+		PublisherNodeAddr: qn,
 	})
 }
 

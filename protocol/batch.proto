@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package network.forta;
 
-import public "query.proto";
+import public "publisher.proto";
 import public "agent.proto";
 import public "metrics.proto";
 

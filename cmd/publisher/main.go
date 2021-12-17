@@ -3,17 +3,18 @@ package publisher
 import (
 	"context"
 	"fmt"
+	"os"
+
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	log "github.com/sirupsen/logrus"
-	"os"
 
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/security"
 	"github.com/forta-protocol/forta-node/services"
-	"github.com/forta-protocol/forta-node/services/query"
+	"github.com/forta-protocol/forta-node/services/publisher"
 )
 
-func initListener(ctx context.Context, cfg config.Config) (*query.AlertListener, error) {
+func initListener(ctx context.Context, cfg config.Config) (*publisher.Publisher, error) {
 	natsHost := os.Getenv(config.EnvNatsHost)
 	if natsHost == "" {
 		return nil, fmt.Errorf("%s is a required env var", config.EnvNatsHost)
@@ -24,7 +25,7 @@ func initListener(ctx context.Context, cfg config.Config) (*query.AlertListener,
 	if err != nil {
 		return nil, err
 	}
-	return query.NewAlertListener(ctx, mc, query.AlertListenerConfig{
+	return publisher.NewPublisher(ctx, mc, publisher.PublisherConfig{
 		Port:            8770,
 		ChainID:         cfg.Scanner.ChainID,
 		Key:             key,

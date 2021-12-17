@@ -2,10 +2,11 @@ package scanner
 
 import (
 	"context"
-	"github.com/forta-protocol/forta-node/clients/messaging"
-	"github.com/forta-protocol/forta-node/metrics"
 	"strings"
 	"time"
+
+	"github.com/forta-protocol/forta-node/clients/messaging"
+	"github.com/forta-protocol/forta-node/metrics"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/jsonpb"
@@ -21,9 +22,9 @@ import (
 
 // BlockAnalyzerService reads TX info, calls agents, and emits results
 type BlockAnalyzerService struct {
-	queryNode protocol.QueryNodeClient
-	cfg       BlockAnalyzerServiceConfig
-	ctx       context.Context
+	publisherNode protocol.PublisherNodeClient
+	cfg           BlockAnalyzerServiceConfig
+	ctx           context.Context
 }
 
 type BlockAnalyzerServiceConfig struct {
@@ -83,7 +84,6 @@ func (t *BlockAnalyzerService) Start() error {
 	log.Infof("Starting %s", t.Name())
 	grp, ctx := errgroup.WithContext(t.ctx)
 
-	//TODO: change this protocol when we know more about query-node delivery
 	// Gear 2: receive result from agent
 	grp.Go(func() error {
 		for result := range t.cfg.AgentPool.BlockResults() {

@@ -5,7 +5,6 @@ package performance
 import (
 	"context"
 	"fmt"
-	"github.com/goccy/go-json"
 	"io"
 	"net/http"
 	"sort"
@@ -13,13 +12,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/goccy/go-json"
+
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/services/query"
+	"github.com/forta-protocol/forta-node/services/publisher"
 )
 
 func agentId(index int) string {
@@ -43,14 +44,14 @@ type TestContext struct {
 	cfg       *TestConfig
 	msgClient clients.MessageClient
 	startDate time.Time
-	metrics   *query.AgentMetricsAggregator
+	metrics   *publisher.AgentMetricsAggregator
 
 	ready []config.AgentConfig
 	agts  []*config.AgentConfig
 }
 
 func init() {
-	query.DefaultBucketInterval = 24 * time.Hour
+	publisher.DefaultBucketInterval = 24 * time.Hour
 }
 
 func (tc *TestContext) generateAgents(count int) []*config.AgentConfig {
@@ -118,7 +119,7 @@ func (tc *TestContext) runAgents() {
 	tc.msgClient.Publish(messaging.SubjectAgentsVersionsLatest, tc.agts)
 }
 
-func (tc *TestContext) getResults() (*query.AgentReport, error) {
+func (tc *TestContext) getResults() (*publisher.AgentReport, error) {
 	url := fmt.Sprintf("http://%s:8778/report/agents?startDate=%d000",
 		tc.cfg.host,
 		tc.startDate.Unix(),
@@ -132,7 +133,7 @@ func (tc *TestContext) getResults() (*query.AgentReport, error) {
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("%s returned %d", url, resp.StatusCode)
 	}
-	var report query.AgentReport
+	var report publisher.AgentReport
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
@@ -176,7 +177,7 @@ func NewTestContext(t *testing.T, cfg *TestConfig) *TestContext {
 		cfg:       cfg,
 		msgClient: messaging.NewClient("perf-test", fmt.Sprintf("%s:4222", cfg.host)),
 		ready:     nil,
-		metrics:   query.NewMetricsAggregator(),
+		metrics:   publisher.NewMetricsAggregator(),
 	}
 }
 
