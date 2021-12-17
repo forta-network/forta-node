@@ -84,6 +84,7 @@ func (s *Suite) SetupTest() {
 		msgClient:  s.msgClient,
 	}
 	service.config.Config.Log.Level = "debug"
+	service.config.Config.ExposeNats = true
 
 	s.dockerClient.EXPECT().Prune(service.ctx)
 	s.dockerClient.EXPECT().CreatePublicNetwork(service.ctx, gomock.Any()).Return(testNodeNetworkID, nil)
