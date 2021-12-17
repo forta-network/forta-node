@@ -22,21 +22,21 @@ import (
 )
 
 func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, cfg config.Config) (*scanner.TxStreamService, feeds.BlockFeed, error) {
-	url := cfg.Scanner.Ethereum.JsonRpcUrl
-	startBlock := config.ParseBigInt(cfg.Scanner.StartBlock)
-	endBlock := config.ParseBigInt(cfg.Scanner.EndBlock)
-	chainID := config.ParseBigInt(cfg.Scanner.ChainID)
+	url := cfg.Scan.JsonRpc.Url
+	startBlock := config.ParseBigInt(cfg.Scan.StartBlock)
+	endBlock := config.ParseBigInt(cfg.Scan.EndBlock)
+	chainID := config.ParseBigInt(cfg.ChainID)
 
 	if url == "" {
-		return nil, nil, fmt.Errorf("ethereum.jsonRpcUrl is required")
+		return nil, nil, fmt.Errorf("scan.jsonRpc.url is required")
 	}
-	if cfg.Trace.Enabled && cfg.Trace.Ethereum.JsonRpcUrl == "" {
-		return nil, nil, fmt.Errorf("trace requires a JsonRpcUrl if enabled")
+	if cfg.Trace.Enabled && cfg.Trace.JsonRpc.Url == "" {
+		return nil, nil, fmt.Errorf("trace requires a jsonRpc URL if enabled")
 	}
 
 	var rateLimit *time.Ticker
-	if cfg.Scanner.BlockRateLimit > 0 {
-		rateLimit = time.NewTicker(time.Duration(cfg.Scanner.BlockRateLimit) * time.Millisecond)
+	if cfg.Scan.BlockRateLimit > 0 {
+		rateLimit = time.NewTicker(time.Duration(cfg.Scan.BlockRateLimit) * time.Millisecond)
 	}
 
 	blockFeed, err := feeds.NewBlockFeed(ctx, ethClient, traceClient, feeds.BlockFeedConfig{
@@ -51,8 +51,8 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 	}
 
 	txStream, err := scanner.NewTxStreamService(ctx, ethClient, blockFeed, scanner.TxStreamServiceConfig{
-		JsonRpcConfig:      cfg.Scanner.Ethereum,
-		TraceJsonRpcConfig: cfg.Trace.Ethereum,
+		JsonRpcConfig:      cfg.Scan.JsonRpc,
+		TraceJsonRpcConfig: cfg.Trace.JsonRpc,
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create the tx stream service: %v", err)
@@ -117,12 +117,12 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 
-	ethClient, err := ethereum.NewStreamEthClient(ctx, cfg.Scanner.Ethereum.JsonRpcUrl)
+	ethClient, err := ethereum.NewStreamEthClient(ctx, cfg.Scan.JsonRpc.Url)
 	if err != nil {
 		return nil, err
 	}
 
-	traceClient, err := ethereum.NewStreamEthClient(ctx, cfg.Trace.Ethereum.JsonRpcUrl)
+	traceClient, err := ethereum.NewStreamEthClient(ctx, cfg.Trace.JsonRpc.Url)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	}
 
 	registryService := registry.New(cfg, key.Address, msgClient)
-	agentPool := agentpool.NewAgentPool(cfg.Scanner, msgClient)
+	agentPool := agentpool.NewAgentPool(cfg.Scan, msgClient)
 	txAnalyzer, err := initTxAnalyzer(ctx, cfg, as, txStream, agentPool, msgClient)
 	if err != nil {
 		return nil, err
@@ -144,7 +144,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	}
 
 	// Start the main block feed so all transaction feeds can start consuming.
-	if !cfg.Scanner.DisableAutostart {
+	if !cfg.Scan.DisableAutostart {
 		blockFeed.Start()
 	}
 

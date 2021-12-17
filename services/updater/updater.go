@@ -2,8 +2,6 @@ package updater
 
 import (
 	"context"
-	"encoding/json"
-
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/store"
@@ -91,23 +89,21 @@ func (up *Updater) replaceSupervisor(imageRef string) {
 		return
 	}
 
-	cfgBytes, err := json.Marshal(up.cfg)
-	if err != nil {
-		logger.WithError(err).Error("cannot marshal config to json")
-		return
-	}
-	cfgJson := string(cfgBytes)
-
+	var err error
 	up.supervisorContainer, err = up.dockerClient.StartContainer(up.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerSupervisorContainerName,
 		Image: imageRef,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "supervisor"},
 		Env: map[string]string{
-			config.EnvConfig:   cfgJson,
 			config.EnvNatsHost: config.DockerNatsContainerName,
+			config.EnvFortaDir: up.cfg.FortaDir,
 		},
 		Volumes: map[string]string{
 			"/var/run/docker.sock": "/var/run/docker.sock", // give access to host docker
+			up.cfg.FortaDir:        config.DefaultContainerFortaDirPath,
+		},
+		Files: map[string][]byte{
+			"passphrase": []byte(up.cfg.Passphrase),
 		},
 		MaxLogSize:  up.cfg.Log.MaxLogSize,
 		MaxLogFiles: up.cfg.Log.MaxLogFiles,

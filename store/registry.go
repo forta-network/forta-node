@@ -149,7 +149,7 @@ func (rs *registryStore) optsWithLatestBlock() (*bind.CallOpts, error) {
 func NewRegistryStore(ctx context.Context, cfg config.Config) (*registryStore, error) {
 	agentRegAddress := cfg.AgentRegistryContractAddress
 
-	rpc, err := ethereum.NewRpcClient(cfg.Registry.Ethereum.JsonRpcUrl)
+	rpc, err := ethereum.NewRpcClient(cfg.Registry.JsonRpc.Url)
 	if err != nil {
 		return nil, err
 	}
@@ -165,16 +165,9 @@ func NewRegistryStore(ctx context.Context, cfg config.Config) (*registryStore, e
 		return nil, err
 	}
 
-	ethClient, err := ethereum.NewStreamEthClient(context.Background(), cfg.Registry.Ethereum.JsonRpcUrl)
+	ethClient, err := ethereum.NewStreamEthClient(context.Background(), cfg.Registry.JsonRpc.Url)
 	if err != nil {
 		return nil, err
-	}
-
-	var ipfsURL string
-	if cfg.Registry.IPFSGateway != nil {
-		ipfsURL = *cfg.Registry.IPFSGateway
-	} else {
-		ipfsURL = config.DefaultIPFSGateway
 	}
 
 	return &registryStore{
@@ -183,6 +176,6 @@ func NewRegistryStore(ctx context.Context, cfg config.Config) (*registryStore, e
 		cfg:        cfg,
 		dispatch:   d,
 		agents:     ar,
-		ipfsClient: &ipfsClient{ipfsURL},
+		ipfsClient: &ipfsClient{cfg.Registry.IPFS.GatewayURL},
 	}, nil
 }

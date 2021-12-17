@@ -21,8 +21,8 @@ type TxStreamService struct {
 }
 
 type TxStreamServiceConfig struct {
-	JsonRpcConfig      config.EthereumConfig
-	TraceJsonRpcConfig config.EthereumConfig
+	JsonRpcConfig      config.JsonRpcConfig
+	TraceJsonRpcConfig config.JsonRpcConfig
 }
 
 func (t *TxStreamService) ReadOnlyBlockStream() <-chan *domain.BlockEvent {
