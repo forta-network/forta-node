@@ -3,9 +3,9 @@ package supervisor
 import (
 	"context"
 	"fmt"
+	"github.com/forta-protocol/forta-node/security"
+	"os"
 	"sync"
-
-	"github.com/goccy/go-json"
 
 	log "github.com/sirupsen/logrus"
 
@@ -54,15 +54,15 @@ func (sup *SupervisorService) start() error {
 		return err
 	}
 
+	sup.config.Config.FortaDir = os.Getenv(config.EnvFortaDir)
 	sup.maxLogSize = sup.config.Config.Log.MaxLogSize
 	sup.maxLogFiles = sup.config.Config.Log.MaxLogFiles
 
-	cfgBytes, err := json.Marshal(sup.config.Config)
+	passphrase, err := security.ReadPassphrase()
 	if err != nil {
-		log.Error("cannot marshal config to json", err)
 		return err
 	}
-	cfgJson := string(cfgBytes)
+	sup.config.Passphrase = passphrase
 
 	if err := sup.client.Prune(sup.ctx); err != nil {
 		return err
@@ -132,7 +132,6 @@ func (sup *SupervisorService) start() error {
 		Image: commonNodeImage,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "publisher"},
 		Env: map[string]string{
-			config.EnvConfig:   cfgJson,
 			config.EnvFortaDir: config.DefaultContainerFortaDirPath,
 			config.EnvNatsHost: config.DockerNatsContainerName,
 		},
@@ -154,8 +153,8 @@ func (sup *SupervisorService) start() error {
 		Name:  config.DockerJSONRPCProxyContainerName,
 		Image: commonNodeImage,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "json-rpc"},
-		Env: map[string]string{
-			config.EnvConfig: cfgJson,
+		Volumes: map[string]string{
+			sup.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
 		},
 		NetworkID:   nodeNetworkID,
 		MaxLogFiles: sup.maxLogFiles,
@@ -170,7 +169,6 @@ func (sup *SupervisorService) start() error {
 		Image: commonNodeImage,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "scanner"},
 		Env: map[string]string{
-			config.EnvConfig:        cfgJson,
 			config.EnvFortaDir:      config.DefaultContainerFortaDirPath,
 			config.EnvPublisherHost: config.DockerPublisherContainerName,
 			config.EnvNatsHost:      config.DockerNatsContainerName,

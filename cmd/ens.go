@@ -41,7 +41,12 @@ func ensureLatestContractAddresses() error {
 
 	whiteBold("Refreshing contract address cache...\n")
 
-	ens, err := store.DialENSStoreAt(cfg.ENSConfig.JsonRpc.Url, cfg.ENSConfig.ContractAddress)
+	ca := cfg.ENSConfig.ContractAddress
+	// if default contract is set, then use the chain's default contract
+	if cfg.ENSConfig.DefaultContract {
+		ca = ""
+	}
+	ens, err := store.DialENSStoreAt(cfg.ENSConfig.JsonRpc.Url, ca)
 	if err != nil {
 		return fmt.Errorf("cannot resolve contract addresses from ENS: %v", err)
 	}

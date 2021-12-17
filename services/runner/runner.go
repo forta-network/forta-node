@@ -142,6 +142,7 @@ func (runner *Runner) replaceContainers(imageRefs store.ImageRefs) {
 		},
 		Volumes: map[string]string{
 			"/var/run/docker.sock": "/var/run/docker.sock", // give access to host docker
+			runner.cfg.FortaDir:    config.DefaultContainerFortaDirPath,
 		},
 		MaxLogSize:  runner.cfg.Log.MaxLogSize,
 		MaxLogFiles: runner.cfg.Log.MaxLogFiles,
