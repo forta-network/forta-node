@@ -19,6 +19,18 @@ import (
 	"github.com/forta-protocol/forta-node/protocol"
 )
 
+func ReadPassphrase() (string, error) {
+	f, err := os.OpenFile("/passphrase", os.O_RDONLY, 400)
+	if err != nil {
+		return "", err
+	}
+	pw, err := io.ReadAll(bufio.NewReader(f))
+	if err != nil {
+		return "", err
+	}
+	return string(pw), nil
+}
+
 // LoadKey loads the node private key.
 func LoadKey(keysDirPath string) (*keystore.Key, error) {
 	f, err := os.OpenFile("/passphrase", os.O_RDONLY, 400)

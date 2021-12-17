@@ -3,6 +3,8 @@ package supervisor
 import (
 	"context"
 	"fmt"
+	"github.com/forta-protocol/forta-node/security"
+	"os"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -52,8 +54,15 @@ func (sup *SupervisorService) start() error {
 		return err
 	}
 
+	sup.config.Config.FortaDir = os.Getenv(config.EnvFortaDir)
 	sup.maxLogSize = sup.config.Config.Log.MaxLogSize
 	sup.maxLogFiles = sup.config.Config.Log.MaxLogFiles
+
+	passphrase, err := security.ReadPassphrase()
+	if err != nil {
+		return err
+	}
+	sup.config.Passphrase = passphrase
 
 	if err := sup.client.Prune(sup.ctx); err != nil {
 		return err
@@ -155,6 +164,7 @@ func (sup *SupervisorService) start() error {
 		return err
 	}
 
+	log.Infof("passphrase: %s", sup.config.Passphrase)
 	sup.scannerContainer, err = sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerScannerContainerName,
 		Image: commonNodeImage,

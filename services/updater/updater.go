@@ -90,16 +90,22 @@ func (up *Updater) replaceSupervisor(imageRef string) {
 	}
 
 	var err error
+	log.Infof("FortaDir = %s", up.cfg.FortaDir)
+	log.Infof("Passphrase = %s", up.cfg.Passphrase)
 	up.supervisorContainer, err = up.dockerClient.StartContainer(up.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerSupervisorContainerName,
 		Image: imageRef,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "supervisor"},
 		Env: map[string]string{
 			config.EnvNatsHost: config.DockerNatsContainerName,
+			config.EnvFortaDir: up.cfg.FortaDir,
 		},
 		Volumes: map[string]string{
 			"/var/run/docker.sock": "/var/run/docker.sock", // give access to host docker
 			up.cfg.FortaDir:        config.DefaultContainerFortaDirPath,
+		},
+		Files: map[string][]byte{
+			"passphrase": []byte(up.cfg.Passphrase),
 		},
 		MaxLogSize:  up.cfg.Log.MaxLogSize,
 		MaxLogFiles: up.cfg.Log.MaxLogFiles,
