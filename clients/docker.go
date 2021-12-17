@@ -42,19 +42,20 @@ type DockerContainer struct {
 
 // DockerContainerConfig is configuration for a particular container
 type DockerContainerConfig struct {
-	Name           string
-	Image          string
-	Env            map[string]string
-	LinkNetworkIDs []string
-	NetworkID      string
-	Ports          map[string]string
-	Volumes        map[string]string
-	Files          map[string][]byte
-	MaxLogSize     string
-	MaxLogFiles    int
-	CPUQuota       int64
-	Memory         int64
-	Cmd            []string
+	Name            string
+	Image           string
+	Env             map[string]string
+	LinkNetworkIDs  []string
+	NetworkID       string
+	Ports           map[string]string
+	PublishAllPorts bool // auto-publishing ports EXPOSEd in Dockerfile
+	Volumes         map[string]string
+	Files           map[string][]byte
+	MaxLogSize      string
+	MaxLogFiles     int
+	CPUQuota        int64
+	Memory          int64
+	Cmd             []string
 }
 
 // DockerContainerList contains the full container data.
@@ -330,7 +331,7 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 		&container.HostConfig{
 			NetworkMode:     container.NetworkMode(config.NetworkID),
 			PortBindings:    bindings,
-			PublishAllPorts: true,
+			PublishAllPorts: config.PublishAllPorts,
 			Binds:           volumes,
 			LogConfig: container.LogConfig{
 				Config: map[string]string{

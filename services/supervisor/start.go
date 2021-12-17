@@ -224,11 +224,6 @@ func (sup *SupervisorService) ensureNodeImages() error {
 			Name: "nats",
 			Ref:  "nats:2.3.2",
 		},
-		{
-			Name:        "node",
-			Ref:         config.DockerScannerNodeImage,
-			RequireAuth: true,
-		},
 	} {
 		if err := sup.ensureLocalImage(image.Name, image.Ref, image.RequireAuth); err != nil {
 			return err

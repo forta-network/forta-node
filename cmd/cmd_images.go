@@ -8,6 +8,7 @@ import (
 
 func handleFortaImages(cmd *cobra.Command, args []string) error {
 	cmd.Println("Use images:", config.UseDockerImages)
-	cmd.Println("Node:", config.DockerScannerNodeImage)
+	cmd.Println("Supervisor:", config.DockerSupervisorImage)
+	cmd.Println("Updater:", config.DockerUpdaterImage)
 	return nil
 }

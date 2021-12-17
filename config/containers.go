@@ -9,9 +9,11 @@ const ContainerNamePrefix = "forta"
 
 // Docker container names
 var (
-	DockerScannerNodeImage = "forta-protocol/forta-node:latest"
-	UseDockerImages        = "local"
+	DockerSupervisorImage = "forta-protocol/forta-node:latest"
+	DockerUpdaterImage    = "forta-protocol/forta-node:latest"
+	UseDockerImages       = "local"
 
+	DockerUpdaterContainerName      = fmt.Sprintf("%s-updater", ContainerNamePrefix)
 	DockerSupervisorContainerName   = fmt.Sprintf("%s-supervisor", ContainerNamePrefix)
 	DockerNatsContainerName         = fmt.Sprintf("%s-nats", ContainerNamePrefix)
 	DockerScannerContainerName      = fmt.Sprintf("%s-scanner", ContainerNamePrefix)
