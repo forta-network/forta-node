@@ -36,6 +36,8 @@ type SupervisorServiceConfig struct {
 	Passphrase string
 }
 
+var MockConfig string
+
 func (sup *SupervisorService) Start() error {
 	if err := sup.start(); err != nil {
 		return err
@@ -101,9 +103,13 @@ func (sup *SupervisorService) start() error {
 		}
 	}
 
-	cfgBytes, err := os.ReadFile(config.DefaultContainerConfigPath)
-	if err != nil {
-		return err
+	cfgBytes := []byte(os.Getenv("MOCK_CONFIG_BYTES"))
+
+	if os.Getenv("MOCK_CONFIG_BYTES") == "" {
+		cfgBytes, err = os.ReadFile(config.DefaultContainerConfigPath)
+		if err != nil {
+			return err
+		}
 	}
 
 	// start nats, wait for it and connect from the supervisor
