@@ -164,7 +164,6 @@ func (sup *SupervisorService) start() error {
 		return err
 	}
 
-	log.Infof("passphrase: %s", sup.config.Passphrase)
 	sup.scannerContainer, err = sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerScannerContainerName,
 		Image: commonNodeImage,

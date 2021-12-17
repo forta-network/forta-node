@@ -90,8 +90,6 @@ func (up *Updater) replaceSupervisor(imageRef string) {
 	}
 
 	var err error
-	log.Infof("FortaDir = %s", up.cfg.FortaDir)
-	log.Infof("Passphrase = %s", up.cfg.Passphrase)
 	up.supervisorContainer, err = up.dockerClient.StartContainer(up.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerSupervisorContainerName,
 		Image: imageRef,

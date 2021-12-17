@@ -19,7 +19,13 @@ import (
 	"github.com/forta-protocol/forta-node/protocol"
 )
 
+var MockPassphrase string
+
 func ReadPassphrase() (string, error) {
+	// this is ugly for a test, sorry, we can refactor
+	if MockPassphrase != "" {
+		return MockPassphrase, nil
+	}
 	f, err := os.OpenFile("/passphrase", os.O_RDONLY, 400)
 	if err != nil {
 		return "", err
