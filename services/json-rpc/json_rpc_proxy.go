@@ -15,12 +15,12 @@ import (
 // JsonRpcProxy proxies requests from agents to json-rpc endpoint
 type JsonRpcProxy struct {
 	ctx context.Context
-	cfg config.JsonRpcProxyConfig
+	cfg config.JsonRpcConfig
 }
 
 func (p *JsonRpcProxy) Start() error {
 	log.Infof("Starting %s", p.Name())
-	rpcUrl, err := url.Parse(p.cfg.Ethereum.JsonRpcUrl)
+	rpcUrl, err := url.Parse(p.cfg.Url)
 	if err != nil {
 		return err
 	}
@@ -31,7 +31,7 @@ func (p *JsonRpcProxy) Start() error {
 		d(r)
 		r.Host = rpcUrl.Host
 		r.URL = rpcUrl
-		for h, v := range p.cfg.Ethereum.Headers {
+		for h, v := range p.cfg.Headers {
 			r.Header.Set(h, v)
 		}
 	}
@@ -54,8 +54,12 @@ func (p *JsonRpcProxy) Name() string {
 }
 
 func NewJsonRpcProxy(ctx context.Context, cfg config.Config) (*JsonRpcProxy, error) {
+	jCfg := cfg.Scan.JsonRpc
+	if cfg.JsonRpcProxy != nil {
+		jCfg = cfg.JsonRpcProxy.JsonRpc
+	}
 	return &JsonRpcProxy{
 		ctx: ctx,
-		cfg: cfg.JsonRpcProxy,
+		cfg: jCfg,
 	}, nil
 }

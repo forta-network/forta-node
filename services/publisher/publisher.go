@@ -431,7 +431,8 @@ func (pub *Publisher) Name() string {
 }
 
 func NewPublisher(ctx context.Context, mc *messaging.Client, cfg PublisherConfig) (*Publisher, error) {
-	rpcClient, err := rpc.Dial(cfg.PublisherConfig.Ethereum.JsonRpcUrl)
+	rpcClient, err := rpc.Dial(cfg.PublisherConfig.JsonRpc.Url)
+
 	if err != nil {
 		return nil, err
 	}
@@ -448,13 +449,8 @@ func NewPublisher(ctx context.Context, mc *messaging.Client, cfg PublisherConfig
 		return nil, err
 	}
 
-	if cfg.PublisherConfig.GasPriceGwei != nil {
-		txOpts.GasPrice = big.NewInt(*cfg.PublisherConfig.GasPriceGwei * params.GWei)
-	}
-
-	if cfg.PublisherConfig.GasLimit != nil {
-		txOpts.GasLimit = *cfg.PublisherConfig.GasLimit
-	}
+	txOpts.GasPrice = big.NewInt(cfg.PublisherConfig.GasPriceGwei * params.GWei)
+	txOpts.GasLimit = cfg.PublisherConfig.GasLimit
 
 	contract, err := contracts.NewAlertsTransactor(common.HexToAddress(cfg.PublisherConfig.ContractAddress), ethereum.NewContractBackend(rpcClient))
 	if err != nil {

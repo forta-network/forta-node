@@ -18,7 +18,7 @@ const (
 
 // useEnsDefaults gets and uses ENS defaults if needed.
 func useEnsDefaults() error {
-	if cfg.Registry.ContractAddress != "" && cfg.Query.PublishTo.ContractAddress != "" {
+	if cfg.Registry.ContractAddress != "" && cfg.Publish.ContractAddress != "" {
 		return nil
 	}
 
@@ -41,7 +41,7 @@ func ensureLatestContractAddresses() error {
 
 	whiteBold("Refreshing contract address cache...\n")
 
-	ens, err := store.DialENSStoreAt(getRegRpcUrl(), cfg.ENSConfig.ContractAddress)
+	ens, err := store.DialENSStoreAt(cfg.ENSConfig.JsonRpc.Url, cfg.ENSConfig.ContractAddress)
 	if err != nil {
 		return fmt.Errorf("cannot resolve contract addresses from ENS: %v", err)
 	}
@@ -91,8 +91,8 @@ func setContractAddressesFromCache(cache contractAddressCache) {
 	if cfg.Registry.ContractAddress == "" {
 		cfg.Registry.ContractAddress = cache.Dispatch
 	}
-	if cfg.Query.PublishTo.ContractAddress == "" {
-		cfg.Query.PublishTo.ContractAddress = cache.Alerts
+	if cfg.Publish.ContractAddress == "" {
+		cfg.Publish.ContractAddress = cache.Alerts
 	}
 	cfg.AgentRegistryContractAddress = cache.Agents
 }
@@ -116,20 +116,4 @@ func getContractAddressCache() (cache contractAddressCache, ok bool) {
 
 	ok = true
 	return
-}
-
-const defaultEnsJsonRpcUrl = "https://cloudflare-eth.com"
-
-func getRegRpcUrl() string {
-	if cfg.ENSConfig.Ethereum == nil {
-		return defaultEnsJsonRpcUrl
-	}
-	if cfg.ENSConfig.Ethereum.JsonRpcUrl != "" {
-		return cfg.ENSConfig.Ethereum.JsonRpcUrl
-	}
-	if cfg.ENSConfig.Ethereum.WebsocketUrl != "" {
-		return cfg.ENSConfig.Ethereum.WebsocketUrl
-	}
-	// default to Ethereum mainnet
-	return defaultEnsJsonRpcUrl
 }

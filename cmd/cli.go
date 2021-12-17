@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/creasty/defaults"
 	"io/ioutil"
 	"os"
 	"path"
@@ -169,6 +170,10 @@ func initConfig() {
 
 	configBytes, _ := ioutil.ReadFile(configPath)
 	yaml.Unmarshal(configBytes, &cfg)
+
+	if err := defaults.Set(&cfg); err != nil {
+		panic(err)
+	}
 
 	cfg.FortaDir = fortaDir
 	cfg.ConfigPath = configPath
