@@ -82,6 +82,7 @@ type ResourcesConfig struct {
 }
 
 type ENSConfig struct {
+	DefaultContract bool          `yaml:"defaultContract" json:"defaultContract" default:"false" `
 	ContractAddress string        `yaml:"contractAddress" json:"contractAddress" validate:"omitempty,eth_addr" default:"0x08f42fcc52a9C2F391bF507C4E8688D0b53e1bd7" `
 	JsonRpc         JsonRpcConfig `yaml:"jsonRpc" json:"jsonRpc" default:"{\"url\": \"https://polygon-rpc.com\"}" `
 }
