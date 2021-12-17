@@ -30,7 +30,7 @@ type AlertSender interface {
 type alertSender struct {
 	ctx     context.Context
 	cfg     AlertSenderConfig
-	qClient protocol.PublisherNodeClient
+	pClient protocol.PublisherNodeClient
 }
 
 type AlertSenderConfig struct {
@@ -49,7 +49,7 @@ func (a *alertSender) SignAlertAndNotify(rt *AgentRoundTrip, alert *protocol.Ale
 	}
 	signedAlert.ChainId = chainID
 	signedAlert.BlockNumber = blockNumber
-	_, err = a.qClient.Notify(a.ctx, &protocol.NotifyRequest{
+	_, err = a.pClient.Notify(a.ctx, &protocol.NotifyRequest{
 		SignedAlert:       signedAlert,
 		EvalBlockRequest:  rt.EvalBlockRequest,
 		EvalBlockResponse: rt.EvalBlockResponse,
@@ -61,7 +61,7 @@ func (a *alertSender) SignAlertAndNotify(rt *AgentRoundTrip, alert *protocol.Ale
 }
 
 func (a *alertSender) NotifyWithoutAlert(rt *AgentRoundTrip, chainID, blockNumber string) error {
-	_, err := a.qClient.Notify(a.ctx, &protocol.NotifyRequest{
+	_, err := a.pClient.Notify(a.ctx, &protocol.NotifyRequest{
 		EvalBlockRequest:  rt.EvalBlockRequest,
 		EvalBlockResponse: rt.EvalBlockResponse,
 		EvalTxRequest:     rt.EvalTxRequest,
@@ -76,10 +76,10 @@ func NewAlertSender(ctx context.Context, cfg AlertSenderConfig) (*alertSender, e
 	if err != nil {
 		return nil, err
 	}
-	qc := protocol.NewPublisherNodeClient(conn)
+	pc := protocol.NewPublisherNodeClient(conn)
 	return &alertSender{
 		ctx:     ctx,
 		cfg:     cfg,
-		qClient: qc,
+		pClient: pc,
 	}, nil
 }
