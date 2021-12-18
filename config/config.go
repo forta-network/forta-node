@@ -2,10 +2,11 @@ package config
 
 import (
 	"fmt"
-	"github.com/creasty/defaults"
-	"github.com/goccy/go-json"
 	"os"
 	"path"
+
+	"github.com/creasty/defaults"
+	"github.com/goccy/go-json"
 )
 
 type JsonRpcConfig struct {
@@ -137,14 +138,12 @@ func GetConfig() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	if err := applyContextDefaults(&cfg); err != nil {
-		return Config{}, err
-	}
+	applyContextDefaults(&cfg)
 	return cfg, nil
 }
 
 // apply defaults that apply in certain contexts
-func applyContextDefaults(cfg *Config) error {
+func applyContextDefaults(cfg *Config) {
 	if cfg.ChainID == 1 {
 		cfg.Trace.Enabled = true
 	}
@@ -154,7 +153,6 @@ func applyContextDefaults(cfg *Config) error {
 	cfg.FortaDir = DefaultContainerFortaDirPath
 	cfg.ConfigPath = DefaultContainerConfigPath
 	cfg.KeyDirPath = path.Join(cfg.FortaDir, DefaultKeysDirName)
-	return nil
 }
 
 func getConfigFromFile(filename string) (Config, error) {

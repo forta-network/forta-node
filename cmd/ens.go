@@ -63,8 +63,6 @@ func ensureLatestContractAddresses() error {
 	}
 
 	setContractAddressesFromCache(cache)
-
-	greenBold("made it this far")
 	return nil
 }
 

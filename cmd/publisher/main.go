@@ -26,7 +26,6 @@ func initListener(ctx context.Context, cfg config.Config) (*publisher.Publisher,
 		return nil, err
 	}
 
-	log.Info("listener init complete")
 	return publisher.NewPublisher(ctx, mc, publisher.PublisherConfig{
 		ChainID:         cfg.ChainID,
 		Key:             key,

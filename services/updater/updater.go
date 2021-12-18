@@ -92,9 +92,6 @@ func (up *Updater) replaceSupervisor(imageRef string) {
 
 	var err error
 
-	log.Infof("forta-dir: %s", up.cfg.FortaDir)
-	log.Infof("forta-config-path: %s", up.cfg.ConfigPath)
-
 	cfgBytes, err := os.ReadFile(up.cfg.ConfigPath)
 	if err != nil {
 		return

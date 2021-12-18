@@ -330,8 +330,6 @@ func (tr *TransactionResults) GetAgentAlerts(agent *protocol.AgentInfo) *protoco
 }
 
 func (pub *Publisher) prepareLatestBatch() {
-	log.Info("prepareLatestBatch()")
-
 	batch := &BatchData{Data: &protocol.AlertBatch{ChainId: uint64(pub.cfg.ChainID)}}
 
 	timeoutCh := time.After(pub.batchInterval)
@@ -341,7 +339,6 @@ func (pub *Publisher) prepareLatestBatch() {
 	for i < pub.batchLimit {
 		select {
 		case notif := <-pub.notifCh:
-			log.Infof("received notification: %s", notif.String())
 			alert := notif.SignedAlert
 			hasAlert := alert != nil
 			if hasAlert {
