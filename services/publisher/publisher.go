@@ -53,7 +53,6 @@ type Publisher struct {
 	messageClient     *messaging.Client
 
 	initialize    sync.Once
-	port          int
 	skipEmpty     bool
 	skipPublish   bool
 	batchInterval time.Duration
@@ -84,7 +83,6 @@ type IPFS interface {
 }
 
 type PublisherConfig struct {
-	Port            int
 	ChainID         int
 	Key             *keystore.Key
 	PublisherConfig config.PublisherConfig
@@ -409,7 +407,7 @@ func (pub *Publisher) handleReady(cfgs messaging.AgentPayload) error {
 }
 
 func (pub *Publisher) Start() error {
-	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", pub.port))
+	lis, err := net.Listen("tcp", "0.0.0.0:8770")
 	if err != nil {
 		return err
 	}
@@ -500,7 +498,6 @@ func NewPublisher(ctx context.Context, mc *messaging.Client, cfg PublisherConfig
 		metricsAggregator: NewMetricsAggregator(),
 		messageClient:     mc,
 
-		port:          cfg.Port,
 		skipEmpty:     cfg.PublisherConfig.Batch.SkipEmpty,
 		skipPublish:   cfg.PublisherConfig.SkipPublish,
 		batchInterval: batchInterval,

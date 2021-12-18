@@ -47,7 +47,7 @@ func ValidateDiscoImageRef(discoHost, ref string) (string, error) {
 		return "", fmt.Errorf("%w: %s", ErrDiscoRefNotIPFSCIDv1, imageRef)
 	}
 
-	return fmt.Sprintf("%s/%s", discoHost, imageRef), nil
+	return fmt.Sprintf("%s/%s@sha256:%s", discoHost, imageRef, digest), nil
 }
 
 // SplitImageRef splits the full image ref to the actual <host>/<repo> and <digest>.
