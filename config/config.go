@@ -5,6 +5,7 @@ import (
 	"github.com/creasty/defaults"
 	"github.com/goccy/go-json"
 	"os"
+	"path"
 )
 
 type JsonRpcConfig struct {
@@ -150,6 +151,9 @@ func applyContextDefaults(cfg *Config) error {
 	if cfg.ENSConfig.DefaultContract {
 		cfg.ENSConfig.ContractAddress = ""
 	}
+	cfg.FortaDir = DefaultContainerFortaDirPath
+	cfg.ConfigPath = DefaultContainerConfigPath
+	cfg.KeyDirPath = path.Join(cfg.FortaDir, DefaultKeysDirName)
 	return nil
 }
 
