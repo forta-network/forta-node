@@ -144,9 +144,6 @@ func (sup *SupervisorService) start() error {
 			config.EnvFortaDir: config.DefaultContainerFortaDirPath,
 			config.EnvNatsHost: config.DockerNatsContainerName,
 		},
-		Ports: map[string]string{
-			"8770": "8770",
-		},
 		Volumes: map[string]string{
 			sup.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
 		},
