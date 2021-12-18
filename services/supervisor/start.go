@@ -171,6 +171,9 @@ func (sup *SupervisorService) start() error {
 		Volumes: map[string]string{
 			sup.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
 		},
+		Env: map[string]string{
+			config.EnvFortaDir: config.DefaultContainerFortaDirPath,
+		},
 		Files: map[string][]byte{
 			config.DefaultContainerConfigPath: cfgBytes,
 		},
