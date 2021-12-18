@@ -101,8 +101,8 @@ func (sup *SupervisorService) start() error {
 		}
 	}
 
+	// this is just to make a unit test work, needs refactor to avoid
 	cfgBytes := []byte(os.Getenv("MOCK_CONFIG_BYTES"))
-
 	if os.Getenv("MOCK_CONFIG_BYTES") == "" {
 		cfgBytes, err = os.ReadFile(config.DefaultContainerConfigPath)
 		if err != nil {
