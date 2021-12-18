@@ -3,8 +3,6 @@ package clients
 import (
 	"context"
 	"fmt"
-	"time"
-
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -73,9 +71,7 @@ func (a *alertSender) NotifyWithoutAlert(rt *AgentRoundTrip, chainID, blockNumbe
 }
 
 func NewAlertSender(ctx context.Context, cfg AlertSenderConfig) (*alertSender, error) {
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
-	conn, err := grpc.DialContext(ctx, fmt.Sprintf("%s:8770", cfg.PublisherNodeAddr), grpc.WithInsecure())
-	cancel()
+	conn, err := grpc.Dial(fmt.Sprintf("%s:8770", cfg.PublisherNodeAddr), grpc.WithInsecure())
 	if err != nil {
 		log.WithError(err).Errorf("could not reach %s within timeout", cfg.PublisherNodeAddr)
 		return nil, err

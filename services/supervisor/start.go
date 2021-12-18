@@ -36,8 +36,6 @@ type SupervisorServiceConfig struct {
 	Passphrase string
 }
 
-var MockConfig string
-
 func (sup *SupervisorService) Start() error {
 	if err := sup.start(); err != nil {
 		return err
