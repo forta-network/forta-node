@@ -59,6 +59,7 @@ func (sup *SupervisorService) start() error {
 	sup.config.Config.FortaDir = os.Getenv(config.EnvFortaDir)
 	sup.maxLogSize = sup.config.Config.Log.MaxLogSize
 	sup.maxLogFiles = sup.config.Config.Log.MaxLogFiles
+	sup.config.Config.ExposeNats = true
 
 	passphrase, err := security.ReadPassphrase()
 	if err != nil {
