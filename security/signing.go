@@ -39,16 +39,10 @@ func ReadPassphrase() (string, error) {
 
 // LoadKey loads the node private key.
 func LoadKey(keysDirPath string) (*keystore.Key, error) {
-	f, err := os.OpenFile("/passphrase", os.O_RDONLY, 400)
+	passphrase, err := ReadPassphrase()
 	if err != nil {
 		return nil, err
 	}
-
-	pw, err := io.ReadAll(bufio.NewReader(f))
-	if err != nil {
-		return nil, err
-	}
-	passphrase := string(pw)
 
 	files, err := ioutil.ReadDir(keysDirPath)
 	if err != nil {

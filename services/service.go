@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"github.com/forta-protocol/forta-node/ens"
 	"os"
 	"os/signal"
 	"syscall"
@@ -37,11 +38,30 @@ func initExecID(ctx context.Context) context.Context {
 	return context.WithValue(ctx, execIDKey, execID.String())
 }
 
+func setContracts(cfg *config.Config) error {
+	contracts, err := ens.ResolveFortaContracts(cfg.ENSConfig.JsonRpc.Url, cfg.ENSConfig.ContractAddress)
+	if err != nil {
+		return err
+	}
+	if cfg.Registry.ContractAddress == "" {
+		cfg.Registry.ContractAddress = contracts.Dispatch
+	}
+	if cfg.Publish.ContractAddress == "" {
+		cfg.Publish.ContractAddress = contracts.Alerts
+	}
+	cfg.AgentRegistryContractAddress = contracts.Agent
+	return nil
+}
+
 func ContainerMain(name string, getServices func(ctx context.Context, cfg config.Config) ([]Service, error)) {
 	cfg, err := config.GetConfig()
 	if err != nil {
 		log.Errorf("could not initialize log level: %v", err)
 		return
+	}
+
+	if err := setContracts(&cfg); err != nil {
+		log.WithError(err).Error("could not initialize contracts for config")
 	}
 
 	lvl, err := log.ParseLevel(cfg.Log.Level)

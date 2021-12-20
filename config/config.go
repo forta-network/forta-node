@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path"
 
 	"github.com/creasty/defaults"
 	"github.com/goccy/go-json"
@@ -37,7 +38,7 @@ type LogConfig struct {
 }
 
 type RegistryConfig struct {
-	JsonRpc           JsonRpcConfig `yaml:"jsonRpc" json:"jsonRpc"`
+	JsonRpc           JsonRpcConfig `yaml:"jsonRpc" json:"jsonRpc" default:"{\"url\": \"https://polygon-rpc.com\"}"`
 	IPFS              IPFSConfig    `yaml:"ipfs" json:"ipfs"`
 	ContractAddress   string        `yaml:"contractAddress" json:"contractAddress" validate:"eth_addr"`
 	ContainerRegistry string        `yaml:"containerRegistry" json:"containerRegistry" validate:"hostname" default:"disco.forta.network" `
@@ -83,7 +84,7 @@ type ResourcesConfig struct {
 
 type ENSConfig struct {
 	DefaultContract bool          `yaml:"defaultContract" json:"defaultContract" default:"false" `
-	ContractAddress string        `yaml:"contractAddress" json:"contractAddress" validate:"omitempty,eth_addr"`
+	ContractAddress string        `yaml:"contractAddress" json:"contractAddress" validate:"omitempty,eth_addr" default:"0x08f42fcc52a9C2F391bF507C4E8688D0b53e1bd7"`
 	JsonRpc         JsonRpcConfig `yaml:"jsonRpc" json:"jsonRpc" default:"{\"url\": \"https://polygon-rpc.com\"}" `
 }
 
@@ -126,15 +127,14 @@ func getConfigFromEnv() (Config, error) {
 }
 
 func GetConfig() (Config, error) {
-	filePath := fmt.Sprintf("%s/%s", DefaultContainerFortaDirPath, "config.yml")
 	var cfg Config
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+	if _, err := os.Stat(DefaultContainerConfigPath); os.IsNotExist(err) {
 		cfg, err = getConfigFromEnv()
 		if err != nil {
 			return Config{}, err
 		}
 	}
-	cfg, err := getConfigFromFile(filePath)
+	cfg, err := getConfigFromFile(DefaultContainerConfigPath)
 	if err != nil {
 		return Config{}, err
 	}
@@ -147,11 +147,12 @@ func applyContextDefaults(cfg *Config) {
 	if cfg.ChainID == 1 {
 		cfg.Trace.Enabled = true
 	}
-	if !cfg.ENSConfig.DefaultContract {
-		if cfg.ENSConfig.ContractAddress == "" {
-			cfg.ENSConfig.ContractAddress = "0x08f42fcc52a9C2F391bF507C4E8688D0b53e1bd7"
-		}
+	if cfg.ENSConfig.DefaultContract {
+		cfg.ENSConfig.ContractAddress = ""
 	}
+	cfg.FortaDir = DefaultContainerFortaDirPath
+	cfg.ConfigPath = DefaultContainerConfigPath
+	cfg.KeyDirPath = path.Join(cfg.FortaDir, DefaultKeysDirName)
 }
 
 func getConfigFromFile(filename string) (Config, error) {

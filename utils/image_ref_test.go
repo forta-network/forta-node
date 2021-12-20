@@ -19,13 +19,13 @@ func TestValidateDiscoImageRef(t *testing.T) {
 		{
 			name:        "valid default",
 			ref:         "bafybeidslpugzaxfpvbhw3mknsohhdljgpqsimom6re7pbqwvtyzqtyi5m@sha256:6910b7c4806203b40bd8cd6e0d5b184280051b872517d8a37b4849a62ff9a014",
-			fixedRef:    "disco.forta.network/bafybeidslpugzaxfpvbhw3mknsohhdljgpqsimom6re7pbqwvtyzqtyi5m",
+			fixedRef:    "disco.forta.network/bafybeidslpugzaxfpvbhw3mknsohhdljgpqsimom6re7pbqwvtyzqtyi5m@sha256:6910b7c4806203b40bd8cd6e0d5b184280051b872517d8a37b4849a62ff9a014",
 			expectedErr: nil,
 		},
 		{
 			name:        "long default",
 			ref:         "disco.forta.network/bafybeidslpugzaxfpvbhw3mknsohhdljgpqsimom6re7pbqwvtyzqtyi5m@sha256:6910b7c4806203b40bd8cd6e0d5b184280051b872517d8a37b4849a62ff9a014",
-			fixedRef:    "disco.forta.network/bafybeidslpugzaxfpvbhw3mknsohhdljgpqsimom6re7pbqwvtyzqtyi5m",
+			fixedRef:    "disco.forta.network/bafybeidslpugzaxfpvbhw3mknsohhdljgpqsimom6re7pbqwvtyzqtyi5m@sha256:6910b7c4806203b40bd8cd6e0d5b184280051b872517d8a37b4849a62ff9a014",
 			expectedErr: nil,
 		},
 		{

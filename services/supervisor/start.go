@@ -101,6 +101,15 @@ func (sup *SupervisorService) start() error {
 		}
 	}
 
+	// this is just to make a unit test work, needs refactor to avoid
+	cfgBytes := []byte(os.Getenv("MOCK_CONFIG_BYTES"))
+	if os.Getenv("MOCK_CONFIG_BYTES") == "" {
+		cfgBytes, err = os.ReadFile(config.DefaultContainerConfigPath)
+		if err != nil {
+			return err
+		}
+	}
+
 	// start nats, wait for it and connect from the supervisor
 	natsContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerNatsContainerName,
@@ -139,7 +148,8 @@ func (sup *SupervisorService) start() error {
 			sup.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
 		},
 		Files: map[string][]byte{
-			"passphrase": []byte(sup.config.Passphrase),
+			"passphrase":                      []byte(sup.config.Passphrase),
+			config.DefaultContainerConfigPath: cfgBytes,
 		},
 		NetworkID:   nodeNetworkID,
 		MaxLogFiles: sup.maxLogFiles,
@@ -148,6 +158,9 @@ func (sup *SupervisorService) start() error {
 	if err != nil {
 		return err
 	}
+	if err := sup.client.WaitContainerStart(sup.ctx, publisherContainer.ID); err != nil {
+		return fmt.Errorf("failed while waiting for publisher to start: %v", err)
+	}
 
 	sup.jsonRpcContainer, err = sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerJSONRPCProxyContainerName,
@@ -155,6 +168,12 @@ func (sup *SupervisorService) start() error {
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "json-rpc"},
 		Volumes: map[string]string{
 			sup.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
+		},
+		Env: map[string]string{
+			config.EnvFortaDir: config.DefaultContainerFortaDirPath,
+		},
+		Files: map[string][]byte{
+			config.DefaultContainerConfigPath: cfgBytes,
 		},
 		NetworkID:   nodeNetworkID,
 		MaxLogFiles: sup.maxLogFiles,
@@ -177,7 +196,8 @@ func (sup *SupervisorService) start() error {
 			sup.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
 		},
 		Files: map[string][]byte{
-			"passphrase": []byte(sup.config.Passphrase),
+			"passphrase":                      []byte(sup.config.Passphrase),
+			config.DefaultContainerConfigPath: cfgBytes,
 		},
 		NetworkID:   nodeNetworkID,
 		MaxLogFiles: sup.maxLogFiles,
