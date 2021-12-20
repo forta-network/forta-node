@@ -2,15 +2,15 @@ package config
 
 // ReleaseManifest contains the latest info about the latest scanner version.
 type ReleaseManifest struct {
-	Metadata ReleaseMetadata `json:"metadata"`
+	Release Release `json:"release"`
 }
 
-// ReleaseMetadata contains release data.
-type ReleaseMetadata struct {
-	Version   string          `json:"version"`
-	Timestamp string          `json:"timestamp"`
-	Notes     string          `json:"notes"`
-	Services  ReleaseServices `json:"services"`
+// Release contains release data.
+type Release struct {
+	Timestamp  string          `json:"timestamp"`
+	Repository string          `json:"repository"`
+	Commit     string          `json:"commit"`
+	Services   ReleaseServices `json:"services"`
 }
 
 // ReleaseServices are the services to run for scanner node.

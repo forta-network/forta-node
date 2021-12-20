@@ -70,18 +70,16 @@ func (runner *Runner) stopContainer(container *clients.DockerContainer) {
 
 func (runner *Runner) receive() {
 	for latestRefs := range runner.imgStore.Latest() {
-		log.WithField("supervisor", latestRefs.Supervisor).WithField("updater", latestRefs.Updater).
-			Info("received new node image reference")
-		runner.replaceContainers(latestRefs)
+		logger := log.WithField("supervisor", latestRefs.Supervisor).WithField("updater", latestRefs.Updater)
+		if latestRefs.Release != nil {
+			logger = logger.WithField("commit", latestRefs.Release.Release.Commit)
+		}
+		logger.Info("received new node image reference")
+		runner.replaceContainers(logger, latestRefs)
 	}
 }
 
-func (runner *Runner) replaceContainers(imageRefs store.ImageRefs) {
-	logger := log.WithField("supervisor", imageRefs.Supervisor).WithField("updater", imageRefs.Updater)
-	if imageRefs.Release != nil {
-		logger = logger.WithField("version", imageRefs.Release.Metadata.Version)
-	}
-
+func (runner *Runner) replaceContainers(logger *log.Entry, imageRefs store.ImageRefs) {
 	runner.Stop()
 
 	// ensure that we restart from scratch

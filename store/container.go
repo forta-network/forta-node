@@ -68,7 +68,7 @@ func (store *fortaImageStore) check(ctx context.Context) {
 		return
 	}
 
-	serviceImgs := latestRelease.Metadata.Services
+	serviceImgs := latestRelease.Release.Services
 	if serviceImgs.Supervisor != store.latestImgs.Supervisor || serviceImgs.Updater != store.latestImgs.Updater {
 		store.latestImgs = ImageRefs{
 			Supervisor: serviceImgs.Supervisor,
