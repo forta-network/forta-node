@@ -3,7 +3,6 @@ package scanner
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -62,10 +61,6 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 }
 
 func initTxAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.TxStreamService, ap *agentpool.AgentPool, msgClient clients.MessageClient) (*scanner.TxAnalyzerService, error) {
-	qn := os.Getenv(config.EnvPublisherHost)
-	if qn == "" {
-		return nil, fmt.Errorf("%s is a required env var", config.EnvPublisherHost)
-	}
 	return scanner.NewTxAnalyzerService(ctx, scanner.TxAnalyzerServiceConfig{
 		TxChannel:   stream.ReadOnlyTxStream(),
 		AlertSender: as,
@@ -75,10 +70,6 @@ func initTxAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSend
 }
 
 func initBlockAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.TxStreamService, ap *agentpool.AgentPool, msgClient clients.MessageClient) (*scanner.BlockAnalyzerService, error) {
-	qn := os.Getenv(config.EnvPublisherHost)
-	if qn == "" {
-		return nil, fmt.Errorf("%s is a required env var", config.EnvPublisherHost)
-	}
 	return scanner.NewBlockAnalyzerService(ctx, scanner.BlockAnalyzerServiceConfig{
 		BlockChannel: stream.ReadOnlyBlockStream(),
 		AlertSender:  as,
@@ -88,24 +79,16 @@ func initBlockAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertS
 }
 
 func initAlertSender(ctx context.Context, key *keystore.Key) (clients.AlertSender, error) {
-	qn := os.Getenv(config.EnvPublisherHost)
-	if qn == "" {
-		return nil, fmt.Errorf("%s is a required env var", config.EnvPublisherHost)
-	}
 	return clients.NewAlertSender(ctx, clients.AlertSenderConfig{
 		Key:               key,
-		PublisherNodeAddr: qn,
+		PublisherNodeAddr: config.DockerPublisherContainerName,
 	})
 }
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
 	cfg.LocalAgentsPath = config.DefaultContainerLocalAgentsFilePath
 
-	natsHost := os.Getenv(config.EnvNatsHost)
-	if natsHost == "" {
-		return nil, fmt.Errorf("%s is a required env var", config.EnvNatsHost)
-	}
-	msgClient := messaging.NewClient("scanner", fmt.Sprintf("%s:%s", natsHost, config.DefaultNatsPort))
+	msgClient := messaging.NewClient("scanner", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 
 	key, err := security.LoadKey(config.DefaultContainerKeyDirPath)
 	if err != nil {

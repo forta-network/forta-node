@@ -1,12 +1,11 @@
 package config
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"path"
 
 	"github.com/creasty/defaults"
-	"github.com/goccy/go-json"
 )
 
 type JsonRpcConfig struct {
@@ -114,29 +113,11 @@ func (cfg *Config) ConfigFilePath() string {
 	return path.Join(cfg.FortaDir, DefaultConfigFileName)
 }
 
-func getConfigFromEnv() (Config, error) {
-	cfgJson := os.Getenv(EnvConfig)
-	if cfgJson == "" {
-		return Config{}, fmt.Errorf("%s is required", EnvConfig)
-	}
-	var cfg Config
-	if err := json.Unmarshal([]byte(cfgJson), &cfg); err != nil {
-		return Config{}, err
-	}
-	if err := defaults.Set(&cfg); err != nil {
-		return Config{}, err
-	}
-	return cfg, nil
-}
-
 //GetConfigForContainer is how a container gets the forta configuration (file or env var)
 func GetConfigForContainer() (Config, error) {
 	var cfg Config
 	if _, err := os.Stat(DefaultContainerConfigPath); os.IsNotExist(err) {
-		cfg, err = getConfigFromEnv()
-		if err != nil {
-			return Config{}, err
-		}
+		return cfg, errors.New("config file not found")
 	}
 	cfg, err := getConfigFromFile(DefaultContainerConfigPath)
 	if err != nil {
