@@ -35,7 +35,7 @@ runs:
       run: |
         ./scripts/build-manifest.sh  ./scripts/manifest-template.json manifest.json $GITHUB_SHA $IMAGE_REF
     - name: Push Manifest
-      uses: aquiladev/ipfs-action@v1
+      uses: aquiladev/ipfs-action@master
       id: ipfs
       with:
         path: ./manifest.json
