@@ -14,7 +14,7 @@ import (
 
 func handleFortaInit(cmd *cobra.Command, args []string) error {
 	if isInitialized() {
-		greenBold("Already initialized - please ensure that your configuration at %s is correct!\n", cfg.ConfigPath)
+		greenBold("Already initialized - please ensure that your configuration at %s is correct!\n", cfg.ConfigFilePath())
 		return nil
 	}
 
@@ -33,7 +33,7 @@ func handleFortaInit(cmd *cobra.Command, args []string) error {
 		if err := tmpl.Execute(&buf, config.GetEnvDefaults(cfg.Development)); err != nil {
 			return err
 		}
-		if err := os.WriteFile(cfg.ConfigPath, buf.Bytes(), 0644); err != nil {
+		if err := os.WriteFile(cfg.ConfigFilePath(), buf.Bytes(), 0644); err != nil {
 			return err
 		}
 	}
@@ -122,7 +122,7 @@ func isDirInitialized() bool {
 }
 
 func isConfigFileInitialized() bool {
-	info, err := os.Stat(cfg.ConfigPath)
+	info, err := os.Stat(cfg.ConfigFilePath())
 	if err != nil {
 		return false
 	}

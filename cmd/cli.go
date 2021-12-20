@@ -22,7 +22,6 @@ import (
 
 const (
 	keyFortaDir         = "forta_dir"
-	keyFortaConfigFile  = "forta_config_file"
 	keyFortaPassphrase  = "forta_passphrase"
 	keyFortaDevelopment = "forta_development"
 	keyFortaExposeNats  = "forta_expose_nats"
@@ -126,9 +125,6 @@ func init() {
 	cmdForta.PersistentFlags().String("dir", "", "Forta dir (default is $HOME/.forta) (overrides $FORTA_DIR)")
 	viper.BindPFlag(keyFortaDir, cmdForta.PersistentFlags().Lookup("dir"))
 
-	cmdForta.PersistentFlags().String("config", "", "config file (default is $HOME/.forta/config.yml) (overrides $FORTA_CONFIG_FILE)")
-	viper.BindPFlag(keyFortaConfigFile, cmdForta.PersistentFlags().Lookup("config"))
-
 	cmdForta.PersistentFlags().Bool("development", false, "development mode (overrides $FORTA_DEVELOPMENT)")
 	viper.BindPFlag(keyFortaDevelopment, cmdForta.PersistentFlags().Lookup("development"))
 
@@ -150,7 +146,6 @@ func initConfig() {
 	viper.SetConfigType("yaml")
 
 	viper.BindEnv(keyFortaDir)
-	viper.BindEnv(keyFortaConfigFile)
 	viper.BindEnv(keyFortaPassphrase)
 	viper.BindEnv(keyFortaDevelopment)
 	viper.BindEnv(keyFortaExposeNats)
@@ -163,11 +158,7 @@ func initConfig() {
 		fortaDir = path.Join(home, ".forta")
 	}
 
-	configPath := viper.GetString(keyFortaConfigFile)
-	if configPath == "" {
-		configPath = path.Join(fortaDir, "config.yml")
-	}
-
+	configPath := path.Join(fortaDir, config.DefaultConfigFileName)
 	configBytes, _ := ioutil.ReadFile(configPath)
 	yaml.Unmarshal(configBytes, &cfg)
 
@@ -176,7 +167,6 @@ func initConfig() {
 	}
 
 	cfg.FortaDir = fortaDir
-	cfg.ConfigPath = configPath
 	cfg.KeyDirPath = path.Join(cfg.FortaDir, config.DefaultKeysDirName)
 	cfg.Development = viper.GetBool(keyFortaDevelopment)
 	cfg.Passphrase = viper.GetString(keyFortaPassphrase)
@@ -239,7 +229,7 @@ func withValidConfig(handler func(*cobra.Command, []string) error) func(*cobra.C
 func withInitialized(handler func(*cobra.Command, []string) error) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		if !isInitialized() {
-			yellowBold("Please make sure you do 'forta init' first and check your configuration at %s\n", cfg.ConfigPath)
+			yellowBold("Please make sure you do 'forta init' first and check your configuration at %s/config.yml\n", cfg.FortaDir)
 			return errors.New("not initialized")
 		}
 		return handler(cmd, args)

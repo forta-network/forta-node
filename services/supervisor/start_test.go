@@ -74,7 +74,6 @@ func (m configMatcher) String() string {
 // SetupTest sets up the test.
 func (s *Suite) SetupTest() {
 	security.MockPassphrase = "test"
-	assert.NoError(s.T(), os.Setenv("MOCK_CONFIG_BYTES", "MOCK"))
 	assert.NoError(s.T(), os.Setenv(config.EnvNatsHost, config.DockerNatsContainerName))
 	s.r = require.New(s.T())
 	s.dockerClient = mock_clients.NewMockDockerClient(gomock.NewController(s.T()))
