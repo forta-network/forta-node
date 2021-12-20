@@ -111,7 +111,7 @@ type Config struct {
 }
 
 func (cfg *Config) ConfigFilePath() string {
-	return fmt.Sprintf("%s/%s", cfg.FortaDir, DefaultConfigFileName)
+	return path.Join(cfg.FortaDir, DefaultConfigFileName)
 }
 
 func getConfigFromEnv() (Config, error) {

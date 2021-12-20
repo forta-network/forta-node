@@ -158,7 +158,7 @@ func initConfig() {
 		fortaDir = path.Join(home, ".forta")
 	}
 
-	configPath := fmt.Sprintf("%s/%s", fortaDir, config.DefaultConfigFileName)
+	configPath := path.Join(fortaDir, config.DefaultConfigFileName)
 	configBytes, _ := ioutil.ReadFile(configPath)
 	yaml.Unmarshal(configBytes, &cfg)
 
