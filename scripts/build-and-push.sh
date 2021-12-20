@@ -16,4 +16,4 @@ if [ -z "$FOUND_LINE" ]; then
 	exit 1
 fi;
 IPFS_REF=${FOUND_LINE::59}
-echo "$REGISTRY/$IPFS_REF"
+echo "$REGISTRY/$IPFS_REF@sha256:$DIGEST"
