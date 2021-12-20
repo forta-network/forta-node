@@ -1,0 +1,39 @@
+name: Deploy Dev
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    branches: [master]
+  pull_request:
+
+jobs:
+  containers:
+    name: Build and push containers
+    runs-on: ubuntu-latest
+    environment: dev
+    outputs:
+      node-image-ref: ${{ steps.write-output.outputs.node-image-ref }}
+    strategy:
+      matrix:
+        image-name: [
+            "node"
+        ]
+    steps:
+      - name: Clear artifacts
+        uses: kolpav/purge-artifacts-action@v1
+        continue-on-error: true
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          expire-in: 7days
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build and push container
+        id: build-and-push
+        uses: ./.github/actions/build-push
+        with:
+          registry: disco-dev.forta.network
+          name: ${{ matrix.image-name }}
+      - name: Write image reference as output
+        id: write-output
+        run: echo "::set-output name=${{ matrix.image-name }}-image-ref::${{ steps.build-and-push.outputs.image-reference }}"
