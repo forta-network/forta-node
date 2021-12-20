@@ -6,6 +6,7 @@ import (
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/store"
+	"github.com/forta-protocol/forta-node/utils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -96,13 +97,23 @@ func (runner *Runner) replaceContainers(logger *log.Entry, imageRefs store.Image
 		}
 	}
 
-	if err := runner.dockerClient.EnsureLocalImage(runner.ctx, "updater", imageRefs.Updater); err != nil {
-		logger.WithError(err).Error("failed to ensure local image for updater")
-		return
-	}
-	if err := runner.dockerClient.EnsureLocalImage(runner.ctx, "supervisor", imageRefs.Supervisor); err != nil {
-		logger.WithError(err).Error("failed to ensure local image for supervisor")
-		return
+	for _, image := range []struct {
+		Name string
+		Ref  string
+	}{
+		{
+			Name: "updater",
+			Ref:  imageRefs.Updater,
+		},
+		{
+			Name: "supervisor",
+			Ref:  imageRefs.Supervisor,
+		},
+	} {
+		if err := runner.ensureNodeImage(image.Name, image.Ref); err != nil {
+			logger.WithError(err).Errorf("failed to ensure local image for %s", image.Name)
+			return
+		}
 	}
 
 	var err error
@@ -136,4 +147,12 @@ func (runner *Runner) replaceContainers(logger *log.Entry, imageRefs store.Image
 		logger.WithError(err).Errorf("failed to start the supervisor")
 		return
 	}
+}
+
+func (runner *Runner) ensureNodeImage(name, ref string) error {
+	fixedRef, err := utils.ValidateDiscoImageRef(runner.cfg.Registry.ContainerRegistry, ref)
+	if err != nil {
+		return err
+	}
+	return runner.dockerClient.EnsureLocalImage(runner.ctx, name, fixedRef)
 }
