@@ -34,4 +34,4 @@ mkdir -p "$HOME/.forta/.keys"
 echo "$privateKeyJson" > "$HOME/.forta/.keys/$privateKeyFileName"
 
 nohup \
-	forta --config "/etc/forta/config.yml" --passphrase $passphrase run > /dev/null 2> /tmp/forta.log < /dev/null &
+	forta --passphrase $passphrase run > /dev/null 2> /tmp/forta.log < /dev/null &
