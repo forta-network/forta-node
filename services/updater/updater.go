@@ -6,7 +6,6 @@ import (
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/store"
 	log "github.com/sirupsen/logrus"
-	"os"
 )
 
 // Updater receives and starts the latest supervisor.
@@ -91,27 +90,20 @@ func (up *Updater) replaceSupervisor(imageRef string) {
 	}
 
 	var err error
-
-	cfgBytes, err := os.ReadFile(up.cfg.ConfigPath)
-	if err != nil {
-		return
-	}
 	up.supervisorContainer, err = up.dockerClient.StartContainer(up.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerSupervisorContainerName,
 		Image: imageRef,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "supervisor"},
 		Env: map[string]string{
-			config.EnvConfigPath: up.cfg.ConfigPath,
-			config.EnvNatsHost:   config.DockerNatsContainerName,
-			config.EnvFortaDir:   up.cfg.FortaDir,
+			config.EnvNatsHost: config.DockerNatsContainerName,
+			config.EnvFortaDir: up.cfg.FortaDir,
 		},
 		Volumes: map[string]string{
 			"/var/run/docker.sock": "/var/run/docker.sock", // give access to host docker
 			up.cfg.FortaDir:        config.DefaultContainerFortaDirPath,
 		},
 		Files: map[string][]byte{
-			"passphrase":                      []byte(up.cfg.Passphrase),
-			config.DefaultContainerConfigPath: cfgBytes,
+			"passphrase": []byte(up.cfg.Passphrase),
 		},
 		MaxLogSize:  up.cfg.Log.MaxLogSize,
 		MaxLogFiles: up.cfg.Log.MaxLogFiles,

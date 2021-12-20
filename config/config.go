@@ -92,7 +92,6 @@ type Config struct {
 	ChainID                      int            `yaml:"chainId" json:"chainId" default:"1" `
 	Development                  bool           `yaml:"-" json:"_development"`
 	FortaDir                     string         `yaml:"-" json:"_fortaDir"`
-	ConfigPath                   string         `yaml:"-" json:"_configPath"`
 	KeyDirPath                   string         `yaml:"-" json:"_keyDirPath"`
 	Passphrase                   string         `yaml:"-" json:"_passphrase"`
 	ExposeNats                   bool           `yaml:"-" json:"_exposeNats"`
@@ -111,6 +110,10 @@ type Config struct {
 	ENSConfig       ENSConfig           `yaml:"ens" json:"ens"`
 }
 
+func (cfg *Config) ConfigFilePath() string {
+	return path.Join(cfg.FortaDir, DefaultConfigFileName)
+}
+
 func getConfigFromEnv() (Config, error) {
 	cfgJson := os.Getenv(EnvConfig)
 	if cfgJson == "" {
@@ -126,7 +129,8 @@ func getConfigFromEnv() (Config, error) {
 	return cfg, nil
 }
 
-func GetConfig() (Config, error) {
+//GetConfigForContainer is how a container gets the forta configuration (file or env var)
+func GetConfigForContainer() (Config, error) {
 	var cfg Config
 	if _, err := os.Stat(DefaultContainerConfigPath); os.IsNotExist(err) {
 		cfg, err = getConfigFromEnv()
@@ -151,7 +155,6 @@ func applyContextDefaults(cfg *Config) {
 		cfg.ENSConfig.ContractAddress = ""
 	}
 	cfg.FortaDir = DefaultContainerFortaDirPath
-	cfg.ConfigPath = DefaultContainerConfigPath
 	cfg.KeyDirPath = path.Join(cfg.FortaDir, DefaultKeysDirName)
 }
 

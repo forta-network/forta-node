@@ -54,7 +54,7 @@ func setContracts(cfg *config.Config) error {
 }
 
 func ContainerMain(name string, getServices func(ctx context.Context, cfg config.Config) ([]Service, error)) {
-	cfg, err := config.GetConfig()
+	cfg, err := config.GetConfigForContainer()
 	if err != nil {
 		log.Errorf("could not initialize log level: %v", err)
 		return
