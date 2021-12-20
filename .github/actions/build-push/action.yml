@@ -27,8 +27,7 @@ runs:
         REGISTRY: ${{ inputs.registry }}
         IMAGE_NAME: ${{ inputs.name }}
       run: |
-        #IMAGE_REF=$(./scripts/build-and-push.sh "$REGISTRY" "$IMAGE_NAME")
-        IMAGE_REF=testvalue
+        IMAGE_REF=$(./scripts/build-and-push.sh "$REGISTRY" "$IMAGE_NAME")
         echo "::set-output name=image-reference::$IMAGE_REF"
         ./scripts/build-manifest.sh ./scripts/manifest-template.json manifest.json "$GITHUB_SHA" "$IMAGE_REF"
     - name: Push Manifest
