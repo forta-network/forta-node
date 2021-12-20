@@ -29,10 +29,6 @@ runs:
       run: |
         IMAGE_REF=$(./scripts/build-and-push.sh "$REGISTRY" "$IMAGE_NAME")
         echo "::set-output name=image-reference::$IMAGE_REF"
-    - name: Build Manifest
-      id: build-manifest
-      shell: bash
-      run: |
         ./scripts/build-manifest.sh  ./scripts/manifest-template.json manifest.json $GITHUB_SHA $IMAGE_REF
     - name: Push Manifest
       uses: aquiladev/ipfs-action@master
