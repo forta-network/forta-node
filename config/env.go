@@ -1,7 +1,7 @@
 package config
 
 const (
-	EnvFortaDir      = "FORTA_DIR"
+	EnvHostFortaDir  = "HOST_FORTA_DIR" // for retrieving forta dir path on the host os
 	EnvJsonRpcHost   = "JSON_RPC_HOST"
 	EnvJsonRpcPort   = "JSON_RPC_PORT"
 	EnvAgentGrpcPort = "AGENT_GRPC_PORT"
