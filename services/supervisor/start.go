@@ -3,9 +3,9 @@ package supervisor
 import (
 	"context"
 	"fmt"
-	"github.com/forta-protocol/forta-node/security"
-	"os"
 	"sync"
+
+	"github.com/forta-protocol/forta-node/security"
 
 	log "github.com/sirupsen/logrus"
 
@@ -54,7 +54,7 @@ func (sup *SupervisorService) start() error {
 		return err
 	}
 
-	sup.config.Config.FortaDir = os.Getenv(config.EnvFortaDir)
+	sup.config.Config.FortaDir = config.DefaultContainerFortaDirPath
 	sup.maxLogSize = sup.config.Config.Log.MaxLogSize
 	sup.maxLogFiles = sup.config.Config.Log.MaxLogFiles
 
@@ -131,10 +131,6 @@ func (sup *SupervisorService) start() error {
 		Name:  config.DockerPublisherContainerName,
 		Image: commonNodeImage,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "publisher"},
-		Env: map[string]string{
-			config.EnvFortaDir: config.DefaultContainerFortaDirPath,
-			config.EnvNatsHost: config.DockerNatsContainerName,
-		},
 		Volumes: map[string]string{
 			sup.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
 		},
@@ -156,9 +152,6 @@ func (sup *SupervisorService) start() error {
 		Name:  config.DockerJSONRPCProxyContainerName,
 		Image: commonNodeImage,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "json-rpc"},
-		Env: map[string]string{
-			config.EnvFortaDir: config.DefaultContainerFortaDirPath,
-		},
 		Volumes: map[string]string{
 			sup.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
 		},
@@ -174,11 +167,6 @@ func (sup *SupervisorService) start() error {
 		Name:  config.DockerScannerContainerName,
 		Image: commonNodeImage,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "scanner"},
-		Env: map[string]string{
-			config.EnvFortaDir:      config.DefaultContainerFortaDirPath,
-			config.EnvPublisherHost: config.DockerPublisherContainerName,
-			config.EnvNatsHost:      config.DockerNatsContainerName,
-		},
 		Volumes: map[string]string{
 			sup.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
 		},
@@ -227,11 +215,6 @@ func (sup *SupervisorService) ensureNodeImages() error {
 		{
 			Name: "nats",
 			Ref:  "nats:2.3.2",
-		},
-		{
-			Name:        "node",
-			Ref:         config.DockerScannerNodeImage,
-			RequireAuth: true,
 		},
 	} {
 		if err := sup.ensureLocalImage(image.Name, image.Ref, image.RequireAuth); err != nil {

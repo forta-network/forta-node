@@ -3,12 +3,11 @@ package supervisor
 import (
 	"context"
 	"fmt"
-	"github.com/forta-protocol/forta-node/security"
-	"os"
 	"testing"
 
+	"github.com/forta-protocol/forta-node/security"
+
 	"github.com/docker/docker/api/types"
-	"github.com/stretchr/testify/assert"
 
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/messaging"
@@ -74,7 +73,6 @@ func (m configMatcher) String() string {
 // SetupTest sets up the test.
 func (s *Suite) SetupTest() {
 	security.MockPassphrase = "test"
-	assert.NoError(s.T(), os.Setenv(config.EnvNatsHost, config.DockerNatsContainerName))
 	s.r = require.New(s.T())
 	s.dockerClient = mock_clients.NewMockDockerClient(gomock.NewController(s.T()))
 	s.dockerAuthClient = mock_clients.NewMockDockerClient(gomock.NewController(s.T()))

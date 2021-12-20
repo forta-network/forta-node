@@ -2,114 +2,62 @@ package updater
 
 import (
 	"context"
-	"github.com/forta-protocol/forta-node/clients"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"sync"
+
 	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/store"
-	log "github.com/sirupsen/logrus"
 )
 
-// Updater receives and starts the latest supervisor.
-type Updater struct {
-	ctx          context.Context
-	cfg          config.Config
-	imgStore     store.FortaImageStore
-	dockerClient clients.DockerClient
+// UpdaterService receives the release updates.
+type UpdaterService struct {
+	ctx  context.Context
+	port string
 
-	supervisorContainer *clients.DockerContainer
+	latestRelease *config.ReleaseManifest
+	mu            sync.RWMutex
 }
 
-// NewUpdater creates a new updater.
-func NewUpdater(ctx context.Context, cfg config.Config, imgStore store.FortaImageStore, dockerClient clients.DockerClient) *Updater {
-	return &Updater{
-		ctx:          ctx,
-		cfg:          cfg,
-		imgStore:     imgStore,
-		dockerClient: dockerClient,
+// NewUpdaterService creates a new updater service.
+func NewUpdaterService(ctx context.Context, port string) *UpdaterService {
+	return &UpdaterService{
+		ctx:  ctx,
+		port: port,
 	}
 }
 
 // Start starts the service.
-func (up *Updater) Start() error {
-	go up.receive()
+func (updater *UpdaterService) Start() error {
+	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		updater.mu.RLock()
+		defer updater.mu.RUnlock()
+
+		if updater.latestRelease == nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		b, _ := json.Marshal(updater.latestRelease)
+		w.Write(b)
+	}))
+
+	go http.ListenAndServe(fmt.Sprintf(":%s", updater.port), nil)
+	go updater.findLatestRelease()
+
 	return nil
 }
 
+func (updater *UpdaterService) findLatestRelease() {
+	// TODO: Find the latest release, unmarshal, lock, update in-memory, unlock.
+}
+
 // Name returns the name of the service.
-func (up *Updater) Name() string {
+func (updater *UpdaterService) Name() string {
 	return "updater"
 }
 
 // Stop stops the service
-func (up *Updater) Stop() error {
-	up.stopSupervisor()
+func (updater *UpdaterService) Stop() error {
 	return nil
-}
-
-func (up *Updater) stopSupervisor() {
-	if up.supervisorContainer != nil {
-		logger := log.WithField("container", up.supervisorContainer.ID)
-		logger.Info("stopping supervisor")
-		if err := up.dockerClient.InterruptContainer(context.Background(), up.supervisorContainer.ID); err != nil {
-			logger.WithError(err).Error("error stopping supervisor container")
-		} else {
-			logger.Info("supervisor stopped")
-		}
-		if err := up.dockerClient.WaitContainerExit(context.Background(), up.supervisorContainer.ID); err != nil {
-			logger.WithError(err).Error("error while waiting for container exist")
-		}
-	}
-}
-
-func (up *Updater) receive() {
-	for latestRef := range up.imgStore.Latest() {
-		log.WithField("image", latestRef).Info("received new node image reference")
-		up.replaceSupervisor(latestRef)
-	}
-}
-
-func (up *Updater) replaceSupervisor(imageRef string) {
-	logger := log.WithField("image", imageRef)
-
-	up.stopSupervisor()
-
-	// ensure that we restart from scratch
-	if err := up.dockerClient.Prune(up.ctx); err != nil {
-		logger.WithError(err).Error("error while pruning after stopping old supervisor")
-		return
-	}
-	if up.supervisorContainer != nil {
-		if err := up.dockerClient.WaitContainerPrune(up.ctx, up.supervisorContainer.ID); err != nil {
-			logger.WithError(err).Error("error while waiting for old supervisor prune")
-			return
-		}
-	}
-
-	if err := up.dockerClient.EnsureLocalImage(up.ctx, "supervisor", imageRef); err != nil {
-		logger.WithError(err).Error("failed to ensure local image for supervisor")
-		return
-	}
-
-	var err error
-	up.supervisorContainer, err = up.dockerClient.StartContainer(up.ctx, clients.DockerContainerConfig{
-		Name:  config.DockerSupervisorContainerName,
-		Image: imageRef,
-		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "supervisor"},
-		Env: map[string]string{
-			config.EnvNatsHost: config.DockerNatsContainerName,
-			config.EnvFortaDir: up.cfg.FortaDir,
-		},
-		Volumes: map[string]string{
-			"/var/run/docker.sock": "/var/run/docker.sock", // give access to host docker
-			up.cfg.FortaDir:        config.DefaultContainerFortaDirPath,
-		},
-		Files: map[string][]byte{
-			"passphrase": []byte(up.cfg.Passphrase),
-		},
-		MaxLogSize:  up.cfg.Log.MaxLogSize,
-		MaxLogFiles: up.cfg.Log.MaxLogFiles,
-	})
-	if err != nil {
-		logger.WithError(err).Errorf("failed to start the supervisor")
-		return
-	}
 }

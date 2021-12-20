@@ -3,7 +3,6 @@ package publisher
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	log "github.com/sirupsen/logrus"
@@ -15,11 +14,7 @@ import (
 )
 
 func initListener(ctx context.Context, cfg config.Config) (*publisher.Publisher, error) {
-	natsHost := os.Getenv(config.EnvNatsHost)
-	if natsHost == "" {
-		return nil, fmt.Errorf("%s is a required env var", config.EnvNatsHost)
-	}
-	mc := messaging.NewClient("metrics", fmt.Sprintf("%s:%s", natsHost, config.DefaultNatsPort))
+	mc := messaging.NewClient("metrics", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 
 	key, err := security.LoadKey(config.DefaultContainerKeyDirPath)
 	if err != nil {

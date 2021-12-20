@@ -13,3 +13,4 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /go/app/main /go/app/cmd/n
 
 FROM base
 COPY --from=go-builder /go/app/main /forta-node
+EXPOSE 8089
