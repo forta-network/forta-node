@@ -2,10 +2,11 @@ package services
 
 import (
 	"context"
-	"github.com/forta-protocol/forta-node/ens"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/forta-protocol/forta-node/ens"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -56,7 +57,7 @@ func setContracts(cfg *config.Config) error {
 func ContainerMain(name string, getServices func(ctx context.Context, cfg config.Config) ([]Service, error)) {
 	cfg, err := config.GetConfigForContainer()
 	if err != nil {
-		log.Errorf("could not initialize log level: %v", err)
+		log.WithError(err).Errorf("could not get config for container '%s'", name)
 		return
 	}
 
@@ -66,7 +67,7 @@ func ContainerMain(name string, getServices func(ctx context.Context, cfg config
 
 	lvl, err := log.ParseLevel(cfg.Log.Level)
 	if err != nil {
-		log.Errorf("could not initialize log level: %v", err)
+		log.WithError(err).Error("could not initialize log level")
 		return
 	}
 	log.SetLevel(lvl)
@@ -77,7 +78,7 @@ func ContainerMain(name string, getServices func(ctx context.Context, cfg config
 
 	serviceList, err := getServices(ctx, cfg)
 	if err != nil {
-		log.Errorf("could not initialize services: %v", err)
+		log.WithError(err).Error("could not initialize services")
 		return
 	}
 

@@ -3,6 +3,7 @@ package supervisor
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/forta-protocol/forta-node/security"
@@ -74,6 +75,7 @@ func (m configMatcher) String() string {
 func (s *Suite) SetupTest() {
 	security.MockPassphrase = "test"
 	s.r = require.New(s.T())
+	os.Setenv(config.EnvHostFortaDir, "/tmp/forta")
 	s.dockerClient = mock_clients.NewMockDockerClient(gomock.NewController(s.T()))
 	s.dockerAuthClient = mock_clients.NewMockDockerClient(gomock.NewController(s.T()))
 

@@ -3,6 +3,7 @@ package supervisor
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 
 	"github.com/forta-protocol/forta-node/security"
@@ -54,7 +55,11 @@ func (sup *SupervisorService) start() error {
 		return err
 	}
 
-	sup.config.Config.FortaDir = config.DefaultContainerFortaDirPath
+	hostFortaDir := os.Getenv(config.EnvHostFortaDir)
+	if len(hostFortaDir) == 0 {
+		return fmt.Errorf("supervisor needs to know $%s to mount to the other containers it runs", config.EnvHostFortaDir)
+	}
+
 	sup.maxLogSize = sup.config.Config.Log.MaxLogSize
 	sup.maxLogFiles = sup.config.Config.Log.MaxLogFiles
 
@@ -132,7 +137,7 @@ func (sup *SupervisorService) start() error {
 		Image: commonNodeImage,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "publisher"},
 		Volumes: map[string]string{
-			sup.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
+			hostFortaDir: config.DefaultContainerFortaDirPath,
 		},
 		Files: map[string][]byte{
 			"passphrase": []byte(sup.config.Passphrase),
@@ -153,7 +158,7 @@ func (sup *SupervisorService) start() error {
 		Image: commonNodeImage,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "json-rpc"},
 		Volumes: map[string]string{
-			sup.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
+			hostFortaDir: config.DefaultContainerFortaDirPath,
 		},
 		NetworkID:   nodeNetworkID,
 		MaxLogFiles: sup.maxLogFiles,
@@ -168,7 +173,7 @@ func (sup *SupervisorService) start() error {
 		Image: commonNodeImage,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "scanner"},
 		Volumes: map[string]string{
-			sup.config.Config.FortaDir: config.DefaultContainerFortaDirPath,
+			hostFortaDir: config.DefaultContainerFortaDirPath,
 		},
 		Files: map[string][]byte{
 			"passphrase": []byte(sup.config.Passphrase),

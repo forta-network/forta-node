@@ -122,6 +122,9 @@ func (runner *Runner) replaceContainers(logger *log.Entry, imageRefs store.Image
 		Name:  config.DockerUpdaterContainerName,
 		Image: imageRefs.Updater,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "updater"},
+		Volumes: map[string]string{
+			runner.cfg.FortaDir: config.DefaultContainerFortaDirPath,
+		},
 		Ports: map[string]string{
 			runner.updaterPort: runner.updaterPort,
 		},
@@ -137,8 +140,17 @@ func (runner *Runner) replaceContainers(logger *log.Entry, imageRefs store.Image
 		Name:  config.DockerSupervisorContainerName,
 		Image: imageRefs.Supervisor,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "supervisor"},
+		Env: map[string]string{
+			// supervisor needs to know and mount the forta dir on the host os
+			config.EnvHostFortaDir: runner.cfg.FortaDir,
+		},
 		Volumes: map[string]string{
-			"/var/run/docker.sock": "/var/run/docker.sock", // give access to host docker
+			// give access to host docker
+			"/var/run/docker.sock": "/var/run/docker.sock",
+			runner.cfg.FortaDir:    config.DefaultContainerFortaDirPath,
+		},
+		Files: map[string][]byte{
+			"passphrase": []byte(runner.cfg.Passphrase),
 		},
 		MaxLogSize:  runner.cfg.Log.MaxLogSize,
 		MaxLogFiles: runner.cfg.Log.MaxLogFiles,
@@ -150,9 +162,12 @@ func (runner *Runner) replaceContainers(logger *log.Entry, imageRefs store.Image
 }
 
 func (runner *Runner) ensureNodeImage(name, ref string) error {
-	fixedRef, err := utils.ValidateDiscoImageRef(runner.cfg.Registry.ContainerRegistry, ref)
-	if err != nil {
-		return err
+	if config.UseDockerImages == "remote" {
+		var err error
+		ref, err = utils.ValidateDiscoImageRef(runner.cfg.Registry.ContainerRegistry, ref)
+		if err != nil {
+			return err
+		}
 	}
-	return runner.dockerClient.EnsureLocalImage(runner.ctx, name, fixedRef)
+	return runner.dockerClient.EnsureLocalImage(runner.ctx, name, ref)
 }
