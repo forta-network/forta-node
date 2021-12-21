@@ -17,8 +17,6 @@ type WebUpdaterStore struct {
 	url string
 }
 
-//TODO: hardcoded, we're throwing this away soon
-
 //NewWebUpdaterStore creates a WebUpdaterStore
 func NewWebUpdaterStore(url string) *WebUpdaterStore {
 	return &WebUpdaterStore{url: url}
