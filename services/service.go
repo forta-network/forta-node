@@ -99,7 +99,8 @@ func InitMainContext() (context.Context, context.CancelFunc) {
 		syscall.SIGTERM,
 		syscall.SIGQUIT)
 	go func() {
-		<-sigc
+		sig := <-sigc
+		log.Infof("received signal: %s", sig.String())
 		cancel()
 	}()
 	return ctx, cancel

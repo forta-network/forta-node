@@ -25,6 +25,7 @@ type UpdaterService struct {
 	ipfs   store.IPFSClient
 	us     store.UpdaterStore
 	cancel context.CancelFunc
+	server *http.Server
 
 	latestReference string
 	latestRelease   *config.ReleaseManifest
@@ -32,39 +33,43 @@ type UpdaterService struct {
 
 // NewUpdaterService creates a new updater service.
 func NewUpdaterService(ctx context.Context, us store.UpdaterStore, ipfs store.IPFSClient, port string) *UpdaterService {
+	ctx, cancel := context.WithCancel(ctx)
 	return &UpdaterService{
-		ctx:  ctx,
-		port: port,
-		us:   us,
-		ipfs: ipfs,
+		ctx:    ctx,
+		port:   port,
+		us:     us,
+		ipfs:   ipfs,
+		cancel: cancel,
 	}
+}
+
+func (updater *UpdaterService) handleGetVersion(w http.ResponseWriter, r *http.Request) {
+	updater.mu.RLock()
+	defer updater.mu.RUnlock()
+
+	if updater.latestRelease == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	log.WithFields(log.Fields{
+		"release": updater.latestReference,
+	}).Info("release response")
+
+	b, _ := json.Marshal(updater.latestRelease)
+	w.Write(b)
 }
 
 // Start starts the service.
 func (updater *UpdaterService) Start() error {
-	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		updater.mu.RLock()
-		defer updater.mu.RUnlock()
+	updater.server = &http.Server{
+		Addr:    fmt.Sprintf(":%s", updater.port),
+		Handler: http.HandlerFunc(updater.handleGetVersion),
+	}
 
-		if updater.latestRelease == nil {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-
-		log.WithFields(log.Fields{
-			"release": updater.latestReference,
-		}).Info("release response")
-
-		b, _ := json.Marshal(updater.latestRelease)
-		w.Write(b)
-	}))
-
-	// this allows stop() to stop
-	ctx, cancel := context.WithCancel(updater.ctx)
-	updater.cancel = cancel
-	grp, ctx := errgroup.WithContext(ctx)
+	grp, ctx := errgroup.WithContext(updater.ctx)
 	grp.Go(func() error {
-		return http.ListenAndServe(fmt.Sprintf(":%s", updater.port), nil)
+		return updater.server.ListenAndServe()
 	})
 
 	t := time.NewTicker(updateInterval)
@@ -127,6 +132,12 @@ func (updater *UpdaterService) Name() string {
 // Stop stops the service
 func (updater *UpdaterService) Stop() error {
 	log.Infof("stopping %s", updater.Name())
+	if updater.server != nil {
+		if err := updater.server.Shutdown(updater.ctx); err != nil {
+			log.WithError(err).Error("error stopping server")
+			return err
+		}
+	}
 	updater.cancel()
 	return nil
 }
