@@ -251,9 +251,9 @@ func (d *dockerClient) GetContainerByID(ctx context.Context, id string) (*types.
 	if err != nil {
 		return nil, err
 	}
-	for _, container := range containers {
-		if container.ID == id {
-			return &container, nil
+	for _, c := range containers {
+		if c.ID == id {
+			return &c, nil
 		}
 	}
 	return nil, fmt.Errorf("%w with id '%s'", ErrContainerNotFound, id)
@@ -404,8 +404,8 @@ func (d *dockerClient) InterruptContainer(ctx context.Context, id string) error 
 func (d *dockerClient) WaitContainerExit(ctx context.Context, id string) error {
 	ticker := time.NewTicker(time.Second)
 	for range ticker.C {
-		container, err := d.GetContainerByID(ctx, id)
-		if err != nil && container.State == "running" {
+		c, err := d.GetContainerByID(ctx, id)
+		if err != nil && c != nil && c.State == "running" {
 			continue
 		}
 		break
@@ -418,8 +418,8 @@ func (d *dockerClient) WaitContainerStart(ctx context.Context, id string) error 
 	ticker := time.NewTicker(time.Second)
 	start := time.Now()
 	for t := range ticker.C {
-		container, err := d.GetContainerByID(ctx, id)
-		if err == nil && container != nil && container.State == "running" {
+		c, err := d.GetContainerByID(ctx, id)
+		if err == nil && c != nil && c.State == "running" {
 			return nil
 		}
 		// if the conditions are not met within 30 seconds, it's a failure

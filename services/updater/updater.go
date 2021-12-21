@@ -126,6 +126,7 @@ func (updater *UpdaterService) Name() string {
 
 // Stop stops the service
 func (updater *UpdaterService) Stop() error {
+	log.Infof("stopping %s", updater.Name())
 	updater.cancel()
 	return nil
 }
