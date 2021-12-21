@@ -87,7 +87,10 @@ func (updater *UpdaterService) Start() error {
 		return err
 	}
 
-	return grp.Wait()
+	if err := grp.Wait(); err != nil {
+		log.WithError(err).Error("error returned while running updater")
+	}
+	return nil
 }
 
 func (updater *UpdaterService) updateLatestRelease() error {
@@ -98,6 +101,7 @@ func (updater *UpdaterService) updateLatestRelease() error {
 	if ref != updater.latestReference {
 		rm, err := updater.ipfs.GetReleaseManifest(ref)
 		if err != nil {
+			log.WithError(err).Error("error getting release manifest")
 			return err
 		}
 		updater.mu.Lock()
@@ -107,6 +111,10 @@ func (updater *UpdaterService) updateLatestRelease() error {
 		log.WithFields(log.Fields{
 			"release": ref,
 		}).Info("updating to release")
+	} else {
+		log.WithFields(log.Fields{
+			"release": ref,
+		}).Info("no change to release")
 	}
 	return nil
 }
