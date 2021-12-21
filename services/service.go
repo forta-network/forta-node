@@ -21,6 +21,8 @@ type Service interface {
 	Name() string
 }
 
+var processGrp *errgroup.Group
+
 var execIDKey = struct{}{}
 
 func ExecID(ctx context.Context) string {
@@ -90,7 +92,9 @@ func ContainerMain(name string, getServices func(ctx context.Context, cfg config
 }
 
 func InitMainContext() (context.Context, context.CancelFunc) {
-	execIDCtx := initExecID(context.Background())
+	grp, ctx := errgroup.WithContext(context.Background())
+	processGrp = grp
+	execIDCtx := initExecID(ctx)
 	ctx, cancel := context.WithCancel(execIDCtx)
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc,
@@ -108,20 +112,22 @@ func InitMainContext() (context.Context, context.CancelFunc) {
 
 // StartServices kicks off all services and blocks until an error is returned or context ends
 func StartServices(ctx context.Context, services []Service) error {
-	grp, ctx := errgroup.WithContext(ctx)
-
-	for _, service := range services {
-		grp.Go(service.Start)
+	if processGrp == nil {
+		panic("InitMainContext must be called first")
 	}
 
 	// wait for context to stop (service.Start may either block or be async)
-	grp.Go(func() error {
+	processGrp.Go(func() error {
 		select {
 		case <-ctx.Done():
 			log.WithError(ctx.Err()).Info("context is done")
 			return ctx.Err()
 		}
 	})
+
+	for _, service := range services {
+		processGrp.Go(service.Start)
+	}
 
 	// clean up all services
 	defer func() {
@@ -132,8 +138,9 @@ func StartServices(ctx context.Context, services []Service) error {
 		}
 	}()
 
-	if err := grp.Wait(); err != nil && err != context.Canceled {
-		log.Errorf("Error returned from grp: %s", err.Error())
+	log.Info("grp.Wait()...")
+	if err := processGrp.Wait(); err != nil {
+		log.WithError(err).Error("StartServices ending with errgroup err")
 		return err
 	}
 	return nil
