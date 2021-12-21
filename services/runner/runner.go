@@ -99,20 +99,28 @@ func (runner *Runner) replaceContainers(logger *log.Entry, imageRefs store.Image
 
 	for _, image := range []struct {
 		Name string
-		Ref  string
+		Ref  *string
 	}{
 		{
 			Name: "updater",
-			Ref:  imageRefs.Updater,
+			Ref:  &imageRefs.Updater,
 		},
 		{
 			Name: "supervisor",
-			Ref:  imageRefs.Supervisor,
+			Ref:  &imageRefs.Supervisor,
 		},
 	} {
-		if err := runner.ensureNodeImage(image.Name, image.Ref); err != nil {
-			logger.WithError(err).Errorf("failed to ensure local image for %s", image.Name)
-			return
+		logger := log.WithField("ref", *image.Ref).WithField("name", image.Name)
+
+		ref, err := utils.ValidateDiscoImageRef(runner.cfg.Registry.ContainerRegistry, *image.Ref)
+		if err != nil {
+			logger.WithError(err).Warn("not a disco ref - skipping pull")
+			continue
+		}
+		// replace ref to include host in ref
+		*image.Ref = ref
+		if err := runner.dockerClient.EnsureLocalImage(runner.ctx, image.Name, ref); err != nil {
+			logger.WithError(err).Warn("failed to ensure local image")
 		}
 	}
 
@@ -159,15 +167,4 @@ func (runner *Runner) replaceContainers(logger *log.Entry, imageRefs store.Image
 		logger.WithError(err).Errorf("failed to start the supervisor")
 		return
 	}
-}
-
-func (runner *Runner) ensureNodeImage(name, ref string) error {
-	if config.UseDockerImages == "remote" {
-		var err error
-		ref, err = utils.ValidateDiscoImageRef(runner.cfg.Registry.ContainerRegistry, ref)
-		if err != nil {
-			return err
-		}
-	}
-	return runner.dockerClient.EnsureLocalImage(runner.ctx, name, ref)
 }

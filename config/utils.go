@@ -1,10 +1,11 @@
 package config
 
 import (
-	log "github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
 	"math/big"
 	"os"
+
+	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
 )
 
 func ParseBigInt(num int) *big.Int {

@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/creasty/defaults"
 	"io/ioutil"
 	"os"
 	"path"
 	"reflect"
 	"regexp"
 	"strings"
+
+	"github.com/creasty/defaults"
 
 	"github.com/forta-protocol/forta-node/config"
 	"gopkg.in/yaml.v3"
