@@ -118,6 +118,7 @@ func StartServices(ctx context.Context, services []Service) error {
 	grp.Go(func() error {
 		select {
 		case <-ctx.Done():
+			log.WithError(ctx.Err()).Info("context is done")
 			return ctx.Err()
 		}
 	})

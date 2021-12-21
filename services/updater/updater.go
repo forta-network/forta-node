@@ -24,7 +24,6 @@ type UpdaterService struct {
 	mu     sync.RWMutex
 	ipfs   store.IPFSClient
 	us     store.UpdaterStore
-	cancel context.CancelFunc
 	server *http.Server
 
 	latestReference string
@@ -33,13 +32,11 @@ type UpdaterService struct {
 
 // NewUpdaterService creates a new updater service.
 func NewUpdaterService(ctx context.Context, us store.UpdaterStore, ipfs store.IPFSClient, port string) *UpdaterService {
-	ctx, cancel := context.WithCancel(ctx)
 	return &UpdaterService{
-		ctx:    ctx,
-		port:   port,
-		us:     us,
-		ipfs:   ipfs,
-		cancel: cancel,
+		ctx:  ctx,
+		port: port,
+		us:   us,
+		ipfs: ipfs,
 	}
 }
 
@@ -138,6 +135,5 @@ func (updater *UpdaterService) Stop() error {
 			return err
 		}
 	}
-	updater.cancel()
 	return nil
 }
