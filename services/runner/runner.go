@@ -112,14 +112,16 @@ func (runner *Runner) replaceContainers(logger *log.Entry, imageRefs store.Image
 	} {
 		logger := log.WithField("ref", *image.Ref).WithField("name", image.Name)
 
-		ref, err := utils.ValidateDiscoImageRef(runner.cfg.Registry.ContainerRegistry, *image.Ref)
-		if err != nil {
-			logger.WithError(err).Warn("not a disco ref - skipping pull")
-			continue
+		if !runner.cfg.Development {
+			ref, err := utils.ValidateDiscoImageRef(runner.cfg.Registry.ContainerRegistry, *image.Ref)
+			if err != nil {
+				logger.WithError(err).Warn("not a disco ref - skipping pull")
+				continue
+			}
+			*image.Ref = ref
 		}
 		// replace ref to include host in ref
-		*image.Ref = ref
-		if err := runner.dockerClient.EnsureLocalImage(runner.ctx, image.Name, ref); err != nil {
+		if err := runner.dockerClient.EnsureLocalImage(runner.ctx, image.Name, *image.Ref); err != nil {
 			logger.WithError(err).Warn("failed to ensure local image")
 		}
 	}
