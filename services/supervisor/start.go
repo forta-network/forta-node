@@ -122,6 +122,7 @@ func (sup *SupervisorService) start() error {
 	if err != nil {
 		return err
 	}
+	sup.addContainerUnsafe(natsContainer)
 
 	if err := sup.client.WaitContainerStart(sup.ctx, natsContainer.ID); err != nil {
 		return fmt.Errorf("failed while waiting for nats to start: %v", err)
@@ -149,9 +150,7 @@ func (sup *SupervisorService) start() error {
 	if err != nil {
 		return err
 	}
-	if err := sup.client.WaitContainerStart(sup.ctx, publisherContainer.ID); err != nil {
-		return fmt.Errorf("failed while waiting for publisher to start: %v", err)
-	}
+	sup.addContainerUnsafe(publisherContainer)
 
 	sup.jsonRpcContainer, err = sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerJSONRPCProxyContainerName,
@@ -167,6 +166,7 @@ func (sup *SupervisorService) start() error {
 	if err != nil {
 		return err
 	}
+	sup.addContainerUnsafe(sup.jsonRpcContainer)
 
 	sup.scannerContainer, err = sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerScannerContainerName,
@@ -185,6 +185,7 @@ func (sup *SupervisorService) start() error {
 	if err != nil {
 		return err
 	}
+	sup.addContainerUnsafe(sup.scannerContainer)
 
 	if !sup.config.Config.ExposeNats {
 		if err := sup.attachToNetwork(config.DockerPublisherContainerName, natsNetworkID); err != nil {
@@ -194,8 +195,6 @@ func (sup *SupervisorService) start() error {
 			return err
 		}
 	}
-
-	sup.addContainerUnsafe(natsContainer, publisherContainer, sup.jsonRpcContainer, sup.scannerContainer)
 
 	return nil
 }

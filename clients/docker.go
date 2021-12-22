@@ -251,9 +251,9 @@ func (d *dockerClient) GetContainerByID(ctx context.Context, id string) (*types.
 	if err != nil {
 		return nil, err
 	}
-	for _, container := range containers {
-		if container.ID == id {
-			return &container, nil
+	for _, c := range containers {
+		if c.ID == id {
+			return &c, nil
 		}
 	}
 	return nil, fmt.Errorf("%w with id '%s'", ErrContainerNotFound, id)
@@ -261,6 +261,10 @@ func (d *dockerClient) GetContainerByID(ctx context.Context, id string) (*types.
 
 // StartContainer kicks off a container as a daemon and returns a summary of the container
 func (d *dockerClient) StartContainer(ctx context.Context, config DockerContainerConfig) (*DockerContainer, error) {
+	log.WithFields(log.Fields{
+		"image": config.Image,
+		"name":  config.Name,
+	}).Info("starting container")
 	containers, err := d.GetContainers(ctx)
 	if err != nil {
 		return nil, err
@@ -378,6 +382,9 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 
 // StopContainer kills a container by ID
 func (d *dockerClient) StopContainer(ctx context.Context, ID string) error {
+	log.WithFields(log.Fields{
+		"id": ID,
+	}).Info("stop container (SIGKILL)")
 	err := d.cli.ContainerKill(ctx, ID, "SIGKILL")
 	if err == nil {
 		return nil
@@ -389,8 +396,11 @@ func (d *dockerClient) StopContainer(ctx context.Context, ID string) error {
 }
 
 // InterruptContainer stops a container by sending an interrupt signal.
-func (d *dockerClient) InterruptContainer(ctx context.Context, id string) error {
-	err := d.cli.ContainerKill(ctx, id, "SIGINT")
+func (d *dockerClient) InterruptContainer(ctx context.Context, ID string) error {
+	log.WithFields(log.Fields{
+		"id": ID,
+	}).Info("stop container (SIGINT)")
+	err := d.cli.ContainerKill(ctx, ID, "SIGINT")
 	if err == nil {
 		return nil
 	}
@@ -404,8 +414,8 @@ func (d *dockerClient) InterruptContainer(ctx context.Context, id string) error 
 func (d *dockerClient) WaitContainerExit(ctx context.Context, id string) error {
 	ticker := time.NewTicker(time.Second)
 	for range ticker.C {
-		container, err := d.GetContainerByID(ctx, id)
-		if err != nil && container.State == "running" {
+		c, err := d.GetContainerByID(ctx, id)
+		if err != nil && c != nil && c.State == "running" {
 			continue
 		}
 		break
@@ -418,8 +428,8 @@ func (d *dockerClient) WaitContainerStart(ctx context.Context, id string) error 
 	ticker := time.NewTicker(time.Second)
 	start := time.Now()
 	for t := range ticker.C {
-		container, err := d.GetContainerByID(ctx, id)
-		if err == nil && container != nil && container.State == "running" {
+		c, err := d.GetContainerByID(ctx, id)
+		if err == nil && c != nil && c.State == "running" {
 			return nil
 		}
 		// if the conditions are not met within 30 seconds, it's a failure
@@ -433,10 +443,20 @@ func (d *dockerClient) WaitContainerStart(ctx context.Context, id string) error 
 // WaitContainerPrune waits for container prune by checking every second.
 func (d *dockerClient) WaitContainerPrune(ctx context.Context, id string) error {
 	ticker := time.NewTicker(time.Second)
+	logger := log.WithFields(log.Fields{
+		"id": id,
+	})
+	// if it takes longer than 10 seconds, then just move on
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
 	for range ticker.C {
+		logger.Infof("waiting for container prune")
 		_, err := d.GetContainerByID(ctx, id)
 		if err != nil && errors.Is(err, ErrContainerNotFound) {
 			return nil
+		}
+		if err != nil {
+			logger.WithError(err).Error("error while waiting for prune")
 		}
 	}
 	return nil
@@ -450,6 +470,10 @@ func (d *dockerClient) HasLocalImage(ctx context.Context, ref string) bool {
 
 // EnsureLocalImage ensures that we have the image locally.
 func (d *dockerClient) EnsureLocalImage(ctx context.Context, name, ref string) error {
+	log.WithFields(log.Fields{
+		"image": ref,
+		"name":  name,
+	}).Info("ensuring local image")
 	if d.HasLocalImage(ctx, ref) {
 		log.Infof("found local image for '%s': %s", name, ref)
 		return nil

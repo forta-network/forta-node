@@ -466,12 +466,12 @@ func NewPublisher(ctx context.Context, mc *messaging.Client, cfg PublisherConfig
 		// use nil IPFS client
 
 	case len(cfg.PublisherConfig.IPFS.Username) > 0 && len(cfg.PublisherConfig.IPFS.Password) > 0:
-		ipfsClient = ipfsapi.NewShellWithClient(cfg.PublisherConfig.IPFS.GatewayURL, &http.Client{
+		ipfsClient = ipfsapi.NewShellWithClient(cfg.PublisherConfig.IPFS.APIURL, &http.Client{
 			Transport: utils.NewBasicAuthTransport(cfg.PublisherConfig.IPFS.Username, cfg.PublisherConfig.IPFS.Password),
 		})
 
 	default:
-		ipfsClient = ipfsapi.NewShellWithClient(cfg.PublisherConfig.IPFS.GatewayURL, http.DefaultClient)
+		ipfsClient = ipfsapi.NewShellWithClient(cfg.PublisherConfig.IPFS.APIURL, http.DefaultClient)
 	}
 
 	batchInterval := defaultInterval

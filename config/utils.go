@@ -1,10 +1,11 @@
 package config
 
 import (
-	log "github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
 	"math/big"
 	"os"
+
+	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
 )
 
 func ParseBigInt(num int) *big.Int {
@@ -25,6 +26,9 @@ func InitLogLevel(cfg Config) error {
 	} else {
 		log.SetLevel(log.InfoLevel)
 	}
+	log.SetFormatter(&log.TextFormatter{
+		FullTimestamp: true,
+	})
 	return nil
 }
 
