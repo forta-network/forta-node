@@ -89,6 +89,7 @@ func (s *Suite) SetupTest() {
 	service.config.Config.Log.Level = "debug"
 
 	s.dockerClient.EXPECT().Prune(service.ctx)
+	s.dockerClient.EXPECT().EnsureLocalImage(service.ctx, gomock.Any(), gomock.Any()).AnyTimes()
 	s.dockerClient.EXPECT().CreatePublicNetwork(service.ctx, gomock.Any()).Return(testNodeNetworkID, nil)
 	s.dockerClient.EXPECT().CreateInternalNetwork(service.ctx, gomock.Any()).Return(testNodeNetworkID, nil) // for nats
 	s.dockerClient.EXPECT().StartContainer(service.ctx, (configMatcher)(clients.DockerContainerConfig{
