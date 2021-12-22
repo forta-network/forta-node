@@ -3,6 +3,7 @@ package ens
 import (
 	"fmt"
 	"github.com/forta-protocol/forta-node/store"
+	log "github.com/sirupsen/logrus"
 )
 
 type FortaContracts struct {
@@ -33,34 +34,47 @@ func GetENSNames() *ENS {
 func ResolveFortaContracts(jsonRpcUrl, resolverAddr string) (*FortaContracts, error) {
 	ens, err := store.DialENSStoreAt(jsonRpcUrl, resolverAddr)
 	if err != nil {
-		return nil, fmt.Errorf("cannot resolve contract addresses from ENS: %v", err)
+		return nil, fmt.Errorf("cannot resolve ens contract addresses: %v", err)
 	}
 
 	names := GetENSNames()
 	dispatch, err := ens.Resolve(names.Dispatch)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"address": names.Dispatch,
+		}).WithError(err).Error("ens cannot resolve dispatch contract")
 		return nil, err
 	}
 
 	alerts, err := ens.Resolve(names.Alerts)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"address": names.Alerts,
+		}).WithError(err).Error("ens cannot resolve alerts contract")
 		return nil, err
 	}
 
 	agents, err := ens.Resolve(names.Agents)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"address": names.Agents,
+		}).WithError(err).Error("ens cannot resolve agents contract")
 		return nil, err
 	}
 
-	snv, err := ens.Resolve(names.ScannerVersion)
-	if err != nil {
-		return nil, err
-	}
+	//TODO: enable when ENS is working again
+	//snv, err := ens.Resolve(names.ScannerVersion)
+	//if err != nil {
+	//	log.WithFields(log.Fields{
+	//		"address": names.ScannerVersion,
+	//	}).WithError(err).Error("ens cannot resolve scanner version contract")
+	//	return nil, err
+	//}
 
 	return &FortaContracts{
 		Dispatch:       dispatch.Hex(),
 		Agent:          agents.Hex(),
 		Alerts:         alerts.Hex(),
-		ScannerVersion: snv.Hex(),
+		ScannerVersion: "0x1B2F9edA5E29A92f92ba87bF354ACe37879939ed",
 	}, nil
 }
