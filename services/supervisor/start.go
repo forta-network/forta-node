@@ -152,10 +152,6 @@ func (sup *SupervisorService) start() error {
 	}
 	sup.addContainerUnsafe(publisherContainer)
 
-	if err := sup.client.WaitContainerStart(sup.ctx, publisherContainer.ID); err != nil {
-		return fmt.Errorf("failed while waiting for publisher to start: %v", err)
-	}
-
 	sup.jsonRpcContainer, err = sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerJSONRPCProxyContainerName,
 		Image: commonNodeImage,

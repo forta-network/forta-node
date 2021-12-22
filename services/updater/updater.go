@@ -14,7 +14,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-var updateInterval = 1 * time.Hour
+var updateInterval = 1 * time.Minute
 
 // UpdaterService receives the release updates.
 type UpdaterService struct {
