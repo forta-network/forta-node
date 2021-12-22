@@ -73,10 +73,8 @@ func (sup *SupervisorService) start() error {
 		return err
 	}
 
-	if config.UseDockerImages == "remote" {
-		if err := sup.ensureNodeImages(); err != nil {
-			return err
-		}
+	if err := sup.ensureNodeImages(); err != nil {
+		return err
 	}
 
 	supervisorContainer, err := sup.client.GetContainerByName(sup.ctx, config.DockerSupervisorContainerName)
@@ -202,10 +200,10 @@ func (sup *SupervisorService) start() error {
 func (sup *SupervisorService) attachToNetwork(containerName, nodeNetworkID string) error {
 	container, err := sup.client.GetContainerByName(sup.ctx, containerName)
 	if err != nil {
-		return fmt.Errorf("failed to get supervisor container while attaching to node network: %v", err)
+		return fmt.Errorf("failed to get '%s' container while attaching to node network: %v", containerName, err)
 	}
 	if err := sup.client.AttachNetwork(sup.ctx, container.ID, nodeNetworkID); err != nil {
-		return fmt.Errorf("failed to attach supervisor to node network: %v", err)
+		return fmt.Errorf("failed to attach '%s' container to node network: %v", containerName, err)
 	}
 	return nil
 }

@@ -144,7 +144,7 @@ func init() {
 	cmdFortaAgentAdd.Flags().Uint64Var(&parsedArgs.Version, "version", 0, "agent version")
 
 	// forta run
-	cmdFortaRun.Flags().BoolVar(&parsedArgs.NoUpdate, "no-update", false, "disable regular release check in updater")
+	cmdFortaRun.Flags().BoolVar(&parsedArgs.NoUpdate, "no-update", false, "disable release check in updater")
 }
 
 func initConfig() {

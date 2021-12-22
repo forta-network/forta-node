@@ -99,10 +99,12 @@ func (updater *UpdaterService) Start() error {
 		}
 	})
 
-	//initialize at start
-	if err := updater.updateLatestRelease(); err != nil {
-		log.WithError(err).Error("error initializing release")
-		return err
+	if !updater.noUpdate {
+		//initialize at start
+		if err := updater.updateLatestRelease(); err != nil {
+			log.WithError(err).Error("error initializing release")
+			return err
+		}
 	}
 
 	if err := grp.Wait(); err != nil {
