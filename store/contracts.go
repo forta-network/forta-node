@@ -28,3 +28,7 @@ type agentRegistry interface {
 		ChainIds []*big.Int
 	}, error)
 }
+
+type scannerNodeVersion interface {
+	ScannerNodeVersion(opts *bind.CallOpts) (string, error)
+}

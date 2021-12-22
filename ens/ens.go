@@ -6,24 +6,27 @@ import (
 )
 
 type FortaContracts struct {
-	Dispatch string
-	Agent    string
-	Alerts   string
+	Dispatch       string
+	Agent          string
+	Alerts         string
+	ScannerVersion string
 }
 
 // ENS contains the default names.
 type ENS struct {
-	Dispatch string
-	Alerts   string
-	Agents   string
+	Dispatch       string
+	Alerts         string
+	Agents         string
+	ScannerVersion string
 }
 
 // GetENSNames returns the default ENS names.
 func GetENSNames() *ENS {
 	return &ENS{
-		Dispatch: "dispatch.forta.eth",
-		Alerts:   "alerts.forta.eth",
-		Agents:   "agents.registries.forta.eth",
+		Dispatch:       "dispatch.forta.eth",
+		Alerts:         "alerts.forta.eth",
+		Agents:         "agents.registries.forta.eth",
+		ScannerVersion: "scanner-node-version.forta.eth",
 	}
 }
 
@@ -49,9 +52,15 @@ func ResolveFortaContracts(jsonRpcUrl, resolverAddr string) (*FortaContracts, er
 		return nil, err
 	}
 
+	snv, err := ens.Resolve(names.ScannerVersion)
+	if err != nil {
+		return nil, err
+	}
+
 	return &FortaContracts{
-		Dispatch: dispatch.Hex(),
-		Agent:    agents.Hex(),
-		Alerts:   alerts.Hex(),
+		Dispatch:       dispatch.Hex(),
+		Agent:          agents.Hex(),
+		Alerts:         alerts.Hex(),
+		ScannerVersion: snv.Hex(),
 	}, nil
 }
