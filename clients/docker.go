@@ -389,7 +389,7 @@ func (d *dockerClient) StopContainer(ctx context.Context, ID string) error {
 	if err == nil {
 		return nil
 	}
-	if strings.Contains(strings.ToLower(err.Error()), "no such container") {
+	if isNoSuchContainerErr(err) {
 		return nil
 	}
 	return err
@@ -404,10 +404,14 @@ func (d *dockerClient) InterruptContainer(ctx context.Context, ID string) error 
 	if err == nil {
 		return nil
 	}
-	if strings.Contains(strings.ToLower(err.Error()), "no such container") {
+	if isNoSuchContainerErr(err) {
 		return nil
 	}
 	return err
+}
+
+func isNoSuchContainerErr(err error) bool {
+	return strings.Contains(strings.ToLower(err.Error()), "no such container")
 }
 
 // WaitContainerExit waits for container exit by checking every second.
@@ -419,10 +423,18 @@ func (d *dockerClient) WaitContainerExit(ctx context.Context, id string) error {
 	for range ticker.C {
 		logger.Info("waiting for container exit")
 		c, err := d.GetContainerByID(ctx, id)
-		if err != nil && c != nil && c.State == "running" {
-			continue
+		if err != nil && errors.Is(err, ErrContainerNotFound) {
+			logger.Info("no need to wait for container exit - not found")
+			return nil
 		}
-		break
+		if err != nil {
+			logger.WithError(err).Error("failed while waiting for container exit")
+			return err
+		}
+		if c.State == "exited" {
+			return nil
+		}
+		logger.WithField("containerState", c.State).Info("still waiting for exit")
 	}
 	return nil
 }
@@ -460,11 +472,16 @@ func (d *dockerClient) WaitContainerPrune(ctx context.Context, id string) error 
 
 	for range ticker.C {
 		logger.Infof("waiting for container prune")
-		_, err := d.GetContainerByID(ctx, id)
+		c, err := d.GetContainerByID(ctx, id)
 		if err != nil && errors.Is(err, ErrContainerNotFound) {
 			return nil
 		}
 		if err != nil {
+			logger.WithError(err).Error("error while waiting for prune")
+			return err
+		}
+		if !(c.State == "exited" || c.State == "dead") {
+			err = fmt.Errorf("cannot prune container with status '%s' - container needs to stop first", c.State)
 			logger.WithError(err).Error("error while waiting for prune")
 			return err
 		}

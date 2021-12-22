@@ -142,6 +142,10 @@ func (runner *Runner) replaceContainers(logger *log.Entry, imageRefs store.Image
 		logger.WithError(err).Errorf("failed to start the updater")
 		return
 	}
+	if err := runner.dockerClient.WaitContainerStart(runner.ctx, runner.updaterContainer.ID); err != nil {
+		logger.WithError(err).Error("error while waiting for updater start")
+		return
+	}
 
 	runner.supervisorContainer, err = runner.dockerClient.StartContainer(runner.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerSupervisorContainerName,
@@ -164,6 +168,10 @@ func (runner *Runner) replaceContainers(logger *log.Entry, imageRefs store.Image
 	})
 	if err != nil {
 		logger.WithError(err).Errorf("failed to start the supervisor")
+		return
+	}
+	if err := runner.dockerClient.WaitContainerStart(runner.ctx, runner.supervisorContainer.ID); err != nil {
+		logger.WithError(err).Error("error while waiting for supervisor start")
 		return
 	}
 }
