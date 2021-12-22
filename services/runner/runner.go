@@ -57,7 +57,6 @@ func (runner *Runner) Stop() error {
 func (runner *Runner) stopContainer(container *clients.DockerContainer) {
 	if container != nil {
 		logger := log.WithField("container", container.ID).WithField("name", container.Name)
-		logger.Info("stopping")
 		if err := runner.dockerClient.InterruptContainer(context.Background(), container.ID); err != nil {
 			logger.WithError(err).Error("error stopping container")
 		} else {
