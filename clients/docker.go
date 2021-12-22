@@ -457,6 +457,7 @@ func (d *dockerClient) WaitContainerPrune(ctx context.Context, id string) error 
 	// if it takes longer than 10 seconds, then just move on
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
+
 	for range ticker.C {
 		logger.Infof("waiting for container prune")
 		_, err := d.GetContainerByID(ctx, id)
@@ -465,6 +466,7 @@ func (d *dockerClient) WaitContainerPrune(ctx context.Context, id string) error 
 		}
 		if err != nil {
 			logger.WithError(err).Error("error while waiting for prune")
+			return err
 		}
 	}
 	return nil
