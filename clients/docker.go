@@ -413,7 +413,11 @@ func (d *dockerClient) InterruptContainer(ctx context.Context, ID string) error 
 // WaitContainerExit waits for container exit by checking every second.
 func (d *dockerClient) WaitContainerExit(ctx context.Context, id string) error {
 	ticker := time.NewTicker(time.Second)
+	logger := log.WithFields(log.Fields{
+		"id": id,
+	})
 	for range ticker.C {
+		logger.Info("waiting for container exit")
 		c, err := d.GetContainerByID(ctx, id)
 		if err != nil && c != nil && c.State == "running" {
 			continue
@@ -427,7 +431,11 @@ func (d *dockerClient) WaitContainerExit(ctx context.Context, id string) error {
 func (d *dockerClient) WaitContainerStart(ctx context.Context, id string) error {
 	ticker := time.NewTicker(time.Second)
 	start := time.Now()
+	logger := log.WithFields(log.Fields{
+		"id": id,
+	})
 	for t := range ticker.C {
+		logger.Info("waiting for container start")
 		c, err := d.GetContainerByID(ctx, id)
 		if err == nil && c != nil && c.State == "running" {
 			return nil
