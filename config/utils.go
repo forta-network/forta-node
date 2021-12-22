@@ -26,6 +26,9 @@ func InitLogLevel(cfg Config) error {
 	} else {
 		log.SetLevel(log.InfoLevel)
 	}
+	log.SetFormatter(&log.TextFormatter{
+		FullTimestamp: true,
+	})
 	return nil
 }
 

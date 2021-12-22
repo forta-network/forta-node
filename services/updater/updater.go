@@ -73,7 +73,6 @@ func (updater *UpdaterService) Start() error {
 	grp.Go(func() error {
 		select {
 		case <-ctx.Done():
-			log.WithError(ctx.Err()).Info("updater exiting early")
 			updater.stopServer()
 			return ctx.Err()
 		case <-t.C:
@@ -131,9 +130,10 @@ func (updater *UpdaterService) Name() string {
 
 func (updater *UpdaterService) stopServer() error {
 	log.Info("stopping server")
-	if err := updater.server.Shutdown(updater.ctx); err != nil {
-		log.WithError(err).Error("error stopping server")
-		return err
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := updater.server.Shutdown(ctx); err != nil {
+		log.WithError(err).Error("error stopping server (ignored)")
 	}
 	return nil
 }
