@@ -14,7 +14,7 @@ func TestUpdaterService_UpdateLatestRelease(t *testing.T) {
 	c := gomock.NewController(t)
 	us := ms.NewMockUpdaterStore(c)
 	is := ms.NewMockIPFSClient(c)
-	updater := NewUpdaterService(context.Background(), us, is, "8080")
+	updater := NewUpdaterService(context.Background(), us, is, "8080", false, false)
 
 	us.EXPECT().GetLatestReference().Return("reference", nil).Times(1)
 	is.EXPECT().GetReleaseManifest("reference").Return(&config.ReleaseManifest{}, nil).Times(1)
@@ -26,7 +26,7 @@ func TestUpdaterService_UpdateLatestReleaseCached(t *testing.T) {
 	c := gomock.NewController(t)
 	us := ms.NewMockUpdaterStore(c)
 	is := ms.NewMockIPFSClient(c)
-	updater := NewUpdaterService(context.Background(), us, is, "8080")
+	updater := NewUpdaterService(context.Background(), us, is, "8080", false, false)
 
 	// update twice
 	us.EXPECT().GetLatestReference().Return("reference", nil).Times(2)
@@ -41,7 +41,7 @@ func TestUpdaterService_UpdateLatestReleaseNotCached(t *testing.T) {
 	c := gomock.NewController(t)
 	us := ms.NewMockUpdaterStore(c)
 	is := ms.NewMockIPFSClient(c)
-	updater := NewUpdaterService(context.Background(), us, is, "8080")
+	updater := NewUpdaterService(context.Background(), us, is, "8080", false, false)
 
 	// update twice
 	us.EXPECT().GetLatestReference().Return("reference1", nil).Times(1)

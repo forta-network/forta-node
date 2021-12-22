@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/config"
@@ -129,6 +130,10 @@ func (runner *Runner) replaceContainers(logger *log.Entry, imageRefs store.Image
 		Name:  config.DockerUpdaterContainerName,
 		Image: imageRefs.Updater,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "updater"},
+		Env: map[string]string{
+			config.EnvDevelopment: strconv.FormatBool(runner.cfg.Development),
+			config.EnvNoUpdate:    strconv.FormatBool(runner.cfg.NoUpdate),
+		},
 		Volumes: map[string]string{
 			runner.cfg.FortaDir: config.DefaultContainerFortaDirPath,
 		},
