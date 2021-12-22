@@ -6,6 +6,7 @@ import (
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/contracts"
 	"github.com/forta-protocol/forta-node/ethereum"
+	log "github.com/sirupsen/logrus"
 )
 
 type UpdaterStore interface {
@@ -23,6 +24,7 @@ func NewContractUpdaterStore(cfg config.Config) (*contractUpdaterStore, error) {
 	}
 	client := ethclient.NewClient(rpc)
 
+	log.WithField("address", cfg.ScannerVersionContractAddress).Info("attaching to scanner version contract")
 	snvc, err := contracts.NewScannerNodeVersionCaller(common.HexToAddress(cfg.ScannerVersionContractAddress), client)
 	if err != nil {
 		return nil, err
