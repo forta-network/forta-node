@@ -14,7 +14,7 @@ jobs:
     environment: dev
     outputs:
       node-image-ref: ${{ steps.write-output.outputs.node-image-ref }}
-      node-hash: ${{ steps.write-output.outputs.node-image-ref }}
+      node-hash: ${{ steps.write-output.outputs.node-hash }}
     strategy:
       matrix:
         image-name: [
