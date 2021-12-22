@@ -122,7 +122,8 @@ func (runner *Runner) replaceContainers(logger *log.Entry, imageRefs store.Image
 		}
 		// replace ref to include host in ref
 		if err := runner.dockerClient.EnsureLocalImage(runner.ctx, image.Name, *image.Ref); err != nil {
-			logger.WithError(err).Warn("failed to ensure local image")
+			logger.WithError(err).Error("failed to ensure local image")
+			return
 		}
 	}
 
