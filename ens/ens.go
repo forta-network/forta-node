@@ -62,19 +62,18 @@ func ResolveFortaContracts(jsonRpcUrl, resolverAddr string) (*FortaContracts, er
 		return nil, err
 	}
 
-	//TODO: enable when ENS is working again
-	//snv, err := ens.Resolve(names.ScannerVersion)
-	//if err != nil {
-	//	log.WithFields(log.Fields{
-	//		"address": names.ScannerVersion,
-	//	}).WithError(err).Error("ens cannot resolve scanner version contract")
-	//	return nil, err
-	//}
+	snv, err := ens.Resolve(names.ScannerVersion)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"address": names.ScannerVersion,
+		}).WithError(err).Error("ens cannot resolve scanner version contract")
+		return nil, err
+	}
 
 	return &FortaContracts{
 		Dispatch:       dispatch.Hex(),
 		Agent:          agents.Hex(),
 		Alerts:         alerts.Hex(),
-		ScannerVersion: "0x1B2F9edA5E29A92f92ba87bF354ACe37879939ed",
+		ScannerVersion: snv.Hex(),
 	}, nil
 }
