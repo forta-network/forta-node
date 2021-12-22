@@ -481,6 +481,7 @@ func (d *dockerClient) WaitContainerPrune(ctx context.Context, id string) error 
 			logger.WithError(err).Error("error while waiting for prune")
 			return err
 		}
+		logger.WithField("containerState", c.State).Info("container state while waiting for prune")
 		if !(c.State == "exited" || c.State == "dead") {
 			err = fmt.Errorf("cannot prune container with status '%s' - container needs to stop first", c.State)
 			logger.WithError(err).Error("error while waiting for prune")
