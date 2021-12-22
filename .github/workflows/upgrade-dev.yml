@@ -1,6 +1,8 @@
-name: Deploy Dev
+name: Upgrade Dev
 
 on:
+  push:
+    branches: [master]
   workflow_dispatch:
     branches: [master]
 
@@ -61,4 +63,4 @@ jobs:
           release-aws-secret-key: ${{ secrets.DEV_RELEASE_AWS_SECRET_KEY }}
           release-aws-region: us-east-1
           build-artifacts-bucket-name: ${{ secrets.DEV_BUILD_ARTIFACTS_BUCKET_NAME }}
-          run-codedeploy: true
+          run-codedeploy: false

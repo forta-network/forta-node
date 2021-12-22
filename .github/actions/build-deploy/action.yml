@@ -1,0 +1,94 @@
+name: 'Build CLI and deploy'
+description: 'Build and push container images'
+inputs:
+  node-image-ref:
+    description: 'Scanner node image ref'
+    required: true
+  deploy-aws-access-key:
+    description: 'AWS access key'
+    required: true
+  deploy-aws-secret-key:
+    description: 'AWS secret key'
+    required: true
+  deploy-aws-region:
+    description: 'AWS region'
+    required: true
+  release-aws-access-key:
+    description: 'AWS access key'
+    required: true
+  release-aws-secret-key:
+    description: 'AWS secret key'
+    required: true
+  release-aws-region:
+    description: 'AWS region'
+    required: true
+  build-artifacts-bucket-name:
+    description: 'Build artifacts bucket name'
+    required: true
+  run-codedeploy:
+    description: 'Run AWS CodeDeploy'
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Echo Image References
+      shell: bash
+      run: |
+        echo "node=${{ inputs.node-image-ref }}"
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.16
+    - name: Create build for revision
+      shell: bash
+      run: |
+        ./scripts/build.sh ${{ inputs.node-image-ref }} 'remote'
+        chmod 755 forta
+    - name: Configure AWS credentials (build artifact -> S3)
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ inputs.release-aws-access-key }}
+        aws-secret-access-key: ${{ inputs.release-aws-secret-key }}
+        aws-region: ${{ inputs.release-aws-region }}
+    - name: Copy build to build artifacts bucket
+      shell: bash
+      env:
+        BUCKET_NAME: ${{ inputs.build-artifacts-bucket-name }}
+        REVISION: ${{ github.sha }}
+      run: |
+        aws s3 cp forta "s3://$BUCKET_NAME/forta-$REVISION"
+    - name: Prepare Distribution
+      shell: bash
+      run: |
+        mkdir dist
+        cp forta dist/
+        cp appspec.yml dist/
+        cp -R scripts dist/
+    - name: Zip Distribution
+      uses: vimtor/action-zip@v1
+      with:
+        files: dist/
+        dest: deploy.zip
+    - uses: actions/upload-artifact@v1
+      with:
+        name: deploy-artifact
+        path: ${{ github.workspace }}/deploy.zip
+    - name: Configure AWS credentials (CodeDeploy)
+      uses: aws-actions/configure-aws-credentials@v1
+      if: ${{ inputs.run-codedeploy }}
+      with:
+        aws-access-key-id: ${{ inputs.deploy-aws-access-key }}
+        aws-secret-access-key: ${{ inputs.deploy-aws-secret-key }}
+        aws-region: ${{ inputs.deploy-aws-region }}
+    - name: AWS CodeDeploy
+      uses: sourcetoad/aws-codedeploy-action@v1
+      if: ${{ inputs.run-codedeploy }}
+      with:
+        aws_access_key: ${{ inputs.deploy-aws-access-key }}
+        aws_secret_key: ${{ inputs.deploy-aws-secret-key }}
+        aws_region: us-east-1
+        codedeploy_name: dev-forta-node
+        codedeploy_group: dev-forta-deploy-group
+        s3_bucket: dev-forta-codedeploy
+        s3_folder: dev
+        directory: ./dist/
