@@ -73,6 +73,7 @@ func (updater *UpdaterService) Start() error {
 	grp.Go(func() error {
 		select {
 		case <-ctx.Done():
+			log.WithError(ctx.Err()).Info("updater context is done")
 			updater.stopServer()
 			return ctx.Err()
 		case <-t.C:

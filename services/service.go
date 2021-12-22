@@ -93,10 +93,10 @@ func ContainerMain(name string, getServices func(ctx context.Context, cfg config
 }
 
 func InitMainContext() (context.Context, context.CancelFunc) {
-	grp, ctx := errgroup.WithContext(context.Background())
-	processGrp = grp
-	execIDCtx := initExecID(ctx)
+	execIDCtx := initExecID(context.Background())
 	ctx, cancel := context.WithCancel(execIDCtx)
+	grp, ctx := errgroup.WithContext(ctx)
+	processGrp = grp
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc,
 		syscall.SIGHUP,
