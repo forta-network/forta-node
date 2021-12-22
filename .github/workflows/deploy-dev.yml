@@ -39,7 +39,7 @@ jobs:
         id: write-output
         run: |
           echo "::set-output name=${{ matrix.image-name }}-hash::${{ steps.build-and-push.outputs.hash }}"
-          echo "::set-output name=${{ matrix.image-name }}-image-ref::${{ steps.build-and-push.outputs.image-reference }}
+          echo "::set-output name=${{ matrix.image-name }}-image-ref::${{ steps.build-and-push.outputs.image-reference }}"
 
   publish-hash:
     name: Publish Hash to Contract
