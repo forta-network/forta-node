@@ -22,9 +22,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const dockerResourcesLabel = "Forta"
+const dockerResourcesLabel = "network.forta"
 
-var labels = map[string]string{dockerResourcesLabel: "true"}
+var defaultLabels = map[string]string{dockerResourcesLabel: "true"}
 
 // Client errors
 var (
@@ -88,6 +88,7 @@ type dockerClient struct {
 	workers  *workers.Group
 	username string
 	password string
+	labels   map[string]string
 }
 
 func (cfg DockerContainerConfig) envVars() []string {
@@ -136,7 +137,7 @@ func (d *dockerClient) pullImage(ctx context.Context, refStr string) error {
 }
 
 func (d *dockerClient) Prune(ctx context.Context) error {
-	filter := filters.NewArgs(filters.Arg("label", dockerResourcesLabel))
+	filter := d.labelFilter()
 	res, err := d.cli.NetworksPrune(ctx, filter)
 	if err != nil {
 		return err
@@ -177,7 +178,7 @@ func (d *dockerClient) createNetwork(ctx context.Context, name string, internal 
 	}
 
 	resp, err := d.cli.NetworkCreate(ctx, name, types.NetworkCreate{
-		Labels:   labels,
+		Labels:   d.labels,
 		Internal: internal,
 	})
 	if err != nil {
@@ -237,9 +238,9 @@ func (d *dockerClient) GetContainerByName(ctx context.Context, name string) (*ty
 	if err != nil {
 		return nil, err
 	}
-	for _, container := range containers {
-		if container.Names[0][1:] == name {
-			return &container, nil
+	for _, c := range containers {
+		if c.Names[0][1:] == name {
+			return &c, nil
 		}
 	}
 	return nil, fmt.Errorf("%w with name '%s'", ErrContainerNotFound, name)
@@ -271,13 +272,13 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 	}
 	// If we already have the container but it is not running, then just start it.
 	var foundContainer *types.Container
-	for _, container := range containers {
-		if len(container.Names) == 0 {
+	for _, c := range containers {
+		if len(c.Names) == 0 {
 			continue
 		}
-		foundName := container.Names[0][1:] // remove / in the beginning
+		foundName := c.Names[0][1:] // remove / in the beginning
 		if foundName == config.Name {
-			foundContainer = &container
+			foundContainer = &c
 			break
 		}
 	}
@@ -322,7 +323,7 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 	cntCfg := &container.Config{
 		Image:  config.Image,
 		Env:    config.envVars(),
-		Labels: labels,
+		Labels: d.labels,
 	}
 
 	if len(config.Cmd) > 0 {
@@ -513,8 +514,25 @@ func (d *dockerClient) EnsureLocalImage(ctx context.Context, name, ref string) e
 	return nil
 }
 
+func (d *dockerClient) labelFilter() filters.Args {
+	filter := filters.NewArgs()
+	for k, v := range d.labels {
+		filter.Add("label", fmt.Sprintf("%s=%s", k, v))
+	}
+	return filter
+}
+
+func initLabels(name string) map[string]string {
+	result := make(map[string]string)
+	for k, v := range defaultLabels {
+		result[k] = v
+	}
+	result["network.forta.supervisor"] = name
+	return result
+}
+
 // NewDockerClient creates a new docker client
-func NewDockerClient() (*dockerClient, error) {
+func NewDockerClient(name string) (*dockerClient, error) {
 	cli, err := client.NewClientWithOpts()
 	if err != nil {
 		return nil, err
@@ -522,11 +540,12 @@ func NewDockerClient() (*dockerClient, error) {
 	return &dockerClient{
 		cli:     cli,
 		workers: workers.New(10),
+		labels:  initLabels(name),
 	}, nil
 }
 
 // NewAuthDockerClient creates a new docker client with credentials
-func NewAuthDockerClient(username, password string) (*dockerClient, error) {
+func NewAuthDockerClient(name string, username, password string) (*dockerClient, error) {
 	cli, err := client.NewClientWithOpts()
 	if err != nil {
 		return nil, err
@@ -536,5 +555,6 @@ func NewAuthDockerClient(username, password string) (*dockerClient, error) {
 		workers:  workers.New(10),
 		username: username,
 		password: password,
+		labels:   initLabels(name),
 	}, nil
 }

@@ -256,11 +256,11 @@ func (sup *SupervisorService) Name() string {
 }
 
 func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*SupervisorService, error) {
-	dockerAuthClient, err := clients.NewAuthDockerClient(cfg.Config.Registry.Username, cfg.Config.Registry.Password)
+	dockerAuthClient, err := clients.NewAuthDockerClient("supervisor", cfg.Config.Registry.Username, cfg.Config.Registry.Password)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the agent docker client: %v", err)
 	}
-	dockerClient, err := clients.NewDockerClient()
+	dockerClient, err := clients.NewDockerClient("supervisor")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the docker client: %v", err)
 	}
