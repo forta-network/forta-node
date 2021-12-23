@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"path"
 	"sync"
 	"time"
 
@@ -26,17 +28,24 @@ type UpdaterService struct {
 	us     store.UpdaterStore
 	server *http.Server
 
+	developmentMode bool
+	noUpdate        bool
+
 	latestReference string
 	latestRelease   *config.ReleaseManifest
 }
 
 // NewUpdaterService creates a new updater service.
-func NewUpdaterService(ctx context.Context, us store.UpdaterStore, ipfs store.IPFSClient, port string) *UpdaterService {
+func NewUpdaterService(ctx context.Context, us store.UpdaterStore, ipfs store.IPFSClient,
+	port string, developmentMode, noUpdate bool,
+) *UpdaterService {
 	return &UpdaterService{
-		ctx:  ctx,
-		port: port,
-		us:   us,
-		ipfs: ipfs,
+		ctx:             ctx,
+		port:            port,
+		us:              us,
+		ipfs:            ipfs,
+		developmentMode: developmentMode,
+		noUpdate:        noUpdate,
 	}
 }
 
@@ -69,27 +78,36 @@ func (updater *UpdaterService) Start() error {
 		return updater.server.ListenAndServe()
 	})
 
-	t := time.NewTicker(updateInterval)
 	grp.Go(func() error {
-		select {
-		case <-ctx.Done():
-			updater.stopServer()
-			return ctx.Err()
-		case <-t.C:
-			if err := updater.updateLatestRelease(); err != nil {
-				log.WithError(err).Error("error getting release")
-				return err
+		if updater.noUpdate {
+			return nil
+		}
+
+		t := time.NewTicker(updateInterval)
+		for {
+			select {
+			case <-ctx.Done():
+				log.WithError(ctx.Err()).Info("updater context is done")
+				updater.stopServer()
+				return ctx.Err()
+			case <-t.C:
+				if err := updater.updateLatestRelease(); err != nil {
+					log.WithError(err).Error("error getting release")
+					// continue, wait ticker
+				}
 			}
 		}
-		return nil
 	})
 
-	//initialize at start
-	if err := updater.updateLatestRelease(); err != nil {
-		log.WithError(err).Error("error initializing release")
-		return err
+	if !updater.noUpdate {
+		//initialize at start
+		if err := updater.updateLatestRelease(); err != nil {
+			log.WithError(err).Error("error initializing release")
+			return err
+		}
 	}
 
+	log.Info("updater initialization complete")
 	if err := grp.Wait(); err != nil {
 		log.WithError(err).Error("error returned while running updater")
 		return err
@@ -98,6 +116,12 @@ func (updater *UpdaterService) Start() error {
 }
 
 func (updater *UpdaterService) updateLatestRelease() error {
+	if updater.developmentMode {
+		return updater.readLocalReleaseManifest()
+	}
+
+	log.Info("updating latest release")
+
 	ref, err := updater.us.GetLatestReference()
 	if err != nil {
 		return err
@@ -120,6 +144,24 @@ func (updater *UpdaterService) updateLatestRelease() error {
 			"release": ref,
 		}).Info("no change to release")
 	}
+	return nil
+}
+
+func (updater *UpdaterService) readLocalReleaseManifest() error {
+	b, err := ioutil.ReadFile(path.Join(config.DefaultContainerFortaDirPath, "test-release.json"))
+	if err != nil {
+		log.WithError(err).Info("could not read the test release manifest file - ignoring error")
+		return nil
+	}
+	var release config.ReleaseManifest
+	if err := json.Unmarshal(b, &release); err != nil {
+		log.WithError(err).Info("could not unmarshal the test release manifest - ignoring error")
+		return nil
+	}
+	updater.mu.Lock()
+	defer updater.mu.Unlock()
+	updater.latestReference = "test-release.json"
+	updater.latestRelease = &release
 	return nil
 }
 

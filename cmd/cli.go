@@ -34,6 +34,7 @@ var (
 	parsedArgs struct {
 		PrivateKeyFilePath string
 		Version            uint64
+		NoUpdate           bool
 	}
 
 	cmdForta = &cobra.Command{
@@ -141,6 +142,9 @@ func init() {
 
 	// forta agent add
 	cmdFortaAgentAdd.Flags().Uint64Var(&parsedArgs.Version, "version", 0, "agent version")
+
+	// forta run
+	cmdFortaRun.Flags().BoolVar(&parsedArgs.NoUpdate, "no-update", false, "disable release check in updater")
 }
 
 func initConfig() {
@@ -172,6 +176,7 @@ func initConfig() {
 	cfg.Development = viper.GetBool(keyFortaDevelopment)
 	cfg.Passphrase = viper.GetString(keyFortaPassphrase)
 	cfg.ExposeNats = viper.GetBool(keyFortaExposeNats)
+	cfg.NoUpdate = parsedArgs.NoUpdate
 
 	cfg.LocalAgentsPath = path.Join(cfg.FortaDir, config.DefaultLocalAgentsFileName)
 	cfg.LocalAgents, _ = readLocalAgents()

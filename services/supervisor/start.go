@@ -73,10 +73,8 @@ func (sup *SupervisorService) start() error {
 		return err
 	}
 
-	if config.UseDockerImages == "remote" {
-		if err := sup.ensureNodeImages(); err != nil {
-			return err
-		}
+	if err := sup.ensureNodeImages(); err != nil {
+		return err
 	}
 
 	supervisorContainer, err := sup.client.GetContainerByName(sup.ctx, config.DockerSupervisorContainerName)
@@ -202,10 +200,10 @@ func (sup *SupervisorService) start() error {
 func (sup *SupervisorService) attachToNetwork(containerName, nodeNetworkID string) error {
 	container, err := sup.client.GetContainerByName(sup.ctx, containerName)
 	if err != nil {
-		return fmt.Errorf("failed to get supervisor container while attaching to node network: %v", err)
+		return fmt.Errorf("failed to get '%s' container while attaching to node network: %v", containerName, err)
 	}
 	if err := sup.client.AttachNetwork(sup.ctx, container.ID, nodeNetworkID); err != nil {
-		return fmt.Errorf("failed to attach supervisor to node network: %v", err)
+		return fmt.Errorf("failed to attach '%s' container to node network: %v", containerName, err)
 	}
 	return nil
 }
@@ -256,11 +254,11 @@ func (sup *SupervisorService) Name() string {
 }
 
 func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*SupervisorService, error) {
-	dockerAuthClient, err := clients.NewAuthDockerClient(cfg.Config.Registry.Username, cfg.Config.Registry.Password)
+	dockerAuthClient, err := clients.NewAuthDockerClient("supervisor", cfg.Config.Registry.Username, cfg.Config.Registry.Password)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the agent docker client: %v", err)
 	}
-	dockerClient, err := clients.NewDockerClient()
+	dockerClient, err := clients.NewDockerClient("supervisor")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the docker client: %v", err)
 	}

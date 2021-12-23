@@ -22,6 +22,7 @@ type Service interface {
 }
 
 var processGrp *errgroup.Group
+var sigc chan os.Signal
 
 var execIDKey = struct{}{}
 
@@ -52,6 +53,7 @@ func setContracts(cfg *config.Config) error {
 	if cfg.Publish.ContractAddress == "" {
 		cfg.Publish.ContractAddress = contracts.Alerts
 	}
+	cfg.ScannerVersionContractAddress = contracts.ScannerVersion
 	cfg.AgentRegistryContractAddress = contracts.Agent
 	return nil
 }
@@ -92,11 +94,13 @@ func ContainerMain(name string, getServices func(ctx context.Context, cfg config
 }
 
 func InitMainContext() (context.Context, context.CancelFunc) {
-	grp, ctx := errgroup.WithContext(context.Background())
+	execIDCtx := initExecID(context.Background())
+	cCtx, cancel := context.WithCancel(execIDCtx)
+	grp, ctx := errgroup.WithContext(cCtx)
 	processGrp = grp
-	execIDCtx := initExecID(ctx)
-	ctx, cancel := context.WithCancel(execIDCtx)
-	sigc := make(chan os.Signal, 1)
+	if sigc == nil {
+		sigc = make(chan os.Signal, 1)
+	}
 	signal.Notify(sigc,
 		syscall.SIGHUP,
 		syscall.SIGINT,

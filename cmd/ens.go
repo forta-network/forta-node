@@ -51,6 +51,7 @@ func ensureLatestContractAddresses() error {
 	cache.Dispatch = contracts.Dispatch
 	cache.Alerts = contracts.Alerts
 	cache.Agents = contracts.Agent
+	cache.ScannerVersion = contracts.ScannerVersion
 	cache.ExpiresAt = time.Now().UTC().Add(contractAddressCacheExpiry)
 
 	b, err := json.MarshalIndent(&cache, "", "  ") // indent by two spaces
@@ -89,10 +90,11 @@ func setContractAddressesFromCache(cache contractAddressCache) {
 }
 
 type contractAddressCache struct {
-	Dispatch  string    `json:"dispatch"`
-	Alerts    string    `json:"alerts"`
-	Agents    string    `json:"agents"`
-	ExpiresAt time.Time `json:"expiresAt"`
+	Dispatch       string    `json:"dispatch"`
+	Alerts         string    `json:"alerts"`
+	Agents         string    `json:"agents"`
+	ScannerVersion string    `json:"scannerVersion"`
+	ExpiresAt      time.Time `json:"expiresAt"`
 }
 
 func getContractAddressCache() (cache contractAddressCache, ok bool) {
