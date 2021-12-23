@@ -117,12 +117,11 @@ func (runner *Runner) ensureImage(logger *log.Entry, name string, imageRef strin
 
 	// to make things easier, don't require image ref validation in dev mode
 	if !runner.cfg.Development {
-		ref, err := utils.ValidateDiscoImageRef(runner.cfg.Registry.ContainerRegistry, imageRef)
+		fixedRef, err := utils.ValidateDiscoImageRef(runner.cfg.Registry.ContainerRegistry, imageRef)
 		if err != nil {
 			logger.WithError(err).Warn("not a disco ref - skipping pull")
 		} else {
-			// IMPORTANT: replaces with fixed ref
-			imageRef = ref
+			imageRef = fixedRef // important
 		}
 	}
 
