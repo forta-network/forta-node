@@ -96,11 +96,15 @@ func (runner *Runner) receive() {
 			if err := runner.replaceUpdater(logger, latestRefs); err != nil {
 				//TODO: what should happen here
 				logger.WithError(err).Error("error replacing updater")
+			} else {
+				runner.currentUpdaterImg = latestRefs.Updater
 			}
 		} else if latestRefs.Supervisor != runner.currentSupervisorImg {
 			if err := runner.replaceSupervisor(logger, latestRefs); err != nil {
 				//TODO: what should happen here
 				logger.WithError(err).Error("error replacing supervisor")
+			} else {
+				runner.currentSupervisorImg = latestRefs.Supervisor
 			}
 		}
 	}
