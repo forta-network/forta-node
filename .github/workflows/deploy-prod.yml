@@ -11,6 +11,7 @@ jobs:
     environment: prod
     outputs:
       node-image-ref: ${{ steps.write-output.outputs.node-image-ref }}
+      node-release-cid: ${{ steps.write-output.outputs.node-release-cid }}
     strategy:
       matrix:
         image-name: [
@@ -33,7 +34,25 @@ jobs:
           name: ${{ matrix.image-name }}
       - name: Write image reference as output
         id: write-output
-        run: echo "::set-output name=${{ matrix.image-name }}-image-ref::${{ steps.build-and-push.outputs.image-reference }}"
+        run: |
+          echo "::set-output name=${{ matrix.image-name }}-release-cid::${{ steps.build-and-push.outputs.release-cid }}"
+          echo "::set-output name=${{ matrix.image-name }}-image-ref::${{ steps.build-and-push.outputs.image-reference }}"
+
+  publish-hash:
+    name: Publish Hash to Contract
+    needs: containers
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Echo Hash
+        run: |
+          echo "release-cid=${{ needs.containers.outputs.node-release-cid }}"
+      - name: Publish Hash
+        run: |
+          # TODO: This script does not exist yet and the secret is not set
+          ./scripts/publish-release-prod.sh ${{ needs.containers.outputs.node-release-cid }} ${{ secrets.PROD_PUBLISH_AUTOTASK_KEY }}
 
   build-deploy:
     name: Build and deploy
@@ -58,7 +77,8 @@ jobs:
           go-version: 1.16
       - name: Create build for revision
         run: |
-          ./scripts/build.sh ${{ needs.containers.outputs.node-image-ref }} 'remote'
+          ./scripts/build.sh ${{ needs.containers.outputs.node-image-ref }} \
+            'remote' ${{ needs.containers.outputs.node-release-cid }} ${{ github.sha }}
           chmod 755 forta
       - name: Configure AWS credentials (build artifact -> S3)
         uses: aws-actions/configure-aws-credentials@v1

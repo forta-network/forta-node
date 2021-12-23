@@ -1,5 +1,18 @@
 package config
 
+// Release vars - injected by the compiler
+var (
+	CommitHash = ""
+	ReleaseCid = ""
+)
+
+// BuildReleaseInfo contains release info about current build.
+type BuildReleaseInfo struct {
+	Commit string `json:"commit"`
+	IPFS   string `json:"ipfs"`
+	// Version string `json:"version"` TODO: Use this when semver is injected
+}
+
 // ReleaseManifest contains the latest info about the latest scanner version.
 type ReleaseManifest struct {
 	Release Release `json:"release"`
