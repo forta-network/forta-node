@@ -13,6 +13,17 @@ type BuildReleaseInfo struct {
 	// Version string `json:"version"` TODO: Use this when semver is injected
 }
 
+func GetBuildReleaseInfo() (*BuildReleaseInfo, bool) {
+	if len(CommitHash) == 0 {
+		return nil, false
+	}
+
+	return &BuildReleaseInfo{
+		Commit: CommitHash,
+		IPFS:   ReleaseCid,
+	}, true
+}
+
 // ReleaseManifest contains the latest info about the latest scanner version.
 type ReleaseManifest struct {
 	Release Release `json:"release"`
