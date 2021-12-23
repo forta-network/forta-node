@@ -3,6 +3,7 @@ package publisher
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	log "github.com/sirupsen/logrus"
@@ -21,10 +22,18 @@ func initListener(ctx context.Context, cfg config.Config) (*publisher.Publisher,
 		return nil, err
 	}
 
+	releaseInfoStr := os.Getenv(config.EnvReleaseInfo)
+	var releaseSummary *config.ReleaseSummary
+	if len(releaseInfoStr) > 0 {
+		releaseInfo := config.ReleaseInfoFromString(config.EnvReleaseInfo)
+		releaseSummary = config.MakeSummaryFromReleaseInfo(releaseInfo)
+	}
+
 	return publisher.NewPublisher(ctx, mc, publisher.PublisherConfig{
 		ChainID:         cfg.ChainID,
 		Key:             key,
 		PublisherConfig: cfg.Publish,
+		ReleaseSummary:  releaseSummary,
 	})
 }
 

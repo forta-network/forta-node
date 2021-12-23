@@ -86,6 +86,7 @@ type PublisherConfig struct {
 	ChainID         int
 	Key             *keystore.Key
 	PublisherConfig config.PublisherConfig
+	ReleaseSummary  *config.ReleaseSummary
 }
 
 func (pub *Publisher) Notify(ctx context.Context, req *protocol.NotifyRequest) (*protocol.NotifyResponse, error) {
@@ -97,6 +98,14 @@ func (pub *Publisher) publishNextBatch(batch *protocol.SignedAlertBatch) error {
 	// flush only if we are publishing so we can make the best use of aggregated metrics
 	if _, skip := pub.shouldSkipPublishing(batch); !skip {
 		batch.Data.Metrics = pub.metricsAggregator.TryFlush()
+	}
+
+	// add release info if it's available
+	if pub.cfg.ReleaseSummary != nil {
+		batch.Data.ScannerVersion = &protocol.ScannerVersion{
+			Commit: pub.cfg.ReleaseSummary.Commit,
+			Ipfs:   pub.cfg.ReleaseSummary.IPFS,
+		}
 	}
 
 	signature, err := security.SignProtoMessage(pub.cfg.Key, batch)

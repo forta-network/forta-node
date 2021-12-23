@@ -89,8 +89,8 @@ func (runner *Runner) removeContainer(container *clients.DockerContainer) error 
 func (runner *Runner) receive() {
 	for latestRefs := range runner.imgStore.Latest() {
 		logger := log.WithField("supervisor", latestRefs.Supervisor).WithField("updater", latestRefs.Updater)
-		if latestRefs.Release != nil {
-			logger = logger.WithField("commit", latestRefs.Release.Release.Commit)
+		if latestRefs.ReleaseInfo != nil {
+			logger = logger.WithField("commit", latestRefs.ReleaseInfo.Manifest.Release.Commit)
 		}
 		logger.Info("detected new images")
 		if latestRefs.Updater != runner.currentUpdaterImg {
@@ -101,7 +101,12 @@ func (runner *Runner) receive() {
 				runner.currentUpdaterImg = latestRefs.Updater
 			}
 		}
-		if latestRefs.Supervisor != runner.currentSupervisorImg {
+
+		// in local mode, run supervisor even if release info is nil.
+		// in production mode, it doesn't make sense to run the supervisor for the first time yet
+		// if updater hasn't yet received the latest release.
+		validReleaseInfo := latestRefs.ReleaseInfo != nil || config.UseDockerImages == "local"
+		if latestRefs.Supervisor != runner.currentSupervisorImg && validReleaseInfo {
 			if err := runner.replaceSupervisor(logger, latestRefs); err != nil {
 				//TODO: what should happen here
 				logger.WithError(err).Error("error replacing supervisor")
@@ -139,7 +144,7 @@ func (runner *Runner) replaceUpdater(logger *log.Entry, imageRefs store.ImageRef
 	if err != nil {
 		return err
 	}
-	return runner.startUpdater(logger, imageRefs.Updater)
+	return runner.startUpdater(logger, imageRefs)
 }
 
 func (runner *Runner) replaceSupervisor(logger *log.Entry, imageRefs store.ImageRefs) error {
@@ -148,14 +153,16 @@ func (runner *Runner) replaceSupervisor(logger *log.Entry, imageRefs store.Image
 	if err != nil {
 		return err
 	}
-	return runner.startSupervisor(logger, imageRefs.Supervisor)
+	return runner.startSupervisor(logger, imageRefs)
 }
 
-func (runner *Runner) startUpdater(logger *log.Entry, updaterRef string) (err error) {
+func (runner *Runner) startUpdater(logger *log.Entry, latestRefs store.ImageRefs) (err error) {
+	updaterRef := latestRefs.Updater
 	updaterRef, err = runner.ensureImage(logger, "updater", updaterRef)
 	if err != nil {
 		return err
 	}
+
 	uc, err := runner.dockerClient.StartContainer(runner.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerUpdaterContainerName,
 		Image: updaterRef,
@@ -163,6 +170,7 @@ func (runner *Runner) startUpdater(logger *log.Entry, updaterRef string) (err er
 		Env: map[string]string{
 			config.EnvDevelopment: strconv.FormatBool(runner.cfg.Development),
 			config.EnvNoUpdate:    strconv.FormatBool(runner.cfg.NoUpdate),
+			config.EnvReleaseInfo: latestRefs.ReleaseInfo.String(),
 		},
 		Volumes: map[string]string{
 			runner.cfg.FortaDir: config.DefaultContainerFortaDirPath,
@@ -186,7 +194,8 @@ func (runner *Runner) startUpdater(logger *log.Entry, updaterRef string) (err er
 	return nil
 }
 
-func (runner *Runner) startSupervisor(logger *log.Entry, supervisorRef string) (err error) {
+func (runner *Runner) startSupervisor(logger *log.Entry, latestRefs store.ImageRefs) (err error) {
+	supervisorRef := latestRefs.Supervisor
 	supervisorRef, err = runner.ensureImage(logger, "supervisor", supervisorRef)
 	if err != nil {
 		return err
@@ -198,6 +207,7 @@ func (runner *Runner) startSupervisor(logger *log.Entry, supervisorRef string) (
 		Env: map[string]string{
 			// supervisor needs to know and mount the forta dir on the host os
 			config.EnvHostFortaDir: runner.cfg.FortaDir,
+			config.EnvReleaseInfo:  latestRefs.ReleaseInfo.String(),
 		},
 		Volumes: map[string]string{
 			// give access to host docker

@@ -62,7 +62,10 @@ func (updater *UpdaterService) handleGetVersion(w http.ResponseWriter, r *http.R
 		"release": updater.latestReference,
 	}).Info("release response")
 
-	b, _ := json.Marshal(updater.latestRelease)
+	b, _ := json.Marshal(&config.ReleaseInfo{
+		IPFS:     updater.latestReference,
+		Manifest: *updater.latestRelease,
+	})
 	w.Write(b)
 }
 

@@ -4,6 +4,7 @@ const (
 	EnvHostFortaDir = "HOST_FORTA_DIR" // for retrieving forta dir path on the host os
 	EnvNoUpdate     = "FORTA_NO_UPDATE"
 	EnvDevelopment  = "FORTA_DEVELOPMENT"
+	EnvReleaseInfo  = "FORTA_RELEASE_INFO"
 
 	// Agent env vars
 	EnvJsonRpcHost   = "JSON_RPC_HOST"

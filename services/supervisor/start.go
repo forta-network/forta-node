@@ -59,6 +59,7 @@ func (sup *SupervisorService) start() error {
 	if len(hostFortaDir) == 0 {
 		return fmt.Errorf("supervisor needs to know $%s to mount to the other containers it runs", config.EnvHostFortaDir)
 	}
+	releaseInfo := config.ReleaseInfoFromString(os.Getenv(config.EnvReleaseInfo))
 
 	sup.maxLogSize = sup.config.Config.Log.MaxLogSize
 	sup.maxLogFiles = sup.config.Config.Log.MaxLogFiles
@@ -135,6 +136,9 @@ func (sup *SupervisorService) start() error {
 		Name:  config.DockerPublisherContainerName,
 		Image: commonNodeImage,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "publisher"},
+		Env: map[string]string{
+			config.EnvReleaseInfo: releaseInfo.String(),
+		},
 		Volumes: map[string]string{
 			hostFortaDir: config.DefaultContainerFortaDirPath,
 		},
