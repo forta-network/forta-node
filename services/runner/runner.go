@@ -100,7 +100,8 @@ func (runner *Runner) receive() {
 			} else {
 				runner.currentUpdaterImg = latestRefs.Updater
 			}
-		} else if latestRefs.Supervisor != runner.currentSupervisorImg {
+		}
+		if latestRefs.Supervisor != runner.currentSupervisorImg {
 			if err := runner.replaceSupervisor(logger, latestRefs); err != nil {
 				//TODO: what should happen here
 				logger.WithError(err).Error("error replacing supervisor")
