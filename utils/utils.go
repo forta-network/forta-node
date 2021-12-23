@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"os"
 	"sort"
+	"strconv"
 	"time"
 )
 
@@ -36,4 +38,14 @@ func MapKeys(m map[string]bool) []string {
 	}
 	sort.Strings(res)
 	return res
+}
+
+// ParseBoolEnvVar parses a bool env var. If nothing works, it's always false.
+func ParseBoolEnvVar(name string) (value bool) {
+	boolStr := os.Getenv(name)
+	if len(boolStr) == 0 {
+		return
+	}
+	value, _ = strconv.ParseBool(boolStr)
+	return
 }

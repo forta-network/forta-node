@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/config"
@@ -64,7 +65,7 @@ func (runner *Runner) removeContainer(container *clients.DockerContainer) error 
 		if err := runner.dockerClient.InterruptContainer(context.Background(), container.ID); err != nil {
 			logger.WithError(err).Error("error stopping container")
 		} else {
-			logger.Info("stopped")
+			logger.Info("interrupted")
 		}
 		if err := runner.dockerClient.WaitContainerExit(context.Background(), container.ID); err != nil {
 			//TODO: what should happen here
@@ -110,21 +111,26 @@ func (runner *Runner) receive() {
 	}
 }
 
-func (runner *Runner) ensureImage(logger *log.Entry, name string, imageRef string) error {
+func (runner *Runner) ensureImage(logger *log.Entry, name string, imageRef string) (string, error) {
 	logger = logger.WithField("ref", imageRef).WithField("name", name)
-	ref, err := utils.ValidateDiscoImageRef(runner.cfg.Registry.ContainerRegistry, imageRef)
-	if err == nil {
-		if err := runner.dockerClient.EnsureLocalImage(runner.ctx, name, ref); err != nil {
-			//TODO: what should happen here
-			logger.WithError(err).Warn("failed to ensure local image")
-			return err
+
+	// to make things easier, don't require image ref validation in dev mode
+	if !runner.cfg.Development {
+		ref, err := utils.ValidateDiscoImageRef(runner.cfg.Registry.ContainerRegistry, imageRef)
+		if err != nil {
+			logger.WithError(err).Warn("not a disco ref - skipping pull")
+		} else {
+			// IMPORTANT: replaces with fixed ref
+			imageRef = ref
 		}
-	} else {
-		//TODO: what should happen here
-		logger.WithError(err).Warn("not a disco ref - skipping pull")
-		return err
 	}
-	return nil
+
+	if err := runner.dockerClient.EnsureLocalImage(runner.ctx, name, imageRef); err != nil {
+		logger.WithError(err).Warn("failed to ensure local image")
+		return "", err
+	}
+
+	return imageRef, nil
 }
 
 func (runner *Runner) replaceUpdater(logger *log.Entry, imageRefs store.ImageRefs) error {
@@ -145,8 +151,8 @@ func (runner *Runner) replaceSupervisor(logger *log.Entry, imageRefs store.Image
 	return runner.startSupervisor(logger, imageRefs.Supervisor)
 }
 
-func (runner *Runner) startUpdater(logger *log.Entry, updaterRef string) error {
-	err := runner.ensureImage(logger, "updater", updaterRef)
+func (runner *Runner) startUpdater(logger *log.Entry, updaterRef string) (err error) {
+	updaterRef, err = runner.ensureImage(logger, "updater", updaterRef)
 	if err != nil {
 		return err
 	}
@@ -154,6 +160,10 @@ func (runner *Runner) startUpdater(logger *log.Entry, updaterRef string) error {
 		Name:  config.DockerUpdaterContainerName,
 		Image: updaterRef,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "updater"},
+		Env: map[string]string{
+			config.EnvDevelopment: strconv.FormatBool(runner.cfg.Development),
+			config.EnvNoUpdate:    strconv.FormatBool(runner.cfg.NoUpdate),
+		},
 		Volumes: map[string]string{
 			runner.cfg.FortaDir: config.DefaultContainerFortaDirPath,
 		},
@@ -176,14 +186,14 @@ func (runner *Runner) startUpdater(logger *log.Entry, updaterRef string) error {
 	return nil
 }
 
-func (runner *Runner) startSupervisor(logger *log.Entry, ref string) error {
-	err := runner.ensureImage(logger, "supervisor", ref)
+func (runner *Runner) startSupervisor(logger *log.Entry, supervisorRef string) (err error) {
+	supervisorRef, err = runner.ensureImage(logger, "supervisor", supervisorRef)
 	if err != nil {
 		return err
 	}
 	sc, err := runner.dockerClient.StartContainer(runner.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerSupervisorContainerName,
-		Image: ref,
+		Image: supervisorRef,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "supervisor"},
 		Env: map[string]string{
 			// supervisor needs to know and mount the forta dir on the host os
