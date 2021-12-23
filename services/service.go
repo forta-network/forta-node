@@ -22,6 +22,7 @@ type Service interface {
 }
 
 var processGrp *errgroup.Group
+var sigc chan os.Signal
 
 var execIDKey = struct{}{}
 
@@ -94,10 +95,12 @@ func ContainerMain(name string, getServices func(ctx context.Context, cfg config
 
 func InitMainContext() (context.Context, context.CancelFunc) {
 	execIDCtx := initExecID(context.Background())
-	ctx, cancel := context.WithCancel(execIDCtx)
-	grp, ctx := errgroup.WithContext(ctx)
+	cCtx, cancel := context.WithCancel(execIDCtx)
+	grp, ctx := errgroup.WithContext(cCtx)
 	processGrp = grp
-	sigc := make(chan os.Signal, 1)
+	if sigc == nil {
+		sigc = make(chan os.Signal, 1)
+	}
 	signal.Notify(sigc,
 		syscall.SIGHUP,
 		syscall.SIGINT,

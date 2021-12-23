@@ -91,6 +91,7 @@ func (updater *UpdaterService) Start() error {
 		return err
 	}
 
+	log.Info("updater initialization complete")
 	if err := grp.Wait(); err != nil {
 		log.WithError(err).Error("error returned while running updater")
 		return err
@@ -99,6 +100,7 @@ func (updater *UpdaterService) Start() error {
 }
 
 func (updater *UpdaterService) updateLatestRelease() error {
+	log.Info("updating latest release")
 	ref, err := updater.us.GetLatestReference()
 	if err != nil {
 		return err
