@@ -421,6 +421,10 @@ func (d *dockerClient) WaitContainerExit(ctx context.Context, id string) error {
 	logger := log.WithFields(log.Fields{
 		"id": id,
 	})
+	// if it takes longer than 10 seconds, then just move on
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
 	for range ticker.C {
 		logger.Info("waiting for container exit")
 		c, err := d.GetContainerByID(ctx, id)
@@ -447,11 +451,19 @@ func (d *dockerClient) WaitContainerStart(ctx context.Context, id string) error 
 	logger := log.WithFields(log.Fields{
 		"id": id,
 	})
+
+	// if it takes longer than 10 seconds, then just move on
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
 	for t := range ticker.C {
 		logger.Info("waiting for container start")
 		c, err := d.GetContainerByID(ctx, id)
 		if err == nil && c != nil && c.State == "running" {
 			return nil
+		}
+		if err != nil {
+			return err
 		}
 		// if the conditions are not met within 30 seconds, it's a failure
 		if t.After(start.Add(time.Second * 30)) {
