@@ -17,6 +17,9 @@ type Runner struct {
 	imgStore     store.FortaImageStore
 	dockerClient clients.DockerClient
 
+	currentUpdaterImg    string
+	currentSupervisorImg string
+
 	updaterPort         string
 	updaterContainer    *clients.DockerContainer
 	supervisorContainer *clients.DockerContainer
@@ -49,12 +52,13 @@ func (runner *Runner) Name() string {
 
 // Stop stops the service
 func (runner *Runner) Stop() error {
-	runner.stopContainer(runner.updaterContainer)
-	runner.stopContainer(runner.supervisorContainer)
+	runner.removeContainer(runner.updaterContainer)
+	runner.removeContainer(runner.supervisorContainer)
 	return nil
 }
 
-func (runner *Runner) stopContainer(container *clients.DockerContainer) {
+//TODO: add a nuke fallback for containers that just don't go away
+func (runner *Runner) removeContainer(container *clients.DockerContainer) error {
 	if container != nil {
 		logger := log.WithField("container", container.ID).WithField("name", container.Name)
 		if err := runner.dockerClient.InterruptContainer(context.Background(), container.ID); err != nil {
@@ -63,9 +67,22 @@ func (runner *Runner) stopContainer(container *clients.DockerContainer) {
 			logger.Info("stopped")
 		}
 		if err := runner.dockerClient.WaitContainerExit(context.Background(), container.ID); err != nil {
+			//TODO: what should happen here
 			logger.WithError(err).Error("error while waiting for container exit")
+			return err
+		}
+		if err := runner.dockerClient.Prune(runner.ctx); err != nil {
+			//TODO: what should happen here
+			logger.WithError(err).Error("error while pruning after stopping old containers")
+			return err
+		}
+		if err := runner.dockerClient.WaitContainerPrune(runner.ctx, container.ID); err != nil {
+			//TODO: what should happen here
+			logger.WithError(err).Error("error while waiting for old container prune")
+			return err
 		}
 	}
+	return nil
 }
 
 func (runner *Runner) receive() {
@@ -74,60 +91,64 @@ func (runner *Runner) receive() {
 		if latestRefs.Release != nil {
 			logger = logger.WithField("commit", latestRefs.Release.Release.Commit)
 		}
-		logger.Info("received new node image reference")
-		runner.replaceContainers(logger, latestRefs)
-	}
-}
-
-func (runner *Runner) replaceContainers(logger *log.Entry, imageRefs store.ImageRefs) {
-	runner.Stop()
-
-	// ensure that we restart from scratch
-	if err := runner.dockerClient.Prune(runner.ctx); err != nil {
-		logger.WithError(err).Error("error while pruning after stopping old containers")
-		return
-	}
-	for _, container := range []*clients.DockerContainer{runner.updaterContainer, runner.supervisorContainer} {
-		if container != nil {
-			if err := runner.dockerClient.WaitContainerPrune(runner.ctx, container.ID); err != nil {
-				logger.WithError(err).Error("error while waiting for old container prune")
-				return
+		logger.Info("detected new images")
+		if latestRefs.Updater != runner.currentUpdaterImg {
+			if err := runner.replaceUpdater(logger, latestRefs); err != nil {
+				//TODO: what should happen here
+				logger.WithError(err).Error("error replacing updater")
+			}
+		} else if latestRefs.Supervisor != runner.currentSupervisorImg {
+			if err := runner.replaceSupervisor(logger, latestRefs); err != nil {
+				//TODO: what should happen here
+				logger.WithError(err).Error("error replacing supervisor")
 			}
 		}
 	}
+}
 
-	for _, image := range []struct {
-		Name string
-		Ref  *string
-	}{
-		{
-			Name: "updater",
-			Ref:  &imageRefs.Updater,
-		},
-		{
-			Name: "supervisor",
-			Ref:  &imageRefs.Supervisor,
-		},
-	} {
-		logger := log.WithField("ref", *image.Ref).WithField("name", image.Name)
-
-		ref, err := utils.ValidateDiscoImageRef(runner.cfg.Registry.ContainerRegistry, *image.Ref)
-		if err != nil {
-			logger.WithError(err).Warn("not a disco ref - skipping pull")
-			continue
-		}
-		// replace ref to include host in ref
-		*image.Ref = ref
-		if err := runner.dockerClient.EnsureLocalImage(runner.ctx, image.Name, ref); err != nil {
+func (runner *Runner) ensureImage(logger *log.Entry, name string, imageRef string) error {
+	logger = logger.WithField("ref", imageRef).WithField("name", name)
+	ref, err := utils.ValidateDiscoImageRef(runner.cfg.Registry.ContainerRegistry, imageRef)
+	if err == nil {
+		if err := runner.dockerClient.EnsureLocalImage(runner.ctx, name, ref); err != nil {
+			//TODO: what should happen here
 			logger.WithError(err).Warn("failed to ensure local image")
+			return err
 		}
+	} else {
+		//TODO: what should happen here
+		logger.WithError(err).Warn("not a disco ref - skipping pull")
+		return err
 	}
+	return nil
+}
 
-	var err error
+func (runner *Runner) replaceUpdater(logger *log.Entry, imageRefs store.ImageRefs) error {
+	logger.Info("replacing updater")
+	err := runner.removeContainer(runner.updaterContainer)
+	if err != nil {
+		return err
+	}
+	return runner.startUpdater(logger, imageRefs.Updater)
+}
 
-	runner.updaterContainer, err = runner.dockerClient.StartContainer(runner.ctx, clients.DockerContainerConfig{
+func (runner *Runner) replaceSupervisor(logger *log.Entry, imageRefs store.ImageRefs) error {
+	logger.Info("replacing supervisor")
+	err := runner.removeContainer(runner.supervisorContainer)
+	if err != nil {
+		return err
+	}
+	return runner.startSupervisor(logger, imageRefs.Supervisor)
+}
+
+func (runner *Runner) startUpdater(logger *log.Entry, updaterRef string) error {
+	err := runner.ensureImage(logger, "updater", updaterRef)
+	if err != nil {
+		return err
+	}
+	uc, err := runner.dockerClient.StartContainer(runner.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerUpdaterContainerName,
-		Image: imageRefs.Updater,
+		Image: updaterRef,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "updater"},
 		Volumes: map[string]string{
 			runner.cfg.FortaDir: config.DefaultContainerFortaDirPath,
@@ -140,16 +161,25 @@ func (runner *Runner) replaceContainers(logger *log.Entry, imageRefs store.Image
 	})
 	if err != nil {
 		logger.WithError(err).Errorf("failed to start the updater")
-		return
+		return err
 	}
+	runner.updaterContainer = uc
+
 	if err := runner.dockerClient.WaitContainerStart(runner.ctx, runner.updaterContainer.ID); err != nil {
 		logger.WithError(err).Error("error while waiting for updater start")
-		return
+		return err
 	}
+	return nil
+}
 
-	runner.supervisorContainer, err = runner.dockerClient.StartContainer(runner.ctx, clients.DockerContainerConfig{
+func (runner *Runner) startSupervisor(logger *log.Entry, ref string) error {
+	err := runner.ensureImage(logger, "supervisor", ref)
+	if err != nil {
+		return err
+	}
+	sc, err := runner.dockerClient.StartContainer(runner.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerSupervisorContainerName,
-		Image: imageRefs.Supervisor,
+		Image: ref,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "supervisor"},
 		Env: map[string]string{
 			// supervisor needs to know and mount the forta dir on the host os
@@ -168,10 +198,13 @@ func (runner *Runner) replaceContainers(logger *log.Entry, imageRefs store.Image
 	})
 	if err != nil {
 		logger.WithError(err).Errorf("failed to start the supervisor")
-		return
+		return err
 	}
+	runner.supervisorContainer = sc
+
 	if err := runner.dockerClient.WaitContainerStart(runner.ctx, runner.supervisorContainer.ID); err != nil {
 		logger.WithError(err).Error("error while waiting for supervisor start")
-		return
+		return err
 	}
+	return nil
 }
