@@ -25,7 +25,7 @@ func initListener(ctx context.Context, cfg config.Config) (*publisher.Publisher,
 	releaseInfoStr := os.Getenv(config.EnvReleaseInfo)
 	var releaseSummary *config.ReleaseSummary
 	if len(releaseInfoStr) > 0 {
-		releaseInfo := config.ReleaseInfoFromString(config.EnvReleaseInfo)
+		releaseInfo := config.ReleaseInfoFromString(releaseInfoStr)
 		releaseSummary = config.MakeSummaryFromReleaseInfo(releaseInfo)
 	}
 
