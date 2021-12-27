@@ -51,8 +51,7 @@ jobs:
           echo "release-cid=${{ needs.containers.outputs.node-release-cid }}"
       - name: Publish Hash
         run: |
-          # TODO: This script does not exist yet and the secret is not set
-          ./scripts/publish-release-prod.sh ${{ needs.containers.outputs.node-release-cid }} ${{ secrets.PROD_PUBLISH_AUTOTASK_KEY }}
+          ./scripts/publish-release.sh ${{ needs.containers.outputs.node-release-cid }} ${{ secrets.PROD_PUBLISH_AUTOTASK_KEY }} ${{ secrets.PROD_PUBLISH_AUTOTASK_URL }}
 
   build-deploy:
     name: Build and deploy

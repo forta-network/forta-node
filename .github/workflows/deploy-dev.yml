@@ -53,7 +53,7 @@ jobs:
           echo "release-cid=${{ needs.containers.outputs.node-release-cid }}"
       - name: Publish Hash
         run: |
-          ./scripts/publish-release-dev.sh ${{ needs.containers.outputs.node-release-cid }} ${{ secrets.DEV_PUBLISH_AUTOTASK_KEY }}
+          ./scripts/publish-release.sh ${{ needs.containers.outputs.node-release-cid }} ${{ secrets.DEV_PUBLISH_AUTOTASK_KEY }} ${{ secrets.DEV_PUBLISH_AUTOTASK_URL }}
 
   build-deploy:
     name: Build and deploy
