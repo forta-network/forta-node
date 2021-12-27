@@ -90,7 +90,10 @@ func (runner *Runner) receive() {
 	for latestRefs := range runner.imgStore.Latest() {
 		logger := log.WithField("supervisor", latestRefs.Supervisor).WithField("updater", latestRefs.Updater)
 		if latestRefs.ReleaseInfo != nil {
-			logger = logger.WithField("commit", latestRefs.ReleaseInfo.Manifest.Release.Commit)
+			logger = logger.WithFields(log.Fields{
+				"commit":      latestRefs.ReleaseInfo.Manifest.Release.Commit,
+				"releaseInfo": latestRefs.ReleaseInfo.String(),
+			})
 		}
 		logger.Info("detected new images")
 		if latestRefs.Updater != runner.currentUpdaterImg {

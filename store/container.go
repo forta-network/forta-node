@@ -70,6 +70,8 @@ func (store *fortaImageStore) check(ctx context.Context) {
 
 	serviceImgs := latestReleaseInfo.Manifest.Release.Services
 	if serviceImgs.Supervisor != store.latestImgs.Supervisor || serviceImgs.Updater != store.latestImgs.Updater {
+		log.WithField("commit", latestReleaseInfo.Manifest.Release.Commit).Info("got newer release from updater")
+
 		store.latestImgs = ImageRefs{
 			Supervisor:  serviceImgs.Supervisor,
 			Updater:     serviceImgs.Updater,

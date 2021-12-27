@@ -1,6 +1,10 @@
 package config
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	log "github.com/sirupsen/logrus"
+)
 
 // Release vars - injected by the compiler
 var (
@@ -43,8 +47,18 @@ func (releaseInfo *ReleaseInfo) String() string {
 
 // ReleaseInfoFromString parses the string.
 func ReleaseInfoFromString(s string) *ReleaseInfo {
+	if len(s) == 0 {
+		log.Warn("empty release info")
+		return nil
+	}
 	var releaseInfo ReleaseInfo
 	json.Unmarshal([]byte(s), &releaseInfo)
+	if len(releaseInfo.Manifest.Release.Commit) > 0 {
+		log.WithFields(log.Fields{
+			"commit": releaseInfo.Manifest.Release.Commit,
+			"ipfs":   releaseInfo.IPFS,
+		}).Info("found release info")
+	}
 	return &releaseInfo
 }
 
