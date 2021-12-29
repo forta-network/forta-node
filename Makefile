@@ -24,6 +24,7 @@ mocks:
 	mockgen -source store/updater.go -destination store/mocks/mock_updater.go
 	mockgen -source store/ipfs.go -destination store/mocks/mock_ipfs.go
 	mockgen -source ethereum/contract_backend.go -destination ethereum/mocks/mock_ethclient.go
+	mockgen -source services/publisher/publisher.go -destination services/publisher/mocks/mock_publisher.go
 
 test:
 	go test -v -count=1 ./...

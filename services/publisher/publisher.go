@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/goccy/go-json"
 
@@ -44,13 +45,14 @@ const (
 // Publisher receives, collects and publishes alerts.
 type Publisher struct {
 	protocol.UnimplementedPublisherNodeServer
-	ctx               context.Context
-	cfg               PublisherConfig
+	ctx context.Context
+	cfg PublisherConfig
+
 	contract          AlertsContract
 	ipfs              IPFS
 	testAlertLogger   TestAlertLogger
 	metricsAggregator *AgentMetricsAggregator
-	messageClient     *messaging.Client
+	messageClient     clients.MessageClient
 
 	initialize    sync.Once
 	skipEmpty     bool
@@ -437,7 +439,7 @@ func (pub *Publisher) Name() string {
 	return "Publisher"
 }
 
-func NewPublisher(ctx context.Context, mc *messaging.Client, cfg PublisherConfig) (*Publisher, error) {
+func NewPublisher(ctx context.Context, mc clients.MessageClient, cfg PublisherConfig) (*Publisher, error) {
 	rpcClient, err := rpc.Dial(cfg.PublisherConfig.JsonRpc.Url)
 
 	if err != nil {
