@@ -412,7 +412,7 @@ func (pub *Publisher) handleReady(cfgs messaging.AgentPayload) error {
 	pub.initialize.Do(func() {
 		go pub.prepareBatches()
 		go pub.publishBatches()
-		go pub.listenForMetrics()
+		pub.listenForMetrics()
 	})
 	return nil
 }
