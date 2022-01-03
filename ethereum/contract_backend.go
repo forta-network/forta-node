@@ -11,6 +11,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	maxNonceDrift = 50
+)
+
 // ContractBackend is the same interface.
 type ContractBackend interface {
 	bind.ContractBackend
@@ -31,21 +35,29 @@ func NewContractBackend(client *rpc.Client) bind.ContractBackend {
 // PendingNonceAt helps us count the nonce more robustly.
 func (cb *contractBackend) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
 	logger := log.WithField("address", account.Hex())
-	pendingNonce, err := cb.ContractBackend.PendingNonceAt(ctx, account)
+	serverNonce, err := cb.ContractBackend.PendingNonceAt(ctx, account)
 	if err != nil {
 		logger.WithError(err).Error("failed to get pending nonce from server")
 		return 0, err
 	}
 	logger = logger.WithFields(log.Fields{
-		"serverNonce": pendingNonce,
+		"serverNonce": serverNonce,
 		"localNonce":  cb.nonce,
 	})
-	if pendingNonce > cb.nonce {
+	switch {
+	case serverNonce > cb.nonce && serverNonce-cb.nonce >= maxNonceDrift:
+		logger.Warn("resetted local nonce")
+		cb.nonce = serverNonce
+		return serverNonce, nil
+
+	case serverNonce > cb.nonce:
 		logger.Info("using server nonce")
-		return pendingNonce, nil
+		return serverNonce, nil
+
+	default:
+		logger.Info("using local nonce")
+		return cb.nonce, nil
 	}
-	logger.Info("using local nonce")
-	return cb.nonce, nil
 }
 
 // SendTransaction sends the transaction with the most up-to-date nonce.
