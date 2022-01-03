@@ -21,9 +21,9 @@ type FortaImageStore interface {
 
 // ImageRefs contains the latest image references.
 type ImageRefs struct {
-	Supervisor string
-	Updater    string
-	Release    *config.ReleaseManifest
+	Supervisor  string
+	Updater     string
+	ReleaseInfo *config.ReleaseInfo
 }
 
 type fortaImageStore struct {
@@ -51,12 +51,12 @@ func (store *fortaImageStore) loop(ctx context.Context) {
 }
 
 func (store *fortaImageStore) check(ctx context.Context) {
-	latestRelease, err := store.getFromUpdater(ctx)
+	latestReleaseInfo, err := store.getFromUpdater(ctx)
 	if err != nil {
 		log.WithError(err).Warn("failed to get the latest release from the updater")
 	}
 
-	if len(store.latestImgs.Supervisor) == 0 && latestRelease == nil {
+	if len(store.latestImgs.Supervisor) == 0 && latestReleaseInfo == nil {
 		store.latestImgs = ImageRefs{
 			Supervisor: config.DockerSupervisorImage,
 			Updater:    config.DockerUpdaterImage,
@@ -64,22 +64,24 @@ func (store *fortaImageStore) check(ctx context.Context) {
 		store.latestCh <- store.latestImgs
 	}
 
-	if latestRelease == nil {
+	if latestReleaseInfo == nil {
 		return
 	}
 
-	serviceImgs := latestRelease.Release.Services
+	serviceImgs := latestReleaseInfo.Manifest.Release.Services
 	if serviceImgs.Supervisor != store.latestImgs.Supervisor || serviceImgs.Updater != store.latestImgs.Updater {
+		log.WithField("commit", latestReleaseInfo.Manifest.Release.Commit).Info("got newer release from updater")
+
 		store.latestImgs = ImageRefs{
-			Supervisor: serviceImgs.Supervisor,
-			Updater:    serviceImgs.Updater,
-			Release:    latestRelease,
+			Supervisor:  serviceImgs.Supervisor,
+			Updater:     serviceImgs.Updater,
+			ReleaseInfo: latestReleaseInfo,
 		}
 		store.latestCh <- store.latestImgs
 	}
 }
 
-func (store *fortaImageStore) getFromUpdater(ctx context.Context) (*config.ReleaseManifest, error) {
+func (store *fortaImageStore) getFromUpdater(ctx context.Context) (*config.ReleaseInfo, error) {
 	resp, err := http.Get(fmt.Sprintf("http://localhost:%s", store.updaterPort))
 	if err != nil {
 		return nil, err
@@ -94,8 +96,8 @@ func (store *fortaImageStore) getFromUpdater(ctx context.Context) (*config.Relea
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected updater response with code %d: %s", resp.StatusCode, string(respBody))
 	}
-	var releaseManifest config.ReleaseManifest
-	return &releaseManifest, json.Unmarshal(respBody, &releaseManifest)
+	var releaseInfo config.ReleaseInfo
+	return &releaseInfo, json.Unmarshal(respBody, &releaseInfo)
 }
 
 // Latest returns a channel that provides the latest image reference.

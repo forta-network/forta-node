@@ -100,6 +100,12 @@ publishes alerts about them`,
 		Short: "list the Forta node container images",
 		RunE:  handleFortaImages,
 	}
+
+	cmdFortaVersion = &cobra.Command{
+		Use:   "version",
+		Short: "show release info",
+		RunE:  handleFortaVersion,
+	}
 )
 
 // Execute executes the root command.
@@ -121,6 +127,8 @@ func init() {
 	cmdFortaAgent.AddCommand(cmdFortaAgentAdd)
 
 	cmdForta.AddCommand(cmdFortaImages)
+
+	cmdForta.AddCommand(cmdFortaVersion)
 
 	// Global (persistent) flags
 

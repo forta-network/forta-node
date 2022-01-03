@@ -22,6 +22,7 @@ message AlertBatch {
   repeated BlockResults results = 6;
   repeated BatchAgent agents = 7;
   repeated AgentMetrics metrics = 8;
+  ScannerVersion scannerVersion = 9;
 }
 
 message BlockResults {
@@ -50,4 +51,9 @@ message BatchAgent {
   AgentInfo info = 1;
   repeated uint64 blocks = 2;
   repeated string transactions = 3;
+}
+
+message ScannerVersion {
+  string commit = 1;
+  string ipfs = 2;
 }

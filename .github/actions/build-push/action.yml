@@ -8,8 +8,8 @@ inputs:
     description: 'Name of container to build'
     required: true
 outputs:
-  hash:
-    description: 'IPFS hash of the release manifest'
+  release-cid:
+    description: 'IPFS CID of the release manifest'
     value: ${{ steps.ipfs.outputs.hash }}
   image-reference:
     description: 'Reference of the built and pushed image'
