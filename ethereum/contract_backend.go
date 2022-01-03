@@ -45,7 +45,7 @@ func (cb *contractBackend) PendingNonceAt(ctx context.Context, account common.Ad
 		"localNonce":  cb.nonce,
 	})
 	switch {
-	case serverNonce > cb.nonce && serverNonce-cb.nonce >= maxNonceDrift:
+	case cb.nonce > serverNonce && cb.nonce-serverNonce >= maxNonceDrift:
 		logger.Warn("resetted local nonce")
 		cb.nonce = serverNonce
 		return serverNonce, nil

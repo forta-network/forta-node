@@ -65,3 +65,21 @@ func TestLaggingBackend(t *testing.T) {
 	r.Equal(backend.nonce, postTxNonce)
 	r.Greater(postTxNonce, txNonce)
 }
+
+func TestDriftingLocal(t *testing.T) {
+	r := require.New(t)
+
+	mockBackend := mock_ethereum.NewMockContractBackend(gomock.NewController(t))
+
+	// Given that the local nonce is higher
+	apiNonce := uint64(100)
+	backend := &contractBackend{ContractBackend: mockBackend, nonce: uint64(apiNonce + maxNonceDrift)}
+	mockBackend.EXPECT().PendingNonceAt(gomock.Any(), gomock.Any()).Return(apiNonce, nil).Times(1)
+
+	// When the nonce is requested from the backend
+	txNonce, err := backend.PendingNonceAt(context.Background(), testAddr)
+	// Then it should reset the local nonce and return the server nonce with no errors
+	r.NoError(err)
+	r.Equal(apiNonce, backend.nonce)
+	r.Equal(apiNonce, txNonce)
+}
