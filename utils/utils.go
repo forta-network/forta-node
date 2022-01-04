@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"math/big"
 	"os"
 	"sort"
 	"strconv"
@@ -48,4 +49,10 @@ func ParseBoolEnvVar(name string) (value bool) {
 	}
 	value, _ = strconv.ParseBool(boolStr)
 	return
+}
+
+//AddPercentage adds the pct to the input var
+func AddPercentage(input *big.Int, pct int64) {
+	bump := big.NewInt(input.Int64()).Div(input, big.NewInt(pct))
+	input.Add(input, bump)
 }

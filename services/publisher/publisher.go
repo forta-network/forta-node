@@ -20,7 +20,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
 	ipfsapi "github.com/ipfs/go-ipfs-api"
 	log "github.com/sirupsen/logrus"
@@ -46,11 +45,13 @@ type Publisher struct {
 	protocol.UnimplementedPublisherNodeServer
 	ctx               context.Context
 	cfg               PublisherConfig
+	chainID           *big.Int
 	contract          AlertsContract
 	ipfs              IPFS
 	testAlertLogger   TestAlertLogger
 	metricsAggregator *AgentMetricsAggregator
 	messageClient     *messaging.Client
+	eth               *ethclient.Client
 
 	initialize    sync.Once
 	skipEmpty     bool
@@ -74,7 +75,7 @@ type EthClient interface {
 
 // AlertsContract stores alerts.
 type AlertsContract interface {
-	AddAlertBatch(_chainId *big.Int, _blockStart *big.Int, _blockEnd *big.Int, _alertCount *big.Int, _maxSeverity *big.Int, _ref string) (*types.Transaction, error)
+	AddAlertBatch(opts *bind.TransactOpts, _chainId *big.Int, _blockStart *big.Int, _blockEnd *big.Int, _alertCount *big.Int, _maxSeverity *big.Int, _ref string) (*types.Transaction, error)
 }
 
 // IPFS interacts with an IPFS node/gateway.
@@ -149,7 +150,35 @@ func (pub *Publisher) publishNextBatch(batch *protocol.SignedAlertBatch) error {
 		},
 	)
 
+	gas, err := pub.eth.SuggestGasPrice(pub.ctx)
+	if err != nil {
+		logger.WithError(err).Error("could not get gas price")
+		return err
+	}
+	utils.AddPercentage(gas, 10)
+
+	txOpts, err := bind.NewKeyedTransactorWithChainID(pub.cfg.Key.PrivateKey, pub.chainID)
+	if err != nil {
+		log.WithError(err).Errorf("error while creating keyed transactor")
+		return err
+	}
+
+	if pub.cfg.PublisherConfig.MaxGasPrice != nil {
+		max := *pub.cfg.PublisherConfig.MaxGasPrice
+		if gas.Int64() > max {
+			logger.WithFields(log.Fields{
+				"estimate": gas.Int64(),
+				"maximum":  max,
+			}).Warn("estimate exceeds maximum, using maximum")
+			gas = big.NewInt(max)
+		}
+	}
+
+	txOpts.GasPrice = gas
+	txOpts.GasLimit = pub.cfg.PublisherConfig.GasLimit
+
 	tx, err := pub.contract.AddAlertBatch(
+		txOpts,
 		big.NewInt(0).SetUint64(batch.Data.ChainId),
 		big.NewInt(0).SetUint64(batch.Data.BlockStart),
 		big.NewInt(0).SetUint64(batch.Data.BlockEnd),
@@ -450,23 +479,9 @@ func NewPublisher(ctx context.Context, mc *messaging.Client, cfg PublisherConfig
 		return nil, err
 	}
 
-	txOpts, err := bind.NewKeyedTransactorWithChainID(cfg.Key.PrivateKey, chainID)
-	if err != nil {
-		log.Errorf("error while creating keyed transactor for listener: %s", err.Error())
-		return nil, err
-	}
-
-	txOpts.GasPrice = big.NewInt(cfg.PublisherConfig.GasPriceGwei * params.GWei)
-	txOpts.GasLimit = cfg.PublisherConfig.GasLimit
-
 	contract, err := contracts.NewAlertsTransactor(common.HexToAddress(cfg.PublisherConfig.ContractAddress), ethereum.NewContractBackend(rpcClient))
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize the alerts contract: %v", err)
-	}
-
-	ats := &contracts.AlertsTransactorSession{
-		Contract:     contract,
-		TransactOpts: *txOpts,
 	}
 
 	var ipfsClient IPFS
@@ -501,7 +516,9 @@ func NewPublisher(ctx context.Context, mc *messaging.Client, cfg PublisherConfig
 	return &Publisher{
 		ctx:               ctx,
 		cfg:               cfg,
-		contract:          ats,
+		chainID:           chainID,
+		contract:          contract,
+		eth:               ethClient,
 		ipfs:              ipfsClient,
 		testAlertLogger:   testAlertLogger,
 		metricsAggregator: NewMetricsAggregator(),
