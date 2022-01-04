@@ -3,12 +3,13 @@ package alertapi
 import (
 	"bytes"
 	"fmt"
-	"github.com/forta-protocol/forta-node/domain"
-	"github.com/goccy/go-json"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/forta-protocol/forta-node/domain"
+	"github.com/goccy/go-json"
+	log "github.com/sirupsen/logrus"
 )
 
 type client struct {
