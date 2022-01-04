@@ -58,8 +58,6 @@ type Publisher struct {
 	batchInterval time.Duration
 	batchLimit    int
 	latestChainID uint64
-	gasPrice      *big.Int
-	lastUpdated   *time.Time
 
 	notifCh chan *protocol.NotifyRequest
 	batchCh chan *protocol.SignedAlertBatch

@@ -3,6 +3,8 @@ name: Deploy Prod with Codedeploy
 on:
   workflow_dispatch:
     branches: [ master ]
+  pull_request:
+    branches: [ master ]
 
 jobs:
   containers:
