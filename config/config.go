@@ -65,7 +65,8 @@ type TestAlertsConfig struct {
 }
 
 type PublisherConfig struct {
-	SkipPublish     bool             `yaml:"skipPublish" json:"skipPublish" default:"false" `
+	SkipPublish     bool             `yaml:"skipPublish" json:"skipPublish" default:"false"`
+	APIURL          string           `default:"https://alerts.forta.network" yaml:"apiUrl" json:"apiUrl"`
 	ContractAddress string           `yaml:"contractAddress" json:"contractAddress"`
 	JsonRpc         JsonRpcConfig    `yaml:"jsonRpc" json:"jsonRpc" default:"{\"url\": \"https://polygon-rpc.com\"}" `
 	IPFS            IPFSConfig       `yaml:"ipfs" json:"ipfs" validate:"required_unless=SkipPublish true"`

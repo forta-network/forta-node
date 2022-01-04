@@ -3,6 +3,7 @@ package publisher
 import (
 	"context"
 	"fmt"
+	"github.com/forta-protocol/forta-node/clients/alertapi"
 	"os"
 
 	"github.com/forta-protocol/forta-node/clients/messaging"
@@ -29,7 +30,9 @@ func initListener(ctx context.Context, cfg config.Config) (*publisher.Publisher,
 		releaseSummary = config.MakeSummaryFromReleaseInfo(releaseInfo)
 	}
 
-	return publisher.NewPublisher(ctx, mc, publisher.PublisherConfig{
+	apiClient := alertapi.NewClient(cfg.Publish.APIURL)
+
+	return publisher.NewPublisher(ctx, mc, apiClient, publisher.PublisherConfig{
 		ChainID:         cfg.ChainID,
 		Key:             key,
 		PublisherConfig: cfg.Publish,

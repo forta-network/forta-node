@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/forta-protocol/forta-node/clients"
+	"github.com/forta-protocol/forta-node/domain"
 	"io"
 	"math/big"
 	"net"
@@ -51,7 +53,9 @@ type Publisher struct {
 	testAlertLogger   TestAlertLogger
 	metricsAggregator *AgentMetricsAggregator
 	messageClient     *messaging.Client
+	alertClient       clients.AlertAPIClient
 
+	parent        string
 	initialize    sync.Once
 	skipEmpty     bool
 	skipPublish   bool
@@ -107,6 +111,9 @@ func (pub *Publisher) publishNextBatch(batch *protocol.SignedAlertBatch) error {
 			Ipfs:   pub.cfg.ReleaseSummary.IPFS,
 		}
 	}
+	if pub.parent != "" {
+		batch.Data.Parent = pub.parent
+	}
 
 	signature, err := security.SignProtoMessage(pub.cfg.Key, batch)
 	if err != nil {
@@ -137,6 +144,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.SignedAlertBatch) error {
 	if err != nil {
 		return fmt.Errorf("failed to store alert data to ipfs: %v", err)
 	}
+	pub.parent = cid
 
 	logger := log.WithFields(
 		log.Fields{
@@ -149,24 +157,45 @@ func (pub *Publisher) publishNextBatch(batch *protocol.SignedAlertBatch) error {
 		},
 	)
 
-	tx, err := pub.contract.AddAlertBatch(
-		big.NewInt(0).SetUint64(batch.Data.ChainId),
-		big.NewInt(0).SetUint64(batch.Data.BlockStart),
-		big.NewInt(0).SetUint64(batch.Data.BlockEnd),
-		big.NewInt(int64(batch.Data.AlertCount)),
-		big.NewInt(0).SetUint64(uint64(batch.Data.MaxSeverity)),
-		cid,
-	)
+	cidSignature, err := security.SignString(pub.cfg.Key, cid)
+	if err != nil {
+		logger.WithError(err).Error("failed to sign cid")
+		return err
+	}
+	err = pub.alertClient.PostBatch(&domain.AlertBatch{
+		Scanner:     pub.cfg.Key.Address.Hex(),
+		ChainID:     int64(batch.Data.ChainId),
+		BlockStart:  int64(batch.Data.BlockStart),
+		BlockEnd:    int64(batch.Data.BlockEnd),
+		AlertCount:  int64(batch.Data.AlertCount),
+		MaxSeverity: int64(batch.Data.MaxSeverity),
+		Ref:         cid,
+	}, cidSignature.Signature)
+
 	if err != nil {
 		logger.WithError(err).Error("alert while sending batch")
 		return fmt.Errorf("failed to send the alert tx: %v", err)
 	}
 
-	logger.WithFields(
-		log.Fields{
-			"tx": tx.Hash().Hex(),
-		},
-	).Info("alert batch")
+	logger.Info("alert batch")
+
+	//tx, err := pub.contract.AddAlertBatch(
+	//	big.NewInt(0).SetUint64(batch.Data.ChainId),
+	//	big.NewInt(0).SetUint64(batch.Data.BlockStart),
+	//	big.NewInt(0).SetUint64(batch.Data.BlockEnd),
+	//	big.NewInt(int64(batch.Data.AlertCount)),
+	//	big.NewInt(0).SetUint64(uint64(batch.Data.MaxSeverity)),
+	//	cid,
+	//)
+	//if err != nil {
+	//	logger.WithError(err).Error("alert while sending batch")
+	//	return fmt.Errorf("failed to send the alert tx: %v", err)
+	//}
+	//logger.WithFields(
+	//	log.Fields{
+	//		"tx": tx.Hash().Hex(),
+	//	},
+	//).Info("alert batch")
 
 	return nil
 }
@@ -437,7 +466,7 @@ func (pub *Publisher) Name() string {
 	return "Publisher"
 }
 
-func NewPublisher(ctx context.Context, mc *messaging.Client, cfg PublisherConfig) (*Publisher, error) {
+func NewPublisher(ctx context.Context, mc *messaging.Client, alertClient clients.AlertAPIClient, cfg PublisherConfig) (*Publisher, error) {
 	rpcClient, err := rpc.Dial(cfg.PublisherConfig.JsonRpc.Url)
 
 	if err != nil {
@@ -506,6 +535,7 @@ func NewPublisher(ctx context.Context, mc *messaging.Client, cfg PublisherConfig
 		testAlertLogger:   testAlertLogger,
 		metricsAggregator: NewMetricsAggregator(),
 		messageClient:     mc,
+		alertClient:       alertClient,
 
 		skipEmpty:     cfg.PublisherConfig.Batch.SkipEmpty,
 		skipPublish:   cfg.PublisherConfig.SkipPublish,

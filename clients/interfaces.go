@@ -2,6 +2,7 @@ package clients
 
 import (
 	"context"
+	"github.com/forta-protocol/forta-node/domain"
 	"io"
 
 	"github.com/docker/docker/api/types"
@@ -42,4 +43,9 @@ type AgentClient interface {
 	Dial(config.AgentConfig) error
 	protocol.AgentClient
 	io.Closer
+}
+
+// AlertAPIClient calls an http api on the analyzer to store alerts
+type AlertAPIClient interface {
+	PostBatch(batch *domain.AlertBatch, signature string) error
 }
