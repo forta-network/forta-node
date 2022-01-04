@@ -47,5 +47,5 @@ type AgentClient interface {
 
 // AlertAPIClient calls an http api on the analyzer to store alerts
 type AlertAPIClient interface {
-	PostBatch(batch *domain.AlertBatch, signature string) error
+	PostBatch(batch *domain.AlertBatch, token string) error
 }

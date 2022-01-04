@@ -157,7 +157,10 @@ func (pub *Publisher) publishNextBatch(batch *protocol.SignedAlertBatch) error {
 		},
 	)
 
-	cidSignature, err := security.SignString(pub.cfg.Key, cid)
+	scannerJwt, err := security.CreateScannerJWT(pub.cfg.Key, map[string]interface{}{
+		"batch": cid,
+	})
+
 	if err != nil {
 		logger.WithError(err).Error("failed to sign cid")
 		return err
@@ -170,7 +173,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.SignedAlertBatch) error {
 		AlertCount:  int64(batch.Data.AlertCount),
 		MaxSeverity: int64(batch.Data.MaxSeverity),
 		Ref:         cid,
-	}, cidSignature.Signature)
+	}, scannerJwt)
 
 	if err != nil {
 		logger.WithError(err).Error("alert while sending batch")
