@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/forta-protocol/forta-node/clients"
+	"github.com/forta-protocol/forta-node/domain"
 	"io"
 	"math/big"
 	"net"
@@ -51,6 +53,7 @@ type Publisher struct {
 	testAlertLogger   TestAlertLogger
 	metricsAggregator *AgentMetricsAggregator
 	messageClient     *messaging.Client
+	alertClient       clients.AlertAPIClient
 
 	initialize    sync.Once
 	skipEmpty     bool
@@ -149,24 +152,37 @@ func (pub *Publisher) publishNextBatch(batch *protocol.SignedAlertBatch) error {
 		},
 	)
 
-	tx, err := pub.contract.AddAlertBatch(
-		big.NewInt(0).SetUint64(batch.Data.ChainId),
-		big.NewInt(0).SetUint64(batch.Data.BlockStart),
-		big.NewInt(0).SetUint64(batch.Data.BlockEnd),
-		big.NewInt(int64(batch.Data.AlertCount)),
-		big.NewInt(0).SetUint64(uint64(batch.Data.MaxSeverity)),
-		cid,
-	)
+	err = pub.alertClient.PostBatch(&domain.AlertBatch{
+		Scanner:     pub.cfg.Key.Address.Hex(),
+		ChainID:     int64(batch.Data.ChainId),
+		BlockStart:  int64(batch.Data.BlockStart),
+		BlockEnd:    int64(batch.Data.BlockEnd),
+		AlertCount:  int64(batch.Data.AlertCount),
+		MaxSeverity: int64(batch.Data.MaxSeverity),
+		Ref:         cid,
+	})
 	if err != nil {
 		logger.WithError(err).Error("alert while sending batch")
 		return fmt.Errorf("failed to send the alert tx: %v", err)
 	}
 
-	logger.WithFields(
-		log.Fields{
-			"tx": tx.Hash().Hex(),
-		},
-	).Info("alert batch")
+	//tx, err := pub.contract.AddAlertBatch(
+	//	big.NewInt(0).SetUint64(batch.Data.ChainId),
+	//	big.NewInt(0).SetUint64(batch.Data.BlockStart),
+	//	big.NewInt(0).SetUint64(batch.Data.BlockEnd),
+	//	big.NewInt(int64(batch.Data.AlertCount)),
+	//	big.NewInt(0).SetUint64(uint64(batch.Data.MaxSeverity)),
+	//	cid,
+	//)
+	//if err != nil {
+	//	logger.WithError(err).Error("alert while sending batch")
+	//	return fmt.Errorf("failed to send the alert tx: %v", err)
+	//}
+	//logger.WithFields(
+	//	log.Fields{
+	//		"tx": tx.Hash().Hex(),
+	//	},
+	//).Info("alert batch")
 
 	return nil
 }
@@ -437,7 +453,7 @@ func (pub *Publisher) Name() string {
 	return "Publisher"
 }
 
-func NewPublisher(ctx context.Context, mc *messaging.Client, cfg PublisherConfig) (*Publisher, error) {
+func NewPublisher(ctx context.Context, mc *messaging.Client, alertClient clients.AlertAPIClient, cfg PublisherConfig) (*Publisher, error) {
 	rpcClient, err := rpc.Dial(cfg.PublisherConfig.JsonRpc.Url)
 
 	if err != nil {
@@ -506,6 +522,7 @@ func NewPublisher(ctx context.Context, mc *messaging.Client, cfg PublisherConfig
 		testAlertLogger:   testAlertLogger,
 		metricsAggregator: NewMetricsAggregator(),
 		messageClient:     mc,
+		alertClient:       alertClient,
 
 		skipEmpty:     cfg.PublisherConfig.Batch.SkipEmpty,
 		skipPublish:   cfg.PublisherConfig.SkipPublish,
