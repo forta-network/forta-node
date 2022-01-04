@@ -87,18 +87,17 @@ func (cb *contractBackend) PendingNonceAt(ctx context.Context, account common.Ad
 	})
 	switch {
 	case cb.localNonce == 0:
-		logger.Info("using server nonce (first time)")
-		return cb.lastServerNonce, nil
+		logger.Info("starting with server nonce")
+		cb.localNonce = cb.lastServerNonce
 
 	case cb.localNonce > cb.lastServerNonce && cb.localNonce-cb.lastServerNonce >= maxNonceDrift:
-		logger.Warn("resetted local nonce")
+		logger.Warn("resetting local to server nonce")
 		cb.resetNonce()
-		return cb.lastServerNonce, nil
 
 	default:
 		logger.Info("using local nonce")
-		return cb.localNonce, nil
 	}
+	return cb.localNonce, nil
 }
 
 const (
