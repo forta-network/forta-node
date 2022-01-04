@@ -63,12 +63,26 @@ func (e ethSigningMethod) Alg() string {
 	return alg
 }
 
-func VerifyJWT(tokenString string, address string) (*jwt.Token, error) {
+type ScannerToken struct {
+	Scanner string
+	Token   *jwt.Token
+}
+
+func parseSub(token *jwt.Token) (string, error) {
+	if c, ok := token.Claims.(jwt.MapClaims); ok {
+		if sub, subOk := c["sub"]; subOk {
+			return sub.(string), nil
+		}
+	}
+	return "", errors.New("invalid claims")
+}
+
+func VerifyScannerJWT(tokenString string) (*ScannerToken, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(ethSigningMethod); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return address, nil
+		return parseSub(token)
 	})
 
 	if err != nil {
@@ -79,10 +93,18 @@ func VerifyJWT(tokenString string, address string) (*jwt.Token, error) {
 		return nil, fmt.Errorf("invalid token")
 	}
 
-	return token, nil
+	sub, err := parseSub(token)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ScannerToken{
+		Scanner: sub,
+		Token:   token,
+	}, nil
 }
 
-func CreateJWT(key *keystore.Key, claims map[string]interface{}) (string, error) {
+func CreateScannerJWT(key *keystore.Key, claims map[string]interface{}) (string, error) {
 	mapClaims := map[string]interface{}{
 		"sub": key.Address.Hex(),
 		"nbf": time.Now().UTC(),
