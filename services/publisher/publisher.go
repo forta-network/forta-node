@@ -55,6 +55,7 @@ type Publisher struct {
 	messageClient     *messaging.Client
 	alertClient       clients.AlertAPIClient
 
+	parent        string
 	initialize    sync.Once
 	skipEmpty     bool
 	skipPublish   bool
@@ -110,6 +111,9 @@ func (pub *Publisher) publishNextBatch(batch *protocol.SignedAlertBatch) error {
 			Ipfs:   pub.cfg.ReleaseSummary.IPFS,
 		}
 	}
+	if pub.parent != "" {
+		batch.Data.Parent = pub.parent
+	}
 
 	signature, err := security.SignProtoMessage(pub.cfg.Key, batch)
 	if err != nil {
@@ -140,6 +144,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.SignedAlertBatch) error {
 	if err != nil {
 		return fmt.Errorf("failed to store alert data to ipfs: %v", err)
 	}
+	pub.parent = cid
 
 	logger := log.WithFields(
 		log.Fields{
@@ -165,6 +170,8 @@ func (pub *Publisher) publishNextBatch(batch *protocol.SignedAlertBatch) error {
 		logger.WithError(err).Error("alert while sending batch")
 		return fmt.Errorf("failed to send the alert tx: %v", err)
 	}
+
+	logger.Info("alert batch")
 
 	//tx, err := pub.contract.AddAlertBatch(
 	//	big.NewInt(0).SetUint64(batch.Data.ChainId),
