@@ -422,7 +422,7 @@ func (d *dockerClient) WaitContainerExit(ctx context.Context, id string) error {
 		"id": id,
 	})
 	// if it takes longer than 10 seconds, then just move on
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
 	defer cancel()
 
 	for range ticker.C {
@@ -453,7 +453,7 @@ func (d *dockerClient) WaitContainerStart(ctx context.Context, id string) error 
 	})
 
 	// if it takes longer than 10 seconds, then just move on
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
 	defer cancel()
 
 	for t := range ticker.C {
@@ -480,7 +480,7 @@ func (d *dockerClient) WaitContainerPrune(ctx context.Context, id string) error 
 		"id": id,
 	})
 	// if it takes longer than 10 seconds, then just move on
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
 	defer cancel()
 
 	for range ticker.C {
