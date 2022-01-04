@@ -2,6 +2,8 @@ package ethereum
 
 import (
 	"context"
+	"github.com/forta-protocol/forta-node/utils"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -23,13 +25,36 @@ type ContractBackend interface {
 // contractBackend is a wrapper of go-ethereum client. This is useful for implementing
 // extra features. It's not thread-safe.
 type contractBackend struct {
-	nonce uint64
+	nonce    uint64
+	maxPrice *big.Int
 	ContractBackend
 }
 
 // NewContractBackend creates a new contract backend by wrapping `ethclient.Client`.
-func NewContractBackend(client *rpc.Client) bind.ContractBackend {
-	return &contractBackend{ContractBackend: ethclient.NewClient(client)}
+func NewContractBackend(client *rpc.Client, maxPrice *big.Int) bind.ContractBackend {
+	return &contractBackend{
+		ContractBackend: ethclient.NewClient(client),
+		maxPrice:        maxPrice,
+	}
+}
+
+// SuggestGasPrice retrieves the currently suggested gas price and adds 10%
+func (cb *contractBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
+	gp, err := cb.ContractBackend.SuggestGasPrice(ctx)
+	if err != nil {
+		return nil, err
+	}
+	utils.AddPercentage(gp, 10)
+	if cb.maxPrice != nil {
+		if gp.Cmp(cb.maxPrice) == 1 {
+			log.WithFields(log.Fields{
+				"suggested": gp.Int64(),
+				"maximum":   cb.maxPrice.Int64(),
+			}).Warn("defaulting to maximum price")
+			return cb.maxPrice, nil
+		}
+	}
+	return gp, nil
 }
 
 // PendingNonceAt helps us count the nonce more robustly.
