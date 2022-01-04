@@ -17,6 +17,7 @@ require (
 	github.com/fatih/color v1.12.0
 	github.com/go-playground/validator/v10 v10.9.0
 	github.com/goccy/go-json v0.7.10
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.2

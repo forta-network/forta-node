@@ -5,17 +5,16 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"os"
-	"path"
-	"strings"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/proto"
 	"google.golang.org/protobuf/runtime/protoiface"
+	"io"
+	"io/ioutil"
+	"os"
+	"path"
+	"strings"
 
 	"github.com/forta-protocol/forta-node/protocol"
 )
