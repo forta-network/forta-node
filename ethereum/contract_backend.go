@@ -86,13 +86,13 @@ func (cb *contractBackend) PendingNonceAt(ctx context.Context, account common.Ad
 		"localNonce":  cb.localNonce,
 	})
 	switch {
+	case cb.localNonce == 0:
+		logger.Info("using server nonce (first time)")
+		return cb.lastServerNonce, nil
+
 	case cb.localNonce > cb.lastServerNonce && cb.localNonce-cb.lastServerNonce >= maxNonceDrift:
 		logger.Warn("resetted local nonce")
 		cb.resetNonce()
-		return cb.lastServerNonce, nil
-
-	case cb.lastServerNonce > cb.localNonce:
-		logger.Info("using server nonce")
 		return cb.lastServerNonce, nil
 
 	default:
@@ -135,7 +135,9 @@ func (cb *contractBackend) incrementNonce(tx *types.Transaction) {
 }
 
 func (cb *contractBackend) resetNonce() {
-	cb.localNonce = cb.lastServerNonce
+	if cb.lastServerNonce < cb.localNonce {
+		cb.localNonce = cb.lastServerNonce
+	}
 }
 
 func getTxLogger(tx *types.Transaction) *log.Entry {

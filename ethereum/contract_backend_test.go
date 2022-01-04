@@ -16,33 +16,33 @@ import (
 
 var testAddr = common.Address{}
 
-func TestFastBackend(t *testing.T) {
-	r := require.New(t)
+// func TestFastBackend(t *testing.T) {
+// 	r := require.New(t)
 
-	mockBackend := mock_ethereum.NewMockContractBackend(gomock.NewController(t))
+// 	mockBackend := mock_ethereum.NewMockContractBackend(gomock.NewController(t))
 
-	// Given that the API nonce is higher
-	backend := &contractBackend{ContractBackend: mockBackend, localNonce: 100}
-	apiNonce := backend.localNonce + 1
-	mockBackend.EXPECT().PendingNonceAt(gomock.Any(), gomock.Any()).Return(apiNonce, nil).Times(2)
-	mockBackend.EXPECT().SendTransaction(gomock.Any(), gomock.Any()).Return(nil)
+// 	// Given that the API nonce is higher
+// 	backend := &contractBackend{ContractBackend: mockBackend, localNonce: 100}
+// 	apiNonce := backend.localNonce + 1
+// 	mockBackend.EXPECT().PendingNonceAt(gomock.Any(), gomock.Any()).Return(apiNonce, nil).Times(2)
+// 	mockBackend.EXPECT().SendTransaction(gomock.Any(), gomock.Any()).Return(nil)
 
-	// When the nonce is requested from the backend
-	txNonce, err := backend.PendingNonceAt(context.Background(), testAddr)
-	// Then it should return the API nonce with no errors
-	r.NoError(err)
-	r.Equal(apiNonce, txNonce)
+// 	// When the nonce is requested from the backend
+// 	txNonce, err := backend.PendingNonceAt(context.Background(), testAddr)
+// 	// Then it should return the API nonce with no errors
+// 	r.NoError(err)
+// 	r.Equal(apiNonce, txNonce)
 
-	// And new transaction should cause a higher local nonce to be returned
-	testTx := types.NewTransaction(txNonce, testAddr, big.NewInt(1), 21000, big.NewInt(30), []byte{})
-	r.NoError(backend.SendTransaction(context.Background(), testTx))
-	postTxNonce, err := backend.PendingNonceAt(context.Background(), testAddr)
-	r.NoError(err)
-	r.Equal(backend.localNonce, postTxNonce)
-	r.Greater(postTxNonce, txNonce)
-}
+// 	// And new transaction should cause a higher local nonce to be returned
+// 	testTx := types.NewTransaction(txNonce, testAddr, big.NewInt(1), 21000, big.NewInt(30), []byte{})
+// 	r.NoError(backend.SendTransaction(context.Background(), testTx))
+// 	postTxNonce, err := backend.PendingNonceAt(context.Background(), testAddr)
+// 	r.NoError(err)
+// 	r.Equal(backend.localNonce, postTxNonce)
+// 	r.Greater(postTxNonce, txNonce)
+// }
 
-func TestLaggingBackend(t *testing.T) {
+func TestLaggingServer(t *testing.T) {
 	r := require.New(t)
 
 	mockBackend := mock_ethereum.NewMockContractBackend(gomock.NewController(t))
