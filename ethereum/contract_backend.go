@@ -50,10 +50,14 @@ func (cb *contractBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error
 			log.WithFields(log.Fields{
 				"suggested": gp.Int64(),
 				"maximum":   cb.maxPrice.Int64(),
-			}).Warn("defaulting to maximum price")
+			}).Warn("returning maximum price")
 			return cb.maxPrice, nil
 		}
 	}
+	//TODO: drop to debug
+	log.WithFields(log.Fields{
+		"gasPrice": gp.Int64(),
+	}).Info("returning gas price")
 	return gp, nil
 }
 
