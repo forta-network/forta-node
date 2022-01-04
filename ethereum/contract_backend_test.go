@@ -83,3 +83,59 @@ func TestDriftingLocal(t *testing.T) {
 	r.Equal(apiNonce, backend.nonce)
 	r.Equal(apiNonce, txNonce)
 }
+
+func TestSuggestGasPrice_Default(t *testing.T) {
+	r := require.New(t)
+
+	suggested := big.NewInt(100)
+
+	// Given no max price
+	mockBackend := mock_ethereum.NewMockContractBackend(gomock.NewController(t))
+	backend := &contractBackend{ContractBackend: mockBackend, nonce: 1}
+	mockBackend.EXPECT().SuggestGasPrice(gomock.Any()).Return(suggested, nil).Times(1)
+
+	// When the SuggestedGasPrice is called
+	res, err := backend.SuggestGasPrice(context.Background())
+
+	// Then it should default to the suggested + 10%
+	r.NoError(err)
+	r.Equal(int64(110), res.Int64())
+}
+
+func TestSuggestGasPrice_MaxExceeded(t *testing.T) {
+	r := require.New(t)
+
+	maxPrice := big.NewInt(50)
+	suggested := big.NewInt(100)
+
+	// Given no max price
+	mockBackend := mock_ethereum.NewMockContractBackend(gomock.NewController(t))
+	backend := &contractBackend{ContractBackend: mockBackend, nonce: 1, maxPrice: maxPrice}
+	mockBackend.EXPECT().SuggestGasPrice(gomock.Any()).Return(suggested, nil).Times(1)
+
+	// When the SuggestedGasPrice is called
+	res, err := backend.SuggestGasPrice(context.Background())
+
+	// Then it should default to maxPrice
+	r.NoError(err)
+	r.Equal(int64(50), res.Int64())
+}
+
+func TestSuggestGasPrice_MaxNotExceeded(t *testing.T) {
+	r := require.New(t)
+
+	maxPrice := big.NewInt(150)
+	suggested := big.NewInt(100)
+
+	// Given no max price
+	mockBackend := mock_ethereum.NewMockContractBackend(gomock.NewController(t))
+	backend := &contractBackend{ContractBackend: mockBackend, nonce: 1, maxPrice: maxPrice}
+	mockBackend.EXPECT().SuggestGasPrice(gomock.Any()).Return(suggested, nil).Times(1)
+
+	// When the SuggestedGasPrice is called
+	res, err := backend.SuggestGasPrice(context.Background())
+
+	// Then it should default to suggested + 10%
+	r.NoError(err)
+	r.Equal(int64(110), res.Int64())
+}
