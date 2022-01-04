@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -138,4 +139,41 @@ func TestSuggestGasPrice_MaxNotExceeded(t *testing.T) {
 	// Then it should default to suggested + 10%
 	r.NoError(err)
 	r.Equal(int64(110), res.Int64())
+}
+
+func TestSuggestGasPrice_CacheHit(t *testing.T) {
+	r := require.New(t)
+
+	maxPrice := big.NewInt(150)
+	cached := big.NewInt(110)
+
+	// Given no max price
+	mockBackend := mock_ethereum.NewMockContractBackend(gomock.NewController(t))
+	backend := &contractBackend{ContractBackend: mockBackend, nonce: 1, maxPrice: maxPrice, gasPrice: cached, gasPriceUpdated: time.Now()}
+
+	// When the SuggestedGasPrice is called
+	res, err := backend.SuggestGasPrice(context.Background())
+
+	// Then it should default to suggested + 10%
+	r.NoError(err)
+	r.Equal(int64(110), res.Int64())
+}
+
+func TestSuggestGasPrice_CacheMiss(t *testing.T) {
+	r := require.New(t)
+
+	cached := big.NewInt(110)
+	suggested := big.NewInt(200)
+
+	// Given no max price
+	mockBackend := mock_ethereum.NewMockContractBackend(gomock.NewController(t))
+	backend := &contractBackend{ContractBackend: mockBackend, nonce: 1, gasPrice: cached, gasPriceUpdated: time.Now().Add(-5 * time.Minute)}
+	mockBackend.EXPECT().SuggestGasPrice(gomock.Any()).Return(suggested, nil).Times(1)
+
+	// When the SuggestedGasPrice is called
+	res, err := backend.SuggestGasPrice(context.Background())
+
+	// Then it should default to suggested + 10%
+	r.NoError(err)
+	r.Equal(int64(220), res.Int64())
 }

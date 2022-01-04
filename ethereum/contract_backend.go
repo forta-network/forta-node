@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/forta-protocol/forta-node/utils"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -25,8 +26,10 @@ type ContractBackend interface {
 // contractBackend is a wrapper of go-ethereum client. This is useful for implementing
 // extra features. It's not thread-safe.
 type contractBackend struct {
-	nonce    uint64
-	maxPrice *big.Int
+	nonce           uint64
+	gasPrice        *big.Int
+	gasPriceUpdated time.Time
+	maxPrice        *big.Int
 	ContractBackend
 }
 
@@ -40,6 +43,9 @@ func NewContractBackend(client *rpc.Client, maxPrice *big.Int) bind.ContractBack
 
 // SuggestGasPrice retrieves the currently suggested gas price and adds 10%
 func (cb *contractBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
+	if cb.gasPrice != nil && time.Since(cb.gasPriceUpdated) < 1*time.Minute {
+		return cb.gasPrice, nil
+	}
 	gp, err := cb.ContractBackend.SuggestGasPrice(ctx)
 	if err != nil {
 		return nil, err
@@ -58,6 +64,8 @@ func (cb *contractBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error
 	log.WithFields(log.Fields{
 		"gasPrice": gp.Int64(),
 	}).Info("returning gas price")
+	cb.gasPriceUpdated = time.Now()
+	cb.gasPrice = gp
 	return gp, nil
 }
 
@@ -89,21 +97,32 @@ func (cb *contractBackend) PendingNonceAt(ctx context.Context, account common.Ad
 	}
 }
 
+func incrementableError(err error) bool {
+	return err.Error() == "replacement transaction underpriced"
+}
+
 // SendTransaction sends the transaction with the most up-to-date nonce.
 func (cb *contractBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
 	logger := getTxLogger(tx)
 	logger.Info("sending")
 	if err := cb.ContractBackend.SendTransaction(ctx, tx); err != nil {
 		logger.WithError(err).Error("failed to send")
+		if incrementableError(err) {
+			cb.incrementNonce(tx)
+		}
 		return err
 	}
 	logger.Info("sent")
 	// count it locally: if sending the tx is successful than that's the previous nonce for sure
+	cb.incrementNonce(tx)
+	return nil
+}
+
+func (cb *contractBackend) incrementNonce(tx *types.Transaction) {
 	newNonce := tx.Nonce() + 1
 	if newNonce > cb.nonce {
 		cb.nonce = newNonce
 	}
-	return nil
 }
 
 func getTxLogger(tx *types.Transaction) *log.Entry {
