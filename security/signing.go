@@ -14,9 +14,10 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/forta-protocol/forta-node/protocol"
 	"github.com/golang/protobuf/proto"
 	"google.golang.org/protobuf/runtime/protoiface"
+
+	"github.com/forta-protocol/forta-node/protocol"
 )
 
 var MockPassphrase string
