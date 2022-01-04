@@ -1,6 +1,7 @@
 package security
 
 import (
+	"github.com/golang-jwt/jwt"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -20,8 +21,11 @@ func TestCreateJWT(t *testing.T) {
 	assert.NoError(t, err)
 	t.Log(token)
 
-	addr, err := VerifyJWT(token, address)
-
+	validToken, err := VerifyJWT(token, address)
 	assert.NoError(t, err)
-	assert.Equal(t, address, addr)
+
+	c, ok := validToken.Claims.(jwt.MapClaims)
+	assert.True(t, ok)
+
+	assert.Equal(t, address, c["sub"])
 }

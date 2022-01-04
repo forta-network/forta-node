@@ -63,7 +63,7 @@ func (e ethSigningMethod) Alg() string {
 	return alg
 }
 
-func VerifyJWT(tokenString string, address string) (string, error) {
+func VerifyJWT(tokenString string, address string) (*jwt.Token, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(ethSigningMethod); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -72,15 +72,14 @@ func VerifyJWT(tokenString string, address string) (string, error) {
 	})
 
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	if token.Valid {
-		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			return claims["sub"].(string), nil
-		}
+	if !token.Valid {
+		return nil, fmt.Errorf("invalid token")
 	}
-	return "", fmt.Errorf("invalid token")
+
+	return token, nil
 }
 
 func CreateJWT(key *keystore.Key, claims map[string]interface{}) (string, error) {
