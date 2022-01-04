@@ -48,11 +48,12 @@ func (c *client) post(path string, body interface{}, headers map[string]string) 
 	return nil
 }
 
-func (c *client) PostBatch(batch *domain.AlertBatch) error {
+func (c *client) PostBatch(batch *domain.AlertBatch, signature string) error {
 	path := fmt.Sprintf("/batch/%s", batch.Ref)
 	headers := map[string]string{
 		"x-forta-scanner": batch.Scanner,
 		"content-type":    "application/json",
+		"Authorization":   fmt.Sprintf("bearer %s", signature),
 	}
 	return c.post(path, batch, headers)
 }
