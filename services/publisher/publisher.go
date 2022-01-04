@@ -458,8 +458,8 @@ func NewPublisher(ctx context.Context, mc *messaging.Client, cfg PublisherConfig
 	txOpts.GasLimit = cfg.PublisherConfig.GasLimit
 
 	var maxPrice *big.Int
-	if cfg.PublisherConfig.MaxGasPrice != nil {
-		maxPrice = big.NewInt(*cfg.PublisherConfig.MaxGasPrice)
+	if cfg.PublisherConfig.MaxGasPrice > 0 {
+		maxPrice = big.NewInt(int64(cfg.PublisherConfig.MaxGasPrice))
 	}
 
 	contract, err := contracts.NewAlertsTransactor(common.HexToAddress(cfg.PublisherConfig.ContractAddress), ethereum.NewContractBackend(rpcClient, maxPrice))

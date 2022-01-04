@@ -71,7 +71,7 @@ type PublisherConfig struct {
 	IPFS            IPFSConfig       `yaml:"ipfs" json:"ipfs" validate:"required_unless=SkipPublish true"`
 	Batch           BatchConfig      `yaml:"batch" json:"batch"`
 	TestAlerts      TestAlertsConfig `yaml:"testAlerts" json:"testAlerts"`
-	MaxGasPrice     *int64           `yaml:"maxGasPrice" json:"maxGasPrice"`
+	MaxGasPrice     uint64           `yaml:"maxGasPrice" json:"maxGasPrice"`
 	GasLimit        uint64           `yaml:"gasLimit" json:"gasLimit" default:"50000"`
 }
 
