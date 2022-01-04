@@ -113,9 +113,14 @@ func (cb *contractBackend) SendTransaction(ctx context.Context, tx *types.Transa
 	logger := getTxLogger(tx)
 	logger.Info("sending")
 	if err := cb.ContractBackend.SendTransaction(ctx, tx); err != nil {
-		// quickly go back to the last server nonce when the error repeats
 		if isReplacementErr(err) {
-			cb.resetNonce()
+			if cb.localNonce > cb.lastServerNonce {
+				// quickly go back to the lower server nonce
+				cb.resetNonce()
+			} else {
+				// keep on by incrementing the low local nonce
+				cb.incrementNonce(tx)
+			}
 		}
 		logger.WithError(err).Error("failed to send")
 		return err
