@@ -18,7 +18,7 @@ const (
 
 // useEnsDefaults gets and uses ENS defaults if needed.
 func useEnsDefaults() error {
-	if cfg.Registry.ContractAddress != "" && cfg.Publish.ContractAddress != "" {
+	if cfg.Registry.ContractAddress != "" {
 		return nil
 	}
 
@@ -82,9 +82,6 @@ func findContractAddress(ens store.ENS, input string) (string, error) {
 func setContractAddressesFromCache(cache contractAddressCache) {
 	if cfg.Registry.ContractAddress == "" {
 		cfg.Registry.ContractAddress = cache.Dispatch
-	}
-	if cfg.Publish.ContractAddress == "" {
-		cfg.Publish.ContractAddress = cache.Alerts
 	}
 	cfg.AgentRegistryContractAddress = cache.Agents
 }
