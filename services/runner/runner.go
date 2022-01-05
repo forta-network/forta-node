@@ -58,7 +58,6 @@ func (runner *Runner) Stop() error {
 	return nil
 }
 
-//TODO: add a nuke fallback for containers that just don't go away
 func (runner *Runner) removeContainer(container *clients.DockerContainer) error {
 	if container != nil {
 		logger := log.WithField("container", container.ID).WithField("name", container.Name)
@@ -68,19 +67,13 @@ func (runner *Runner) removeContainer(container *clients.DockerContainer) error 
 			logger.Info("interrupted")
 		}
 		if err := runner.dockerClient.WaitContainerExit(context.Background(), container.ID); err != nil {
-			//TODO: what should happen here
-			logger.WithError(err).Error("error while waiting for container exit")
-			return err
+			logger.WithError(err).Panic("error while waiting for container exit")
 		}
 		if err := runner.dockerClient.Prune(runner.ctx); err != nil {
-			//TODO: what should happen here
-			logger.WithError(err).Error("error while pruning after stopping old containers")
-			return err
+			logger.WithError(err).Panic("error while pruning after stopping old containers")
 		}
 		if err := runner.dockerClient.WaitContainerPrune(runner.ctx, container.ID); err != nil {
-			//TODO: what should happen here
-			logger.WithError(err).Error("error while waiting for old container prune")
-			return err
+			logger.WithError(err).Panic("error while waiting for old container prune")
 		}
 	}
 	return nil
@@ -98,8 +91,7 @@ func (runner *Runner) receive() {
 		logger.Info("detected new images")
 		if latestRefs.Updater != runner.currentUpdaterImg {
 			if err := runner.replaceUpdater(logger, latestRefs); err != nil {
-				//TODO: what should happen here
-				logger.WithError(err).Error("error replacing updater")
+				logger.WithError(err).Panic("error replacing updater")
 			} else {
 				runner.currentUpdaterImg = latestRefs.Updater
 			}
@@ -111,8 +103,7 @@ func (runner *Runner) receive() {
 		validReleaseInfo := latestRefs.ReleaseInfo != nil || config.UseDockerImages == "local"
 		if latestRefs.Supervisor != runner.currentSupervisorImg && validReleaseInfo {
 			if err := runner.replaceSupervisor(logger, latestRefs); err != nil {
-				//TODO: what should happen here
-				logger.WithError(err).Error("error replacing supervisor")
+				logger.WithError(err).Panic("error replacing supervisor")
 			} else {
 				runner.currentSupervisorImg = latestRefs.Supervisor
 			}
