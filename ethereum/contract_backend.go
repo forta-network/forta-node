@@ -2,9 +2,10 @@ package ethereum
 
 import (
 	"context"
-	"github.com/forta-protocol/forta-node/utils"
 	"math/big"
 	"time"
+
+	"github.com/forta-protocol/forta-node/utils"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -26,10 +27,13 @@ type ContractBackend interface {
 // contractBackend is a wrapper of go-ethereum client. This is useful for implementing
 // extra features. It's not thread-safe.
 type contractBackend struct {
-	nonce           uint64
+	localNonce      uint64
+	lastServerNonce uint64
+
 	gasPrice        *big.Int
 	gasPriceUpdated time.Time
 	maxPrice        *big.Int
+
 	ContractBackend
 }
 
@@ -70,35 +74,38 @@ func (cb *contractBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error
 }
 
 // PendingNonceAt helps us count the nonce more robustly.
-func (cb *contractBackend) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
+func (cb *contractBackend) PendingNonceAt(ctx context.Context, account common.Address) (pendingNonce uint64, err error) {
 	logger := log.WithField("address", account.Hex())
-	serverNonce, err := cb.ContractBackend.PendingNonceAt(ctx, account)
+	cb.lastServerNonce, err = cb.ContractBackend.PendingNonceAt(ctx, account)
 	if err != nil {
 		logger.WithError(err).Error("failed to get pending nonce from server")
 		return 0, err
 	}
 	logger = logger.WithFields(log.Fields{
-		"serverNonce": serverNonce,
-		"localNonce":  cb.nonce,
+		"serverNonce": cb.lastServerNonce,
+		"localNonce":  cb.localNonce,
 	})
 	switch {
-	case cb.nonce > serverNonce && cb.nonce-serverNonce >= maxNonceDrift:
-		logger.Warn("resetted local nonce")
-		cb.nonce = serverNonce
-		return serverNonce, nil
+	case cb.localNonce == 0:
+		logger.Info("starting with server nonce")
+		cb.localNonce = cb.lastServerNonce
 
-	case serverNonce > cb.nonce:
-		logger.Info("using server nonce")
-		return serverNonce, nil
+	case cb.localNonce > cb.lastServerNonce && cb.localNonce-cb.lastServerNonce >= maxNonceDrift:
+		logger.Warn("resetting local to server nonce")
+		cb.resetNonce()
 
 	default:
 		logger.Info("using local nonce")
-		return cb.nonce, nil
 	}
+	return cb.localNonce, nil
 }
 
-func incrementableError(err error) bool {
-	return err.Error() == "replacement transaction underpriced"
+const (
+	errStrReplacementTx = "replacement transaction underpriced"
+)
+
+func isReplacementErr(err error) bool {
+	return err.Error() == errStrReplacementTx
 }
 
 // SendTransaction sends the transaction with the most up-to-date nonce.
@@ -106,10 +113,16 @@ func (cb *contractBackend) SendTransaction(ctx context.Context, tx *types.Transa
 	logger := getTxLogger(tx)
 	logger.Info("sending")
 	if err := cb.ContractBackend.SendTransaction(ctx, tx); err != nil {
-		logger.WithError(err).Error("failed to send")
-		if incrementableError(err) {
-			cb.incrementNonce(tx)
+		if isReplacementErr(err) {
+			if cb.localNonce > cb.lastServerNonce {
+				// quickly go back to the lower server nonce
+				cb.resetNonce()
+			} else {
+				// keep on by incrementing the low local nonce
+				cb.incrementNonce(tx)
+			}
 		}
+		logger.WithError(err).Error("failed to send")
 		return err
 	}
 	logger.Info("sent")
@@ -120,8 +133,14 @@ func (cb *contractBackend) SendTransaction(ctx context.Context, tx *types.Transa
 
 func (cb *contractBackend) incrementNonce(tx *types.Transaction) {
 	newNonce := tx.Nonce() + 1
-	if newNonce > cb.nonce {
-		cb.nonce = newNonce
+	if newNonce > cb.localNonce {
+		cb.localNonce = newNonce
+	}
+}
+
+func (cb *contractBackend) resetNonce() {
+	if cb.lastServerNonce < cb.localNonce {
+		cb.localNonce = cb.lastServerNonce
 	}
 }
 
