@@ -51,9 +51,8 @@ func (c *client) post(path string, body interface{}, headers map[string]string) 
 func (c *client) PostBatch(batch *domain.AlertBatch, token string) error {
 	path := fmt.Sprintf("/batch/%s", batch.Ref)
 	headers := map[string]string{
-		"x-forta-scanner": batch.Scanner,
-		"content-type":    "application/json",
-		"Authorization":   fmt.Sprintf("bearer %s", token),
+		"content-type":  "application/json",
+		"Authorization": fmt.Sprintf("Bearer %s", token),
 	}
 	return c.post(path, batch, headers)
 }
