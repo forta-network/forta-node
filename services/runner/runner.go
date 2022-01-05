@@ -68,15 +68,12 @@ func (runner *Runner) removeContainer(container *clients.DockerContainer) error 
 		}
 		if err := runner.dockerClient.WaitContainerExit(context.Background(), container.ID); err != nil {
 			logger.WithError(err).Panic("error while waiting for container exit")
-			return err
 		}
 		if err := runner.dockerClient.Prune(runner.ctx); err != nil {
 			logger.WithError(err).Panic("error while pruning after stopping old containers")
-			return err
 		}
 		if err := runner.dockerClient.WaitContainerPrune(runner.ctx, container.ID); err != nil {
 			logger.WithError(err).Panic("error while waiting for old container prune")
-			return err
 		}
 	}
 	return nil
