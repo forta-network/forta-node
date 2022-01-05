@@ -16,21 +16,14 @@ import (
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/goccy/go-json"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rpc"
 	ipfsapi "github.com/ipfs/go-ipfs-api"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
 	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/contracts"
-	"github.com/forta-protocol/forta-node/ethereum"
 	"github.com/forta-protocol/forta-node/protocol"
 	"github.com/forta-protocol/forta-node/security"
 	"github.com/forta-protocol/forta-node/services/publisher/testalerts"
@@ -181,24 +174,6 @@ func (pub *Publisher) publishNextBatch(batch *protocol.SignedAlertBatch) error {
 	}
 
 	logger.Info("alert batch")
-
-	//tx, err := pub.contract.AddAlertBatch(
-	//	big.NewInt(0).SetUint64(batch.Data.ChainId),
-	//	big.NewInt(0).SetUint64(batch.Data.BlockStart),
-	//	big.NewInt(0).SetUint64(batch.Data.BlockEnd),
-	//	big.NewInt(int64(batch.Data.AlertCount)),
-	//	big.NewInt(0).SetUint64(uint64(batch.Data.MaxSeverity)),
-	//	cid,
-	//)
-	//if err != nil {
-	//	logger.WithError(err).Error("alert while sending batch")
-	//	return fmt.Errorf("failed to send the alert tx: %v", err)
-	//}
-	//logger.WithFields(
-	//	log.Fields{
-	//		"tx": tx.Hash().Hex(),
-	//	},
-	//).Info("alert batch")
 
 	return nil
 }
@@ -462,36 +437,6 @@ func (pub *Publisher) Name() string {
 }
 
 func NewPublisher(ctx context.Context, mc *messaging.Client, alertClient clients.AlertAPIClient, cfg PublisherConfig) (*Publisher, error) {
-	rpcClient, err := rpc.Dial(cfg.PublisherConfig.JsonRpc.Url)
-
-	if err != nil {
-		return nil, err
-	}
-	ethClient := ethclient.NewClient(rpcClient)
-	chainID, err := ethClient.ChainID(ctx)
-	if err != nil {
-		log.Errorf("could not determine scanner registry chain ID: %s", err.Error())
-		return nil, err
-	}
-
-	txOpts, err := bind.NewKeyedTransactorWithChainID(cfg.Key.PrivateKey, chainID)
-	if err != nil {
-		log.Errorf("error while creating keyed transactor for listener: %s", err.Error())
-		return nil, err
-	}
-
-	txOpts.GasPrice = big.NewInt(cfg.PublisherConfig.GasPriceGwei * params.GWei)
-	txOpts.GasLimit = cfg.PublisherConfig.GasLimit
-
-	contract, err := contracts.NewAlertsTransactor(common.HexToAddress(cfg.PublisherConfig.ContractAddress), ethereum.NewContractBackend(rpcClient))
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize the alerts contract: %v", err)
-	}
-
-	ats := &contracts.AlertsTransactorSession{
-		Contract:     contract,
-		TransactOpts: *txOpts,
-	}
 
 	var ipfsClient IPFS
 	switch {
@@ -525,7 +470,6 @@ func NewPublisher(ctx context.Context, mc *messaging.Client, alertClient clients
 	return &Publisher{
 		ctx:               ctx,
 		cfg:               cfg,
-		contract:          ats,
 		ipfs:              ipfsClient,
 		testAlertLogger:   testAlertLogger,
 		metricsAggregator: NewMetricsAggregator(),
