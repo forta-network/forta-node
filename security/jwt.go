@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -105,9 +106,14 @@ func VerifyScannerJWT(tokenString string) (*ScannerToken, error) {
 }
 
 func CreateScannerJWT(key *keystore.Key, claims map[string]interface{}) (string, error) {
+	u := uuid.Must(uuid.NewUUID())
+	now := time.Now().UTC()
 	mapClaims := map[string]interface{}{
+		"jti": u.String(),
 		"sub": key.Address.Hex(),
-		"nbf": time.Now().UTC(),
+		"iat": now.Unix(),
+		"nbf": now.Add(-30 * time.Second).Unix(),
+		"exp": now.Add(30 * time.Second).Unix(),
 	}
 	for k, v := range claims {
 		mapClaims[k] = v
