@@ -455,7 +455,9 @@ func (pub *Publisher) Start() error {
 	grpcServer := grpc.NewServer()
 	protocol.RegisterPublisherNodeServer(grpcServer, pub)
 
-	pub.messageClient.Subscribe(messaging.SubjectAgentsStatusAttached, messaging.AgentsHandler(pub.handleReady))
+	go pub.prepareBatches()
+	go pub.publishBatches()
+	go pub.listenForMetrics()
 
 	return grpcServer.Serve(lis)
 }
