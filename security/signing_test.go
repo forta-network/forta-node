@@ -1,8 +1,9 @@
 package security
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -12,8 +13,7 @@ const (
 )
 
 func TestSignString(t *testing.T) {
-	MockPassphrase = "Forta123"
-	key, err := LoadKey("testkey")
+	key, err := LoadKeyWithPassphrase("testkey", "Forta123")
 	assert.NoError(t, err)
 
 	res, err := SignString(key, ref)

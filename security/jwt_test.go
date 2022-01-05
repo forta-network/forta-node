@@ -1,14 +1,14 @@
 package security
 
 import (
+	"testing"
+
 	"github.com/golang-jwt/jwt"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestCreateJWT(t *testing.T) {
-	MockPassphrase = "Forta123"
-	key, err := LoadKey("testkey")
+	key, err := LoadKeyWithPassphrase("testkey", "Forta123")
 	assert.NoError(t, err)
 
 	address := "0xeE0D82ac806efe2b9a0003a27a785458bC67bbf0"
