@@ -49,7 +49,6 @@ func ensureLatestContractAddresses() error {
 		return err
 	}
 	cache.Dispatch = contracts.Dispatch
-	cache.Alerts = contracts.Alerts
 	cache.Agents = contracts.Agent
 	cache.ScannerVersion = contracts.ScannerVersion
 	cache.ExpiresAt = time.Now().UTC().Add(contractAddressCacheExpiry)
@@ -88,7 +87,6 @@ func setContractAddressesFromCache(cache contractAddressCache) {
 
 type contractAddressCache struct {
 	Dispatch       string    `json:"dispatch"`
-	Alerts         string    `json:"alerts"`
 	Agents         string    `json:"agents"`
 	ScannerVersion string    `json:"scannerVersion"`
 	ExpiresAt      time.Time `json:"expiresAt"`

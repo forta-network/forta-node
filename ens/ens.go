@@ -25,7 +25,6 @@ type ENS struct {
 func GetENSNames() *ENS {
 	return &ENS{
 		Dispatch:       "dispatch.forta.eth",
-		Alerts:         "alerts.forta.eth",
 		Agents:         "agents.registries.forta.eth",
 		ScannerVersion: "scanner-node-version.forta.eth",
 	}
