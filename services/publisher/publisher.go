@@ -437,16 +437,6 @@ func (pub *Publisher) prepareLatestBatch() {
 	pub.batchCh <- (*protocol.SignedAlertBatch)(batch)
 }
 
-// on connection of first agent, start publishing batches (no agents = no batches)
-func (pub *Publisher) handleReady(cfgs messaging.AgentPayload) error {
-	pub.initialize.Do(func() {
-		go pub.prepareBatches()
-		go pub.publishBatches()
-		go pub.listenForMetrics()
-	})
-	return nil
-}
-
 func (pub *Publisher) Start() error {
 	lis, err := net.Listen("tcp", "0.0.0.0:8770")
 	if err != nil {
@@ -455,7 +445,9 @@ func (pub *Publisher) Start() error {
 	grpcServer := grpc.NewServer()
 	protocol.RegisterPublisherNodeServer(grpcServer, pub)
 
-	pub.messageClient.Subscribe(messaging.SubjectAgentsStatusAttached, messaging.AgentsHandler(pub.handleReady))
+	go pub.prepareBatches()
+	go pub.publishBatches()
+	go pub.listenForMetrics()
 
 	return grpcServer.Serve(lis)
 }
