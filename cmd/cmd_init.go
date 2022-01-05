@@ -97,14 +97,10 @@ trace:
 
 # The publish settings drive how alerts are sent
 # publish:
-#  jsonRpc:
-#    url: https://polygon-rpc.com/
 #  ipfs:
 #    apiUrl: https://ipfs.forta.network
 #    username: <set if needed>
 #    password: <set if needed>
-#  gasLimit: 50000
-#  gasPriceGwei: 50
 
 # The log settings drive the log output of the scan node
 # log:

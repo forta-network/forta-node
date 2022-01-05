@@ -18,7 +18,7 @@ const (
 
 // useEnsDefaults gets and uses ENS defaults if needed.
 func useEnsDefaults() error {
-	if cfg.Registry.ContractAddress != "" && cfg.Publish.ContractAddress != "" {
+	if cfg.Registry.ContractAddress != "" {
 		return nil
 	}
 
@@ -49,7 +49,6 @@ func ensureLatestContractAddresses() error {
 		return err
 	}
 	cache.Dispatch = contracts.Dispatch
-	cache.Alerts = contracts.Alerts
 	cache.Agents = contracts.Agent
 	cache.ScannerVersion = contracts.ScannerVersion
 	cache.ExpiresAt = time.Now().UTC().Add(contractAddressCacheExpiry)
@@ -83,15 +82,11 @@ func setContractAddressesFromCache(cache contractAddressCache) {
 	if cfg.Registry.ContractAddress == "" {
 		cfg.Registry.ContractAddress = cache.Dispatch
 	}
-	if cfg.Publish.ContractAddress == "" {
-		cfg.Publish.ContractAddress = cache.Alerts
-	}
 	cfg.AgentRegistryContractAddress = cache.Agents
 }
 
 type contractAddressCache struct {
 	Dispatch       string    `json:"dispatch"`
-	Alerts         string    `json:"alerts"`
 	Agents         string    `json:"agents"`
 	ScannerVersion string    `json:"scannerVersion"`
 	ExpiresAt      time.Time `json:"expiresAt"`

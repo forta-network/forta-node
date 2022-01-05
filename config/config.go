@@ -65,15 +65,11 @@ type TestAlertsConfig struct {
 }
 
 type PublisherConfig struct {
-	SkipPublish     bool             `yaml:"skipPublish" json:"skipPublish" default:"false"`
-	APIURL          string           `default:"https://alerts.forta.network" yaml:"apiUrl" json:"apiUrl"`
-	ContractAddress string           `yaml:"contractAddress" json:"contractAddress"`
-	JsonRpc         JsonRpcConfig    `yaml:"jsonRpc" json:"jsonRpc" default:"{\"url\": \"https://polygon-rpc.com\"}" `
-	IPFS            IPFSConfig       `yaml:"ipfs" json:"ipfs" validate:"required_unless=SkipPublish true"`
-	Batch           BatchConfig      `yaml:"batch" json:"batch"`
-	TestAlerts      TestAlertsConfig `yaml:"testAlerts" json:"testAlerts"`
-	GasPriceGwei    int64            `yaml:"gasPriceGwei" json:"gasPriceGwei" default:"50" `
-	GasLimit        uint64           `yaml:"gasLimit" json:"gasLimit" default:"50000" `
+	SkipPublish bool             `yaml:"skipPublish" json:"skipPublish" default:"false"`
+	APIURL      string           `default:"https://alerts.forta.network" yaml:"apiUrl" json:"apiUrl"`
+	IPFS        IPFSConfig       `yaml:"ipfs" json:"ipfs" validate:"required_unless=SkipPublish true"`
+	Batch       BatchConfig      `yaml:"batch" json:"batch"`
+	TestAlerts  TestAlertsConfig `yaml:"testAlerts" json:"testAlerts"`
 }
 
 type ResourcesConfig struct {

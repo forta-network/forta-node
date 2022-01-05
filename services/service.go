@@ -50,9 +50,6 @@ func setContracts(cfg *config.Config) error {
 	if cfg.Registry.ContractAddress == "" {
 		cfg.Registry.ContractAddress = contracts.Dispatch
 	}
-	if cfg.Publish.ContractAddress == "" {
-		cfg.Publish.ContractAddress = contracts.Alerts
-	}
 	cfg.ScannerVersionContractAddress = contracts.ScannerVersion
 	cfg.AgentRegistryContractAddress = contracts.Agent
 	return nil
