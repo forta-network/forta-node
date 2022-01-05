@@ -20,13 +20,7 @@ import (
 	"github.com/forta-protocol/forta-node/protocol"
 )
 
-var MockPassphrase string
-
 func ReadPassphrase() (string, error) {
-	// this is ugly for a test, sorry, we can refactor
-	if MockPassphrase != "" {
-		return MockPassphrase, nil
-	}
 	f, err := os.OpenFile("/passphrase", os.O_RDONLY, 400)
 	if err != nil {
 		return "", err
@@ -38,13 +32,17 @@ func ReadPassphrase() (string, error) {
 	return string(pw), nil
 }
 
-// LoadKey loads the node private key.
+// LoadKey loads the passphrase and the node private key.
 func LoadKey(keysDirPath string) (*keystore.Key, error) {
 	passphrase, err := ReadPassphrase()
 	if err != nil {
 		return nil, err
 	}
+	return LoadKeyWithPassphrase(keysDirPath, passphrase)
+}
 
+// LoadKeyWithPassphrase decrypts and loads the node private key using provided passphrase.
+func LoadKeyWithPassphrase(keysDirPath, passphrase string) (*keystore.Key, error) {
 	files, err := ioutil.ReadDir(keysDirPath)
 	if err != nil {
 		return nil, err

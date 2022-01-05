@@ -6,8 +6,6 @@ import (
 	"os"
 	"sync"
 
-	"github.com/forta-protocol/forta-node/security"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/forta-protocol/forta-node/clients"
@@ -63,12 +61,6 @@ func (sup *SupervisorService) start() error {
 
 	sup.maxLogSize = sup.config.Config.Log.MaxLogSize
 	sup.maxLogFiles = sup.config.Config.Log.MaxLogFiles
-
-	passphrase, err := security.ReadPassphrase()
-	if err != nil {
-		return err
-	}
-	sup.config.Passphrase = passphrase
 
 	if err := sup.client.Prune(sup.ctx); err != nil {
 		return err

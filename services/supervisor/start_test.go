@@ -6,8 +6,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/forta-protocol/forta-node/security"
-
 	"github.com/docker/docker/api/types"
 
 	"github.com/forta-protocol/forta-node/clients"
@@ -73,7 +71,6 @@ func (m configMatcher) String() string {
 
 // SetupTest sets up the test.
 func (s *Suite) SetupTest() {
-	security.MockPassphrase = "test"
 	s.r = require.New(s.T())
 	os.Setenv(config.EnvHostFortaDir, "/tmp/forta")
 	s.dockerClient = mock_clients.NewMockDockerClient(gomock.NewController(s.T()))
