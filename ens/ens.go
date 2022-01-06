@@ -9,14 +9,12 @@ import (
 type FortaContracts struct {
 	Dispatch       string
 	Agent          string
-	Alerts         string
 	ScannerVersion string
 }
 
 // ENS contains the default names.
 type ENS struct {
 	Dispatch       string
-	Alerts         string
 	Agents         string
 	ScannerVersion string
 }
@@ -45,14 +43,6 @@ func ResolveFortaContracts(jsonRpcUrl, resolverAddr string) (*FortaContracts, er
 		return nil, err
 	}
 
-	alerts, err := ens.Resolve(names.Alerts)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"address": names.Alerts,
-		}).WithError(err).Error("ens cannot resolve alerts contract")
-		return nil, err
-	}
-
 	agents, err := ens.Resolve(names.Agents)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -72,7 +62,6 @@ func ResolveFortaContracts(jsonRpcUrl, resolverAddr string) (*FortaContracts, er
 	return &FortaContracts{
 		Dispatch:       dispatch.Hex(),
 		Agent:          agents.Hex(),
-		Alerts:         alerts.Hex(),
 		ScannerVersion: snv.Hex(),
 	}, nil
 }
