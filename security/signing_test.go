@@ -1,6 +1,7 @@
 package security
 
 import (
+	"github.com/forta-protocol/forta-node/protocol"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,4 +26,33 @@ func TestSignString(t *testing.T) {
 func TestVerifySignature(t *testing.T) {
 	err := VerifySignature([]byte(ref), signer, signature)
 	assert.NoError(t, err)
+}
+
+func TestSignProtoMessage(t *testing.T) {
+	key, err := LoadKeyWithPassphrase("testkey", "Forta123")
+	assert.NoError(t, err)
+
+	obj := &protocol.AlertBatch{
+		ChainId: 1,
+		Parent:  "test",
+	}
+
+	sigHex, err := SignProtoMessage(key, obj)
+	assert.NoError(t, err)
+
+	err = VerifyProtoSignature(obj, signer, sigHex.Signature)
+	assert.NoError(t, err)
+}
+
+func TestSignProtoMessage_BadSignature(t *testing.T) {
+	obj := &protocol.AlertBatch{
+		ChainId: 1,
+		Parent:  "test",
+	}
+
+	// this signature isn't for this obj, so it should fail
+	err := VerifyProtoSignature(obj, signer, signature)
+
+	// should return error
+	assert.Error(t, err)
 }
