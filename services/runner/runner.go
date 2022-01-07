@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"errors"
 	"strconv"
 
 	"github.com/forta-protocol/forta-node/clients"
@@ -42,8 +43,26 @@ func NewRunner(ctx context.Context, cfg config.Config,
 
 // Start starts the service.
 func (runner *Runner) Start() error {
+	if err := runner.removeOldContainer(config.DockerUpdaterContainerName); err != nil {
+		return err
+	}
+	if err := runner.removeOldContainer(config.DockerSupervisorContainerName); err != nil {
+		return err
+	}
+
 	go runner.receive()
 	return nil
+}
+
+func (runner *Runner) removeOldContainer(containerName string) error {
+	oldContainer, err := runner.dockerClient.GetContainerByName(runner.ctx, containerName)
+	if err != nil && errors.Is(err, clients.ErrContainerNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	return runner.removeContainerWithProps(oldContainer.Names[0], oldContainer.ID)
 }
 
 // Name returns the name of the service.
@@ -60,21 +79,26 @@ func (runner *Runner) Stop() error {
 
 func (runner *Runner) removeContainer(container *clients.DockerContainer) error {
 	if container != nil {
-		logger := log.WithField("container", container.ID).WithField("name", container.Name)
-		if err := runner.dockerClient.InterruptContainer(context.Background(), container.ID); err != nil {
-			logger.WithError(err).Error("error stopping container")
-		} else {
-			logger.Info("interrupted")
-		}
-		if err := runner.dockerClient.WaitContainerExit(context.Background(), container.ID); err != nil {
-			logger.WithError(err).Panic("error while waiting for container exit")
-		}
-		if err := runner.dockerClient.Prune(runner.ctx); err != nil {
-			logger.WithError(err).Panic("error while pruning after stopping old containers")
-		}
-		if err := runner.dockerClient.WaitContainerPrune(runner.ctx, container.ID); err != nil {
-			logger.WithError(err).Panic("error while waiting for old container prune")
-		}
+		return runner.removeContainerWithProps(container.Name, container.ID)
+	}
+	return nil
+}
+
+func (runner *Runner) removeContainerWithProps(name, id string) error {
+	logger := log.WithField("container", id).WithField("name", name)
+	if err := runner.dockerClient.InterruptContainer(context.Background(), id); err != nil {
+		logger.WithError(err).Error("error stopping container")
+	} else {
+		logger.Info("interrupted")
+	}
+	if err := runner.dockerClient.WaitContainerExit(context.Background(), id); err != nil {
+		logger.WithError(err).Panic("error while waiting for container exit")
+	}
+	if err := runner.dockerClient.Prune(runner.ctx); err != nil {
+		logger.WithError(err).Panic("error while pruning after stopping old containers")
+	}
+	if err := runner.dockerClient.WaitContainerPrune(runner.ctx, id); err != nil {
+		logger.WithError(err).Panic("error while waiting for old container prune")
 	}
 	return nil
 }
