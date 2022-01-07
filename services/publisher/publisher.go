@@ -258,23 +258,22 @@ type BatchData protocol.AlertBatch
 
 // AppendAlert adds the alert to the relevant list.
 func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
-	alertBatch := bd
 	isBlockAlert := notif.EvalBlockRequest != nil
 	hasAlert := notif.SignedAlert != nil
 
 	var agentAlerts *protocol.AgentAlerts
 	if isBlockAlert {
 		blockNum := hexutil.MustDecodeUint64(notif.EvalBlockRequest.Event.BlockNumber)
-		alertBatch.AddBatchAgent(notif.AgentInfo, blockNum, "")
+		bd.AddBatchAgent(notif.AgentInfo, blockNum, "")
 		if hasAlert {
-			blockRes := alertBatch.GetBlockResults(notif.EvalBlockRequest.Event.BlockHash, blockNum, notif.EvalBlockRequest.Event.Block.Timestamp)
+			blockRes := bd.GetBlockResults(notif.EvalBlockRequest.Event.BlockHash, blockNum, notif.EvalBlockRequest.Event.Block.Timestamp)
 			agentAlerts = (*BlockResults)(blockRes).GetAgentAlerts(notif.AgentInfo)
 		}
 	} else {
 		blockNum := hexutil.MustDecodeUint64(notif.EvalTxRequest.Event.Block.BlockNumber)
-		alertBatch.AddBatchAgent(notif.AgentInfo, blockNum, notif.EvalTxRequest.Event.Receipt.TransactionHash)
+		bd.AddBatchAgent(notif.AgentInfo, blockNum, notif.EvalTxRequest.Event.Receipt.TransactionHash)
 		if hasAlert {
-			blockRes := alertBatch.GetBlockResults(notif.EvalTxRequest.Event.Block.BlockHash, blockNum, notif.EvalTxRequest.Event.Block.BlockTimestamp)
+			blockRes := bd.GetBlockResults(notif.EvalTxRequest.Event.Block.BlockHash, blockNum, notif.EvalTxRequest.Event.Block.BlockTimestamp)
 			txRes := (*BlockResults)(blockRes).GetTransactionResults(notif.EvalTxRequest.Event)
 			agentAlerts = (*TransactionResults)(txRes).GetAgentAlerts(notif.AgentInfo)
 		}
@@ -325,8 +324,8 @@ func (bd *BatchData) AddBatchAgent(agent *protocol.AgentInfo, blockNumber uint64
 }
 
 // GetBlockResults returns an existing or a new aggregation object for the block.
-func (ab *BatchData) GetBlockResults(blockHash string, blockNumber uint64, blockTimestamp string) *protocol.BlockResults {
-	for _, blockRes := range ab.Results {
+func (bd *BatchData) GetBlockResults(blockHash string, blockNumber uint64, blockTimestamp string) *protocol.BlockResults {
+	for _, blockRes := range bd.Results {
 		if blockRes.Block.BlockNumber == blockNumber {
 			return blockRes
 		}
@@ -338,7 +337,7 @@ func (ab *BatchData) GetBlockResults(blockHash string, blockNumber uint64, block
 			BlockTimestamp: blockTimestamp,
 		},
 	}
-	ab.Results = append(ab.Results, br)
+	bd.Results = append(bd.Results, br)
 	return br
 }
 
