@@ -2,10 +2,13 @@ package publisher
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/domain"
+	"github.com/golang/protobuf/proto"
 	"io"
 	"math/big"
 	"net"
@@ -56,7 +59,7 @@ type Publisher struct {
 	batchLimit    int
 	latestChainID uint64
 	notifCh       chan *protocol.NotifyRequest
-	batchCh       chan *protocol.SignedAlertBatch
+	batchCh       chan *protocol.AlertBatch
 }
 
 // TestAlertLogger logs the test alerts.
@@ -91,38 +94,79 @@ func (pub *Publisher) Notify(ctx context.Context, req *protocol.NotifyRequest) (
 	return &protocol.NotifyResponse{}, nil
 }
 
-func (pub *Publisher) publishNextBatch(batch *protocol.SignedAlertBatch) error {
+func gzipBytes(b []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	zw := gzip.NewWriter(&buf)
+
+	_, err := zw.Write(b)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := zw.Close(); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+func (pub *Publisher) buildEnvelope(batch *protocol.AlertBatch) (*protocol.SignedAlertBatch, error) {
+	b, err := proto.Marshal(batch)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal batch: %v", err)
+	}
+
+	zipped, err := gzipBytes(b)
+	if err != nil {
+		return nil, fmt.Errorf("failed to gzip batch: %v", err)
+	}
+
+	encoded := base64.StdEncoding.EncodeToString(zipped)
+
+	envelope := &protocol.SignedAlertBatch{
+		Data:    batch,
+		Encoded: encoded,
+	}
+
+	signature, err := security.SignString(pub.cfg.Key, encoded)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign alert batch: %v", err)
+	}
+	envelope.Signature = signature
+	return envelope, nil
+}
+
+func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 	// flush only if we are publishing so we can make the best use of aggregated metrics
 	if _, skip := pub.shouldSkipPublishing(batch); !skip {
-		batch.Data.Metrics = pub.metricsAggregator.TryFlush()
+		batch.Metrics = pub.metricsAggregator.TryFlush()
 	}
 
 	// add release info if it's available
 	if pub.cfg.ReleaseSummary != nil {
-		batch.Data.ScannerVersion = &protocol.ScannerVersion{
+		batch.ScannerVersion = &protocol.ScannerVersion{
 			Commit: pub.cfg.ReleaseSummary.Commit,
 			Ipfs:   pub.cfg.ReleaseSummary.IPFS,
 		}
 	}
 	if pub.parent != "" {
-		batch.Data.Parent = pub.parent
+		batch.Parent = pub.parent
 	}
 
-	signature, err := security.SignProtoMessage(pub.cfg.Key, batch.Data)
+	envelope, err := pub.buildEnvelope(batch)
 	if err != nil {
-		return fmt.Errorf("failed to sign alert batch: %v", err)
+		return fmt.Errorf("failed to build envelope: %v", err)
 	}
-	batch.Signature = signature
 
 	var buf bytes.Buffer
-	if err = json.NewEncoder(&buf).Encode(batch); err != nil {
+	if err = json.NewEncoder(&buf).Encode(envelope); err != nil {
 		return fmt.Errorf("failed to encode the signed alert: %v", err)
 	}
 	log.Tracef("alert payload: %s", string(buf.Bytes()))
 
 	// save with blank tx hash for now
 	if pub.skipPublish {
-		log.Infof("alert batch: blockStart=%d, blockEnd=%d, alertCount=%d, maxSeverity=%s", batch.Data.BlockStart, batch.Data.BlockEnd, batch.Data.AlertCount, batch.Data.MaxSeverity.String())
+		log.Infof("alert batch: blockStart=%d, blockEnd=%d, alertCount=%d, maxSeverity=%s", batch.BlockStart, batch.BlockEnd, batch.AlertCount, batch.MaxSeverity.String())
 		log.Info("skipping batch, because skipPublish is enabled")
 		return nil
 	}
@@ -141,12 +185,12 @@ func (pub *Publisher) publishNextBatch(batch *protocol.SignedAlertBatch) error {
 
 	logger := log.WithFields(
 		log.Fields{
-			"blockStart":  batch.Data.BlockStart,
-			"blockEnd":    batch.Data.BlockEnd,
-			"alertCount":  batch.Data.AlertCount,
-			"maxSeverity": batch.Data.MaxSeverity.String(),
+			"blockStart":  batch.BlockStart,
+			"blockEnd":    batch.BlockEnd,
+			"alertCount":  batch.AlertCount,
+			"maxSeverity": batch.MaxSeverity.String(),
 			"ref":         cid,
-			"metrics":     len(batch.Data.Metrics),
+			"metrics":     len(batch.Metrics),
 		},
 	)
 
@@ -160,11 +204,11 @@ func (pub *Publisher) publishNextBatch(batch *protocol.SignedAlertBatch) error {
 	}
 	err = pub.alertClient.PostBatch(&domain.AlertBatch{
 		Scanner:     pub.cfg.Key.Address.Hex(),
-		ChainID:     int64(batch.Data.ChainId),
-		BlockStart:  int64(batch.Data.BlockStart),
-		BlockEnd:    int64(batch.Data.BlockEnd),
-		AlertCount:  int64(batch.Data.AlertCount),
-		MaxSeverity: int64(batch.Data.MaxSeverity),
+		ChainID:     int64(batch.ChainId),
+		BlockStart:  int64(batch.BlockStart),
+		BlockEnd:    int64(batch.BlockEnd),
+		AlertCount:  int64(batch.AlertCount),
+		MaxSeverity: int64(batch.MaxSeverity),
 		Ref:         cid,
 	}, scannerJwt)
 
@@ -178,9 +222,9 @@ func (pub *Publisher) publishNextBatch(batch *protocol.SignedAlertBatch) error {
 	return nil
 }
 
-func (pub *Publisher) shouldSkipPublishing(batch *protocol.SignedAlertBatch) (string, bool) {
+func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, bool) {
 	return "because there are no alerts and skipEmpty is enabled",
-		pub.skipEmpty && batch.Data.AlertCount == uint32(0)
+		pub.skipEmpty && batch.AlertCount == uint32(0)
 }
 
 func (pub *Publisher) listenForMetrics() {
@@ -209,15 +253,12 @@ type TransactionResults protocol.TransactionResults
 // BlockResults contains the results for a block.
 type BlockResults protocol.BlockResults
 
-// AlertBatch contains the actual batch data.
-type AlertBatch protocol.AlertBatch
-
 // BatchData is a parent wrapper that contains all batch info.
-type BatchData protocol.SignedAlertBatch
+type BatchData protocol.AlertBatch
 
 // AppendAlert adds the alert to the relevant list.
 func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
-	alertBatch := (*AlertBatch)(bd.Data)
+	alertBatch := bd
 	isBlockAlert := notif.EvalBlockRequest != nil
 	hasAlert := notif.SignedAlert != nil
 
@@ -244,14 +285,14 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 	}
 
 	agentAlerts.Alerts = append(agentAlerts.Alerts, notif.SignedAlert)
-	bd.Data.AlertCount++
+	bd.AlertCount++
 }
 
 // AddBatchAgent includes the agent info in the batch so we know that this agent really
 // processed a specific block or a tx hash.
-func (ab *AlertBatch) AddBatchAgent(agent *protocol.AgentInfo, blockNumber uint64, txHash string) {
+func (bd *BatchData) AddBatchAgent(agent *protocol.AgentInfo, blockNumber uint64, txHash string) {
 	var batchAgent *protocol.BatchAgent
-	for _, ba := range ab.Agents {
+	for _, ba := range bd.Agents {
 		if ba.Info.Manifest == agent.Manifest {
 			batchAgent = ba
 			break
@@ -261,7 +302,7 @@ func (ab *AlertBatch) AddBatchAgent(agent *protocol.AgentInfo, blockNumber uint6
 		batchAgent = &protocol.BatchAgent{
 			Info: agent,
 		}
-		ab.Agents = append(ab.Agents, batchAgent)
+		bd.Agents = append(bd.Agents, batchAgent)
 	}
 	// There should always be a block number.
 	if blockNumber == 0 {
@@ -284,7 +325,7 @@ func (ab *AlertBatch) AddBatchAgent(agent *protocol.AgentInfo, blockNumber uint6
 }
 
 // GetBlockResults returns an existing or a new aggregation object for the block.
-func (ab *AlertBatch) GetBlockResults(blockHash string, blockNumber uint64, blockTimestamp string) *protocol.BlockResults {
+func (ab *BatchData) GetBlockResults(blockHash string, blockNumber uint64, blockTimestamp string) *protocol.BlockResults {
 	for _, blockRes := range ab.Results {
 		if blockRes.Block.BlockNumber == blockNumber {
 			return blockRes
@@ -344,7 +385,7 @@ func (tr *TransactionResults) GetAgentAlerts(agent *protocol.AgentInfo) *protoco
 }
 
 func (pub *Publisher) prepareLatestBatch() {
-	batch := &BatchData{Data: &protocol.AlertBatch{ChainId: uint64(pub.cfg.ChainID)}}
+	batch := (*BatchData)(&protocol.AlertBatch{ChainId: uint64(pub.cfg.ChainID)})
 
 	timeoutCh := time.After(pub.batchInterval)
 
@@ -387,15 +428,15 @@ func (pub *Publisher) prepareLatestBatch() {
 				log.Errorf("failed to parse alert notif block number: %v", err)
 				continue
 			}
-			if batch.Data.BlockStart == 0 || (batch.Data.BlockStart > 0 && notifBlockNum < batch.Data.BlockStart) {
-				batch.Data.BlockStart = notifBlockNum
+			if batch.BlockStart == 0 || (batch.BlockStart > 0 && notifBlockNum < batch.BlockStart) {
+				batch.BlockStart = notifBlockNum
 			}
-			if batch.Data.BlockEnd == 0 || (batch.Data.BlockEnd > 0 && notifBlockNum > batch.Data.BlockEnd) {
-				batch.Data.BlockEnd = notifBlockNum
+			if batch.BlockEnd == 0 || (batch.BlockEnd > 0 && notifBlockNum > batch.BlockEnd) {
+				batch.BlockEnd = notifBlockNum
 			}
 
-			if hasAlert && alert.Alert.Finding.Severity > batch.Data.MaxSeverity {
-				batch.Data.MaxSeverity = alert.Alert.Finding.Severity
+			if hasAlert && alert.Alert.Finding.Severity > batch.MaxSeverity {
+				batch.MaxSeverity = alert.Alert.Finding.Severity
 			}
 
 			batch.AppendAlert(notif)
@@ -409,7 +450,7 @@ func (pub *Publisher) prepareLatestBatch() {
 		}
 	}
 
-	pub.batchCh <- (*protocol.SignedAlertBatch)(batch)
+	pub.batchCh <- (*protocol.AlertBatch)(batch)
 }
 
 func (pub *Publisher) Start() error {
@@ -481,6 +522,6 @@ func NewPublisher(ctx context.Context, mc *messaging.Client, alertClient clients
 		batchInterval: batchInterval,
 		batchLimit:    batchLimit,
 		notifCh:       make(chan *protocol.NotifyRequest, defaultBatchLimit),
-		batchCh:       make(chan *protocol.SignedAlertBatch, defaultBatchBufferSize),
+		batchCh:       make(chan *protocol.AlertBatch, defaultBatchBufferSize),
 	}, nil
 }
