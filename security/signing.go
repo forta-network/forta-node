@@ -111,6 +111,14 @@ func VerifySignature(message []byte, signerAddress string, sigHex string) error 
 	return nil
 }
 
+func VerifyProtoSignature(m protoiface.MessageV1, signerAddress, sigHex string) error {
+	b, err := proto.Marshal(m)
+	if err != nil {
+		return err
+	}
+	return VerifySignature(b, signerAddress, sigHex)
+}
+
 // SignProtoMessage marshals a message and signs.
 func SignProtoMessage(key *keystore.Key, m protoiface.MessageV1) (*protocol.Signature, error) {
 	b, err := proto.Marshal(m)
