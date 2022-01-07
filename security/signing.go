@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"os"
@@ -76,6 +77,13 @@ func SignBytes(key *keystore.Key, b []byte) (*protocol.Signature, error) {
 	hash := crypto.Keccak256(b)
 	sig, err := crypto.Sign(hash, key.PrivateKey)
 
+	log.WithFields(
+		log.Fields{
+			"hash":  hex.EncodeToString(hash),
+			"bytes": hex.EncodeToString(b),
+		},
+	).Info("sign bytes")
+
 	if err != nil {
 		return nil, err
 	}
@@ -94,20 +102,26 @@ func VerifySignature(message []byte, signerAddress string, sigHex string) error 
 	hash := crypto.Keccak256Hash(message)
 	sigHex = strings.ReplaceAll(sigHex, "0x", "")
 	signature, err := hex.DecodeString(sigHex)
+
 	if err != nil {
 		return err
 	}
-	sigPublicKeyECDSA, err := crypto.SigToPub(hash.Bytes(), signature)
+
+	pubKey, err := crypto.SigToPub(hash.Bytes(), signature)
 	if err != nil {
 		return err
 	}
-	if sigPublicKeyECDSA == nil {
+
+	if pubKey == nil {
 		return errors.New("could not recover address (pub is nil)")
 	}
-	addr := crypto.PubkeyToAddress(*sigPublicKeyECDSA)
+
+	addr := crypto.PubkeyToAddress(*pubKey)
+
 	if addr.Hex() != signerAddress {
-		return errors.New("signature invalid: " + addr.Hex())
+		return fmt.Errorf("invalid signature expected=%s, got=%s", signerAddress, addr.Hex())
 	}
+
 	return nil
 }
 
