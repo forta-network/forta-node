@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"os"
@@ -77,16 +76,10 @@ func SignBytes(key *keystore.Key, b []byte) (*protocol.Signature, error) {
 	hash := crypto.Keccak256(b)
 	sig, err := crypto.Sign(hash, key.PrivateKey)
 
-	log.WithFields(
-		log.Fields{
-			"hash":  hex.EncodeToString(hash),
-			"bytes": hex.EncodeToString(b),
-		},
-	).Info("sign bytes")
-
 	if err != nil {
 		return nil, err
 	}
+
 	return &protocol.Signature{
 		Signature: fmt.Sprintf("0x%s", hex.EncodeToString(sig)),
 		Algorithm: "ECDSA",
