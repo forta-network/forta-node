@@ -108,7 +108,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.SignedAlertBatch) error {
 		batch.Data.Parent = pub.parent
 	}
 
-	signature, err := security.SignProtoMessage(pub.cfg.Key, batch)
+	signature, err := security.SignProtoMessage(pub.cfg.Key, batch.Data)
 	if err != nil {
 		return fmt.Errorf("failed to sign alert batch: %v", err)
 	}
