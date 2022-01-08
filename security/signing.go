@@ -5,9 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/forta-protocol/forta-node/encoding"
-	"github.com/forta-protocol/forta-node/utils"
 	"io"
 	"io/ioutil"
 	"os"
@@ -16,8 +13,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+
+	"github.com/forta-protocol/forta-node/encoding"
 	"github.com/forta-protocol/forta-node/protocol"
+	"github.com/forta-protocol/forta-node/utils"
 )
 
 var ErrMissingSignature = errors.New("missing signature")
@@ -63,6 +64,12 @@ func LoadKeyWithPassphrase(keysDirPath, passphrase string) (*keystore.Key, error
 	return keystore.DecryptKey(keyBytes, passphrase)
 }
 
+/*
+The alertHash includes
+1. alert.Id, which is a hash of all fields for the alert (same for all scanners that find this alert)
+2. metadata, which is unique to this scanner (deterministic via list conversion)
+3. timestamp, which is unique to this scanner
+*/
 func alertHash(alert *protocol.Alert) common.Hash {
 	metadata := utils.MapToList(alert.Metadata)
 	alertStr := fmt.Sprintf("%s%s%s", alert.Id, strings.Join(metadata, ""), alert.Timestamp)
