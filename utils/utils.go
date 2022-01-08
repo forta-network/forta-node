@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"os"
 	"sort"
 	"strconv"
@@ -38,6 +39,18 @@ func MapKeys(m map[string]bool) []string {
 	}
 	sort.Strings(res)
 	return res
+}
+
+//MapToList returns a deterministic list from a map
+func MapToList(m map[string]string) []string {
+	result := make([]string, len(m))
+	i := 0
+	for k, v := range m {
+		result[i] = fmt.Sprintf("%s=%s", k, v)
+		i++
+	}
+	sort.Strings(result)
+	return result
 }
 
 // ParseBoolEnvVar parses a bool env var. If nothing works, it's always false.

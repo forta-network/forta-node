@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/metrics"
+	"sort"
 	"strings"
 	"time"
 
@@ -31,7 +32,10 @@ type TxAnalyzerServiceConfig struct {
 	MsgClient   clients.MessageClient
 }
 
+// WARNING, this must be deterministic (any maps must be converted to sorted lists)
 func (t *TxAnalyzerService) calculateAlertID(result *TxResult, f *protocol.Finding) string {
+	addrs := utils.MapKeys(result.Request.Event.Addresses)
+	sort.Strings(addrs)
 	idStr := strings.Join([]string{
 		result.Request.Event.Network.ChainId,
 		result.Request.Event.Transaction.Hash,
@@ -43,7 +47,7 @@ func (t *TxAnalyzerService) calculateAlertID(result *TxResult, f *protocol.Findi
 		f.Severity.String(),
 		result.AgentConfig.Image,
 		result.AgentConfig.ID,
-		strings.Join(utils.MapKeys(result.Request.Event.Addresses), "")}, "")
+		strings.Join(addrs, "")}, "")
 	return crypto.Keccak256Hash([]byte(idStr)).Hex()
 }
 

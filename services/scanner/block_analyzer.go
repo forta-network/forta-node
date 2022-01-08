@@ -34,6 +34,7 @@ type BlockAnalyzerServiceConfig struct {
 	MsgClient    clients.MessageClient
 }
 
+// WARNING, this must be deterministic (any maps must be converted to sorted lists)
 func (t *BlockAnalyzerService) calculateAlertID(result *BlockResult, f *protocol.Finding) string {
 	idStr := strings.Join([]string{
 		result.Request.Event.Network.ChainId,
