@@ -25,6 +25,7 @@ type SignedAlertBatch struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	//deprecated
 	Data      *AlertBatch `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
 	Signature *Signature  `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
 	Encoded   string      `protobuf:"bytes,3,opt,name=encoded,proto3" json:"encoded,omitempty"`
