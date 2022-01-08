@@ -2,13 +2,11 @@ package publisher
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
-	"encoding/base64"
 	"fmt"
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/domain"
-	"github.com/golang/protobuf/proto"
+	"github.com/forta-protocol/forta-node/encoding"
 	"io"
 	"math/big"
 	"net"
@@ -94,36 +92,15 @@ func (pub *Publisher) Notify(ctx context.Context, req *protocol.NotifyRequest) (
 	return &protocol.NotifyResponse{}, nil
 }
 
-func gzipBytes(b []byte) ([]byte, error) {
-	var buf bytes.Buffer
-	zw := gzip.NewWriter(&buf)
-
-	_, err := zw.Write(b)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := zw.Close(); err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
-}
-
 func (pub *Publisher) buildEnvelope(batch *protocol.AlertBatch) (*protocol.SignedAlertBatch, error) {
-	b, err := proto.Marshal(batch)
+	encoded, err := encoding.EncodeBatch(batch)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal batch: %v", err)
+		log.WithError(err).Error("could not encode batch")
+		return nil, err
 	}
-
-	zipped, err := gzipBytes(b)
-	if err != nil {
-		return nil, fmt.Errorf("failed to gzip batch: %v", err)
-	}
-
-	encoded := base64.StdEncoding.EncodeToString(zipped)
 
 	envelope := &protocol.SignedAlertBatch{
+		//TODO: soon will stop populating this
 		Data:    batch,
 		Encoded: encoded,
 	}
