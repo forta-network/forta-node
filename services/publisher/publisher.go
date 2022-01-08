@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/domain"
-	"github.com/forta-protocol/forta-node/encoding"
 	"io"
 	"math/big"
 	"net"
@@ -92,27 +91,6 @@ func (pub *Publisher) Notify(ctx context.Context, req *protocol.NotifyRequest) (
 	return &protocol.NotifyResponse{}, nil
 }
 
-func (pub *Publisher) buildEnvelope(batch *protocol.AlertBatch) (*protocol.SignedAlertBatch, error) {
-	encoded, err := encoding.EncodeBatch(batch)
-	if err != nil {
-		log.WithError(err).Error("could not encode batch")
-		return nil, err
-	}
-
-	envelope := &protocol.SignedAlertBatch{
-		//TODO: soon will stop populating this
-		Data:    batch,
-		Encoded: encoded,
-	}
-
-	signature, err := security.SignString(pub.cfg.Key, encoded)
-	if err != nil {
-		return nil, fmt.Errorf("failed to sign alert batch: %v", err)
-	}
-	envelope.Signature = signature
-	return envelope, nil
-}
-
 func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 	// flush only if we are publishing so we can make the best use of aggregated metrics
 	if _, skip := pub.shouldSkipPublishing(batch); !skip {
@@ -130,13 +108,13 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		batch.Parent = pub.parent
 	}
 
-	envelope, err := pub.buildEnvelope(batch)
+	signedBatch, err := security.SignBatch(pub.cfg.Key, batch)
 	if err != nil {
 		return fmt.Errorf("failed to build envelope: %v", err)
 	}
 
 	var buf bytes.Buffer
-	if err = json.NewEncoder(&buf).Encode(envelope); err != nil {
+	if err = json.NewEncoder(&buf).Encode(signedBatch); err != nil {
 		return fmt.Errorf("failed to encode the signed alert: %v", err)
 	}
 	log.Tracef("alert payload: %s", string(buf.Bytes()))

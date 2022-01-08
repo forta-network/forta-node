@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/forta-protocol/forta-node/encoding"
 	"io"
 	"io/ioutil"
 	"os"
@@ -133,6 +134,33 @@ func SignProtoMessage(key *keystore.Key, m protoiface.MessageV1) (*protocol.Sign
 		return nil, err
 	}
 	return SignBytes(key, b)
+}
+
+// SignBatch will sign an alert batch and return a SignedAlertBatch
+func SignBatch(key *keystore.Key, batch *protocol.AlertBatch) (*protocol.SignedAlertBatch, error) {
+	encoded, err := encoding.EncodeBatch(batch)
+	if err != nil {
+		return nil, err
+	}
+	signature, err := SignString(key, encoded)
+	if err != nil {
+		return nil, err
+	}
+
+	return &protocol.SignedAlertBatch{
+		//TODO: remove Data in subsequent deploy
+		Data:      batch,
+		Encoded:   encoded,
+		Signature: signature,
+	}, nil
+}
+
+// VerifyBatchSignature will return an error if the signature fails to validate
+func VerifyBatchSignature(signedBatch *protocol.SignedAlertBatch) error {
+	if signedBatch.Signature == nil {
+		return errors.New("no signature present")
+	}
+	return VerifySignature([]byte(signedBatch.Encoded), signedBatch.Signature.Signer, signedBatch.Signature.Signature)
 }
 
 // NewTransactOpts creates new opts with the private key.
