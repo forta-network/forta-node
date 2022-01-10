@@ -18,6 +18,7 @@ type Runner struct {
 	cfg          config.Config
 	imgStore     store.FortaImageStore
 	dockerClient clients.DockerClient
+	nukeClient   clients.DockerClient
 
 	currentUpdaterImg    string
 	currentSupervisorImg string
@@ -29,21 +30,22 @@ type Runner struct {
 
 // NewRunner creates a new runner.
 func NewRunner(ctx context.Context, cfg config.Config,
-	imgStore store.FortaImageStore, dockerClient clients.DockerClient,
-	updaterPort string,
+	imgStore store.FortaImageStore, runnerDockerClient clients.DockerClient,
+	globalDockerClient clients.DockerClient, updaterPort string,
 ) *Runner {
 	return &Runner{
 		ctx:          ctx,
 		cfg:          cfg,
 		imgStore:     imgStore,
-		dockerClient: dockerClient,
+		dockerClient: runnerDockerClient,
+		nukeClient:   globalDockerClient,
 		updaterPort:  updaterPort,
 	}
 }
 
 // Start starts the service.
 func (runner *Runner) Start() error {
-	if err := runner.dockerClient.Nuke(context.Background()); err != nil {
+	if err := runner.nukeClient.Nuke(context.Background()); err != nil {
 		return fmt.Errorf("failed to nuke leftover containers at start: %v", err)
 	}
 
@@ -58,7 +60,7 @@ func (runner *Runner) Name() string {
 
 // Stop stops the service
 func (runner *Runner) Stop() error {
-	if err := runner.dockerClient.Nuke(context.Background()); err != nil {
+	if err := runner.nukeClient.Nuke(context.Background()); err != nil {
 		return fmt.Errorf("failed to nuke containers before exiting: %v", err)
 	}
 	return nil

@@ -21,13 +21,17 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the docker client: %v", err)
 	}
+	globalDockerClient, err := clients.NewDockerClient("")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create the docker client: %v", err)
+	}
 
 	if cfg.Development {
 		log.Warn("running in development mode")
 	}
 
 	return []services.Service{
-		runner.NewRunner(ctx, cfg, imgStore, dockerClient, config.DefaultUpdaterPort),
+		runner.NewRunner(ctx, cfg, imgStore, dockerClient, globalDockerClient, config.DefaultUpdaterPort),
 	}, nil
 }
 
