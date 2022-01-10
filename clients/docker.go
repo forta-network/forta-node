@@ -260,6 +260,48 @@ func (d *dockerClient) GetContainerByID(ctx context.Context, id string) (*types.
 	return nil, fmt.Errorf("%w with id '%s'", ErrContainerNotFound, id)
 }
 
+// Nuke makes sure that all running Forta containers are stopped and pruned, quickly enough.
+func (d *dockerClient) Nuke(ctx context.Context) error {
+	containers, err := d.cli.ContainerList(ctx, types.ContainerListOptions{
+		Filters: d.labelFilter(),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to get forta containers list: %v", err)
+	}
+
+	// step 1: stop all and wait until each exit
+	for _, container := range containers {
+		// avoid hanging for long
+		stopCtx, cancel := context.WithTimeout(ctx, time.Second*10)
+		defer cancel()
+
+		if err := d.StopContainer(stopCtx, container.ID); err != nil {
+			return fmt.Errorf("failed to stop: %v", err)
+		}
+		if err := d.WaitContainerExit(stopCtx, container.ID); err != nil {
+			return err
+		}
+	}
+
+	// step 2: prune everything
+	if err := d.Prune(ctx); err != nil {
+		return fmt.Errorf("failed to prune: %v", err)
+	}
+
+	// step 3: ensure that the containers are really pruned
+	for _, container := range containers {
+		// avoid hanging for long
+		pruneCtx, cancel := context.WithTimeout(ctx, time.Second*10)
+		defer cancel()
+
+		if err := d.WaitContainerPrune(pruneCtx, container.ID); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // StartContainer kicks off a container as a daemon and returns a summary of the container
 func (d *dockerClient) StartContainer(ctx context.Context, config DockerContainerConfig) (*DockerContainer, error) {
 	log.WithFields(log.Fields{
@@ -415,14 +457,14 @@ func isNoSuchContainerErr(err error) bool {
 	return strings.Contains(strings.ToLower(err.Error()), "no such container")
 }
 
-// WaitContainerExit waits for container exit by checking every second.
+// WaitContainerExit waits for container exit by checking periodically.
 func (d *dockerClient) WaitContainerExit(ctx context.Context, id string) error {
 	ticker := time.NewTicker(time.Second)
 	logger := log.WithFields(log.Fields{
 		"id": id,
 	})
-	// if it takes longer than 10 seconds, then just move on
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
+
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
 	for range ticker.C {
@@ -444,7 +486,7 @@ func (d *dockerClient) WaitContainerExit(ctx context.Context, id string) error {
 	return nil
 }
 
-// WaitContainerStart waits for container start by checking every second.
+// WaitContainerStart waits for container start by checking periodically.
 func (d *dockerClient) WaitContainerStart(ctx context.Context, id string) error {
 	ticker := time.NewTicker(time.Second)
 	start := time.Now()
@@ -452,8 +494,7 @@ func (d *dockerClient) WaitContainerStart(ctx context.Context, id string) error 
 		"id": id,
 	})
 
-	// if it takes longer than 10 seconds, then just move on
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
 	for t := range ticker.C {
@@ -473,14 +514,14 @@ func (d *dockerClient) WaitContainerStart(ctx context.Context, id string) error 
 	return nil
 }
 
-// WaitContainerPrune waits for container prune by checking every second.
+// WaitContainerPrune waits for container prune by checking periodically.
 func (d *dockerClient) WaitContainerPrune(ctx context.Context, id string) error {
 	ticker := time.NewTicker(time.Second)
 	logger := log.WithFields(log.Fields{
 		"id": id,
 	})
-	// if it takes longer than 10 seconds, then just move on
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
+
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
 	for range ticker.C {

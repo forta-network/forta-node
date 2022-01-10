@@ -2,7 +2,7 @@ package runner
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/forta-protocol/forta-node/clients"
@@ -43,26 +43,12 @@ func NewRunner(ctx context.Context, cfg config.Config,
 
 // Start starts the service.
 func (runner *Runner) Start() error {
-	if err := runner.removeOldContainer(config.DockerUpdaterContainerName); err != nil {
-		return err
-	}
-	if err := runner.removeOldContainer(config.DockerSupervisorContainerName); err != nil {
-		return err
+	if err := runner.dockerClient.Nuke(context.Background()); err != nil {
+		return fmt.Errorf("failed to nuke leftover containers at start: %v", err)
 	}
 
 	go runner.receive()
 	return nil
-}
-
-func (runner *Runner) removeOldContainer(containerName string) error {
-	oldContainer, err := runner.dockerClient.GetContainerByName(runner.ctx, containerName)
-	if err != nil && errors.Is(err, clients.ErrContainerNotFound) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	return runner.removeContainerWithProps(oldContainer.Names[0], oldContainer.ID)
 }
 
 // Name returns the name of the service.
@@ -72,8 +58,9 @@ func (runner *Runner) Name() string {
 
 // Stop stops the service
 func (runner *Runner) Stop() error {
-	runner.removeContainer(runner.updaterContainer)
-	runner.removeContainer(runner.supervisorContainer)
+	if err := runner.dockerClient.Nuke(context.Background()); err != nil {
+		return fmt.Errorf("failed to nuke containers before exiting: %v", err)
+	}
 	return nil
 }
 

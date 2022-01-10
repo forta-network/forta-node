@@ -11,6 +11,7 @@ import (
 	types "github.com/docker/docker/api/types"
 	clients "github.com/forta-protocol/forta-node/clients"
 	config "github.com/forta-protocol/forta-node/config"
+	domain "github.com/forta-protocol/forta-node/domain"
 	protocol "github.com/forta-protocol/forta-node/protocol"
 	gomock "github.com/golang/mock/gomock"
 	proto "github.com/golang/protobuf/proto"
@@ -154,6 +155,20 @@ func (m *MockDockerClient) InterruptContainer(ctx context.Context, ID string) er
 func (mr *MockDockerClientMockRecorder) InterruptContainer(ctx, ID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InterruptContainer", reflect.TypeOf((*MockDockerClient)(nil).InterruptContainer), ctx, ID)
+}
+
+// Nuke mocks base method.
+func (m *MockDockerClient) Nuke(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Nuke", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Nuke indicates an expected call of Nuke.
+func (mr *MockDockerClientMockRecorder) Nuke(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Nuke", reflect.TypeOf((*MockDockerClient)(nil).Nuke), ctx)
 }
 
 // Prune mocks base method.
@@ -423,4 +438,41 @@ func (mr *MockAgentClientMockRecorder) Initialize(ctx, in interface{}, opts ...i
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, in}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Initialize", reflect.TypeOf((*MockAgentClient)(nil).Initialize), varargs...)
+}
+
+// MockAlertAPIClient is a mock of AlertAPIClient interface.
+type MockAlertAPIClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockAlertAPIClientMockRecorder
+}
+
+// MockAlertAPIClientMockRecorder is the mock recorder for MockAlertAPIClient.
+type MockAlertAPIClientMockRecorder struct {
+	mock *MockAlertAPIClient
+}
+
+// NewMockAlertAPIClient creates a new mock instance.
+func NewMockAlertAPIClient(ctrl *gomock.Controller) *MockAlertAPIClient {
+	mock := &MockAlertAPIClient{ctrl: ctrl}
+	mock.recorder = &MockAlertAPIClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockAlertAPIClient) EXPECT() *MockAlertAPIClientMockRecorder {
+	return m.recorder
+}
+
+// PostBatch mocks base method.
+func (m *MockAlertAPIClient) PostBatch(batch *domain.AlertBatch, token string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PostBatch", batch, token)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PostBatch indicates an expected call of PostBatch.
+func (mr *MockAlertAPIClientMockRecorder) PostBatch(batch, token interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostBatch", reflect.TypeOf((*MockAlertAPIClient)(nil).PostBatch), batch, token)
 }
