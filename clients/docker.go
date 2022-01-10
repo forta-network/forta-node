@@ -288,6 +288,15 @@ func (d *dockerClient) Nuke(ctx context.Context) error {
 		return fmt.Errorf("failed to prune: %v", err)
 	}
 
+	// use all containers including stopped this time
+	containers, err = d.cli.ContainerList(ctx, types.ContainerListOptions{
+		All:     true,
+		Filters: d.labelFilter(),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to get forta containers list: %v", err)
+	}
+
 	// step 3: ensure that the containers are really pruned
 	for _, container := range containers {
 		// avoid hanging for long
