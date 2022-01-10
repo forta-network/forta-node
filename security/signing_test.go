@@ -2,7 +2,9 @@ package security
 
 import (
 	"github.com/forta-protocol/forta-node/protocol"
+	"github.com/google/uuid"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -12,6 +14,36 @@ const (
 	signer    = "0xeE0D82ac806efe2b9a0003a27a785458bC67bbf0"
 	ref       = "Qmc2Dmb3wAycyeg3E7Nf6AANqDeBhiX4rdSy3ZJqg2PpMP"
 )
+
+func getTestAlert() *protocol.Alert {
+	entropicMap := make(map[string]string)
+	for i := 0; i < 10; i++ {
+		entropicMap[uuid.Must(uuid.NewUUID()).String()] = "true"
+	}
+	return &protocol.Alert{
+		Id:   "0xabcdefg",
+		Type: 2,
+		Finding: &protocol.Finding{
+			Protocol:    "metadata",
+			Severity:    5,
+			Metadata:    entropicMap,
+			Type:        2,
+			AlertId:     "finding",
+			Name:        "name",
+			Description: "description",
+		},
+		Timestamp: time.Now().String(),
+		Metadata:  entropicMap,
+		Agent: &protocol.AgentInfo{
+			Image:     "image",
+			ImageHash: "hash",
+			Id:        "id",
+			Manifest:  "manifest",
+		},
+		Tags:    entropicMap,
+		Scanner: &protocol.ScannerInfo{Address: "0xaddress"},
+	}
+}
 
 func TestSignString(t *testing.T) {
 	key, err := LoadKeyWithPassphrase("testkey", "Forta123")
@@ -28,31 +60,51 @@ func TestVerifySignature(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestSignProtoMessage(t *testing.T) {
+func TestVerifyAlertSignature(t *testing.T) {
 	key, err := LoadKeyWithPassphrase("testkey", "Forta123")
 	assert.NoError(t, err)
 
-	obj := &protocol.AlertBatch{
-		ChainId: 1,
-		Parent:  "test",
-	}
+	alert := getTestAlert()
 
-	sigHex, err := SignProtoMessage(key, obj)
+	signed, err := SignAlert(key, alert)
 	assert.NoError(t, err)
+	assert.NotNil(t, signed.Signature)
 
-	err = VerifyProtoSignature(obj, signer, sigHex.Signature)
-	assert.NoError(t, err)
+	t.Log(signed.Signature.Signature)
+
+	assert.NoError(t, VerifyAlertSignature(signed))
 }
 
-func TestSignProtoMessage_BadSignature(t *testing.T) {
-	obj := &protocol.AlertBatch{
-		ChainId: 1,
-		Parent:  "test",
-	}
+func TestVerifyAlertSignature_Bad(t *testing.T) {
+	key, err := LoadKeyWithPassphrase("testkey", "Forta123")
+	assert.NoError(t, err)
 
-	// this signature isn't for this obj, so it should fail
-	err := VerifyProtoSignature(obj, signer, signature)
+	alert1 := getTestAlert()
+	alert2 := getTestAlert()
 
-	// should return error
-	assert.Error(t, err)
+	signed1, err := SignAlert(key, alert1)
+	assert.NoError(t, err)
+
+	signed2, err := SignAlert(key, alert2)
+	assert.NoError(t, err)
+
+	//copy over the signature from #2
+	signed1.Signature = signed2.Signature
+
+	assert.ErrorIs(t, VerifyAlertSignature(signed1), ErrInvalidSignature)
+}
+
+func TestVerifyAlertSignature_Missing(t *testing.T) {
+	key, err := LoadKeyWithPassphrase("testkey", "Forta123")
+	assert.NoError(t, err)
+
+	alert := getTestAlert()
+
+	signed, err := SignAlert(key, alert)
+	assert.NoError(t, err)
+	assert.NotNil(t, signed.Signature)
+
+	signed.Signature = nil
+
+	assert.ErrorIs(t, VerifyAlertSignature(signed), ErrMissingSignature)
 }

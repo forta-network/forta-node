@@ -13,12 +13,16 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/golang/protobuf/proto"
-	"google.golang.org/protobuf/runtime/protoiface"
 
+	"github.com/forta-protocol/forta-node/encoding"
 	"github.com/forta-protocol/forta-node/protocol"
+	"github.com/forta-protocol/forta-node/utils"
 )
+
+var ErrMissingSignature = errors.New("missing signature")
+var ErrInvalidSignature = errors.New("invalid signature")
 
 func ReadPassphrase() (string, error) {
 	f, err := os.OpenFile("/passphrase", os.O_RDONLY, 400)
@@ -60,9 +64,22 @@ func LoadKeyWithPassphrase(keysDirPath, passphrase string) (*keystore.Key, error
 	return keystore.DecryptKey(keyBytes, passphrase)
 }
 
-// SignAlert signs the alert.
+/*
+The alertHash includes
+1. alert.Id, which is a hash of all fields for the alert (same for all scanners that find this alert)
+2. metadata, which is unique to this scanner (deterministic via list conversion)
+3. timestamp, which is unique to this scanner
+*/
+func alertHash(alert *protocol.Alert) common.Hash {
+	metadata := utils.MapToList(alert.Metadata)
+	alertStr := fmt.Sprintf("%s%s%s", alert.Id, strings.Join(metadata, ""), alert.Timestamp)
+	return crypto.Keccak256Hash([]byte(alertStr))
+}
+
+// SignAlert signs the alert using the alertID and deterministicly formatted Metadata
 func SignAlert(key *keystore.Key, alert *protocol.Alert) (*protocol.SignedAlert, error) {
-	signature, err := SignProtoMessage(key, alert)
+	hash := alertHash(alert)
+	signature, err := SignBytes(key, hash.Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -70,6 +87,15 @@ func SignAlert(key *keystore.Key, alert *protocol.Alert) (*protocol.SignedAlert,
 		Alert:     alert,
 		Signature: signature,
 	}, nil
+}
+
+// VerifyAlertSignature returns an error if the signature for the signed alert is invalid
+func VerifyAlertSignature(sa *protocol.SignedAlert) error {
+	if sa.Signature == nil {
+		return ErrMissingSignature
+	}
+	hash := alertHash(sa.Alert)
+	return VerifySignature(hash.Bytes(), sa.Signature.Signer, sa.Signature.Signature)
 }
 
 func SignBytes(key *keystore.Key, b []byte) (*protocol.Signature, error) {
@@ -112,27 +138,37 @@ func VerifySignature(message []byte, signerAddress string, sigHex string) error 
 	addr := crypto.PubkeyToAddress(*pubKey)
 
 	if addr.Hex() != signerAddress {
-		return fmt.Errorf("invalid signature expected=%s, got=%s", signerAddress, addr.Hex())
+		return ErrInvalidSignature
 	}
 
 	return nil
 }
 
-func VerifyProtoSignature(m protoiface.MessageV1, signerAddress, sigHex string) error {
-	b, err := proto.Marshal(m)
-	if err != nil {
-		return err
-	}
-	return VerifySignature(b, signerAddress, sigHex)
-}
-
-// SignProtoMessage marshals a message and signs.
-func SignProtoMessage(key *keystore.Key, m protoiface.MessageV1) (*protocol.Signature, error) {
-	b, err := proto.Marshal(m)
+// SignBatch will sign an alert batch and return a SignedAlertBatch
+func SignBatch(key *keystore.Key, batch *protocol.AlertBatch) (*protocol.SignedAlertBatch, error) {
+	encoded, err := encoding.EncodeBatch(batch)
 	if err != nil {
 		return nil, err
 	}
-	return SignBytes(key, b)
+	signature, err := SignString(key, encoded)
+	if err != nil {
+		return nil, err
+	}
+
+	return &protocol.SignedAlertBatch{
+		//TODO: remove Data in subsequent deploy
+		Data:      batch,
+		Encoded:   encoded,
+		Signature: signature,
+	}, nil
+}
+
+// VerifyBatchSignature will return an error if the signature fails to validate
+func VerifyBatchSignature(signedBatch *protocol.SignedAlertBatch) error {
+	if signedBatch.Signature == nil {
+		return ErrMissingSignature
+	}
+	return VerifySignature([]byte(signedBatch.Encoded), signedBatch.Signature.Signer, signedBatch.Signature.Signature)
 }
 
 // NewTransactOpts creates new opts with the private key.
