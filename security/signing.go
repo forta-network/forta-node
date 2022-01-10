@@ -156,8 +156,6 @@ func SignBatch(key *keystore.Key, batch *protocol.AlertBatch) (*protocol.SignedA
 	}
 
 	return &protocol.SignedAlertBatch{
-		//TODO: remove Data in subsequent deploy
-		Data:      batch,
 		Encoded:   encoded,
 		Signature: signature,
 	}, nil
