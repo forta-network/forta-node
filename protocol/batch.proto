@@ -9,8 +9,7 @@ import public "metrics.proto";
 option go_package = "./;protocol";
 
 message SignedAlertBatch {
-  //deprecated
-  AlertBatch data = 1;
+  reserved 1;
   Signature signature = 2;
   string encoded = 3;
 }
