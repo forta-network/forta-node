@@ -43,11 +43,9 @@ func MapKeys(m map[string]bool) []string {
 
 //MapToList returns a deterministic list from a map
 func MapToList(m map[string]string) []string {
-	result := make([]string, len(m))
-	i := 0
+	result := make([]string, 0, len(m))
 	for k, v := range m {
-		result[i] = fmt.Sprintf("%s=%s", k, v)
-		i++
+		result = append(result, fmt.Sprintf("%s=%s", k, v))
 	}
 	sort.Strings(result)
 	return result
