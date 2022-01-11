@@ -11,7 +11,7 @@ import (
 )
 
 func (sup *SupervisorService) startAgent(agent config.AgentConfig) error {
-	if err := sup.ensureLocalImage(fmt.Sprintf("agent %s", agent.ID), agent.Image, true); err != nil {
+	if err := sup.client.EnsureLocalImage(sup.ctx, fmt.Sprintf("agent %s", agent.ID), agent.Image); err != nil {
 		return err
 	}
 
