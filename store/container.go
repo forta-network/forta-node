@@ -58,8 +58,9 @@ func (store *fortaImageStore) check(ctx context.Context) {
 
 	if len(store.latestImgs.Supervisor) == 0 && latestReleaseInfo == nil {
 		store.latestImgs = ImageRefs{
-			Supervisor: config.DockerSupervisorImage,
-			Updater:    config.DockerUpdaterImage,
+			Supervisor:  config.DockerSupervisorImage,
+			Updater:     config.DockerUpdaterImage,
+			ReleaseInfo: config.GetBuildReleaseInfo(),
 		}
 		store.latestCh <- store.latestImgs
 	}
