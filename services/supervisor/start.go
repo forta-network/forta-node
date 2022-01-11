@@ -15,9 +15,9 @@ import (
 
 // SupervisorService manages the scanner node's service and agent containers.
 type SupervisorService struct {
-	ctx        context.Context
-	client     clients.DockerClient
-	authClient clients.DockerClient
+	ctx          context.Context
+	client       clients.DockerClient
+	globalClient clients.DockerClient
 
 	msgClient   clients.MessageClient
 	config      SupervisorServiceConfig
@@ -70,7 +70,7 @@ func (sup *SupervisorService) start() error {
 		return err
 	}
 
-	supervisorContainer, err := sup.client.GetContainerByName(sup.ctx, config.DockerSupervisorContainerName)
+	supervisorContainer, err := sup.globalClient.GetContainerByName(sup.ctx, config.DockerSupervisorContainerName)
 	if err != nil {
 		return fmt.Errorf("failed to get the supervisor container: %v", err)
 	}
@@ -80,8 +80,8 @@ func (sup *SupervisorService) start() error {
 	if err != nil {
 		return err
 	}
-	if err := sup.attachToNetwork(config.DockerSupervisorContainerName, nodeNetworkID); err != nil {
-		return err
+	if err := sup.client.AttachNetwork(sup.ctx, supervisorContainer.ID, nodeNetworkID); err != nil {
+		return fmt.Errorf("failed to attach supervisor container to node network: %v", err)
 	}
 
 	var natsNetworkID string
@@ -92,8 +92,8 @@ func (sup *SupervisorService) start() error {
 		if err != nil {
 			return err
 		}
-		if err := sup.attachToNetwork(config.DockerSupervisorContainerName, natsNetworkID); err != nil {
-			return err
+		if err := sup.client.AttachNetwork(sup.ctx, supervisorContainer.ID, natsNetworkID); err != nil {
+			return fmt.Errorf("failed to attach supervisor container to nats network: %v", err)
 		}
 	}
 
@@ -206,28 +206,19 @@ func (sup *SupervisorService) attachToNetwork(containerName, nodeNetworkID strin
 
 func (sup *SupervisorService) ensureNodeImages() error {
 	for _, image := range []struct {
-		Name        string
-		Ref         string
-		RequireAuth bool
+		Name string
+		Ref  string
 	}{
 		{
 			Name: "nats",
 			Ref:  "nats:2.3.2",
 		},
 	} {
-		if err := sup.ensureLocalImage(image.Name, image.Ref, image.RequireAuth); err != nil {
+		if err := sup.client.EnsureLocalImage(sup.ctx, image.Name, image.Ref); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func (sup *SupervisorService) ensureLocalImage(name, ref string, requireAuth bool) error {
-	client := sup.client
-	if requireAuth {
-		client = sup.authClient
-	}
-	return client.EnsureLocalImage(sup.ctx, name, ref)
 }
 
 func (sup *SupervisorService) Stop() error {
@@ -250,18 +241,18 @@ func (sup *SupervisorService) Name() string {
 }
 
 func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*SupervisorService, error) {
-	dockerAuthClient, err := clients.NewAuthDockerClient("supervisor", cfg.Config.Registry.Username, cfg.Config.Registry.Password)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create the agent docker client: %v", err)
-	}
 	dockerClient, err := clients.NewDockerClient("supervisor")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the docker client: %v", err)
 	}
+	globalClient, err := clients.NewDockerClient("")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create the global docker client: %v", err)
+	}
 	return &SupervisorService{
-		ctx:        ctx,
-		client:     dockerClient,
-		authClient: dockerAuthClient,
-		config:     cfg,
+		ctx:          ctx,
+		client:       dockerClient,
+		globalClient: globalClient,
+		config:       cfg,
 	}, nil
 }

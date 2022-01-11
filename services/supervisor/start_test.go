@@ -21,6 +21,7 @@ import (
 const (
 	testImageRef              = "some.docker.registry.io/foobar@sha256:cdd4ddccf5e9c740eb4144bcc68e3ea3a056789ec7453e94a6416dcfc80937a4"
 	testNodeNetworkID         = "node-network-id"
+	testNatsNetworkID         = "nats-network-id"
 	testScannerContainerID    = "test-scanner-container-id"
 	testPublisherContainerID  = "test-publisher-container-id"
 	testProxyContainerID      = "test-proxy-container-id"
@@ -40,8 +41,8 @@ func TestSuite(t *testing.T) {
 type Suite struct {
 	r *require.Assertions
 
-	dockerClient     *mock_clients.MockDockerClient
-	dockerAuthClient *mock_clients.MockDockerClient
+	dockerClient *mock_clients.MockDockerClient
+	globalClient *mock_clients.MockDockerClient
 
 	msgClient *mock_clients.MockMessageClient
 
@@ -74,21 +75,21 @@ func (s *Suite) SetupTest() {
 	s.r = require.New(s.T())
 	os.Setenv(config.EnvHostFortaDir, "/tmp/forta")
 	s.dockerClient = mock_clients.NewMockDockerClient(gomock.NewController(s.T()))
-	s.dockerAuthClient = mock_clients.NewMockDockerClient(gomock.NewController(s.T()))
+	s.globalClient = mock_clients.NewMockDockerClient(gomock.NewController(s.T()))
 
 	s.msgClient = mock_clients.NewMockMessageClient(gomock.NewController(s.T()))
 	service := &SupervisorService{
-		ctx:        context.Background(),
-		client:     s.dockerClient,
-		authClient: s.dockerAuthClient,
-		msgClient:  s.msgClient,
+		ctx:          context.Background(),
+		client:       s.dockerClient,
+		globalClient: s.globalClient,
+		msgClient:    s.msgClient,
 	}
 	service.config.Config.Log.Level = "debug"
 
 	s.dockerClient.EXPECT().Prune(service.ctx)
-	s.dockerClient.EXPECT().EnsureLocalImage(service.ctx, gomock.Any(), gomock.Any()).AnyTimes()
+	s.dockerClient.EXPECT().EnsureLocalImage(service.ctx, gomock.Any(), gomock.Any()) // needs to get nats once
 	s.dockerClient.EXPECT().CreatePublicNetwork(service.ctx, gomock.Any()).Return(testNodeNetworkID, nil)
-	s.dockerClient.EXPECT().CreateInternalNetwork(service.ctx, gomock.Any()).Return(testNodeNetworkID, nil) // for nats
+	s.dockerClient.EXPECT().CreateInternalNetwork(service.ctx, gomock.Any()).Return(testNatsNetworkID, nil) // for nats
 	s.dockerClient.EXPECT().StartContainer(service.ctx, (configMatcher)(clients.DockerContainerConfig{
 		Name: config.DockerNatsContainerName,
 	})).Return(&clients.DockerContainer{}, nil)
@@ -102,14 +103,13 @@ func (s *Suite) SetupTest() {
 		Name: config.DockerScannerContainerName,
 	})).Return(&clients.DockerContainer{ID: testScannerContainerID}, nil)
 	s.dockerClient.EXPECT().HasLocalImage(service.ctx, gomock.Any()).Return(true).AnyTimes()
-	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerSupervisorContainerName).Return(&types.Container{ID: testSupervisorContainerID}, nil).AnyTimes()
+	s.globalClient.EXPECT().GetContainerByName(service.ctx, config.DockerSupervisorContainerName).Return(&types.Container{ID: testSupervisorContainerID}, nil).AnyTimes()
 	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testSupervisorContainerID, testNodeNetworkID)
-	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerSupervisorContainerName).Return(&types.Container{ID: testSupervisorContainerID}, nil).AnyTimes()
-	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testSupervisorContainerID, testNodeNetworkID)
+	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testSupervisorContainerID, testNatsNetworkID)
 	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerScannerContainerName).Return(&types.Container{ID: testScannerContainerID}, nil).AnyTimes()
-	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testScannerContainerID, testNodeNetworkID)
+	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testScannerContainerID, testNatsNetworkID)
 	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerPublisherContainerName).Return(&types.Container{ID: testPublisherContainerID}, nil).AnyTimes()
-	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testPublisherContainerID, testNodeNetworkID)
+	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testPublisherContainerID, testNatsNetworkID)
 
 	s.dockerClient.EXPECT().WaitContainerStart(service.ctx, gomock.Any()).Return(nil).AnyTimes()
 	s.msgClient.EXPECT().Subscribe(messaging.SubjectAgentsActionRun, gomock.Any())
@@ -134,7 +134,7 @@ func (s *Suite) TestAgentRun() {
 	agentConfig, agentPayload := testAgentData()
 	// Creates the agent network, starts the agent container, attaches the scanner and the proxy to the
 	// agent network, publishes a "running" message.
-	s.dockerAuthClient.EXPECT().EnsureLocalImage(s.service.ctx, "agent test-agent", agentConfig.Image).Return(nil)
+	s.dockerClient.EXPECT().EnsureLocalImage(s.service.ctx, "agent test-agent", agentConfig.Image).Return(nil)
 	s.dockerClient.EXPECT().CreatePublicNetwork(s.service.ctx, testAgentContainerName).Return(testAgentNetworkID, nil)
 	s.dockerClient.EXPECT().StartContainer(s.service.ctx, (configMatcher)(clients.DockerContainerConfig{
 		Name: agentConfig.ContainerName(),
