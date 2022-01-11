@@ -19,7 +19,8 @@ type ReleaseSummary struct {
 	// Version string `json:"version,omitempty"` TODO: Use this when semver is injected
 }
 
-func GetBuildReleaseInfo() (*ReleaseSummary, bool) {
+// GetBuildReleaseSummary returns the build summary from build vars.
+func GetBuildReleaseSummary() (*ReleaseSummary, bool) {
 	if len(CommitHash) == 0 {
 		return nil, false
 	}
@@ -28,6 +29,18 @@ func GetBuildReleaseInfo() (*ReleaseSummary, bool) {
 		Commit: CommitHash,
 		IPFS:   ReleaseCid,
 	}, true
+}
+
+// GetBuildReleaseInfo collects and returns the release info from build vars.
+func GetBuildReleaseInfo() *ReleaseInfo {
+	return &ReleaseInfo{
+		IPFS: CommitHash,
+		Manifest: ReleaseManifest{
+			Release: Release{
+				Commit: CommitHash,
+			},
+		},
+	}
 }
 
 // ReleaseInfo contains the release response from the updater.

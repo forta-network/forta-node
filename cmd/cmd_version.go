@@ -8,11 +8,11 @@ import (
 )
 
 func handleFortaVersion(cmd *cobra.Command, args []string) error {
-	releaseInfo, ok := config.GetBuildReleaseInfo()
+	releaseSummary, ok := config.GetBuildReleaseSummary()
 	if !ok {
 		return nil
 	}
-	b, _ := json.MarshalIndent(releaseInfo, "", "  ")
+	b, _ := json.MarshalIndent(releaseSummary, "", "  ")
 	cmd.Println(string(b))
 	return nil
 }
