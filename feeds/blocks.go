@@ -203,7 +203,7 @@ func (bf *blockFeed) forEachBlock() error {
 		}
 		if err != nil {
 			log.Errorf("error getting block: %s", err.Error())
-			return err
+			continue
 		}
 
 		evt := &domain.BlockEvent{EventType: domain.EventTypeBlock, Block: block, ChainID: bf.chainID, Traces: traces}
