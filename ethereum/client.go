@@ -52,6 +52,7 @@ var ErrNotFound = fmt.Errorf("not found")
 var permanentErrors = []string{
 	"method not found",
 	"hash is not currently canonical",
+	"unknown block",
 }
 
 var minBackoff = 1 * time.Second
