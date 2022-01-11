@@ -2,8 +2,9 @@ package clients
 
 import (
 	"context"
-	"github.com/forta-protocol/forta-node/domain"
 	"io"
+
+	"github.com/forta-protocol/forta-node/domain"
 
 	"github.com/docker/docker/api/types"
 	"github.com/golang/protobuf/proto"
@@ -27,6 +28,7 @@ type DockerClient interface {
 	WaitContainerStart(ctx context.Context, id string) error
 	Prune(ctx context.Context) error
 	WaitContainerPrune(ctx context.Context, id string) error
+	Nuke(ctx context.Context) error
 	HasLocalImage(ctx context.Context, ref string) bool
 	EnsureLocalImage(ctx context.Context, name, ref string) error
 }

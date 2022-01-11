@@ -18,6 +18,7 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/utils/workers"
 	log "github.com/sirupsen/logrus"
 )
@@ -228,7 +229,8 @@ func copyFile(cli *client.Client, ctx context.Context, filename string, content 
 // GetContainers returns all of the containers.
 func (d *dockerClient) GetContainers(ctx context.Context) (DockerContainerList, error) {
 	return d.cli.ContainerList(ctx, types.ContainerListOptions{
-		All: true,
+		All:     true,
+		Filters: d.labelFilter(),
 	})
 }
 
@@ -258,6 +260,58 @@ func (d *dockerClient) GetContainerByID(ctx context.Context, id string) (*types.
 		}
 	}
 	return nil, fmt.Errorf("%w with id '%s'", ErrContainerNotFound, id)
+}
+
+// Nuke makes sure that all running Forta containers are stopped and pruned, quickly enough.
+func (d *dockerClient) Nuke(ctx context.Context) error {
+	var err error
+	for i := 0; i < 4; i++ {
+		err = d.nuke(ctx)
+		if err == nil {
+			return nil
+		}
+		log.WithError(err).Error("failed to nuke - retrying")
+	}
+	return fmt.Errorf("all nuke retries failed: %v", err)
+}
+
+func (d *dockerClient) nuke(ctx context.Context) error {
+	// step 1: put the supervisor to the top of the list so it doesn't do funny restarts
+	containers, err := d.GetContainers(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get forta containers list: %v", err)
+	}
+	supervisorContainer, err := d.GetContainerByName(ctx, config.DockerSupervisorContainerName)
+	if err == nil {
+		containers = append([]types.Container{*supervisorContainer}, containers...)
+	}
+	if err != nil && !errors.Is(err, ErrContainerNotFound) {
+		return fmt.Errorf("unexpected error while getting supervisor container: %v", err)
+	}
+
+	// step 1: stop all and wait until each exit
+	for _, container := range containers {
+		if err := d.StopContainer(ctx, container.ID); err != nil {
+			return fmt.Errorf("failed to stop: %v", err)
+		}
+		if err := d.WaitContainerExit(ctx, container.ID); err != nil {
+			return err
+		}
+	}
+
+	// step 2: prune everything
+	if err := d.Prune(ctx); err != nil {
+		return fmt.Errorf("failed to prune: %v", err)
+	}
+
+	// step 3: ensure that the containers are really pruned
+	for _, container := range containers {
+		if err := d.WaitContainerPrune(ctx, container.ID); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // StartContainer kicks off a container as a daemon and returns a summary of the container
@@ -390,7 +444,7 @@ func (d *dockerClient) StopContainer(ctx context.Context, ID string) error {
 	if err == nil {
 		return nil
 	}
-	if isNoSuchContainerErr(err) {
+	if isNoSuchContainerErr(err) || isNotRunningErr(err) {
 		return nil
 	}
 	return err
@@ -405,7 +459,7 @@ func (d *dockerClient) InterruptContainer(ctx context.Context, ID string) error 
 	if err == nil {
 		return nil
 	}
-	if isNoSuchContainerErr(err) {
+	if isNoSuchContainerErr(err) || isNotRunningErr(err) {
 		return nil
 	}
 	return err
@@ -415,14 +469,18 @@ func isNoSuchContainerErr(err error) bool {
 	return strings.Contains(strings.ToLower(err.Error()), "no such container")
 }
 
-// WaitContainerExit waits for container exit by checking every second.
+func isNotRunningErr(err error) bool {
+	return strings.Contains(strings.ToLower(err.Error()), "is not running")
+}
+
+// WaitContainerExit waits for container exit by checking periodically.
 func (d *dockerClient) WaitContainerExit(ctx context.Context, id string) error {
 	ticker := time.NewTicker(time.Second)
 	logger := log.WithFields(log.Fields{
 		"id": id,
 	})
-	// if it takes longer than 10 seconds, then just move on
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
+
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
 	for range ticker.C {
@@ -444,7 +502,7 @@ func (d *dockerClient) WaitContainerExit(ctx context.Context, id string) error {
 	return nil
 }
 
-// WaitContainerStart waits for container start by checking every second.
+// WaitContainerStart waits for container start by checking periodically.
 func (d *dockerClient) WaitContainerStart(ctx context.Context, id string) error {
 	ticker := time.NewTicker(time.Second)
 	start := time.Now()
@@ -452,8 +510,7 @@ func (d *dockerClient) WaitContainerStart(ctx context.Context, id string) error 
 		"id": id,
 	})
 
-	// if it takes longer than 10 seconds, then just move on
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
 	for t := range ticker.C {
@@ -473,14 +530,14 @@ func (d *dockerClient) WaitContainerStart(ctx context.Context, id string) error 
 	return nil
 }
 
-// WaitContainerPrune waits for container prune by checking every second.
+// WaitContainerPrune waits for container prune by checking periodically.
 func (d *dockerClient) WaitContainerPrune(ctx context.Context, id string) error {
 	ticker := time.NewTicker(time.Second)
 	logger := log.WithFields(log.Fields{
 		"id": id,
 	})
-	// if it takes longer than 10 seconds, then just move on
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
+
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
 	for range ticker.C {
@@ -539,6 +596,9 @@ func initLabels(name string) map[string]string {
 	result := make(map[string]string)
 	for k, v := range defaultLabels {
 		result[k] = v
+	}
+	if len(name) == 0 {
+		return result
 	}
 	result["network.forta.supervisor"] = name
 	return result
