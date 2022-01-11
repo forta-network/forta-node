@@ -52,7 +52,7 @@ type ReleaseInfo struct {
 // String implements fmt.Stringer interface.
 func (releaseInfo *ReleaseInfo) String() string {
 	if releaseInfo == nil {
-		return "{}"
+		return ""
 	}
 	b, _ := json.Marshal(releaseInfo)
 	return string(b)
