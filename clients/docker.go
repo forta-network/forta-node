@@ -264,6 +264,18 @@ func (d *dockerClient) GetContainerByID(ctx context.Context, id string) (*types.
 
 // Nuke makes sure that all running Forta containers are stopped and pruned, quickly enough.
 func (d *dockerClient) Nuke(ctx context.Context) error {
+	var err error
+	for i := 0; i < 4; i++ {
+		err = d.nuke(ctx)
+		if err == nil {
+			return nil
+		}
+		log.WithError(err).Error("failed to nuke - retrying")
+	}
+	return fmt.Errorf("all nuke retries failed: %v", err)
+}
+
+func (d *dockerClient) nuke(ctx context.Context) error {
 	// step 1: put the supervisor to the top of the list so it doesn't do funny restarts
 	containers, err := d.GetContainers(ctx)
 	if err != nil {
@@ -279,14 +291,10 @@ func (d *dockerClient) Nuke(ctx context.Context) error {
 
 	// step 1: stop all and wait until each exit
 	for _, container := range containers {
-		// avoid hanging for long
-		stopCtx, cancel := context.WithTimeout(ctx, time.Second*10)
-		defer cancel()
-
-		if err := d.StopContainer(stopCtx, container.ID); err != nil {
+		if err := d.StopContainer(ctx, container.ID); err != nil {
 			return fmt.Errorf("failed to stop: %v", err)
 		}
-		if err := d.WaitContainerExit(stopCtx, container.ID); err != nil {
+		if err := d.WaitContainerExit(ctx, container.ID); err != nil {
 			return err
 		}
 	}
@@ -298,11 +306,7 @@ func (d *dockerClient) Nuke(ctx context.Context) error {
 
 	// step 3: ensure that the containers are really pruned
 	for _, container := range containers {
-		// avoid hanging for long
-		pruneCtx, cancel := context.WithTimeout(ctx, time.Second*10)
-		defer cancel()
-
-		if err := d.WaitContainerPrune(pruneCtx, container.ID); err != nil {
+		if err := d.WaitContainerPrune(ctx, container.ID); err != nil {
 			return err
 		}
 	}
