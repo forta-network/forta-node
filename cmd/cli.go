@@ -32,9 +32,8 @@ var (
 	cfg config.Config
 
 	parsedArgs struct {
-		PrivateKeyFilePath string
-		Version            uint64
-		NoUpdate           bool
+		Version  uint64
+		NoUpdate bool
 	}
 
 	cmdForta = &cobra.Command{
@@ -106,6 +105,20 @@ publishes alerts about them`,
 		Short: "show release info",
 		RunE:  handleFortaVersion,
 	}
+
+	cmdFortaBatch = &cobra.Command{
+		Use:   "batch",
+		Short: "batch utils",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cmd.Help()
+		},
+	}
+
+	cmdFortaBatchDecode = &cobra.Command{
+		Use:   "decode",
+		Short: "download a batch from IPFS and decode data",
+		RunE:  handleFortaBatchDecode,
+	}
 )
 
 // Execute executes the root command.
@@ -130,6 +143,9 @@ func init() {
 
 	cmdForta.AddCommand(cmdFortaVersion)
 
+	cmdForta.AddCommand(cmdFortaBatch)
+	cmdFortaBatch.AddCommand(cmdFortaBatchDecode)
+
 	// Global (persistent) flags
 
 	cmdForta.PersistentFlags().String("dir", "", "Forta dir (default is $HOME/.forta) (overrides $FORTA_DIR)")
@@ -153,6 +169,12 @@ func init() {
 
 	// forta run
 	cmdFortaRun.Flags().BoolVar(&parsedArgs.NoUpdate, "no-update", false, "disable release check in updater")
+
+	// forta batch decode
+	cmdFortaBatchDecode.Flags().String("cid", "", "batch IPFS CID (content ID)")
+	cmdFortaBatchDecode.MarkFlagRequired("cid")
+	cmdFortaBatchDecode.Flags().String("o", "alert-batch.json", "output file name (default: alert-batch.json)")
+	cmdFortaBatchDecode.Flags().Bool("stdout", false, "print to stdout instead of writing to a file")
 }
 
 func initConfig() {
