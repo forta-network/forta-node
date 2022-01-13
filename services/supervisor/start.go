@@ -172,6 +172,7 @@ func (sup *SupervisorService) start() error {
 		Files: map[string][]byte{
 			"passphrase": []byte(sup.config.Passphrase),
 		},
+		DialHost:    true,
 		NetworkID:   nodeNetworkID,
 		MaxLogFiles: sup.maxLogFiles,
 		MaxLogSize:  sup.maxLogSize,

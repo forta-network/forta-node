@@ -57,6 +57,7 @@ type DockerContainerConfig struct {
 	CPUQuota        int64
 	Memory          int64
 	Cmd             []string
+	DialHost        bool
 }
 
 // DockerContainerList contains the full container data.
@@ -384,26 +385,32 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 		cntCfg.Cmd = config.Cmd
 	}
 
+	hostCfg := &container.HostConfig{
+		NetworkMode:     container.NetworkMode(config.NetworkID),
+		PortBindings:    bindings,
+		PublishAllPorts: config.PublishAllPorts,
+		Binds:           volumes,
+		LogConfig: container.LogConfig{
+			Config: map[string]string{
+				"max-file": fmt.Sprintf("%d", maxLogFiles),
+				"max-size": maxLogSize,
+			},
+			Type: "json-file",
+		},
+		Resources: container.Resources{
+			CPUQuota: config.CPUQuota,
+			Memory:   config.Memory,
+		},
+	}
+
+	if config.DialHost {
+		hostCfg.ExtraHosts = append(hostCfg.ExtraHosts, "host.docker.internal:host-gateway")
+	}
+
 	cont, err := d.cli.ContainerCreate(
 		ctx,
 		cntCfg,
-		&container.HostConfig{
-			NetworkMode:     container.NetworkMode(config.NetworkID),
-			PortBindings:    bindings,
-			PublishAllPorts: config.PublishAllPorts,
-			Binds:           volumes,
-			LogConfig: container.LogConfig{
-				Config: map[string]string{
-					"max-file": fmt.Sprintf("%d", maxLogFiles),
-					"max-size": maxLogSize,
-				},
-				Type: "json-file",
-			},
-			Resources: container.Resources{
-				CPUQuota: config.CPUQuota,
-				Memory:   config.Memory,
-			},
-		}, nil, config.Name)
+		hostCfg, nil, config.Name)
 
 	if err != nil {
 		return nil, err
