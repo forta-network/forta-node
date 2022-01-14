@@ -30,6 +30,15 @@ type Block struct {
 	Uncles           []*string     `json:"uncles"`
 }
 
+func (b *Block) Age() (*time.Duration, error) {
+	ts, err := b.GetTimestamp()
+	if err != nil {
+		return nil, err
+	}
+	age := time.Since(*ts)
+	return &age, nil
+}
+
 func (b *Block) GetTimestamp() (*time.Time, error) {
 	ts, err := utils.HexToBigInt(b.Timestamp)
 	if err != nil {

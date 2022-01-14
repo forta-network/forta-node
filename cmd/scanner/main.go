@@ -36,10 +36,12 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 		rateLimit = time.NewTicker(time.Duration(cfg.Scan.BlockRateLimit) * time.Millisecond)
 	}
 
+	maxAge := time.Hour
 	blockFeed, err := feeds.NewBlockFeed(ctx, ethClient, traceClient, feeds.BlockFeedConfig{
-		ChainID:   chainID,
-		Tracing:   cfg.Trace.Enabled,
-		RateLimit: rateLimit,
+		ChainID:             chainID,
+		Tracing:             cfg.Trace.Enabled,
+		RateLimit:           rateLimit,
+		SkipBlocksOlderThan: &maxAge,
 	})
 	if err != nil {
 		return nil, nil, err

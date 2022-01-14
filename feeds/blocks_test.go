@@ -61,6 +61,7 @@ func getTestBlockFeed(t *testing.T) (*blockFeed, *mocks.MockClient, *mocks.MockC
 	traceClient := mocks.NewMockClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())
 	cache := utils.NewCache(10000)
+	maxBlockAge := time.Hour
 	return &blockFeed{
 		start:       big.NewInt(1),
 		ctx:         ctx,
@@ -68,6 +69,7 @@ func getTestBlockFeed(t *testing.T) (*blockFeed, *mocks.MockClient, *mocks.MockC
 		traceClient: traceClient,
 		cache:       cache,
 		tracing:     true,
+		maxBlockAge: &maxBlockAge,
 	}, client, traceClient, ctx, cancel
 }
 

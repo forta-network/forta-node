@@ -16,8 +16,6 @@ import (
 
 var ErrEndBlockReached = errors.New("end block reached")
 
-var maxAgeOfBlock = 1 * time.Hour
-
 type bfHandler struct {
 	Handler func(evt *domain.BlockEvent) error
 	ErrCh   chan<- error
@@ -35,14 +33,16 @@ type blockFeed struct {
 	tracing     bool
 	started     bool
 	rateLimit   *time.Ticker
+	maxBlockAge *time.Duration
 }
 
 type BlockFeedConfig struct {
-	Start     *big.Int
-	End       *big.Int
-	ChainID   *big.Int
-	RateLimit *time.Ticker
-	Tracing   bool
+	Start               *big.Int
+	End                 *big.Int
+	ChainID             *big.Int
+	RateLimit           *time.Ticker
+	Tracing             bool
+	SkipBlocksOlderThan *time.Duration
 }
 
 func (bf *blockFeed) initialize() error {
@@ -169,13 +169,14 @@ func (bf *blockFeed) forEachBlock() error {
 			"blockNum": blockNum.Uint64(),
 			"blockHex": block.Number,
 		})
-		blockTime, err := block.GetTimestamp()
-		if err != nil {
-			logger.Errorf("error getting block timestamp: ts=%s, %s", block.Timestamp, err.Error())
+		age, err := block.Age()
+		if err != nil || age == nil {
+			logger.Errorf("error getting age of block: ts=%s, %s", block.Timestamp, err.Error())
 			continue
 		}
-		age := time.Since(*blockTime)
-		if age < maxAgeOfBlock {
+
+		// if not too old
+		if bf.maxBlockAge == nil || *age < *bf.maxBlockAge {
 			evt := &domain.BlockEvent{EventType: domain.EventTypeBlock, Block: block, ChainID: bf.chainID, Traces: traces}
 			for _, handler := range bf.handlers {
 				if err := handler.Handler(evt); err != nil {
@@ -184,7 +185,7 @@ func (bf *blockFeed) forEachBlock() error {
 			}
 			bf.cache.Add(block.Hash)
 		} else {
-			logger.WithField("age", age).Warnf("ignoring block, older than %v", maxAgeOfBlock)
+			logger.WithField("age", age).Warnf("ignoring block, older than %v", bf.maxBlockAge)
 		}
 
 		blockNum.Add(blockNum, increment)
