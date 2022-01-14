@@ -14,8 +14,8 @@ type JsonRpcConfig struct {
 }
 
 type ScannerConfig struct {
-	StartBlock       int           `yaml:"startBlock" json:"startBlock"`
-	EndBlock         int           `yaml:"endBlock" json:"endBlock"`
+	StartBlock       int           `yaml:"-" json:"_startBlock"`
+	EndBlock         int           `yaml:"-" json:"_endBlock"`
 	JsonRpc          JsonRpcConfig `yaml:"jsonRpc" json:"jsonRpc"`
 	DisableAutostart bool          `yaml:"disableAutostart" json:"disableAutostart"`
 	BlockRateLimit   int           `yaml:"blockRateLimit" json:"blockRateLimit"`

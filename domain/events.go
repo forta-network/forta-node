@@ -16,7 +16,6 @@ import (
 type EventType string
 
 const (
-	EventTypeReorg EventType = "reorg"
 	EventTypeBlock EventType = "block"
 )
 
