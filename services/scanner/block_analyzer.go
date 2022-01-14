@@ -68,9 +68,9 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 	tags := map[string]string{
 		"agentImage": result.AgentConfig.Image,
 		"agentId":    result.AgentConfig.ID,
+		"chainId":    chainId.String(),
 	}
 	if !result.Response.Private {
-		tags["chainId"] = chainId.String()
 		tags["blockHash"] = result.Request.Event.BlockHash
 		tags["blockNumber"] = blockNumber.String()
 	}

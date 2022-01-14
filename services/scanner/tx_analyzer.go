@@ -71,12 +71,12 @@ func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *pr
 	tags := map[string]string{
 		"agentImage": result.AgentConfig.Image,
 		"agentId":    result.AgentConfig.ID,
+		"chainId":    chainId.String(),
 	}
 
 	if !result.Response.Private {
 		alertType = protocol.AlertType_PRIVATE
 		tags["txHash"] = result.Request.Event.Transaction.Hash
-		tags["chainId"] = chainId.String()
 		tags["blockHash"] = result.Request.Event.Block.BlockHash
 		tags["blockNumber"] = blockNumber.String()
 	}
