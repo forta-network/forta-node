@@ -47,9 +47,6 @@ func strPtr(val string) *string {
 
 func (t *BlockEvent) ToMessage() (*protocol.BlockEvent, error) {
 	evtType := protocol.BlockEvent_BLOCK
-	if t.EventType == "reorg" {
-		evtType = protocol.BlockEvent_REORG
-	}
 
 	txs := make([]string, 0, len(t.Block.Transactions))
 	for _, tx := range t.Block.Transactions {
@@ -108,9 +105,6 @@ func safeAddStrToMap(addresses map[string]bool, addr *string) {
 // ToMessage converts the TransactionEvent to the protocol.TransactionEvent message
 func (t *TransactionEvent) ToMessage() (*protocol.TransactionEvent, error) {
 	evtType := protocol.TransactionEvent_BLOCK
-	if t.BlockEvt.EventType == "reorg" {
-		evtType = protocol.TransactionEvent_REORG
-	}
 
 	addresses := make(map[string]bool)
 

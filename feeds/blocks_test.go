@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -17,7 +18,6 @@ import (
 
 var testErr = errors.New("test")
 var startHash = "0x4fc0862e76691f5312964883954d5c2db35e2b8f7a4f191775a4f50c69804a8d"
-var reorgHash = "0xb9b293da464be42bbb87695c372678ea93a2ef87dc54213bbaa93bd6d8880c17"
 
 var endOfBlocks = errors.New("end of blocks")
 
@@ -72,10 +72,12 @@ func getTestBlockFeed(t *testing.T) (*blockFeed, *mocks.MockClient, *mocks.MockC
 }
 
 func blockWithParent(hash string, num int) *domain.Block {
+	ts := utils.BigIntToHex(big.NewInt(time.Now().Unix()))
 	return &domain.Block{
 		Hash:       fmt.Sprintf("0x%s%d", hash, num),
 		ParentHash: hash,
 		Number:     utils.BigIntToHex(big.NewInt(int64(num))),
+		Timestamp:  ts,
 	}
 }
 
@@ -129,6 +131,43 @@ func TestBlockFeed_ForEachBlock(t *testing.T) {
 	assert.Error(t, testErr, res)
 	assert.Equal(t, 3, len(evts))
 	assertEvts(t, evts, blockEvent(block1), blockEvent(block2), blockEvent(block3))
+}
+
+func TestBlockFeed_ForEachBlockWithOldBlock(t *testing.T) {
+	bf, client, traceClient, ctx, _ := getTestBlockFeed(t)
+
+	block1 := blockWithParent(startHash, 1)
+	block2 := blockWithParent(block1.Hash, 2)
+	block2.Timestamp = utils.BigIntToHex(big.NewInt(time.Now().Add(-2 * time.Hour).Unix()))
+
+	block3 := blockWithParent(block2.Hash, 3)
+
+	//TODO: actually test that the trace part matters (this returns nil for now)
+	client.EXPECT().BlockByNumber(ctx, big.NewInt(1)).Return(block1, nil).Times(1)
+	traceClient.EXPECT().TraceBlock(ctx, hexToBigInt(block1.Number)).Return(nil, nil).Times(1)
+
+	client.EXPECT().BlockByNumber(ctx, big.NewInt(2)).Return(block2, nil).Times(1)
+	traceClient.EXPECT().TraceBlock(ctx, hexToBigInt(block2.Number)).Return(nil, nil).Times(1)
+
+	client.EXPECT().BlockByNumber(ctx, big.NewInt(3)).Return(block3, nil).Times(1)
+	traceClient.EXPECT().TraceBlock(ctx, hexToBigInt(block3.Number)).Return(nil, nil).Times(1)
+
+	count := 0
+	var evts []*domain.BlockEvent
+	bf.Subscribe(func(evt *domain.BlockEvent) error {
+		count++
+		evts = append(evts, evt)
+		if count == 2 {
+			return testErr
+		}
+		return nil
+	})
+	res := bf.forEachBlock()
+	assert.Error(t, testErr, res)
+	assert.Equal(t, 2, len(evts))
+
+	// should skip block 2 and continue to block 3
+	assertEvts(t, evts, blockEvent(block1), blockEvent(block3))
 }
 
 func TestBlockFeed_ForEachBlock_Cancelled(t *testing.T) {

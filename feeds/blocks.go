@@ -16,6 +16,8 @@ import (
 
 var ErrEndBlockReached = errors.New("end block reached")
 
+var maxAgeOfBlock = 1 * time.Hour
+
 type bfHandler struct {
 	Handler func(evt *domain.BlockEvent) error
 	ErrCh   chan<- error
@@ -159,13 +161,31 @@ func (bf *blockFeed) forEachBlock() error {
 			continue
 		}
 
-		evt := &domain.BlockEvent{EventType: domain.EventTypeBlock, Block: block, ChainID: bf.chainID, Traces: traces}
-		for _, handler := range bf.handlers {
-			if err := handler.Handler(evt); err != nil {
-				return err
-			}
+		if err != nil {
+			log.Errorf("error getting blocknumber: num=%s, %s", block.Number, err.Error())
+			continue
 		}
-		bf.cache.Add(block.Hash)
+		logger := log.WithFields(log.Fields{
+			"blockNum": blockNum.Uint64(),
+			"blockHex": block.Number,
+		})
+		blockTime, err := block.GetTimestamp()
+		if err != nil {
+			logger.Errorf("error getting block timestamp: ts=%s, %s", block.Timestamp, err.Error())
+			continue
+		}
+		age := time.Since(*blockTime)
+		if age < maxAgeOfBlock {
+			evt := &domain.BlockEvent{EventType: domain.EventTypeBlock, Block: block, ChainID: bf.chainID, Traces: traces}
+			for _, handler := range bf.handlers {
+				if err := handler.Handler(evt); err != nil {
+					return err
+				}
+			}
+			bf.cache.Add(block.Hash)
+		} else {
+			logger.WithField("age", age).Warnf("ignoring block, older than %v", maxAgeOfBlock)
+		}
 
 		blockNum.Add(blockNum, increment)
 		if bf.rateLimit != nil {
