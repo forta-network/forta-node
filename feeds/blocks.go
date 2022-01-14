@@ -176,7 +176,8 @@ func (bf *blockFeed) forEachBlock() error {
 		}
 
 		// if not too old
-		if bf.maxBlockAge == nil || *age < *bf.maxBlockAge {
+		tooOld := bf.maxBlockAge != nil && *age > *bf.maxBlockAge
+		if !tooOld {
 			evt := &domain.BlockEvent{EventType: domain.EventTypeBlock, Block: block, ChainID: bf.chainID, Traces: traces}
 			for _, handler := range bf.handlers {
 				if err := handler.Handler(evt); err != nil {
