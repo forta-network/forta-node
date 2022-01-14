@@ -1,5 +1,11 @@
 package domain
 
+import (
+	"github.com/forta-protocol/forta-node/utils"
+	"math/big"
+	"time"
+)
+
 //Block is the intersection between parity and go-ethereum block
 type Block struct {
 	Difficulty       *string       `json:"difficulty"`
@@ -22,6 +28,25 @@ type Block struct {
 	Transactions     []Transaction `json:"transactions"`
 	TransactionsRoot *string       `json:"transactionsRoot"`
 	Uncles           []*string     `json:"uncles"`
+}
+
+func (b *Block) Age() (*time.Duration, error) {
+	ts, err := b.GetTimestamp()
+	if err != nil {
+		return nil, err
+	}
+	age := time.Since(*ts)
+	return &age, nil
+}
+
+func (b *Block) GetTimestamp() (*time.Time, error) {
+	ts, err := utils.HexToBigInt(b.Timestamp)
+	if err != nil {
+		return nil, err
+	}
+	blockTsMs := ts.Mul(ts, big.NewInt(1000))
+	result := time.Unix(0, int64(blockTsMs.Uint64())*int64(time.Millisecond))
+	return &result, nil
 }
 
 //Transaction is the intersection between parity and go-ethereum transactions

@@ -22,8 +22,6 @@ import (
 
 func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, cfg config.Config) (*scanner.TxStreamService, feeds.BlockFeed, error) {
 	url := cfg.Scan.JsonRpc.Url
-	startBlock := config.ParseBigInt(cfg.Scan.StartBlock)
-	endBlock := config.ParseBigInt(cfg.Scan.EndBlock)
 	chainID := config.ParseBigInt(cfg.ChainID)
 
 	if url == "" {
@@ -38,12 +36,12 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 		rateLimit = time.NewTicker(time.Duration(cfg.Scan.BlockRateLimit) * time.Millisecond)
 	}
 
+	maxAge := time.Hour
 	blockFeed, err := feeds.NewBlockFeed(ctx, ethClient, traceClient, feeds.BlockFeedConfig{
-		Start:     startBlock,
-		End:       endBlock,
-		ChainID:   chainID,
-		Tracing:   cfg.Trace.Enabled,
-		RateLimit: rateLimit,
+		ChainID:             chainID,
+		Tracing:             cfg.Trace.Enabled,
+		RateLimit:           rateLimit,
+		SkipBlocksOlderThan: &maxAge,
 	})
 	if err != nil {
 		return nil, nil, err

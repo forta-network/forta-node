@@ -33,14 +33,16 @@ type blockFeed struct {
 	tracing     bool
 	started     bool
 	rateLimit   *time.Ticker
+	maxBlockAge *time.Duration
 }
 
 type BlockFeedConfig struct {
-	Start     *big.Int
-	End       *big.Int
-	ChainID   *big.Int
-	RateLimit *time.Ticker
-	Tracing   bool
+	Start               *big.Int
+	End                 *big.Int
+	ChainID             *big.Int
+	RateLimit           *time.Ticker
+	Tracing             bool
+	SkipBlocksOlderThan *time.Duration
 }
 
 func (bf *blockFeed) initialize() error {
@@ -115,53 +117,6 @@ func (bf *blockFeed) loop() {
 	}
 }
 
-func (bf *blockFeed) processReorg(parentHash string) error {
-	// don't process anything before start index
-	currentHash := parentHash
-	for {
-		if bf.ctx.Err() != nil {
-			log.Debug("processReorg, returning ctx err")
-			return bf.ctx.Err()
-		}
-		if bf.cache.Exists(currentHash) {
-			return nil
-		}
-		block, err := bf.client.BlockByHash(bf.ctx, currentHash)
-		if err != nil {
-			log.Errorf("reorg: err getting block: %s (skipping)", err.Error())
-			return nil
-		}
-		blockNum, err := utils.HexToBigInt(block.Number)
-		if err != nil {
-			log.Errorf("error converting blocknum hex to bigint: %s", err.Error())
-			return nil
-		}
-
-		var traces []domain.Trace
-		if bf.tracing {
-			traces, err = bf.traceClient.TraceBlock(bf.ctx, blockNum)
-			if err != nil {
-				log.Errorf("error tracing block: %s", err.Error())
-				return err
-			}
-		}
-
-		if blockNum.Uint64() <= bf.start.Uint64() {
-			// stop if prior to horizon
-			return nil
-		}
-		evt := &domain.BlockEvent{EventType: domain.EventTypeReorg, Block: block, ChainID: bf.chainID, Traces: traces}
-		for _, handler := range bf.handlers {
-			if err := handler.Handler(evt); err != nil {
-				return err
-			}
-		}
-
-		bf.cache.Add(currentHash)
-		currentHash = block.ParentHash
-	}
-}
-
 func (bf *blockFeed) Subscribe(handler func(evt *domain.BlockEvent) error) <-chan error {
 	errCh := make(chan error)
 	bf.handlers = append(bf.handlers, &bfHandler{
@@ -206,19 +161,34 @@ func (bf *blockFeed) forEachBlock() error {
 			continue
 		}
 
-		evt := &domain.BlockEvent{EventType: domain.EventTypeBlock, Block: block, ChainID: bf.chainID, Traces: traces}
-		for _, handler := range bf.handlers {
-			if err := handler.Handler(evt); err != nil {
-				return err
-			}
+		if err != nil {
+			log.Errorf("error getting blocknumber: num=%s, %s", block.Number, err.Error())
+			continue
 		}
-		bf.cache.Add(block.Hash)
-		if blockNum.Uint64() > bf.start.Uint64() {
-			if err := bf.processReorg(block.ParentHash); err != nil {
-				log.Errorf("ForEachBlock: err from processReorg: %s", err.Error())
-				return err
-			}
+		logger := log.WithFields(log.Fields{
+			"blockNum": blockNum.Uint64(),
+			"blockHex": block.Number,
+		})
+		age, err := block.Age()
+		if err != nil || age == nil {
+			logger.Errorf("error getting age of block: ts=%s, %s", block.Timestamp, err.Error())
+			continue
 		}
+
+		// if not too old
+		tooOld := bf.maxBlockAge != nil && *age > *bf.maxBlockAge
+		if !tooOld {
+			evt := &domain.BlockEvent{EventType: domain.EventTypeBlock, Block: block, ChainID: bf.chainID, Traces: traces}
+			for _, handler := range bf.handlers {
+				if err := handler.Handler(evt); err != nil {
+					return err
+				}
+			}
+			bf.cache.Add(block.Hash)
+		} else {
+			logger.WithField("age", age).Warnf("ignoring block, older than %v", bf.maxBlockAge)
+		}
+
 		blockNum.Add(blockNum, increment)
 		if bf.rateLimit != nil {
 			<-bf.rateLimit.C

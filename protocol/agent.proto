@@ -90,7 +90,7 @@ message EvaluateBlockResponse {
 message BlockEvent {
   enum EventType {
     BLOCK = 0;
-    REORG = 1;
+    REORG = 1 [deprecated=true];
   }
   message Network {
     string chainId = 1;
