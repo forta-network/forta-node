@@ -66,20 +66,28 @@ func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *pr
 	if err != nil {
 		return nil, err
 	}
+
+	tags := map[string]string{
+		"agentImage": result.AgentConfig.Image,
+		"agentId":    result.AgentConfig.ID,
+		"chainId":    chainId.String(),
+	}
+
+	alertType := protocol.AlertType_PRIVATE
+	if !result.Response.Private {
+		alertType = protocol.AlertType_TRANSACTION
+		tags["txHash"] = result.Request.Event.Transaction.Hash
+		tags["blockHash"] = result.Request.Event.Block.BlockHash
+		tags["blockNumber"] = blockNumber.String()
+	}
+
 	return &protocol.Alert{
 		Id:        alertID,
 		Finding:   f,
 		Timestamp: ts.Format(utils.AlertTimeFormat),
-		Type:      protocol.AlertType_TRANSACTION,
+		Type:      alertType,
 		Agent:     result.AgentConfig.ToAgentInfo(),
-		Tags: map[string]string{
-			"agentImage":  result.AgentConfig.Image,
-			"agentId":     result.AgentConfig.ID,
-			"chainId":     chainId.String(),
-			"blockHash":   result.Request.Event.Block.BlockHash,
-			"blockNumber": blockNumber.String(),
-			"txHash":      result.Request.Event.Transaction.Hash,
-		},
+		Tags:      tags,
 	}, nil
 }
 

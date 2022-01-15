@@ -37,6 +37,7 @@ enum AlertType {
   UNKNOWN_ALERT_TYPE = 0;
   TRANSACTION = 1;
   BLOCK = 2;
+  PRIVATE = 3;
 }
 
 message Alert {

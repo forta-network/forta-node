@@ -211,13 +211,37 @@ type BlockResults protocol.BlockResults
 // BatchData is a parent wrapper that contains all batch info.
 type BatchData protocol.AlertBatch
 
+func (bd *BatchData) GetPrivateAlerts(notif *protocol.NotifyRequest) *protocol.AgentAlerts {
+	for _, a := range bd.PrivateAlerts {
+		if a.AgentManifest == notif.AgentInfo.Manifest {
+			return a
+		}
+	}
+	res := &protocol.AgentAlerts{
+		AgentManifest: notif.AgentInfo.Manifest,
+	}
+
+	bd.PrivateAlerts = append(bd.PrivateAlerts, res)
+	return res
+}
+
 // AppendAlert adds the alert to the relevant list.
 func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 	isBlockAlert := notif.EvalBlockRequest != nil
+	var isPrivate bool
+	if notif.EvalBlockResponse != nil {
+		isPrivate = notif.EvalBlockResponse.Private
+	} else if notif.EvalTxResponse != nil {
+		isPrivate = notif.EvalTxResponse.Private
+	}
 	hasAlert := notif.SignedAlert != nil
 
 	var agentAlerts *protocol.AgentAlerts
-	if isBlockAlert {
+	if isPrivate {
+		if hasAlert {
+			agentAlerts = bd.GetPrivateAlerts(notif)
+		}
+	} else if isBlockAlert {
 		blockNum := hexutil.MustDecodeUint64(notif.EvalBlockRequest.Event.BlockNumber)
 		bd.AddBatchAgent(notif.AgentInfo, blockNum, "")
 		if hasAlert {
@@ -258,7 +282,6 @@ func (bd *BatchData) AddBatchAgent(agent *protocol.AgentInfo, blockNumber uint64
 		}
 		bd.Agents = append(bd.Agents, batchAgent)
 	}
-	// There should always be a block number.
 	if blockNumber == 0 {
 		log.Error("zero block number while adding batch agent")
 		return

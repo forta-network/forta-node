@@ -76,6 +76,7 @@ message EvaluateTxResponse {
   map<string, string> metadata = 4;
   string timestamp = 5;
   uint32 latencyMs = 6;
+  bool private = 7;
 }
 
 message EvaluateBlockResponse {
@@ -85,6 +86,7 @@ message EvaluateBlockResponse {
   map<string, string> metadata = 4;
   string timestamp = 5;
   uint32 latencyMs = 6;
+  bool private = 7;
 }
 
 message BlockEvent {

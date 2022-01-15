@@ -25,6 +25,7 @@ message AlertBatch {
   repeated AgentMetrics metrics = 8;
   ScannerVersion scannerVersion = 9;
   string parent = 10;
+  repeated AgentAlerts privateAlerts = 11;
 }
 
 message BlockResults {
