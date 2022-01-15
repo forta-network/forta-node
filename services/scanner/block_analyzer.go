@@ -70,7 +70,10 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 		"agentId":    result.AgentConfig.ID,
 		"chainId":    chainId.String(),
 	}
+
+	alertType := protocol.AlertType_PRIVATE
 	if !result.Response.Private {
+		alertType = protocol.AlertType_BLOCK
 		tags["blockHash"] = result.Request.Event.BlockHash
 		tags["blockNumber"] = blockNumber.String()
 	}
@@ -78,7 +81,7 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 		Id:        alertID,
 		Finding:   f,
 		Timestamp: ts.Format(utils.AlertTimeFormat),
-		Type:      protocol.AlertType_BLOCK,
+		Type:      alertType,
 		Agent:     result.AgentConfig.ToAgentInfo(),
 		Tags:      tags,
 	}, nil
