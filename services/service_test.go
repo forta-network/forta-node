@@ -2,12 +2,13 @@ package services
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/sync/errgroup"
 	"os"
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/sync/errgroup"
 )
 
 type TestService struct {

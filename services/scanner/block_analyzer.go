@@ -12,7 +12,6 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/domain"
@@ -83,15 +82,10 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 
 func (t *BlockAnalyzerService) Start() error {
 	log.Infof("Starting %s", t.Name())
-	grp, ctx := errgroup.WithContext(t.ctx)
 
 	// Gear 2: receive result from agent
-	grp.Go(func() error {
+	go func() {
 		for result := range t.cfg.AgentPool.BlockResults() {
-			if ctx.Err() != nil {
-				return ctx.Err()
-			}
-
 			ts := time.Now().UTC()
 
 			m := jsonpb.Marshaler{}
@@ -112,40 +106,34 @@ func (t *BlockAnalyzerService) Start() error {
 				if err := t.cfg.AlertSender.NotifyWithoutAlert(
 					rt, result.Request.Event.Network.ChainId, result.Request.Event.BlockNumber,
 				); err != nil {
-					log.WithError(err).Error("failed to notify without alert")
-					return err
+					log.WithError(err).Panic("failed to notify without alert")
 				}
 			}
 
 			for _, f := range result.Response.Findings {
 				alert, err := t.findingToAlert(result, ts, f)
 				if err != nil {
-					return err
+					log.WithError(err).Error("failed to transform finding to alert")
+					continue
 				}
 				if err := t.cfg.AlertSender.SignAlertAndNotify(
 					rt, alert, result.Request.Event.Network.ChainId, result.Request.Event.BlockNumber,
 				); err != nil {
-					log.WithError(err).Error("failed sign alert and notify")
-					return err
+					log.WithError(err).Panic("failed sign alert and notify")
 				}
 			}
 			t.publishMetrics(result)
 		}
-		return nil
-	})
+	}()
 
 	// Gear 1: loops over blocks and distributes to all agents
-	grp.Go(func() error {
+	go func() {
 		// for each block
 		for block := range t.cfg.BlockChannel {
-			if ctx.Err() != nil {
-				return ctx.Err()
-			}
-
 			// convert to message
 			blockEvt, err := block.ToMessage()
 			if err != nil {
-				log.Error("error converting block event to message (skipping)", err)
+				log.WithError(err).Error("error converting block event to message (skipping)")
 				continue
 			}
 
@@ -156,10 +144,9 @@ func (t *BlockAnalyzerService) Start() error {
 			// forward to the pool
 			t.cfg.AgentPool.SendEvaluateBlockRequest(request)
 		}
-		return nil
-	})
+	}()
 
-	return grp.Wait()
+	return nil
 }
 
 func (t *BlockAnalyzerService) Stop() error {
