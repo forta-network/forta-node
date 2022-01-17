@@ -74,7 +74,7 @@ func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *pr
 	}
 
 	alertType := protocol.AlertType_PRIVATE
-	if !result.Response.Private {
+	if !f.Private && !result.Response.Private {
 		alertType = protocol.AlertType_TRANSACTION
 		tags["txHash"] = result.Request.Event.Transaction.Hash
 		tags["blockHash"] = result.Request.Event.Block.BlockHash

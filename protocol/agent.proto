@@ -67,6 +67,7 @@ message Finding {
   string name = 6;
   string description = 7;
   string everestId = 8;
+  bool private = 9;
 }
 
 message EvaluateTxResponse {
