@@ -158,9 +158,9 @@ func StartServices(ctx context.Context, cancelParent context.CancelFunc, service
 	}
 
 	log.Info("grp.Wait()...")
-	if err := processGrp.Wait(); err != nil {
+	err := processGrp.Wait()
+	if err != nil {
 		log.WithError(err).Error("StartServices ending with errgroup err")
-		return err
 	}
-	return nil
+	return err
 }
