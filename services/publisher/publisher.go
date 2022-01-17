@@ -229,15 +229,19 @@ func (bd *BatchData) GetPrivateAlerts(notif *protocol.NotifyRequest) *protocol.A
 func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 	isBlockAlert := notif.EvalBlockRequest != nil
 
-	// default at per-finding level
-	isPrivate := notif.SignedAlert.Alert.Finding.Private
+	var isPrivate bool
 
-	// if public, let a private override at response-level win
-	if !isPrivate {
-		if notif.EvalBlockResponse != nil {
-			isPrivate = notif.EvalBlockResponse.Private
-		} else if notif.EvalTxResponse != nil {
-			isPrivate = notif.EvalTxResponse.Private
+	if notif.SignedAlert != nil && notif.SignedAlert.Alert != nil && notif.SignedAlert.Alert.Finding != nil {
+		// default at per-finding level
+		isPrivate = notif.SignedAlert.Alert.Finding.Private
+
+		// if public, let a private override at response-level win
+		if !isPrivate {
+			if notif.EvalBlockResponse != nil {
+				isPrivate = notif.EvalBlockResponse.Private
+			} else if notif.EvalTxResponse != nil {
+				isPrivate = notif.EvalTxResponse.Private
+			}
 		}
 	}
 
