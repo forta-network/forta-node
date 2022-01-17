@@ -48,7 +48,7 @@ func Run(cfg config.Config) {
 		return
 	}
 
-	if err := services.StartServices(ctx, serviceList); err != nil {
+	if err := services.StartServices(ctx, cancel, serviceList); err != nil {
 		log.WithError(err).Error("error running runner services")
 	}
 

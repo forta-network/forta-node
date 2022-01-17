@@ -136,7 +136,7 @@ func StartServices(ctx context.Context, cancelParent context.CancelFunc, service
 
 		go func() {
 			if err := service.Start(); err != nil {
-				logger.WithError(err).Error("failed to start service")
+				logger.WithError(err).Error("failed to start service - exiting")
 				cancelParent()
 				return
 			}
@@ -145,6 +145,7 @@ func StartServices(ctx context.Context, cancelParent context.CancelFunc, service
 
 		select {
 		case <-time.After(time.Minute):
+			logger.Error("took too long to start service - exiting")
 			cancelParent()
 			break
 		case <-serviceStartedCtx.Done():
@@ -154,6 +155,8 @@ func StartServices(ctx context.Context, cancelParent context.CancelFunc, service
 					logger.WithError(err).Error("error while stopping")
 				}
 			}()
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 
