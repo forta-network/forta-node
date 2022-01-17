@@ -53,7 +53,10 @@ func (p *JsonRpcProxy) Start() error {
 
 func (p *JsonRpcProxy) Stop() error {
 	log.Infof("Stopping %s", p.Name())
-	return p.server.Close()
+	if p.server != nil {
+		return p.server.Close()
+	}
+	return nil
 }
 
 func (p *JsonRpcProxy) Name() string {

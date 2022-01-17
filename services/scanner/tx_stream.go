@@ -55,8 +55,12 @@ func (t *TxStreamService) Start() error {
 
 func (t *TxStreamService) Stop() error {
 	log.Infof("Stopping %s", t.Name())
-	close(t.txOutput)
-	close(t.blockOutput)
+	if t.txOutput != nil {
+		close(t.txOutput)
+	}
+	if t.blockOutput != nil {
+		close(t.blockOutput)
+	}
 	return nil
 }
 

@@ -428,7 +428,9 @@ func (pub *Publisher) Start() error {
 
 func (pub *Publisher) Stop() error {
 	log.Infof("Stopping %s", pub.Name())
-	pub.server.Stop()
+	if pub.server != nil {
+		pub.server.Stop()
+	}
 	return nil
 }
 

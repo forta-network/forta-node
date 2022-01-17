@@ -93,7 +93,9 @@ func (t *API) Start() error {
 
 func (t *API) Stop() error {
 	log.Infof("Stopping %s", t.Name())
-	t.server.Close()
+	if t.server != nil {
+		return t.server.Close()
+	}
 	return nil
 }
 

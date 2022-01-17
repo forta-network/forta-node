@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/forta-protocol/forta-node/ens"
 
@@ -83,7 +84,7 @@ func ContainerMain(name string, getServices func(ctx context.Context, cfg config
 		return
 	}
 
-	if err := StartServices(ctx, serviceList); err != nil {
+	if err := StartServices(ctx, cancel, serviceList); err != nil {
 		log.Error("error running services: ", err)
 	}
 
@@ -112,7 +113,7 @@ func InitMainContext() (context.Context, context.CancelFunc) {
 }
 
 // StartServices kicks off all services and blocks until an error is returned or context ends
-func StartServices(ctx context.Context, services []Service) error {
+func StartServices(ctx context.Context, cancelParent context.CancelFunc, services []Service) error {
 	if processGrp == nil {
 		panic("InitMainContext must be called first")
 	}
@@ -126,18 +127,35 @@ func StartServices(ctx context.Context, services []Service) error {
 		}
 	})
 
+	// each service should be able to start successfully within reasonable time
 	for _, service := range services {
-		processGrp.Go(service.Start)
-	}
+		serviceStartedCtx, serviceStarted := context.WithCancel(context.Background())
+		defer serviceStarted()
 
-	// clean up all services
-	defer func() {
-		for _, service := range services {
-			if err := service.Stop(); err != nil {
-				log.Errorf("error stopping %s: %s", service.Name(), err.Error())
+		logger := log.WithField("service", service.Name())
+
+		go func() {
+			if err := service.Start(); err != nil {
+				logger.WithError(err).Error("failed to start service")
+				cancelParent()
+				return
 			}
+			serviceStarted()
+		}()
+
+		select {
+		case <-time.After(time.Minute):
+			cancelParent()
+			break
+		case <-serviceStartedCtx.Done():
+			// clean up each service
+			defer func() {
+				if err := service.Stop(); err != nil {
+					logger.WithError(err).Error("error while stopping")
+				}
+			}()
 		}
-	}()
+	}
 
 	log.Info("grp.Wait()...")
 	if err := processGrp.Wait(); err != nil {

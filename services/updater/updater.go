@@ -174,6 +174,9 @@ func (updater *UpdaterService) Name() string {
 }
 
 func (updater *UpdaterService) stopServer() error {
+	if updater.server == nil {
+		return nil
+	}
 	log.Info("stopping server")
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
