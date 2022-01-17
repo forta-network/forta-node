@@ -34,7 +34,7 @@ func GetBuildReleaseSummary() (*ReleaseSummary, bool) {
 // GetBuildReleaseInfo collects and returns the release info from build vars.
 func GetBuildReleaseInfo() *ReleaseInfo {
 	return &ReleaseInfo{
-		IPFS: CommitHash,
+		IPFS: ReleaseCid,
 		Manifest: ReleaseManifest{
 			Release: Release{
 				Commit: CommitHash,
