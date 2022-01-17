@@ -6,10 +6,34 @@ import (
 	"testing"
 )
 
+func TestBatchData_AppendPrivateAlert_PerFinding(t *testing.T) {
+	bd := BatchData{}
+	alert := &protocol.SignedAlert{
+		Alert: &protocol.Alert{Id: "alertId", Finding: &protocol.Finding{
+			Private: true,
+		}},
+	}
+	nr := &protocol.NotifyRequest{
+		SignedAlert:    alert,
+		EvalTxRequest:  &protocol.EvaluateTxRequest{},
+		EvalTxResponse: &protocol.EvaluateTxResponse{},
+		AgentInfo: &protocol.AgentInfo{
+			Manifest: "agentInfo",
+		},
+	}
+
+	assert.Len(t, bd.PrivateAlerts, 0)
+	bd.AppendAlert(nr)
+	assert.Len(t, bd.PrivateAlerts, 1)
+	assert.Equal(t, nr.AgentInfo.Manifest, bd.PrivateAlerts[0].AgentManifest)
+	assert.Len(t, bd.PrivateAlerts[0].Alerts, 1)
+	assert.EqualValues(t, alert, bd.PrivateAlerts[0].Alerts[0])
+}
+
 func TestBatchData_AppendPrivateAlert_Tx(t *testing.T) {
 	bd := BatchData{}
 	alert := &protocol.SignedAlert{
-		Alert: &protocol.Alert{Id: "alertId"},
+		Alert: &protocol.Alert{Id: "alertId", Finding: &protocol.Finding{}},
 	}
 	nr := &protocol.NotifyRequest{
 		SignedAlert:   alert,
@@ -33,7 +57,7 @@ func TestBatchData_AppendPrivateAlert_Tx(t *testing.T) {
 func TestBatchData_AppendPrivateAlert_Block(t *testing.T) {
 	bd := BatchData{}
 	alert := &protocol.SignedAlert{
-		Alert: &protocol.Alert{Id: "alertId"},
+		Alert: &protocol.Alert{Id: "alertId", Finding: &protocol.Finding{}},
 	}
 	nr := &protocol.NotifyRequest{
 		SignedAlert:      alert,

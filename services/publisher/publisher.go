@@ -228,12 +228,19 @@ func (bd *BatchData) GetPrivateAlerts(notif *protocol.NotifyRequest) *protocol.A
 // AppendAlert adds the alert to the relevant list.
 func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 	isBlockAlert := notif.EvalBlockRequest != nil
-	var isPrivate bool
-	if notif.EvalBlockResponse != nil {
-		isPrivate = notif.EvalBlockResponse.Private
-	} else if notif.EvalTxResponse != nil {
-		isPrivate = notif.EvalTxResponse.Private
+
+	// default at per-finding level
+	isPrivate := notif.SignedAlert.Alert.Finding.Private
+
+	// if public, let a private override at response-level win
+	if !isPrivate {
+		if notif.EvalBlockResponse != nil {
+			isPrivate = notif.EvalBlockResponse.Private
+		} else if notif.EvalTxResponse != nil {
+			isPrivate = notif.EvalTxResponse.Private
+		}
 	}
+
 	hasAlert := notif.SignedAlert != nil
 
 	var agentAlerts *protocol.AgentAlerts

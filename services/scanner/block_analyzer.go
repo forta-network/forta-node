@@ -72,7 +72,7 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 	}
 
 	alertType := protocol.AlertType_PRIVATE
-	if !result.Response.Private {
+	if !f.Private && !result.Response.Private {
 		alertType = protocol.AlertType_BLOCK
 		tags["blockHash"] = result.Request.Event.BlockHash
 		tags["blockNumber"] = blockNumber.String()
