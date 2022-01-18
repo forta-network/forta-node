@@ -82,13 +82,11 @@ func ContainerMain(name string, getServices func(ctx context.Context, cfg config
 	serviceList, err := getServices(ctx, cfg)
 	if err != nil {
 		logger.WithError(err).Error("could not initialize services")
-		cancel()
 		return
 	}
 
 	if err := StartServices(ctx, cancel, logger, serviceList); err != nil {
 		logger.WithError(err).Error("failed to start services")
-		cancel()
 	}
 }
 
