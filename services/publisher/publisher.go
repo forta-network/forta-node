@@ -258,15 +258,15 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 	} else if isBlockAlert {
 		blockNum := hexutil.MustDecodeUint64(notif.EvalBlockRequest.Event.BlockNumber)
 		bd.AddBatchAgent(notif.AgentInfo, blockNum, "")
+		blockRes := bd.GetBlockResults(notif.EvalBlockRequest.Event.BlockHash, blockNum, notif.EvalBlockRequest.Event.Block.Timestamp)
 		if hasAlert {
-			blockRes := bd.GetBlockResults(notif.EvalBlockRequest.Event.BlockHash, blockNum, notif.EvalBlockRequest.Event.Block.Timestamp)
 			agentAlerts = (*BlockResults)(blockRes).GetAgentAlerts(notif.AgentInfo)
 		}
 	} else {
 		blockNum := hexutil.MustDecodeUint64(notif.EvalTxRequest.Event.Block.BlockNumber)
 		bd.AddBatchAgent(notif.AgentInfo, blockNum, notif.EvalTxRequest.Event.Receipt.TransactionHash)
+		blockRes := bd.GetBlockResults(notif.EvalTxRequest.Event.Block.BlockHash, blockNum, notif.EvalTxRequest.Event.Block.BlockTimestamp)
 		if hasAlert {
-			blockRes := bd.GetBlockResults(notif.EvalTxRequest.Event.Block.BlockHash, blockNum, notif.EvalTxRequest.Event.Block.BlockTimestamp)
 			txRes := (*BlockResults)(blockRes).GetTransactionResults(notif.EvalTxRequest.Event)
 			agentAlerts = (*TransactionResults)(txRes).GetAgentAlerts(notif.AgentInfo)
 		}
