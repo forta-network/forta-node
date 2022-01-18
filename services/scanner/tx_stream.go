@@ -47,7 +47,7 @@ func (t *TxStreamService) Start() error {
 	log.Infof("Starting %s", t.Name())
 	go func() {
 		if err := t.txFeed.ForEachTransaction(t.handleBlock, t.handleTx); err != nil {
-			log.WithError(err).Error("tx feed error")
+			log.WithError(err).Panic("tx feed error")
 		}
 	}()
 	return nil
