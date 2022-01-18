@@ -137,6 +137,9 @@ func (bf *blockFeed) forEachBlock() error {
 		if bf.end != nil && blockNum.Uint64() > bf.end.Uint64() {
 			return ErrEndBlockReached
 		}
+		if bf.rateLimit != nil {
+			<-bf.rateLimit.C
+		}
 
 		var err error
 		var traces []domain.Trace
@@ -189,9 +192,6 @@ func (bf *blockFeed) forEachBlock() error {
 		}
 
 		blockNum.Add(blockNum, increment)
-		if bf.rateLimit != nil {
-			<-bf.rateLimit.C
-		}
 	}
 }
 
