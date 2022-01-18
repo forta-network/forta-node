@@ -143,8 +143,7 @@ func (bf *blockFeed) forEachBlock() error {
 		if bf.tracing {
 			traces, err = bf.traceClient.TraceBlock(bf.ctx, blockNum)
 			if err != nil {
-				log.Errorf("error tracing block: %s", err.Error())
-				return err
+				log.WithError(err).Error("error tracing block")
 			}
 		}
 
@@ -157,12 +156,12 @@ func (bf *blockFeed) forEachBlock() error {
 			block, err = bf.client.BlockByHash(bf.ctx, *hash)
 		}
 		if err != nil {
-			log.Errorf("error getting block: %s", err.Error())
+			log.WithError(err).Error("error getting block")
 			continue
 		}
 
 		if err != nil {
-			log.Errorf("error getting blocknumber: num=%s, %s", block.Number, err.Error())
+			log.WithError(err).Errorf("error getting blocknumber: num=%s", block.Number)
 			continue
 		}
 		logger := log.WithFields(log.Fields{
@@ -171,7 +170,7 @@ func (bf *blockFeed) forEachBlock() error {
 		})
 		age, err := block.Age()
 		if err != nil || age == nil {
-			logger.Errorf("error getting age of block: ts=%s, %s", block.Timestamp, err.Error())
+			logger.WithError(err).Errorf("error getting age of block: ts=%s", block.Timestamp)
 			continue
 		}
 
