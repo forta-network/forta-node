@@ -40,17 +40,17 @@ func Run(cfg config.Config) {
 	ctx, cancel := services.InitMainContext()
 	defer cancel()
 
-	log.Info("starting runner")
+	logger := log.WithField("process", "runner")
+	logger.Info("starting")
+	defer logger.Info("exiting")
 
 	serviceList, err := initServices(ctx, cfg)
 	if err != nil {
-		log.WithError(err).Error("could not initialize runner services")
+		logger.WithError(err).Error("could not initialize services")
 		return
 	}
 
-	if err := services.StartServices(ctx, cancel, serviceList); err != nil {
-		log.WithError(err).Error("error running runner services")
+	if err := services.StartServices(ctx, cancel, log.NewEntry(log.StandardLogger()), serviceList); err != nil {
+		logger.WithError(err).Error("error running services")
 	}
-
-	log.Info("stopping runner")
 }

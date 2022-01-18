@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/sync/errgroup"
 )
@@ -46,7 +47,7 @@ func TestSigIntSignalCancelsService(t *testing.T) {
 	}()
 
 	svc := &TestService{ctx: ctx}
-	err := StartServices(ctx, cancel, []Service{svc})
+	err := StartServices(ctx, cancel, logrus.NewEntry(logrus.StandardLogger()), []Service{svc})
 	assert.Error(t, err, context.Canceled)
 	assert.True(t, svc.cancelled)
 }
