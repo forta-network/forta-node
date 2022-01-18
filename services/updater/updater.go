@@ -12,8 +12,8 @@ import (
 
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/store"
+	"github.com/forta-protocol/forta-node/utils"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/sync/errgroup"
 )
 
 var updateInterval = 1 * time.Minute
@@ -76,32 +76,6 @@ func (updater *UpdaterService) Start() error {
 		Handler: http.HandlerFunc(updater.handleGetVersion),
 	}
 
-	grp, ctx := errgroup.WithContext(updater.ctx)
-	grp.Go(func() error {
-		return updater.server.ListenAndServe()
-	})
-
-	grp.Go(func() error {
-		if updater.noUpdate {
-			return nil
-		}
-
-		t := time.NewTicker(updateInterval)
-		for {
-			select {
-			case <-ctx.Done():
-				log.WithError(ctx.Err()).Info("updater context is done")
-				updater.stopServer()
-				return ctx.Err()
-			case <-t.C:
-				if err := updater.updateLatestRelease(); err != nil {
-					log.WithError(err).Error("error getting release")
-					// continue, wait ticker
-				}
-			}
-		}
-	})
-
 	if !updater.noUpdate {
 		//initialize at start
 		if err := updater.updateLatestRelease(); err != nil {
@@ -110,11 +84,30 @@ func (updater *UpdaterService) Start() error {
 		}
 	}
 
+	utils.GoListenAndServe(updater.server)
+
+	go func() {
+		if updater.noUpdate {
+			return
+		}
+
+		t := time.NewTicker(updateInterval)
+		for {
+			select {
+			case <-updater.ctx.Done():
+				log.WithError(updater.ctx.Err()).Info("updater context is done")
+				updater.stopServer()
+				return
+			case <-t.C:
+				if err := updater.updateLatestRelease(); err != nil {
+					log.WithError(err).Error("error getting release")
+					// continue, wait ticker
+				}
+			}
+		}
+	}()
+
 	log.Info("updater initialization complete")
-	if err := grp.Wait(); err != nil {
-		log.WithError(err).Error("error returned while running updater")
-		return err
-	}
 	return nil
 }
 
@@ -174,6 +167,9 @@ func (updater *UpdaterService) Name() string {
 }
 
 func (updater *UpdaterService) stopServer() error {
+	if updater.server == nil {
+		return nil
+	}
 	log.Info("stopping server")
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/forta-protocol/forta-node/clients"
-	"github.com/forta-protocol/forta-node/domain"
 	"io"
 	"math/big"
 	"net"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/forta-protocol/forta-node/clients"
+	"github.com/forta-protocol/forta-node/domain"
 
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/goccy/go-json"
@@ -47,6 +48,8 @@ type Publisher struct {
 	metricsAggregator *AgentMetricsAggregator
 	messageClient     *messaging.Client
 	alertClient       clients.AlertAPIClient
+
+	server *grpc.Server
 
 	parent        string
 	initialize    sync.Once
@@ -446,18 +449,22 @@ func (pub *Publisher) Start() error {
 	if err != nil {
 		return err
 	}
-	grpcServer := grpc.NewServer()
-	protocol.RegisterPublisherNodeServer(grpcServer, pub)
+	pub.server = grpc.NewServer()
+	protocol.RegisterPublisherNodeServer(pub.server, pub)
 
 	go pub.prepareBatches()
 	go pub.publishBatches()
 	go pub.listenForMetrics()
 
-	return grpcServer.Serve(lis)
+	utils.GoGrpcServe(pub.server, lis)
+	return nil
 }
 
 func (pub *Publisher) Stop() error {
 	log.Infof("Stopping %s", pub.Name())
+	if pub.server != nil {
+		pub.server.Stop()
+	}
 	return nil
 }
 

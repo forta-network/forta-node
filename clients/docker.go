@@ -501,7 +501,7 @@ func (d *dockerClient) WaitContainerExit(ctx context.Context, id string) error {
 			logger.WithError(err).Error("failed while waiting for container exit")
 			return err
 		}
-		if c.State == "exited" {
+		if c.State == "exited" || c.State == "created" {
 			return nil
 		}
 		logger.WithField("containerState", c.State).Info("still waiting for exit")

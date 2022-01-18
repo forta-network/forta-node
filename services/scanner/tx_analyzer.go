@@ -2,11 +2,12 @@ package scanner
 
 import (
 	"context"
-	"github.com/forta-protocol/forta-node/clients/messaging"
-	"github.com/forta-protocol/forta-node/metrics"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/forta-protocol/forta-node/clients/messaging"
+	"github.com/forta-protocol/forta-node/metrics"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/forta-protocol/forta-node/clients"
@@ -16,7 +17,6 @@ import (
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/sync/errgroup"
 )
 
 // TxAnalyzerService reads TX info, calls agents, and emits results
@@ -93,14 +93,9 @@ func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *pr
 
 func (t *TxAnalyzerService) Start() error {
 	log.Infof("Starting %s", t.Name())
-	grp, ctx := errgroup.WithContext(t.ctx)
 
-	grp.Go(func() error {
+	go func() {
 		for result := range t.cfg.AgentPool.TxResults() {
-			if ctx.Err() != nil {
-				return ctx.Err()
-			}
-
 			ts := time.Now().UTC()
 
 			rt := &clients.AgentRoundTrip{
@@ -113,8 +108,7 @@ func (t *TxAnalyzerService) Start() error {
 				if err := t.cfg.AlertSender.NotifyWithoutAlert(
 					rt, result.Request.Event.Network.ChainId, result.Request.Event.Block.BlockNumber,
 				); err != nil {
-					log.WithError(err).Error("failed to notify without alert")
-					return err
+					log.WithError(err).Panic("failed to notify without alert")
 				}
 			}
 
@@ -122,32 +116,27 @@ func (t *TxAnalyzerService) Start() error {
 			for _, f := range result.Response.Findings {
 				alert, err := t.findingToAlert(result, ts, f)
 				if err != nil {
-					return err
+					log.WithError(err).Error("failed to transform finding to alert")
+					continue
 				}
 				if err := t.cfg.AlertSender.SignAlertAndNotify(
 					rt, alert, result.Request.Event.Network.ChainId, result.Request.Event.Block.BlockNumber,
 				); err != nil {
-					log.WithError(err).Error("failed to sign alert and notify")
-					return err
+					log.WithError(err).Panic("failed to sign alert and notify")
 				}
 			}
 			t.publishMetrics(result)
 		}
-		return nil
-	})
+	}()
 
 	// Gear 1: loops over transactions and distributes to all agents
-	grp.Go(func() error {
+	go func() {
 		// for each transaction
 		for tx := range t.cfg.TxChannel {
-			if ctx.Err() != nil {
-				return ctx.Err()
-			}
-
 			// convert to message
 			msg, err := tx.ToMessage()
 			if err != nil {
-				log.Error("error converting tx event to message (skipping)", err)
+				log.WithError(err).Error("error converting tx event to message (skipping)")
 				continue
 			}
 
@@ -158,10 +147,9 @@ func (t *TxAnalyzerService) Start() error {
 			// forward to the pool
 			t.cfg.AgentPool.SendEvaluateTxRequest(request)
 		}
-		return nil
-	})
+	}()
 
-	return grp.Wait()
+	return nil
 }
 
 func (t *TxAnalyzerService) Stop() error {

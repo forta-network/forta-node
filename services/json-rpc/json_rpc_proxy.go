@@ -10,12 +10,14 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-protocol/forta-node/utils"
 )
 
 // JsonRpcProxy proxies requests from agents to json-rpc endpoint
 type JsonRpcProxy struct {
-	ctx context.Context
-	cfg config.JsonRpcConfig
+	ctx    context.Context
+	cfg    config.JsonRpcConfig
+	server *http.Server
 }
 
 func (p *JsonRpcProxy) Start() error {
@@ -41,11 +43,19 @@ func (p *JsonRpcProxy) Start() error {
 		AllowCredentials: true,
 	})
 
-	return http.ListenAndServe(":8545", c.Handler(rp))
+	p.server = &http.Server{
+		Addr:    ":8545",
+		Handler: c.Handler(rp),
+	}
+	utils.GoListenAndServe(p.server)
+	return nil
 }
 
 func (p *JsonRpcProxy) Stop() error {
 	log.Infof("Stopping %s", p.Name())
+	if p.server != nil {
+		return p.server.Close()
+	}
 	return nil
 }
 

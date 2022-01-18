@@ -15,12 +15,14 @@ type TxLogger struct {
 func (t *TxLogger) Start() error {
 	ticker := time.NewTicker(10 * time.Minute)
 
-	for range ticker.C {
-		if t.ctx.Err() != nil {
-			return t.ctx.Err()
+	go func() {
+		for range ticker.C {
+			if t.ctx.Err() != nil {
+				return
+			}
+			log.Info("tx-logger tick")
 		}
-		log.Info("tx-logger tick")
-	}
+	}()
 	return nil
 }
 

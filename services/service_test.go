@@ -2,12 +2,14 @@ package services
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/sync/errgroup"
 	"os"
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/sync/errgroup"
 )
 
 type TestService struct {
@@ -37,7 +39,7 @@ func (t *TestService) Name() string {
 
 func TestSigIntSignalCancelsService(t *testing.T) {
 	sigc = make(chan os.Signal, 1)
-	ctx, _ := InitMainContext()
+	ctx, cancel := InitMainContext()
 
 	go func() {
 		time.Sleep(1 * time.Second)
@@ -45,7 +47,7 @@ func TestSigIntSignalCancelsService(t *testing.T) {
 	}()
 
 	svc := &TestService{ctx: ctx}
-	err := StartServices(ctx, []Service{svc})
+	err := StartServices(ctx, cancel, logrus.NewEntry(logrus.StandardLogger()), []Service{svc})
 	assert.Error(t, err, context.Canceled)
 	assert.True(t, svc.cancelled)
 }

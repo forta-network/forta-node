@@ -45,13 +45,22 @@ func (t *TxStreamService) handleTx(evt *domain.TransactionEvent) error {
 
 func (t *TxStreamService) Start() error {
 	log.Infof("Starting %s", t.Name())
-	defer close(t.txOutput)
-	defer close(t.blockOutput)
-	return t.txFeed.ForEachTransaction(t.handleBlock, t.handleTx)
+	go func() {
+		if err := t.txFeed.ForEachTransaction(t.handleBlock, t.handleTx); err != nil {
+			log.WithError(err).Panic("tx feed error")
+		}
+	}()
+	return nil
 }
 
 func (t *TxStreamService) Stop() error {
 	log.Infof("Stopping %s", t.Name())
+	if t.txOutput != nil {
+		close(t.txOutput)
+	}
+	if t.blockOutput != nil {
+		close(t.blockOutput)
+	}
 	return nil
 }
 

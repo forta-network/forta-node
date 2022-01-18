@@ -2,10 +2,12 @@ package scanner
 
 import (
 	"context"
-	"github.com/forta-protocol/forta-node/feeds"
-	"github.com/goccy/go-json"
 	"net/http"
 	"strconv"
+
+	"github.com/forta-protocol/forta-node/feeds"
+	"github.com/forta-protocol/forta-node/utils"
+	"github.com/goccy/go-json"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
@@ -17,6 +19,7 @@ type API struct {
 	ctx     context.Context
 	started bool
 	feed    feeds.BlockFeed
+	server  *http.Server
 }
 
 type Message struct {
@@ -79,11 +82,20 @@ func (t *API) Start() error {
 		AllowedOrigins:   []string{"*"},
 		AllowCredentials: true,
 	})
-	return http.ListenAndServe(":80", c.Handler(router))
+
+	t.server = &http.Server{
+		Addr:    ":80",
+		Handler: c.Handler(router),
+	}
+	utils.GoListenAndServe(t.server)
+	return nil
 }
 
 func (t *API) Stop() error {
 	log.Infof("Stopping %s", t.Name())
+	if t.server != nil {
+		return t.server.Close()
+	}
 	return nil
 }
 

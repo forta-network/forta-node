@@ -5,12 +5,12 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/forta-protocol/forta-node/ens"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/forta-protocol/forta-node/config"
 )
@@ -21,7 +21,6 @@ type Service interface {
 	Name() string
 }
 
-var processGrp *errgroup.Group
 var sigc chan os.Signal
 
 var execIDKey = struct{}{}
@@ -56,45 +55,45 @@ func setContracts(cfg *config.Config) error {
 }
 
 func ContainerMain(name string, getServices func(ctx context.Context, cfg config.Config) ([]Service, error)) {
+	logger := log.WithField("container", name)
+
 	cfg, err := config.GetConfigForContainer()
 	if err != nil {
-		log.WithError(err).Errorf("could not get config for container '%s'", name)
+		logger.WithError(err).Error("could not get config")
 		return
 	}
 
 	if err := setContracts(&cfg); err != nil {
-		log.WithError(err).Error("could not initialize contracts for config")
+		logger.WithError(err).Error("could not initialize contract addresses using config")
+		return
 	}
 
 	lvl, err := log.ParseLevel(cfg.Log.Level)
 	if err != nil {
-		log.WithError(err).Error("could not initialize log level")
+		logger.WithError(err).Error("could not initialize log level")
 		return
 	}
 	log.SetLevel(lvl)
-	log.Infof("Starting %s", name)
+	logger.Info("starting")
+	defer logger.Info("exiting")
 
 	ctx, cancel := InitMainContext()
 	defer cancel()
 
 	serviceList, err := getServices(ctx, cfg)
 	if err != nil {
-		log.WithError(err).Error("could not initialize services")
+		logger.WithError(err).Error("could not initialize services")
 		return
 	}
 
-	if err := StartServices(ctx, serviceList); err != nil {
-		log.Error("error running services: ", err)
+	if err := StartServices(ctx, cancel, logger, serviceList); err != nil {
+		logger.WithError(err).Error("failed to start services")
 	}
-
-	log.Infof("Stopping %s", name)
 }
 
 func InitMainContext() (context.Context, context.CancelFunc) {
 	execIDCtx := initExecID(context.Background())
-	cCtx, cancel := context.WithCancel(execIDCtx)
-	grp, ctx := errgroup.WithContext(cCtx)
-	processGrp = grp
+	ctx, cancel := context.WithCancel(execIDCtx)
 	if sigc == nil {
 		sigc = make(chan os.Signal, 1)
 	}
@@ -111,38 +110,44 @@ func InitMainContext() (context.Context, context.CancelFunc) {
 	return ctx, cancel
 }
 
-// StartServices kicks off all services and blocks until an error is returned or context ends
-func StartServices(ctx context.Context, services []Service) error {
-	if processGrp == nil {
-		panic("InitMainContext must be called first")
-	}
+// StartServices kicks off all services.
+func StartServices(ctx context.Context, cancelMainCtx context.CancelFunc, logger *log.Entry, services []Service) error {
+	// each service should be able to start successfully within reasonable time
+	for _, service := range services {
+		serviceStartedCtx, serviceStarted := context.WithCancel(context.Background())
+		defer serviceStarted()
 
-	// wait for context to stop (service.Start may either block or be async)
-	processGrp.Go(func() error {
+		logger := logger.WithField("service", service.Name())
+
+		go func() {
+			if err := service.Start(); err != nil {
+				logger.WithError(err).Error("failed to start service")
+				cancelMainCtx()
+				return
+			}
+			serviceStarted()
+		}()
+
 		select {
+		case <-time.After(time.Minute):
+			logger.Error("took too long to start service")
+			cancelMainCtx()
+			break
+		case <-serviceStartedCtx.Done():
+			// ok - do nothing
 		case <-ctx.Done():
-			log.WithError(ctx.Err()).Info("context is done")
 			return ctx.Err()
 		}
-	})
+	}
 
+	<-ctx.Done()
+	logger.WithError(ctx.Err()).Info("context is done")
+
+	// stop all services
 	for _, service := range services {
-		processGrp.Go(service.Start)
+		err := service.Stop()
+		logger.WithError(err).WithField("service", service.Name()).Info("stopped")
 	}
 
-	// clean up all services
-	defer func() {
-		for _, service := range services {
-			if err := service.Stop(); err != nil {
-				log.Errorf("error stopping %s: %s", service.Name(), err.Error())
-			}
-		}
-	}()
-
-	log.Info("grp.Wait()...")
-	if err := processGrp.Wait(); err != nil {
-		log.WithError(err).Error("StartServices ending with errgroup err")
-		return err
-	}
 	return nil
 }
