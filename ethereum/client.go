@@ -53,6 +53,8 @@ var permanentErrors = []string{
 	"method not found",
 	"hash is not currently canonical",
 	"unknown block",
+	"Unable to complete request at this time",
+	"503 Service Unavailable",
 }
 
 var minBackoff = 1 * time.Second
