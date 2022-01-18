@@ -65,6 +65,7 @@ func ContainerMain(name string, getServices func(ctx context.Context, cfg config
 
 	if err := setContracts(&cfg); err != nil {
 		logger.WithError(err).Error("could not initialize contract addresses using config")
+		return
 	}
 
 	lvl, err := log.ParseLevel(cfg.Log.Level)
