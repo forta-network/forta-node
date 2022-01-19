@@ -55,6 +55,8 @@ var permanentErrors = []string{
 	"unknown block",
 	"unable to complete request at this time",
 	"503 service unavailable",
+	"trace_block is not available",
+	"invalid host",
 }
 
 var minBackoff = 1 * time.Second
