@@ -96,15 +96,17 @@ func (runner *Runner) setupTestClients() error {
 	}
 	runner.scanClient, err = ethclient.Dial(scanClientUrl)
 	if err != nil {
-		return err
+		return fmt.Errorf("scan client init failed: %v", err)
 	}
 	traceClientUrl, err := runner.fixTestRpcUrl(runner.cfg.Trace.JsonRpc.Url)
 	if err != nil {
 		return fmt.Errorf("invalid trace url: %v", err)
 	}
-	runner.traceClient, err = ethclient.Dial(traceClientUrl)
-	if err != nil {
-		return err
+	if runner.cfg.Trace.Enabled {
+		runner.traceClient, err = ethclient.Dial(traceClientUrl)
+		if err != nil {
+			return fmt.Errorf("trace client init failed: %v", err)
+		}
 	}
 	runner.alertClient = alertapi.NewClient(runner.cfg.Publish.APIURL)
 	return nil
@@ -121,10 +123,12 @@ func (runner *Runner) doStartUpCheck() error {
 	if err != nil {
 		return fmt.Errorf("scan api check failed: %v", err)
 	}
-	// ensure that the trace json-rpc api is reachable
-	_, err = runner.traceClient.BlockNumber(runner.ctx)
-	if err != nil {
-		return fmt.Errorf("trace api check failed: %v", err)
+	if runner.cfg.Trace.Enabled {
+		// ensure that the trace json-rpc api is reachable
+		_, err = runner.traceClient.BlockNumber(runner.ctx)
+		if err != nil {
+			return fmt.Errorf("trace api check failed: %v", err)
+		}
 	}
 	// ensure that the batch api is available for publishing to
 	if err := runner.alertClient.PostBatch(&domain.AlertBatch{Ref: "test"}, ""); err != nil {
