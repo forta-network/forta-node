@@ -74,6 +74,7 @@ func ContainerMain(name string, getServices func(ctx context.Context, cfg config
 		return
 	}
 	log.SetLevel(lvl)
+	log.SetFormatter(&log.JSONFormatter{})
 	logger.Info("starting")
 	defer logger.Info("exiting")
 
