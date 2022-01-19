@@ -2,7 +2,6 @@ package runner
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -135,9 +134,6 @@ func (runner *Runner) doStartUpCheck() error {
 }
 
 func (runner *Runner) fixTestRpcUrl(rawurl string) (string, error) {
-	if strings.Contains(rawurl, "localhost") {
-		return "", errors.New("cannot dial localhost from scanner")
-	}
 	return strings.ReplaceAll(rawurl, "host.docker.internal", "localhost"), nil
 }
 
