@@ -89,7 +89,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 
 	// can't dial localhost - need to dial host gateway from scanner container
 	cfg.Scan.JsonRpc.Url = fixJsonRpcUrl(cfg.Scan.JsonRpc.Url)
-	cfg.Trace.JsonRpc.Url = fixJsonRpcUrl(cfg.Scan.JsonRpc.Url)
+	cfg.Trace.JsonRpc.Url = fixJsonRpcUrl(cfg.Trace.JsonRpc.Url)
 
 	msgClient := messaging.NewClient("scanner", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 
