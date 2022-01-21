@@ -129,6 +129,21 @@ func (mr *MockDockerClientMockRecorder) GetContainers(ctx interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainers", reflect.TypeOf((*MockDockerClient)(nil).GetContainers), ctx)
 }
 
+// GetFortaServiceContainers mocks base method.
+func (m *MockDockerClient) GetFortaServiceContainers(ctx context.Context) (clients.DockerContainerList, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetFortaServiceContainers", ctx)
+	ret0, _ := ret[0].(clients.DockerContainerList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetFortaServiceContainers indicates an expected call of GetFortaServiceContainers.
+func (mr *MockDockerClientMockRecorder) GetFortaServiceContainers(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFortaServiceContainers", reflect.TypeOf((*MockDockerClient)(nil).GetFortaServiceContainers), ctx)
+}
+
 // HasLocalImage mocks base method.
 func (m *MockDockerClient) HasLocalImage(ctx context.Context, ref string) bool {
 	m.ctrl.T.Helper()

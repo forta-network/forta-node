@@ -1,12 +1,15 @@
 package agentpool
 
 import (
-	"github.com/forta-protocol/forta-node/metrics"
+	"strconv"
 	"sync"
 	"time"
 
+	"github.com/forta-protocol/forta-node/metrics"
+
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/agentgrpc"
+	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/protocol"
@@ -49,6 +52,41 @@ func NewAgentPool(cfg config.ScannerConfig, msgClient clients.MessageClient) *Ag
 	agentPool.registerMessageHandlers()
 	go agentPool.logAgentChanBuffersLoop()
 	return agentPool
+}
+
+// Health implements health.Reporter interface.
+func (ap *AgentPool) Health() health.Reports {
+	ap.mu.RLock()
+	defer ap.mu.RUnlock()
+
+	agentCount := len(ap.agents)
+	var fullCount int
+	for _, agent := range ap.agents {
+		if agent.TxBufferIsFull() {
+			fullCount++
+		}
+	}
+	status := health.StatusOK
+	if agentCount == 0 {
+		status = health.StatusFailing
+	}
+	return health.Reports{
+		&health.Report{
+			Name:    "agents.total",
+			Status:  status,
+			Details: strconv.Itoa(agentCount),
+		},
+		&health.Report{
+			Name:    "agents.lagging",
+			Status:  health.StatusInfo,
+			Details: strconv.Itoa(fullCount),
+		},
+	}
+}
+
+// Name implements health.Reporter interface.
+func (ap *AgentPool) Name() string {
+	return "agent-pool"
 }
 
 // discardAgent removes the agent from the list which eventually causes the

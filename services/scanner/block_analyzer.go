@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/metrics"
 
@@ -21,9 +22,12 @@ import (
 
 // BlockAnalyzerService reads TX info, calls agents, and emits results
 type BlockAnalyzerService struct {
-	publisherNode protocol.PublisherNodeClient
-	cfg           BlockAnalyzerServiceConfig
 	ctx           context.Context
+	cfg           BlockAnalyzerServiceConfig
+	publisherNode protocol.PublisherNodeClient
+
+	lastInputActivity  health.TimeTracker
+	lastOutputActivity health.TimeTracker
 }
 
 type BlockAnalyzerServiceConfig struct {
@@ -129,6 +133,8 @@ func (t *BlockAnalyzerService) Start() error {
 				}
 			}
 			t.publishMetrics(result)
+
+			t.lastOutputActivity.Set()
 		}
 	}()
 
@@ -149,6 +155,8 @@ func (t *BlockAnalyzerService) Start() error {
 
 			// forward to the pool
 			t.cfg.AgentPool.SendEvaluateBlockRequest(request)
+
+			t.lastInputActivity.Set()
 		}
 	}()
 
@@ -161,7 +169,15 @@ func (t *BlockAnalyzerService) Stop() error {
 }
 
 func (t *BlockAnalyzerService) Name() string {
-	return "BlockAnalyzerService"
+	return "block-analyzer"
+}
+
+// Health implements the health.Reporter interface.
+func (t *BlockAnalyzerService) Health() health.Reports {
+	return health.Reports{
+		t.lastInputActivity.GetReport("inputs"),
+		t.lastOutputActivity.GetReport("outputs"),
+	}
 }
 
 func NewBlockAnalyzerService(ctx context.Context, cfg BlockAnalyzerServiceConfig) (*BlockAnalyzerService, error) {

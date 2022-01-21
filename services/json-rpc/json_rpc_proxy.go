@@ -9,6 +9,7 @@ import (
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/utils"
 )
@@ -18,6 +19,8 @@ type JsonRpcProxy struct {
 	ctx    context.Context
 	cfg    config.JsonRpcConfig
 	server *http.Server
+
+	lastErr health.ErrorTracker
 }
 
 func (p *JsonRpcProxy) Start() error {

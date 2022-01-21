@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/alertapi"
+	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/domain"
 	"github.com/forta-protocol/forta-node/store"
@@ -22,7 +23,7 @@ type Runner struct {
 	cfg          config.Config
 	imgStore     store.FortaImageStore
 	dockerClient clients.DockerClient
-	nukeClient   clients.DockerClient
+	globalClient clients.DockerClient
 
 	// test clients for initial checks
 	scanClient  EthereumClient
@@ -35,6 +36,8 @@ type Runner struct {
 	updaterPort         string
 	updaterContainer    *clients.DockerContainer
 	supervisorContainer *clients.DockerContainer
+
+	healthClient health.HealthClient
 }
 
 // EthereumClient is useful for checking the JSON-RPC API.
@@ -45,15 +48,15 @@ type EthereumClient interface {
 // NewRunner creates a new runner.
 func NewRunner(ctx context.Context, cfg config.Config,
 	imgStore store.FortaImageStore, runnerDockerClient clients.DockerClient,
-	globalDockerClient clients.DockerClient, updaterPort string,
+	globalDockerClient clients.DockerClient,
 ) *Runner {
 	return &Runner{
 		ctx:          ctx,
 		cfg:          cfg,
 		imgStore:     imgStore,
 		dockerClient: runnerDockerClient,
-		nukeClient:   globalDockerClient,
-		updaterPort:  updaterPort,
+		globalClient: globalDockerClient,
+		healthClient: health.NewClient(),
 	}
 }
 
@@ -67,9 +70,11 @@ func (runner *Runner) Start() error {
 	}
 	log.Info("start-up check successful")
 
-	if err := runner.nukeClient.Nuke(context.Background()); err != nil {
+	if err := runner.globalClient.Nuke(context.Background()); err != nil {
 		return fmt.Errorf("failed to nuke leftover containers at start: %v", err)
 	}
+
+	health.StartServer(runner.ctx, runner.checkHealth)
 
 	go runner.receive()
 	return nil
@@ -82,7 +87,7 @@ func (runner *Runner) Name() string {
 
 // Stop stops the service
 func (runner *Runner) Stop() error {
-	if err := runner.nukeClient.Nuke(context.Background()); err != nil {
+	if err := runner.globalClient.Nuke(context.Background()); err != nil {
 		return fmt.Errorf("failed to nuke containers before exiting: %v", err)
 	}
 	return nil
@@ -258,7 +263,8 @@ func (runner *Runner) startUpdater(logger *log.Entry, latestRefs store.ImageRefs
 			runner.cfg.FortaDir: config.DefaultContainerFortaDirPath,
 		},
 		Ports: map[string]string{
-			runner.updaterPort: runner.updaterPort,
+			config.DefaultContainerPort: config.DefaultContainerPort,
+			"":                          config.DefaultHealthPort, // random host port
 		},
 		MaxLogSize:  runner.cfg.Log.MaxLogSize,
 		MaxLogFiles: runner.cfg.Log.MaxLogFiles,
@@ -295,6 +301,9 @@ func (runner *Runner) startSupervisor(logger *log.Entry, latestRefs store.ImageR
 			// give access to host docker
 			"/var/run/docker.sock": "/var/run/docker.sock",
 			runner.cfg.FortaDir:    config.DefaultContainerFortaDirPath,
+		},
+		Ports: map[string]string{
+			"": config.DefaultHealthPort, // random host port
 		},
 		Files: map[string][]byte{
 			"passphrase": []byte(runner.cfg.Passphrase),

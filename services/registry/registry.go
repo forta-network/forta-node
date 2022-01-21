@@ -3,12 +3,14 @@ package registry
 import (
 	"context"
 	"fmt"
-	"github.com/forta-protocol/forta-node/store"
 	"time"
+
+	"github.com/forta-protocol/forta-node/store"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/forta-protocol/forta-node/clients"
+	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/ethereum"
@@ -30,6 +32,10 @@ type RegistryService struct {
 	done          chan struct{}
 	version       string
 	sem           *semaphore.Weighted
+
+	lastChecked        health.TimeTracker
+	lastChangeDetected health.TimeTracker
+	lastErr            health.ErrorTracker
 }
 
 // IPFSClient interacts with an IPFS Gateway.
@@ -77,9 +83,11 @@ func (rs *RegistryService) start() error {
 		//TODO: possibly make this configurable, but 15s per block is normal
 		ticker := time.NewTicker(15 * time.Second)
 		for {
-			if err := rs.publishLatestAgents(); err != nil {
-				log.Errorf("failed to publish the latest agents: %v", err)
+			err := rs.publishLatestAgents()
+			if err != nil {
+				log.WithError(err).Error("failed to publish the latest agents")
 			}
+			rs.lastErr.Set(err)
 			<-ticker.C
 		}
 	}()
@@ -91,11 +99,13 @@ func (rs *RegistryService) publishLatestAgents() error {
 	// only allow one executor at a time, even if slow
 	if rs.sem.TryAcquire(1) {
 		defer rs.sem.Release(1)
+		rs.lastChecked.Set()
 		agts, changed, err := rs.registryStore.GetAgentsIfChanged(rs.scannerAddress.Hex())
 		if err != nil {
 			return fmt.Errorf("failed to get the scanner list agents version: %v", err)
 		}
 		if changed {
+			rs.lastChangeDetected.Set()
 			log.WithField("count", len(agts)).Infof("publishing list of agents")
 			rs.agentsConfigs = agts
 			rs.msgClient.Publish(messaging.SubjectAgentsVersionsLatest, agts)
@@ -113,5 +123,22 @@ func (rs *RegistryService) Stop() error {
 
 // Name returns the name of the service.
 func (rs *RegistryService) Name() string {
-	return "RegistryService"
+	return "registry"
+}
+
+// Health implements the health.Reporter interface.
+func (rs *RegistryService) Health() health.Reports {
+	return health.Reports{
+		rs.lastErr.GetReport("events.checked.error"),
+		&health.Report{
+			Name:    "events.checked",
+			Status:  health.StatusInfo,
+			Details: rs.lastChecked.String(),
+		},
+		&health.Report{
+			Name:    "events.change-detected",
+			Status:  health.StatusInfo,
+			Details: rs.lastChangeDetected.String(),
+		},
+	}
 }

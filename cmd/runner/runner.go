@@ -13,7 +13,7 @@ import (
 )
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
-	imgStore, err := store.NewFortaImageStore(ctx, config.DefaultUpdaterPort)
+	imgStore, err := store.NewFortaImageStore(ctx, config.DefaultContainerPort)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the image store: %v", err)
 	}
@@ -31,7 +31,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	}
 
 	return []services.Service{
-		runner.NewRunner(ctx, cfg, imgStore, dockerClient, globalDockerClient, config.DefaultUpdaterPort),
+		runner.NewRunner(ctx, cfg, imgStore, dockerClient, globalDockerClient),
 	}, nil
 }
 

@@ -3,6 +3,7 @@ package supervisor
 import (
 	"context"
 
+	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/security"
 	"github.com/forta-protocol/forta-node/services"
@@ -23,6 +24,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	}
 	return []services.Service{
 		svc,
+		health.NewService(ctx, health.CheckerFrom(svc)),
 	}, nil
 }
 

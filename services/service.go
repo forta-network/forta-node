@@ -15,6 +15,7 @@ import (
 	"github.com/forta-protocol/forta-node/config"
 )
 
+// Service is a service abstraction.
 type Service interface {
 	Start() error
 	Stop() error

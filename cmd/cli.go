@@ -119,6 +119,12 @@ publishes alerts about them`,
 		Short: "download a batch from IPFS and decode data",
 		RunE:  handleFortaBatchDecode,
 	}
+
+	cmdFortaStatus = &cobra.Command{
+		Use:   "status",
+		Short: "display statuses of node services",
+		RunE:  handleFortaStatus,
+	}
 )
 
 // Execute executes the root command.
@@ -145,6 +151,8 @@ func init() {
 
 	cmdForta.AddCommand(cmdFortaBatch)
 	cmdFortaBatch.AddCommand(cmdFortaBatchDecode)
+
+	cmdForta.AddCommand(cmdFortaStatus)
 
 	// Global (persistent) flags
 

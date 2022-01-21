@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/metrics"
 
@@ -21,8 +22,11 @@ import (
 
 // TxAnalyzerService reads TX info, calls agents, and emits results
 type TxAnalyzerService struct {
-	cfg TxAnalyzerServiceConfig
 	ctx context.Context
+	cfg TxAnalyzerServiceConfig
+
+	lastInputActivity  health.TimeTracker
+	lastOutputActivity health.TimeTracker
 }
 
 type TxAnalyzerServiceConfig struct {
@@ -126,6 +130,8 @@ func (t *TxAnalyzerService) Start() error {
 				}
 			}
 			t.publishMetrics(result)
+
+			t.lastOutputActivity.Set()
 		}
 	}()
 
@@ -146,6 +152,8 @@ func (t *TxAnalyzerService) Start() error {
 
 			// forward to the pool
 			t.cfg.AgentPool.SendEvaluateTxRequest(request)
+
+			t.lastInputActivity.Set()
 		}
 	}()
 
@@ -158,7 +166,15 @@ func (t *TxAnalyzerService) Stop() error {
 }
 
 func (t *TxAnalyzerService) Name() string {
-	return "TxAnalyzerService"
+	return "tx-analyzer"
+}
+
+// Health implements the health.Reporter interface.
+func (t *TxAnalyzerService) Health() health.Reports {
+	return health.Reports{
+		t.lastInputActivity.GetReport("inputs"),
+		t.lastOutputActivity.GetReport("outputs"),
+	}
 }
 
 func NewTxAnalyzerService(ctx context.Context, cfg TxAnalyzerServiceConfig) (*TxAnalyzerService, error) {

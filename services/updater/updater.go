@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/store"
 	"github.com/forta-protocol/forta-node/utils"
@@ -33,6 +34,9 @@ type UpdaterService struct {
 
 	latestReference string
 	latestRelease   *config.ReleaseManifest
+
+	lastChecked health.TimeTracker
+	lastErr     health.ErrorTracker
 }
 
 // NewUpdaterService creates a new updater service.
@@ -101,8 +105,10 @@ func (updater *UpdaterService) Start() error {
 			case <-t.C:
 				if err := updater.updateLatestRelease(); err != nil {
 					log.WithError(err).Error("error getting release")
+					updater.lastErr.Set(err)
 					// continue, wait ticker
 				}
+				updater.lastChecked.Set()
 			}
 		}
 	}()
@@ -183,4 +189,12 @@ func (updater *UpdaterService) stopServer() error {
 func (updater *UpdaterService) Stop() error {
 	log.Infof("stopping %s", updater.Name())
 	return updater.stopServer()
+}
+
+// Health implements the health.Reporter interface.
+func (updater *UpdaterService) Health() health.Reports {
+	return health.Reports{
+		updater.lastChecked.GetReport("events.checked"),
+		updater.lastErr.GetReport("events.checked.error"),
+	}
 }

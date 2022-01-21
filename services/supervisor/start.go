@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/forta-protocol/forta-node/clients"
+	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/config"
 )
@@ -28,6 +30,9 @@ type SupervisorService struct {
 	jsonRpcContainer *clients.DockerContainer
 	containers       []*clients.DockerContainer
 	mu               sync.RWMutex
+
+	lastRun  health.TimeTracker
+	lastStop health.TimeTracker
 }
 
 type SupervisorServiceConfig struct {
@@ -46,6 +51,9 @@ func (sup *SupervisorService) Start() error {
 }
 
 func (sup *SupervisorService) start() error {
+	sup.mu.Lock()
+	defer sup.mu.Unlock()
+
 	log.Infof("Starting %s", sup.Name())
 	_, err := log.ParseLevel(sup.config.Config.Log.Level)
 	if err != nil {
@@ -134,6 +142,9 @@ func (sup *SupervisorService) start() error {
 		Volumes: map[string]string{
 			hostFortaDir: config.DefaultContainerFortaDirPath,
 		},
+		Ports: map[string]string{
+			"": config.DefaultHealthPort, // random host port
+		},
 		Files: map[string][]byte{
 			"passphrase": []byte(sup.config.Passphrase),
 		},
@@ -153,6 +164,9 @@ func (sup *SupervisorService) start() error {
 		Volumes: map[string]string{
 			hostFortaDir: config.DefaultContainerFortaDirPath,
 		},
+		Ports: map[string]string{
+			"": config.DefaultHealthPort, // random host port
+		},
 		NetworkID:   nodeNetworkID,
 		MaxLogFiles: sup.maxLogFiles,
 		MaxLogSize:  sup.maxLogSize,
@@ -168,6 +182,9 @@ func (sup *SupervisorService) start() error {
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "scanner"},
 		Volumes: map[string]string{
 			hostFortaDir: config.DefaultContainerFortaDirPath,
+		},
+		Ports: map[string]string{
+			"": config.DefaultHealthPort, // random host port
 		},
 		Files: map[string][]byte{
 			"passphrase": []byte(sup.config.Passphrase),
@@ -238,7 +255,36 @@ func (sup *SupervisorService) Stop() error {
 }
 
 func (sup *SupervisorService) Name() string {
-	return "Supervisor"
+	return "supervisor"
+}
+
+// Health implements the health.Reporter interface.
+func (sup *SupervisorService) Health() health.Reports {
+	sup.mu.RLock()
+	defer sup.mu.RUnlock()
+
+	containersStatus := health.StatusOK
+	if len(sup.containers) < 4 {
+		containersStatus = health.StatusFailing
+	}
+
+	return health.Reports{
+		&health.Report{
+			Name:    "containers.managed",
+			Status:  containersStatus,
+			Details: strconv.Itoa(len(sup.containers)),
+		},
+		&health.Report{
+			Name:    "events.run-agent",
+			Status:  health.StatusInfo,
+			Details: sup.lastRun.String(),
+		},
+		&health.Report{
+			Name:    "events.stop-agent",
+			Status:  health.StatusInfo,
+			Details: sup.lastStop.String(),
+		},
+	}
 }
 
 func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*SupervisorService, error) {

@@ -68,12 +68,17 @@ func isCriticalErr(err error) bool {
 // LogStatus logs the status of the agent.
 func (agent *Agent) LogStatus() {
 	log.WithFields(log.Fields{
-		"agent":         agent.config.ID,
-		"buffer-blocks": len(agent.blockRequests),
-		"buffer-txs":    len(agent.txRequests),
-		"ready":         agent.IsReady(),
-		"closed":        agent.IsClosed(),
+		"agent":       agent.config.ID,
+		"blockBuffer": len(agent.blockRequests),
+		"txBuffer":    len(agent.txRequests),
+		"ready":       agent.IsReady(),
+		"closed":      agent.IsClosed(),
 	}).Debug("agent status")
+}
+
+// TxBufferIsFull tells if an agent input buffer is full.
+func (agent *Agent) TxBufferIsFull() bool {
+	return len(agent.txRequests) == DefaultBufferSize
 }
 
 // Config returns the agent config.
