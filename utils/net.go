@@ -3,6 +3,7 @@ package utils
 import (
 	"net"
 	"net/http"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -30,4 +31,12 @@ func GoGrpcServe(server *grpc.Server, lis net.Listener) {
 			log.WithError(err).Panic("server error")
 		}
 	}()
+}
+
+// ConvertToDockerHostURL converts localhost HTTP URLs to docker host URLs that are
+// dialable from within a scanner.
+func ConvertToDockerHostURL(rawurl string) string {
+	rawurl = strings.ReplaceAll(rawurl, "http://127.0.0.1", "http://host.docker.internal")
+	rawurl = strings.ReplaceAll(rawurl, "http://localhost", "http://host.docker.internal")
+	return rawurl
 }
