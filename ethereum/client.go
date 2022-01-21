@@ -57,6 +57,7 @@ var permanentErrors = []string{
 	"503 service unavailable",
 	"trace_block is not available",
 	"invalid host",
+	"receipt was empty",
 }
 
 var minBackoff = 1 * time.Second
