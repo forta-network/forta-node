@@ -6,12 +6,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/alertapi"
 	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/domain"
+	"github.com/forta-protocol/forta-node/ethereum"
 	"github.com/forta-protocol/forta-node/store"
 	"github.com/forta-protocol/forta-node/utils"
 	log "github.com/sirupsen/logrus"
@@ -24,11 +24,6 @@ type Runner struct {
 	imgStore     store.FortaImageStore
 	dockerClient clients.DockerClient
 	globalClient clients.DockerClient
-
-	// test clients for initial checks
-	scanClient  EthereumClient
-	traceClient EthereumClient
-	alertClient clients.AlertAPIClient
 
 	currentUpdaterImg    string
 	currentSupervisorImg string
@@ -62,9 +57,6 @@ func NewRunner(ctx context.Context, cfg config.Config,
 
 // Start starts the service.
 func (runner *Runner) Start() error {
-	if err := runner.setupTestClients(); err != nil {
-		return err
-	}
 	if err := runner.doStartUpCheck(); err != nil {
 		return fmt.Errorf("start-up check failed: %v", err)
 	}
@@ -93,30 +85,6 @@ func (runner *Runner) Stop() error {
 	return nil
 }
 
-func (runner *Runner) setupTestClients() error {
-	var err error
-	scanClientUrl, err := runner.fixTestRpcUrl(runner.cfg.Scan.JsonRpc.Url)
-	if err != nil {
-		return fmt.Errorf("invalid scan url: %v", err)
-	}
-	runner.scanClient, err = ethclient.Dial(scanClientUrl)
-	if err != nil {
-		return fmt.Errorf("scan client init failed: %v", err)
-	}
-	traceClientUrl, err := runner.fixTestRpcUrl(runner.cfg.Trace.JsonRpc.Url)
-	if err != nil {
-		return fmt.Errorf("invalid trace url: %v", err)
-	}
-	if runner.cfg.Trace.Enabled {
-		runner.traceClient, err = ethclient.Dial(traceClientUrl)
-		if err != nil {
-			return fmt.Errorf("trace client init failed: %v", err)
-		}
-	}
-	runner.alertClient = alertapi.NewClient(runner.cfg.Publish.APIURL)
-	return nil
-}
-
 func (runner *Runner) doStartUpCheck() error {
 	// ensure that docker is available
 	_, err := runner.dockerClient.GetContainers(runner.ctx)
@@ -124,26 +92,27 @@ func (runner *Runner) doStartUpCheck() error {
 		return fmt.Errorf("docker check failed (get containers): %v", err)
 	}
 	// ensure that the scan json-rpc api is reachable
-	_, err = runner.scanClient.BlockNumber(runner.ctx)
+	err = ethereum.TestAPI(runner.ctx, runner.fixTestRpcUrl(runner.cfg.Scan.JsonRpc.Url))
 	if err != nil {
 		return fmt.Errorf("scan api check failed: %v", err)
 	}
 	if runner.cfg.Trace.Enabled {
 		// ensure that the trace json-rpc api is reachable
-		_, err = runner.traceClient.BlockNumber(runner.ctx)
+		err = ethereum.TestAPI(runner.ctx, runner.fixTestRpcUrl(runner.cfg.Trace.JsonRpc.Url))
 		if err != nil {
 			return fmt.Errorf("trace api check failed: %v", err)
 		}
 	}
 	// ensure that the batch api is available for publishing to
-	if err := runner.alertClient.PostBatch(&domain.AlertBatch{Ref: "test"}, ""); err != nil {
+	if err := alertapi.NewClient(runner.cfg.Publish.APIURL).
+		PostBatch(&domain.AlertBatch{Ref: "test"}, ""); err != nil {
 		return fmt.Errorf("batch api check failed: %v", err)
 	}
 	return nil
 }
 
-func (runner *Runner) fixTestRpcUrl(rawurl string) (string, error) {
-	return strings.ReplaceAll(rawurl, "host.docker.internal", "localhost"), nil
+func (runner *Runner) fixTestRpcUrl(rawurl string) string {
+	return strings.ReplaceAll(rawurl, "host.docker.internal", "localhost")
 }
 
 func (runner *Runner) removeContainer(container *clients.DockerContainer) error {

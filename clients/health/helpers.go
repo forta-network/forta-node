@@ -88,3 +88,30 @@ func (et *ErrorTracker) GetReport(name string) *Report {
 	}
 	return &report
 }
+
+// MessageTracker is useful for tracking the latest message about something.
+type MessageTracker struct {
+	msg string
+	mu  sync.RWMutex
+}
+
+// Set sets the tracker.
+func (mt *MessageTracker) Set(msg string) {
+	mt.mu.Lock()
+	mt.msg = msg
+	mt.mu.Unlock()
+}
+
+// GetReport constructs and returns a report.
+func (mt *MessageTracker) GetReport(name string) *Report {
+	mt.mu.RLock()
+	defer mt.mu.RUnlock()
+	var report Report
+	report.Name = name
+	report.Status = StatusInfo
+	report.Details = "<nil>"
+	if len(mt.msg) > 0 {
+		report.Details = mt.msg
+	}
+	return &report
+}

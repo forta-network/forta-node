@@ -5,12 +5,14 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"time"
 
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-protocol/forta-node/ethereum"
 	"github.com/forta-protocol/forta-node/utils"
 )
 
@@ -63,7 +65,29 @@ func (p *JsonRpcProxy) Stop() error {
 }
 
 func (p *JsonRpcProxy) Name() string {
-	return "JsonRpcProxy"
+	return "json-rpc-proxy"
+}
+
+// Health implements health.Reporter interface.
+func (p *JsonRpcProxy) Health() health.Reports {
+	return health.Reports{
+		p.lastErr.GetReport("api"),
+	}
+}
+
+func (p *JsonRpcProxy) apiHealthChecker() {
+	p.testAPI()
+	ticker := time.NewTicker(time.Minute * 5)
+	for range ticker.C {
+		p.testAPI()
+	}
+}
+
+func (p *JsonRpcProxy) testAPI() {
+	err := ethereum.TestAPI(p.ctx, "http://localhost:8545")
+	if err != nil {
+		p.lastErr.Set(err)
+	}
 }
 
 func NewJsonRpcProxy(ctx context.Context, cfg config.Config) (*JsonRpcProxy, error) {
