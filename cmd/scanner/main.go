@@ -3,7 +3,6 @@ package scanner
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -19,6 +18,7 @@ import (
 	"github.com/forta-protocol/forta-node/services/registry"
 	"github.com/forta-protocol/forta-node/services/scanner"
 	"github.com/forta-protocol/forta-node/services/scanner/agentpool"
+	"github.com/forta-protocol/forta-node/utils"
 )
 
 func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, cfg config.Config) (*scanner.TxStreamService, feeds.BlockFeed, error) {
@@ -87,9 +87,9 @@ func initAlertSender(ctx context.Context, key *keystore.Key) (clients.AlertSende
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
 	cfg.LocalAgentsPath = config.DefaultContainerLocalAgentsFilePath
 
-	// can't dial localhost - need to dial host gateway from scanner container
-	cfg.Scan.JsonRpc.Url = fixJsonRpcUrl(cfg.Scan.JsonRpc.Url)
-	cfg.Trace.JsonRpc.Url = fixJsonRpcUrl(cfg.Trace.JsonRpc.Url)
+	// can't dial localhost - need to dial host gateway from container
+	cfg.Scan.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Scan.JsonRpc.Url)
+	cfg.Trace.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Trace.JsonRpc.Url)
 
 	msgClient := messaging.NewClient("scanner", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 
@@ -148,12 +148,6 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	}
 
 	return svcs, nil
-}
-
-func fixJsonRpcUrl(rawurl string) string {
-	rawurl = strings.ReplaceAll(rawurl, "http://127.0.0.1", "http://host.docker.internal")
-	rawurl = strings.ReplaceAll(rawurl, "http://localhost", "http://host.docker.internal")
-	return rawurl
 }
 
 func Run() {
