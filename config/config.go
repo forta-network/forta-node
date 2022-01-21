@@ -100,12 +100,12 @@ type Config struct {
 	Scan  ScannerConfig `yaml:"scan" json:"scan"`
 	Trace TraceConfig   `yaml:"trace" json:"trace"`
 
-	Registry        RegistryConfig      `yaml:"registry" json:"registry"`
-	Publish         PublisherConfig     `yaml:"publish" json:"publish"`
-	JsonRpcProxy    *JsonRpcProxyConfig `yaml:"jsonRpcProxy" json:"jsonRpcProxy"`
-	Log             LogConfig           `yaml:"log" json:"log"`
-	ResourcesConfig ResourcesConfig     `yaml:"resources" json:"resources"`
-	ENSConfig       ENSConfig           `yaml:"ens" json:"ens"`
+	Registry        RegistryConfig     `yaml:"registry" json:"registry"`
+	Publish         PublisherConfig    `yaml:"publish" json:"publish"`
+	JsonRpcProxy    JsonRpcProxyConfig `yaml:"jsonRpcProxy" json:"jsonRpcProxy"`
+	Log             LogConfig          `yaml:"log" json:"log"`
+	ResourcesConfig ResourcesConfig    `yaml:"resources" json:"resources"`
+	ENSConfig       ENSConfig          `yaml:"ens" json:"ens"`
 }
 
 func (cfg *Config) ConfigFilePath() string {

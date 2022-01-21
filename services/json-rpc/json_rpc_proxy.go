@@ -65,7 +65,7 @@ func (p *JsonRpcProxy) Name() string {
 
 func NewJsonRpcProxy(ctx context.Context, cfg config.Config) (*JsonRpcProxy, error) {
 	jCfg := cfg.Scan.JsonRpc
-	if cfg.JsonRpcProxy != nil {
+	if len(cfg.JsonRpcProxy.JsonRpc.Url) > 0 {
 		jCfg = cfg.JsonRpcProxy.JsonRpc
 	}
 	return &JsonRpcProxy{
