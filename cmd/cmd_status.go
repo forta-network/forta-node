@@ -90,7 +90,7 @@ func formatReportsPretty(reports health.Reports) {
 			writeDetails(w, report.Status, report.Details)
 		}
 
-		fmt.Fprint(w, "\n")
+		fmt.Fprint(w, "\n\n")
 	}
 	fmt.Fprint(os.Stdout, w.String())
 }
