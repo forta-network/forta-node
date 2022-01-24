@@ -22,6 +22,7 @@ import (
 // Constants
 const (
 	DefaultBufferSize = 2000
+	AgentTimeout      = 30 * time.Second
 )
 
 // Agent receives blocks and transactions, and produces results.
@@ -160,7 +161,7 @@ func (agent *Agent) processTransactions() {
 		if agent.IsClosed() {
 			return
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), AgentTimeout)
 		lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
 		resp, err := agent.client.EvaluateTx(ctx, request)
 		cancel()
@@ -207,7 +208,7 @@ func (agent *Agent) processBlocks() {
 			return
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), AgentTimeout)
 		lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
 		resp, err := agent.client.EvaluateBlock(ctx, request)
 		cancel()
