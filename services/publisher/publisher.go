@@ -493,7 +493,11 @@ func (pub *Publisher) Health() health.Reports {
 	return health.Reports{
 		pub.lastBatchPublish.GetReport("events.batch.publish"),
 		pub.lastBatchPublishErr.GetReport("events.batch.publish.error"),
-		pub.lastBatchSkip.GetReport("events.batch.skip"),
+		&health.Report{
+			Name:    "events.batch.skip",
+			Status:  health.StatusInfo,
+			Details: pub.lastBatchSkip.String(),
+		},
 		pub.lastBatchSkipReason.GetReport("events.batch.skip.reason"),
 		pub.lastMetricsFlush.GetReport("events.metrics.flush"),
 	}
