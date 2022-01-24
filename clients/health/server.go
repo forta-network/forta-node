@@ -56,17 +56,6 @@ func StartServer(ctx context.Context, healthChecker HealthChecker) {
 func MakeHandler(healthChecker HealthChecker) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		reports := healthChecker()
-		// if err != nil {
-		// 	w.WriteHeader(http.StatusInternalServerError)
-		// 	err := json.NewEncoder(w).Encode(&errorResponse{
-		// 		Error: err.Error(),
-		// 	})
-		// 	if err != nil {
-		// 		log.WithError(err).Warn("failed to encode health check error response")
-		// 	}
-		// 	return
-		// }
-		// make sure it returns [] instead of null (just in case)
 		if reports == nil {
 			reports = Reports{}
 		}
