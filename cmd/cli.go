@@ -183,6 +183,10 @@ func init() {
 	cmdFortaBatchDecode.MarkFlagRequired("cid")
 	cmdFortaBatchDecode.Flags().String("o", "alert-batch.json", "output file name (default: alert-batch.json)")
 	cmdFortaBatchDecode.Flags().Bool("stdout", false, "print to stdout instead of writing to a file")
+
+	// forta status
+	cmdFortaStatus.Flags().String("format", StatusFormatPretty, "output formatting/encoding: pretty (default), oneline, json, csv")
+	cmdFortaStatus.Flags().Bool("no-color", false, "disable colors")
 }
 
 func initConfig() {
