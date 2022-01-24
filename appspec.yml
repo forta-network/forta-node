@@ -3,6 +3,7 @@ os: linux
 files:
   - source: forta
     destination: /usr/local/bin/
+file_exists_behavior: OVERWRITE
 hooks:
   BeforeInstall:
     - location: scripts/stop-server.sh
