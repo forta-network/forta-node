@@ -5,7 +5,6 @@ on:
     branches: [master]
   workflow_dispatch:
     branches: [master]
-  pull_request:
 
 jobs:
   containers:
@@ -122,7 +121,7 @@ jobs:
           aws_secret_key: ${{ secrets.DEV_DEPLOY_AWS_SECRET_KEY }}
           aws_region: us-east-1
           codedeploy_name: dev-forta-node
-          codedeploy_group: dev-forta-all-scanners-deploy-group
+          codedeploy_group: dev-forta-deploy-group
           s3_bucket: dev-forta-codedeploy
           s3_folder: dev
           directory: ./dist/
