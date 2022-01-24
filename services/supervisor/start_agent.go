@@ -73,6 +73,8 @@ func (sup *SupervisorService) handleAgentRun(payload messaging.AgentPayload) err
 	sup.mu.Lock()
 	defer sup.mu.Unlock()
 
+	sup.lastRun.Set()
+
 	log.WithFields(log.Fields{
 		"payload": len(payload),
 	}).Infof("handle agent run")
@@ -99,6 +101,8 @@ func (sup *SupervisorService) handleAgentRun(payload messaging.AgentPayload) err
 func (sup *SupervisorService) handleAgentStop(payload messaging.AgentPayload) error {
 	sup.mu.Lock()
 	defer sup.mu.Unlock()
+
+	sup.lastStop.Set()
 
 	stopped := make(map[string]bool)
 	for _, agentCfg := range payload {

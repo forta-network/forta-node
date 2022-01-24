@@ -3,6 +3,7 @@ package scanner
 import (
 	"context"
 
+	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/domain"
 	"github.com/forta-protocol/forta-node/ethereum"
@@ -18,6 +19,9 @@ type TxStreamService struct {
 	blockOutput chan *domain.BlockEvent
 	txOutput    chan *domain.TransactionEvent
 	txFeed      feeds.TransactionFeed
+
+	lastBlockActivity health.TimeTracker
+	lastTxActivity    health.TimeTracker
 }
 
 type TxStreamServiceConfig struct {
@@ -35,11 +39,13 @@ func (t *TxStreamService) ReadOnlyTxStream() <-chan *domain.TransactionEvent {
 
 func (t *TxStreamService) handleBlock(evt *domain.BlockEvent) error {
 	t.blockOutput <- evt
+	t.lastBlockActivity.Set()
 	return nil
 }
 
 func (t *TxStreamService) handleTx(evt *domain.TransactionEvent) error {
 	t.txOutput <- evt
+	t.lastTxActivity.Set()
 	return nil
 }
 
@@ -65,7 +71,15 @@ func (t *TxStreamService) Stop() error {
 }
 
 func (t *TxStreamService) Name() string {
-	return "TxStream"
+	return "tx-stream"
+}
+
+// Health implements health.Reporter interface.
+func (t *TxStreamService) Health() health.Reports {
+	return health.Reports{
+		t.lastBlockActivity.GetReport("blocks"),
+		t.lastTxActivity.GetReport("transactions"),
+	}
 }
 
 func NewTxStreamService(ctx context.Context, ethClient ethereum.Client, blockFeed feeds.BlockFeed, cfg TxStreamServiceConfig) (*TxStreamService, error) {
@@ -78,10 +92,10 @@ func NewTxStreamService(ctx context.Context, ethClient ethereum.Client, blockFee
 	}
 
 	return &TxStreamService{
-		cfg,
-		ctx,
-		blockOutput,
-		txOutput,
-		txFeed,
+		cfg:         cfg,
+		ctx:         ctx,
+		blockOutput: blockOutput,
+		txOutput:    txOutput,
+		txFeed:      txFeed,
 	}, nil
 }

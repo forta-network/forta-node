@@ -9,6 +9,7 @@ import (
 	gethlog "github.com/ethereum/go-ethereum/log"
 
 	"github.com/forta-protocol/forta-node/clients"
+	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/ethereum"
@@ -140,6 +141,9 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		blockAnalyzer,
 		scanner.NewScannerAPI(ctx, blockFeed),
 		scanner.NewTxLogger(ctx),
+		health.NewService(ctx, health.CheckerFrom(
+			txStream, txAnalyzer, blockAnalyzer, agentPool, registryService,
+		)),
 	}
 
 	// for performance tests, this flag avoids using registry service

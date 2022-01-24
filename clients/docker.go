@@ -235,6 +235,20 @@ func (d *dockerClient) GetContainers(ctx context.Context) (DockerContainerList, 
 	})
 }
 
+// GetFortaServiceContainers returns all of the non-agent forta containers.
+func (d *dockerClient) GetFortaServiceContainers(ctx context.Context) (fortaContainers DockerContainerList, err error) {
+	containers, err := d.cli.ContainerList(ctx, types.ContainerListOptions{
+		All:     true,
+		Filters: d.labelFilter(),
+	})
+	for _, container := range containers {
+		if !strings.Contains(container.Names[0][1:], "forta-agent") {
+			fortaContainers = append(fortaContainers, container)
+		}
+	}
+	return
+}
+
 // GetContainerByName gets a container by using a name lookup over all containers.
 func (d *dockerClient) GetContainerByName(ctx context.Context, name string) (*types.Container, error) {
 	containers, err := d.GetContainers(ctx)
@@ -352,11 +366,17 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 	bindings := make(map[nat.Port][]nat.PortBinding)
 	ps := make(nat.PortSet)
 	for hp, cp := range config.Ports {
+		hostIP := "0.0.0.0"
+		parts := strings.Split(hp, ":")
+		if len(parts) == 2 {
+			hostIP = parts[0]
+			hp = parts[1]
+		}
 		contPort := nat.Port(withTcp(cp))
 		ps[contPort] = struct{}{}
 		bindings[contPort] = []nat.PortBinding{{
 			HostPort: hp,
-			HostIP:   "0.0.0.0",
+			HostIP:   hostIP,
 		}}
 	}
 

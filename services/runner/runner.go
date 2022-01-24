@@ -6,11 +6,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/alertapi"
+	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/domain"
+	"github.com/forta-protocol/forta-node/ethereum"
 	"github.com/forta-protocol/forta-node/store"
 	"github.com/forta-protocol/forta-node/utils"
 	log "github.com/sirupsen/logrus"
@@ -22,12 +23,7 @@ type Runner struct {
 	cfg          config.Config
 	imgStore     store.FortaImageStore
 	dockerClient clients.DockerClient
-	nukeClient   clients.DockerClient
-
-	// test clients for initial checks
-	scanClient  EthereumClient
-	traceClient EthereumClient
-	alertClient clients.AlertAPIClient
+	globalClient clients.DockerClient
 
 	currentUpdaterImg    string
 	currentSupervisorImg string
@@ -35,6 +31,8 @@ type Runner struct {
 	updaterPort         string
 	updaterContainer    *clients.DockerContainer
 	supervisorContainer *clients.DockerContainer
+
+	healthClient health.HealthClient
 }
 
 // EthereumClient is useful for checking the JSON-RPC API.
@@ -45,31 +43,30 @@ type EthereumClient interface {
 // NewRunner creates a new runner.
 func NewRunner(ctx context.Context, cfg config.Config,
 	imgStore store.FortaImageStore, runnerDockerClient clients.DockerClient,
-	globalDockerClient clients.DockerClient, updaterPort string,
+	globalDockerClient clients.DockerClient,
 ) *Runner {
 	return &Runner{
 		ctx:          ctx,
 		cfg:          cfg,
 		imgStore:     imgStore,
 		dockerClient: runnerDockerClient,
-		nukeClient:   globalDockerClient,
-		updaterPort:  updaterPort,
+		globalClient: globalDockerClient,
+		healthClient: health.NewClient(),
 	}
 }
 
 // Start starts the service.
 func (runner *Runner) Start() error {
-	if err := runner.setupTestClients(); err != nil {
-		return err
-	}
 	if err := runner.doStartUpCheck(); err != nil {
 		return fmt.Errorf("start-up check failed: %v", err)
 	}
 	log.Info("start-up check successful")
 
-	if err := runner.nukeClient.Nuke(context.Background()); err != nil {
+	if err := runner.globalClient.Nuke(context.Background()); err != nil {
 		return fmt.Errorf("failed to nuke leftover containers at start: %v", err)
 	}
+
+	health.StartServer(runner.ctx, runner.checkHealth)
 
 	go runner.receive()
 	return nil
@@ -82,33 +79,9 @@ func (runner *Runner) Name() string {
 
 // Stop stops the service
 func (runner *Runner) Stop() error {
-	if err := runner.nukeClient.Nuke(context.Background()); err != nil {
+	if err := runner.globalClient.Nuke(context.Background()); err != nil {
 		return fmt.Errorf("failed to nuke containers before exiting: %v", err)
 	}
-	return nil
-}
-
-func (runner *Runner) setupTestClients() error {
-	var err error
-	scanClientUrl, err := runner.fixTestRpcUrl(runner.cfg.Scan.JsonRpc.Url)
-	if err != nil {
-		return fmt.Errorf("invalid scan url: %v", err)
-	}
-	runner.scanClient, err = ethclient.Dial(scanClientUrl)
-	if err != nil {
-		return fmt.Errorf("scan client init failed: %v", err)
-	}
-	traceClientUrl, err := runner.fixTestRpcUrl(runner.cfg.Trace.JsonRpc.Url)
-	if err != nil {
-		return fmt.Errorf("invalid trace url: %v", err)
-	}
-	if runner.cfg.Trace.Enabled {
-		runner.traceClient, err = ethclient.Dial(traceClientUrl)
-		if err != nil {
-			return fmt.Errorf("trace client init failed: %v", err)
-		}
-	}
-	runner.alertClient = alertapi.NewClient(runner.cfg.Publish.APIURL)
 	return nil
 }
 
@@ -119,26 +92,27 @@ func (runner *Runner) doStartUpCheck() error {
 		return fmt.Errorf("docker check failed (get containers): %v", err)
 	}
 	// ensure that the scan json-rpc api is reachable
-	_, err = runner.scanClient.BlockNumber(runner.ctx)
+	err = ethereum.TestAPI(runner.ctx, runner.fixTestRpcUrl(runner.cfg.Scan.JsonRpc.Url))
 	if err != nil {
 		return fmt.Errorf("scan api check failed: %v", err)
 	}
 	if runner.cfg.Trace.Enabled {
 		// ensure that the trace json-rpc api is reachable
-		_, err = runner.traceClient.BlockNumber(runner.ctx)
+		err = ethereum.TestAPI(runner.ctx, runner.fixTestRpcUrl(runner.cfg.Trace.JsonRpc.Url))
 		if err != nil {
 			return fmt.Errorf("trace api check failed: %v", err)
 		}
 	}
 	// ensure that the batch api is available for publishing to
-	if err := runner.alertClient.PostBatch(&domain.AlertBatch{Ref: "test"}, ""); err != nil {
+	if err := alertapi.NewClient(runner.cfg.Publish.APIURL).
+		PostBatch(&domain.AlertBatch{Ref: "test"}, ""); err != nil {
 		return fmt.Errorf("batch api check failed: %v", err)
 	}
 	return nil
 }
 
-func (runner *Runner) fixTestRpcUrl(rawurl string) (string, error) {
-	return strings.ReplaceAll(rawurl, "host.docker.internal", "localhost"), nil
+func (runner *Runner) fixTestRpcUrl(rawurl string) string {
+	return strings.ReplaceAll(rawurl, "host.docker.internal", "localhost")
 }
 
 func (runner *Runner) removeContainer(container *clients.DockerContainer) error {
@@ -258,7 +232,8 @@ func (runner *Runner) startUpdater(logger *log.Entry, latestRefs store.ImageRefs
 			runner.cfg.FortaDir: config.DefaultContainerFortaDirPath,
 		},
 		Ports: map[string]string{
-			runner.updaterPort: runner.updaterPort,
+			config.DefaultContainerPort: config.DefaultContainerPort,
+			"":                          config.DefaultHealthPort, // random host port
 		},
 		MaxLogSize:  runner.cfg.Log.MaxLogSize,
 		MaxLogFiles: runner.cfg.Log.MaxLogFiles,
@@ -295,6 +270,9 @@ func (runner *Runner) startSupervisor(logger *log.Entry, latestRefs store.ImageR
 			// give access to host docker
 			"/var/run/docker.sock": "/var/run/docker.sock",
 			runner.cfg.FortaDir:    config.DefaultContainerFortaDirPath,
+		},
+		Ports: map[string]string{
+			"": config.DefaultHealthPort, // random host port
 		},
 		Files: map[string][]byte{
 			"passphrase": []byte(runner.cfg.Passphrase),

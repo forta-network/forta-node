@@ -3,6 +3,7 @@ package updater
 import (
 	"context"
 
+	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/services"
 	"github.com/forta-protocol/forta-node/services/updater"
@@ -27,11 +28,14 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		"noUpdate":        noUpdate,
 	}).Info("updater modes")
 
+	updaterService := updater.NewUpdaterService(
+		ctx, up, ipfs, config.DefaultContainerPort,
+		developmentMode, noUpdate,
+	)
+
 	return []services.Service{
-		updater.NewUpdaterService(
-			ctx, up, ipfs, config.DefaultUpdaterPort,
-			developmentMode, noUpdate,
-		),
+		updaterService,
+		health.NewService(ctx, health.CheckerFrom(updaterService)),
 	}, nil
 }
 

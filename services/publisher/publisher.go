@@ -14,6 +14,7 @@ import (
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/domain"
 
+	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/goccy/go-json"
 
@@ -60,6 +61,12 @@ type Publisher struct {
 	latestChainID uint64
 	notifCh       chan *protocol.NotifyRequest
 	batchCh       chan *protocol.AlertBatch
+
+	lastBatchPublish    health.TimeTracker
+	lastBatchSkip       health.TimeTracker
+	lastBatchSkipReason health.MessageTracker
+	lastBatchPublishErr health.ErrorTracker
+	lastMetricsFlush    health.TimeTracker
 }
 
 // TestAlertLogger logs the test alerts.
@@ -98,6 +105,9 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 	// flush only if we are publishing so we can make the best use of aggregated metrics
 	if _, skip := pub.shouldSkipPublishing(batch); !skip {
 		batch.Metrics = pub.metricsAggregator.TryFlush()
+		if len(batch.Metrics) > 0 {
+			pub.lastMetricsFlush.Set()
+		}
 	}
 
 	// add release info if it's available
@@ -122,16 +132,19 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 	}
 	log.Tracef("alert payload: %s", string(buf.Bytes()))
 
-	// save with blank tx hash for now
 	if pub.skipPublish {
+		const reason = "skipping batch, because skipPublish is enabled"
 		log.Infof("alert batch: blockStart=%d, blockEnd=%d, alertCount=%d, maxSeverity=%s", batch.BlockStart, batch.BlockEnd, batch.AlertCount, batch.MaxSeverity.String())
-		log.Info("skipping batch, because skipPublish is enabled")
+		log.Info(reason)
+		pub.lastBatchSkip.Set()
+		pub.lastBatchSkipReason.Set(reason)
 		return nil
 	}
 
-	// if we should really skip this batch due to other reasons, then we just leave it in the db with blank tx hash
 	if reason, skip := pub.shouldSkipPublishing(batch); skip {
 		log.WithField("reason", reason).Info("skipping batch")
+		pub.lastBatchSkip.Set()
+		pub.lastBatchSkipReason.Set(reason)
 		return nil
 	}
 
@@ -191,7 +204,10 @@ func (pub *Publisher) listenForMetrics() {
 
 func (pub *Publisher) publishBatches() {
 	for batch := range pub.batchCh {
-		if err := pub.publishNextBatch(batch); err != nil {
+		err := pub.publishNextBatch(batch)
+		pub.lastBatchPublish.Set()
+		pub.lastBatchPublishErr.Set(err)
+		if err != nil {
 			log.Errorf("failed to publish alert batch: %v", err)
 			time.Sleep(time.Second * 3)
 		}
@@ -469,7 +485,22 @@ func (pub *Publisher) Stop() error {
 }
 
 func (pub *Publisher) Name() string {
-	return "Publisher"
+	return "publisher"
+}
+
+// Health implements the health.Reporter interface.
+func (pub *Publisher) Health() health.Reports {
+	return health.Reports{
+		pub.lastBatchPublish.GetReport("events.batch.publish"),
+		pub.lastBatchPublishErr.GetReport("events.batch.publish.error"),
+		&health.Report{
+			Name:    "events.batch.skip",
+			Status:  health.StatusInfo,
+			Details: pub.lastBatchSkip.String(),
+		},
+		pub.lastBatchSkipReason.GetReport("events.batch.skip.reason"),
+		pub.lastMetricsFlush.GetReport("events.metrics.flush"),
+	}
 }
 
 func NewPublisher(ctx context.Context, mc *messaging.Client, alertClient clients.AlertAPIClient, cfg PublisherConfig) (*Publisher, error) {
