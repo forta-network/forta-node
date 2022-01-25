@@ -34,8 +34,8 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	)
 
 	return []services.Service{
-		updaterService,
 		health.NewService(ctx, health.CheckerFrom(updaterService)),
+		updaterService,
 	}, nil
 }
 

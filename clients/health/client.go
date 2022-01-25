@@ -48,7 +48,7 @@ type errorResponse struct {
 
 func (hc *healthClient) CheckHealth(name, port string) (reports Reports) {
 	rawurl := containerURL(port)
-	apiName := fmt.Sprintf("%s.health-api", name)
+	apiName := "health-api"
 	resp, err := http.Get(rawurl)
 	if err != nil {
 		return singleReport(apiName, StatusDown, fmt.Sprintf("request failed: %v", err))
@@ -69,6 +69,7 @@ func (hc *healthClient) CheckHealth(name, port string) (reports Reports) {
 	if err := json.Unmarshal(b, &reports); err != nil {
 		return singleReport(apiName, StatusFailing, fmt.Sprintf("bad response: %v: %s", err, string(b)))
 	}
+	reports.ObfuscateDetails()
 
 	return reports
 }

@@ -50,6 +50,7 @@ func (runner *Runner) checkHealth() (allReports health.Reports) {
 				for _, report := range reports {
 					report.Name = fmt.Sprintf("%s.%s", name, report.Name)
 				}
+				reports.ObfuscateDetails()
 				allReports = append(allReports, reports...)
 				gotReports = true
 				break

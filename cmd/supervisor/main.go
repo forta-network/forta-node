@@ -28,8 +28,8 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 	return []services.Service{
-		svc,
 		health.NewService(ctx, health.CheckerFrom(svc)),
+		svc,
 	}, nil
 }
 
