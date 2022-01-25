@@ -81,7 +81,6 @@ func (et *ErrorTracker) GetReport(name string) *Report {
 	var report Report
 	report.Name = name
 	report.Status = StatusOK
-	report.Details = "<nil>"
 	if et.err != nil {
 		report.Status = StatusFailing
 		report.Details = et.err.Error()
@@ -109,9 +108,6 @@ func (mt *MessageTracker) GetReport(name string) *Report {
 	var report Report
 	report.Name = name
 	report.Status = StatusInfo
-	report.Details = "<nil>"
-	if len(mt.msg) > 0 {
-		report.Details = mt.msg
-	}
+	report.Details = mt.msg
 	return &report
 }
