@@ -131,12 +131,12 @@ func (rs *RegistryService) Health() health.Reports {
 	return health.Reports{
 		rs.lastErr.GetReport("events.checked.error"),
 		&health.Report{
-			Name:    "events.checked",
+			Name:    "events.checked.time",
 			Status:  health.StatusInfo,
 			Details: rs.lastChecked.String(),
 		},
 		&health.Report{
-			Name:    "events.change-detected",
+			Name:    "events.change-detected.time",
 			Status:  health.StatusInfo,
 			Details: rs.lastChangeDetected.String(),
 		},

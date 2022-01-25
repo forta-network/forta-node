@@ -12,7 +12,9 @@ const (
 	StatusOK      Status = "ok"
 	StatusDown    Status = "down"
 	StatusFailing Status = "failing"
+	StatusLagging Status = "lagging"
 	StatusInfo    Status = "info"
+	StatusUnknown Status = "unknown"
 )
 
 // Report contains health info from a service or component.

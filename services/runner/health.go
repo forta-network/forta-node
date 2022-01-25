@@ -15,7 +15,7 @@ func (runner *Runner) checkHealth() (allReports health.Reports) {
 			{
 				Name:    "docker",
 				Status:  health.StatusDown,
-				Details: fmt.Sprintf("failed to get running services: %v", err),
+				Details: err.Error(),
 			},
 		}
 	}
@@ -27,7 +27,7 @@ func (runner *Runner) checkHealth() (allReports health.Reports) {
 			allReports = append(allReports, &health.Report{
 				Name:    name,
 				Status:  health.StatusDown,
-				Details: fmt.Sprintf("state: %s", container.State),
+				Details: container.State,
 			})
 			continue
 		}
@@ -35,7 +35,7 @@ func (runner *Runner) checkHealth() (allReports health.Reports) {
 		allReports = append(allReports, &health.Report{
 			Name:    name,
 			Status:  health.StatusOK,
-			Details: fmt.Sprintf("state: %s", container.State),
+			Details: container.State,
 		})
 
 		// no further checks if nats

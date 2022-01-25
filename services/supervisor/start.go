@@ -315,17 +315,17 @@ func (sup *SupervisorService) Health() health.Reports {
 			Details: strconv.Itoa(len(sup.containers)),
 		},
 		&health.Report{
-			Name:    "events.run-agent",
+			Name:    "events.run-agent.time",
 			Status:  health.StatusInfo,
 			Details: sup.lastRun.String(),
 		},
 		&health.Report{
-			Name:    "events.stop-agent",
+			Name:    "events.stop-agent.time",
 			Status:  health.StatusInfo,
 			Details: sup.lastStop.String(),
 		},
-		sup.lastTelemetryRequest.GetReport("telemetry"),
-		sup.lastTelemetryRequestError.GetReport("telemetry.error"),
+		sup.lastTelemetryRequest.GetReport("telemetry-sync.time"),
+		sup.lastTelemetryRequestError.GetReport("telemetry-sync.error"),
 	}
 }
 

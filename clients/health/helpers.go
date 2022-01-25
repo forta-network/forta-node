@@ -1,7 +1,6 @@
 package health
 
 import (
-	"fmt"
 	"sync"
 	"time"
 )
@@ -21,15 +20,18 @@ func (tt *TimeTracker) Set() {
 }
 
 // Check checks the time.
-func (tt *TimeTracker) Check(timeout time.Duration) (formatted string, isLate bool) {
+func (tt *TimeTracker) Check(timeout time.Duration) (formatted string, status Status) {
 	tt.mu.RLock()
 	defer tt.mu.RUnlock()
-	if tt.ts != nil {
-		isLate = tt.ts.Add(timeout).Before(time.Now())
-	} else {
-		isLate = true
+	if tt.ts == nil {
+		return "", StatusUnknown
 	}
-	return tt.string(), isLate
+
+	isLate := tt.ts.Add(timeout).Before(time.Now())
+	if isLate {
+		return tt.string(), StatusLagging
+	}
+	return tt.string(), StatusOK
 }
 
 // String implements the fmt.Stringer interface.
@@ -41,7 +43,7 @@ func (tt *TimeTracker) String() string {
 
 func (tt *TimeTracker) string() string {
 	if tt.ts == nil {
-		return "<never>"
+		return ""
 	}
 	return tt.ts.Format(time.RFC3339)
 }
@@ -50,14 +52,7 @@ func (tt *TimeTracker) string() string {
 func (tt *TimeTracker) GetReport(name string) *Report {
 	var report Report
 	report.Name = name
-	formatted, isLate := tt.Check(time.Minute * 5)
-	if isLate {
-		report.Status = StatusFailing
-		report.Details = fmt.Sprintf("lagging - last activity: %s", formatted)
-	} else {
-		report.Status = StatusOK
-		report.Details = fmt.Sprintf("flowing - last activity: %s", formatted)
-	}
+	report.Details, report.Status = tt.Check(time.Minute * 5)
 	return &report
 }
 

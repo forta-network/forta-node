@@ -491,15 +491,15 @@ func (pub *Publisher) Name() string {
 // Health implements the health.Reporter interface.
 func (pub *Publisher) Health() health.Reports {
 	return health.Reports{
-		pub.lastBatchPublish.GetReport("events.batch.publish"),
+		pub.lastBatchPublish.GetReport("events.batch.publish.time"),
 		pub.lastBatchPublishErr.GetReport("events.batch.publish.error"),
 		&health.Report{
-			Name:    "events.batch.skip",
+			Name:    "events.batch.skip.time",
 			Status:  health.StatusInfo,
 			Details: pub.lastBatchSkip.String(),
 		},
 		pub.lastBatchSkipReason.GetReport("events.batch.skip.reason"),
-		pub.lastMetricsFlush.GetReport("events.metrics.flush"),
+		pub.lastMetricsFlush.GetReport("events.metrics.flush.time"),
 	}
 }
 

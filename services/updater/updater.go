@@ -194,7 +194,7 @@ func (updater *UpdaterService) Stop() error {
 // Health implements the health.Reporter interface.
 func (updater *UpdaterService) Health() health.Reports {
 	return health.Reports{
-		updater.lastChecked.GetReport("events.checked"),
+		updater.lastChecked.GetReport("events.checked.time"),
 		updater.lastErr.GetReport("events.checked.error"),
 	}
 }
