@@ -129,14 +129,14 @@ func (rs *RegistryService) Name() string {
 // Health implements the health.Reporter interface.
 func (rs *RegistryService) Health() health.Reports {
 	return health.Reports{
-		rs.lastErr.GetReport("events.checked.error"),
+		rs.lastErr.GetReport("event.checked.error"),
 		&health.Report{
-			Name:    "events.checked.time",
+			Name:    "event.checked.time",
 			Status:  health.StatusInfo,
 			Details: rs.lastChecked.String(),
 		},
 		&health.Report{
-			Name:    "events.change-detected.time",
+			Name:    "event.change-detected.time",
 			Status:  health.StatusInfo,
 			Details: rs.lastChangeDetected.String(),
 		},
