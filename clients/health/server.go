@@ -24,6 +24,7 @@ func CheckerFrom(reporters ...Reporter) HealthChecker {
 	return func() (allReports Reports) {
 		for _, reporter := range reporters {
 			reports := reporter.Health()
+			reports.ObfuscateDetails()
 			for _, report := range reports {
 				if len(report.Name) == 0 {
 					report.Name = fmt.Sprintf("service.%s", reporter.Name())
@@ -87,10 +88,12 @@ func (service *Service) Start() error {
 	return nil
 }
 
+// Stop stops the service.
 func (service *Service) Stop() error {
 	return nil
 }
 
+// Name returns the name of the service.
 func (service *Service) Name() string {
 	return "health"
 }

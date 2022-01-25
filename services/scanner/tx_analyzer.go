@@ -172,8 +172,8 @@ func (t *TxAnalyzerService) Name() string {
 // Health implements the health.Reporter interface.
 func (t *TxAnalyzerService) Health() health.Reports {
 	return health.Reports{
-		t.lastInputActivity.GetReport("inputs"),
-		t.lastOutputActivity.GetReport("outputs"),
+		t.lastInputActivity.GetReport("event.input.time"),
+		t.lastOutputActivity.GetReport("event.output.time"),
 	}
 }
 

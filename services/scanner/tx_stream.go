@@ -77,8 +77,8 @@ func (t *TxStreamService) Name() string {
 // Health implements health.Reporter interface.
 func (t *TxStreamService) Health() health.Reports {
 	return health.Reports{
-		t.lastBlockActivity.GetReport("blocks"),
-		t.lastTxActivity.GetReport("transactions"),
+		t.lastBlockActivity.GetReport("event.block.time"),
+		t.lastTxActivity.GetReport("event.transaction.time"),
 	}
 }
 

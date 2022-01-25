@@ -2,6 +2,8 @@ package health
 
 import (
 	"strings"
+
+	"github.com/forta-protocol/forta-node/utils"
 )
 
 // Status represents status of a component.
@@ -12,7 +14,9 @@ const (
 	StatusOK      Status = "ok"
 	StatusDown    Status = "down"
 	StatusFailing Status = "failing"
+	StatusLagging Status = "lagging"
 	StatusInfo    Status = "info"
+	StatusUnknown Status = "unknown"
 )
 
 // Report contains health info from a service or component.
@@ -41,3 +45,10 @@ func ReportName(service, component string, properties ...string) string {
 
 // Reports can be marshaled into CSV format.
 type Reports []*Report
+
+// ObfuscateDetails obfuscates details in each report.
+func (reports Reports) ObfuscateDetails() {
+	for _, report := range reports {
+		report.Details = utils.ObfuscateURLs(report.Details)
+	}
+}

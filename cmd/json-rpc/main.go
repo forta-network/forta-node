@@ -25,8 +25,8 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	}
 
 	return []services.Service{
-		proxy,
 		health.NewService(ctx, health.CheckerFrom(proxy)),
+		proxy,
 	}, nil
 }
 

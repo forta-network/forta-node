@@ -84,6 +84,7 @@ func (s *Suite) SetupTest() {
 		globalClient: s.globalClient,
 		msgClient:    s.msgClient,
 	}
+	service.config.Config.TelemetryConfig.Disable = true
 	service.config.Config.Log.Level = "debug"
 
 	s.dockerClient.EXPECT().Prune(service.ctx)

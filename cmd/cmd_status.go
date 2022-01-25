@@ -74,16 +74,8 @@ func formatReportsPretty(reports health.Reports) {
 		writeName(w, report.Name)
 		fmt.Fprint(w, "\n")
 
-		switch report.Status {
-		case health.StatusOK:
-			writeColoredBall(w, color.FgGreen)
-		case health.StatusDown:
-			writeColoredBall(w, color.FgRed)
-		case health.StatusFailing:
-			writeColoredBall(w, color.FgYellow)
-		case health.StatusInfo:
-			writeColoredBall(w, color.FgBlue)
-		}
+		writeStatusBall(w, report.Status)
+
 		writeStatus(w, string(report.Status))
 		if len(report.Details) > 0 {
 			writeStatus(w, ": ") // put colon at the end of the status
@@ -98,16 +90,8 @@ func formatReportsPretty(reports health.Reports) {
 func formatReportsOneline(reports health.Reports) {
 	w := new(bytes.Buffer)
 	for _, report := range reports {
-		switch report.Status {
-		case health.StatusOK:
-			writeColoredBall(w, color.FgGreen)
-		case health.StatusDown:
-			writeColoredBall(w, color.FgRed)
-		case health.StatusFailing:
-			writeColoredBall(w, color.FgYellow)
-		case health.StatusInfo:
-			writeColoredBall(w, color.FgBlue)
-		}
+		writeStatusBall(w, report.Status)
+
 		writeStatus(w, string(report.Status))
 		fmt.Fprint(w, " | ")
 		writeName(w, report.Name)
@@ -120,6 +104,23 @@ func formatReportsOneline(reports health.Reports) {
 	}
 
 	fmt.Fprint(os.Stdout, w.String())
+}
+
+func writeStatusBall(w io.Writer, status health.Status) {
+	switch status {
+	case health.StatusOK:
+		writeColoredBall(w, color.FgGreen)
+	case health.StatusDown:
+		writeColoredBall(w, color.FgRed)
+	case health.StatusFailing:
+		writeColoredBall(w, color.FgYellow)
+	case health.StatusLagging:
+		writeColoredBall(w, color.FgYellow)
+	case health.StatusInfo:
+		writeColoredBall(w, color.FgBlue)
+	case health.StatusUnknown:
+		writeColoredBall(w, color.Faint)
+	}
 }
 
 func formatReportsJSON(reports health.Reports) error {

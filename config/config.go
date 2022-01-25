@@ -18,7 +18,7 @@ type ScannerConfig struct {
 	EndBlock         int           `yaml:"-" json:"_endBlock"`
 	JsonRpc          JsonRpcConfig `yaml:"jsonRpc" json:"jsonRpc"`
 	DisableAutostart bool          `yaml:"disableAutostart" json:"disableAutostart"`
-	BlockRateLimit   int           `default:"1000" yaml:"blockRateLimit" json:"blockRateLimit"`
+	BlockRateLimit   int           `yaml:"blockRateLimit" json:"blockRateLimit" default:"1000"`
 }
 
 type TraceConfig struct {
@@ -66,7 +66,7 @@ type TestAlertsConfig struct {
 
 type PublisherConfig struct {
 	SkipPublish bool             `yaml:"skipPublish" json:"skipPublish" default:"false"`
-	APIURL      string           `default:"https://alerts.forta.network" yaml:"apiUrl" json:"apiUrl"`
+	APIURL      string           `yaml:"apiUrl" json:"apiUrl" default:"https://alerts.forta.network" validate:"url"`
 	IPFS        IPFSConfig       `yaml:"ipfs" json:"ipfs" validate:"required_unless=SkipPublish true"`
 	Batch       BatchConfig      `yaml:"batch" json:"batch"`
 	TestAlerts  TestAlertsConfig `yaml:"testAlerts" json:"testAlerts"`
@@ -82,6 +82,11 @@ type ENSConfig struct {
 	DefaultContract bool          `yaml:"defaultContract" json:"defaultContract" default:"false" `
 	ContractAddress string        `yaml:"contractAddress" json:"contractAddress" validate:"omitempty,eth_addr" default:"0x08f42fcc52a9C2F391bF507C4E8688D0b53e1bd7"`
 	JsonRpc         JsonRpcConfig `yaml:"jsonRpc" json:"jsonRpc" default:"{\"url\": \"https://polygon-rpc.com\"}" `
+}
+
+type TelemetryConfig struct {
+	URL     string `yaml:"url" json:"url" default:"https://alerts.forta.network/telemetry" validate:"url"`
+	Disable bool   `yaml:"disable" json:"disable" validate:"omitempty,boolean"`
 }
 
 type Config struct {
@@ -106,6 +111,7 @@ type Config struct {
 	Log             LogConfig          `yaml:"log" json:"log"`
 	ResourcesConfig ResourcesConfig    `yaml:"resources" json:"resources"`
 	ENSConfig       ENSConfig          `yaml:"ens" json:"ens"`
+	TelemetryConfig TelemetryConfig    `yaml:"telemetry" json:"telemetry"`
 }
 
 func (cfg *Config) ConfigFilePath() string {
