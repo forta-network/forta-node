@@ -159,16 +159,17 @@ func (runner *Runner) receive() {
 			}
 		}
 
-		// in local mode, run supervisor even if release info is nil.
-		// in production mode, it doesn't make sense to run the supervisor for the first time yet
-		// if updater hasn't yet received the latest release.
-		validReleaseInfo := latestRefs.ReleaseInfo != nil || config.UseDockerImages == "local"
-		if latestRefs.Supervisor != runner.currentSupervisorImg && validReleaseInfo {
+		// don't run the supervisor if the release info is from compile time
+		// we need the up-to-date release info in order to start the whole stack
+		remoteReleaseInfo := latestRefs.ReleaseInfo != nil && !latestRefs.ReleaseInfo.FromBuild
+		if latestRefs.Supervisor != runner.currentSupervisorImg && remoteReleaseInfo {
 			if err := runner.replaceSupervisor(logger, latestRefs); err != nil {
 				logger.WithError(err).Panic("error replacing supervisor")
 			} else {
 				runner.currentSupervisorImg = latestRefs.Supervisor
 			}
+		} else {
+			logger.Info("skipping supervisor launch for now")
 		}
 	}
 }

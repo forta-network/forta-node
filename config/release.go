@@ -34,7 +34,8 @@ func GetBuildReleaseSummary() (*ReleaseSummary, bool) {
 // GetBuildReleaseInfo collects and returns the release info from build vars.
 func GetBuildReleaseInfo() *ReleaseInfo {
 	return &ReleaseInfo{
-		IPFS: ReleaseCid,
+		FromBuild: true,
+		IPFS:      ReleaseCid,
 		Manifest: ReleaseManifest{
 			Release: Release{
 				Commit: CommitHash,
@@ -45,8 +46,9 @@ func GetBuildReleaseInfo() *ReleaseInfo {
 
 // ReleaseInfo contains the release response from the updater.
 type ReleaseInfo struct {
-	IPFS     string          `json:"ipfs"`
-	Manifest ReleaseManifest `json:"manifest"`
+	FromBuild bool            `json:"fromBuild"`
+	IPFS      string          `json:"ipfs"`
+	Manifest  ReleaseManifest `json:"manifest"`
 }
 
 // String implements fmt.Stringer interface.
@@ -68,8 +70,9 @@ func ReleaseInfoFromString(s string) *ReleaseInfo {
 	json.Unmarshal([]byte(s), &releaseInfo)
 	if len(releaseInfo.Manifest.Release.Commit) > 0 {
 		log.WithFields(log.Fields{
-			"commit": releaseInfo.Manifest.Release.Commit,
-			"ipfs":   releaseInfo.IPFS,
+			"commit":    releaseInfo.Manifest.Release.Commit,
+			"ipfs":      releaseInfo.IPFS,
+			"fromBuild": releaseInfo.FromBuild,
 		}).Info("found release info")
 	}
 	return &releaseInfo
