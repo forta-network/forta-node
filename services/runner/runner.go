@@ -278,6 +278,7 @@ func (runner *Runner) startSupervisor(logger *log.Entry, latestRefs store.ImageR
 		Files: map[string][]byte{
 			"passphrase": []byte(runner.cfg.Passphrase),
 		},
+		DialHost:    true,
 		MaxLogSize:  runner.cfg.Log.MaxLogSize,
 		MaxLogFiles: runner.cfg.Log.MaxLogFiles,
 	})

@@ -6,13 +6,16 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-protocol/forta-node/security"
 )
 
 // SupervisorService manages the scanner node's service and agent containers.
@@ -31,13 +34,18 @@ type SupervisorService struct {
 	containers       []*clients.DockerContainer
 	mu               sync.RWMutex
 
-	lastRun  health.TimeTracker
-	lastStop health.TimeTracker
+	lastRun                   health.TimeTracker
+	lastStop                  health.TimeTracker
+	lastTelemetryRequest      health.TimeTracker
+	lastTelemetryRequestError health.ErrorTracker
+
+	healthClient health.HealthClient
 }
 
 type SupervisorServiceConfig struct {
 	Config     config.Config
 	Passphrase string
+	Key        *keystore.Key
 }
 
 func (sup *SupervisorService) Start() error {
@@ -51,6 +59,10 @@ func (sup *SupervisorService) Start() error {
 }
 
 func (sup *SupervisorService) start() error {
+	if !sup.config.Config.TelemetryConfig.Disable {
+		go sup.syncTelemetryData()
+	}
+
 	sup.mu.Lock()
 	defer sup.mu.Unlock()
 
@@ -239,6 +251,34 @@ func (sup *SupervisorService) ensureNodeImages() error {
 	return nil
 }
 
+func (sup *SupervisorService) syncTelemetryData() {
+	time.After(time.Second * 15)          // rate limit crash loops
+	ticker := time.NewTicker(time.Minute) // slow down with auto-upgrade later
+	for {
+		err := sup.doSyncTelemetryData()
+		if err != nil {
+			log.WithError(err).Warn("telemetry sync failed")
+		}
+		sup.lastTelemetryRequest.Set()
+		sup.lastTelemetryRequestError.Set(err)
+		<-ticker.C
+	}
+}
+
+func (sup *SupervisorService) doSyncTelemetryData() error {
+	scannerJwt, err := security.CreateScannerJWT(sup.config.Key, map[string]interface{}{
+		"access": "telemetry",
+	})
+	if err != nil {
+		return err
+	}
+	return sup.healthClient.SendReports(
+		fmt.Sprintf("http://host.docker.internal:%s/health", config.DefaultHealthPort),
+		sup.config.Config.TelemetryConfig.URL,
+		scannerJwt,
+	)
+}
+
 func (sup *SupervisorService) Stop() error {
 	sup.mu.RLock()
 	defer sup.mu.RUnlock()
@@ -284,6 +324,8 @@ func (sup *SupervisorService) Health() health.Reports {
 			Status:  health.StatusInfo,
 			Details: sup.lastStop.String(),
 		},
+		sup.lastTelemetryRequest.GetReport("telemetry"),
+		sup.lastTelemetryRequestError.GetReport("telemetry.error"),
 	}
 }
 
@@ -301,5 +343,6 @@ func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*Su
 		client:       dockerClient,
 		globalClient: globalClient,
 		config:       cfg,
+		healthClient: health.NewClient(),
 	}, nil
 }
