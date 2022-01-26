@@ -43,9 +43,6 @@ func (sup *SupervisorService) startAgent(agent config.AgentConfig) error {
 	// Attach the scanner and the JSON-RPC proxy to the agent's network.
 	for _, containerID := range []string{sup.scannerContainer.ID, sup.jsonRpcContainer.ID} {
 		err := sup.client.AttachNetwork(sup.ctx, containerID, nwID)
-		if err == clients.ErrAlreadyExistsInNetwork {
-			continue
-		}
 		if err != nil {
 			return err
 		}

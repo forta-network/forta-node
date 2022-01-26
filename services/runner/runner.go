@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/alertapi"
@@ -25,12 +27,11 @@ type Runner struct {
 	dockerClient clients.DockerClient
 	globalClient clients.DockerClient
 
+	updaterContainer     *clients.DockerContainer
+	supervisorContainer  *clients.DockerContainer
 	currentUpdaterImg    string
 	currentSupervisorImg string
-
-	updaterPort         string
-	updaterContainer    *clients.DockerContainer
-	supervisorContainer *clients.DockerContainer
+	containerMu          sync.RWMutex // protects above refs and containers
 
 	healthClient health.HealthClient
 }
@@ -68,7 +69,9 @@ func (runner *Runner) Start() error {
 
 	health.StartServer(runner.ctx, runner.checkHealth)
 
-	go runner.receive()
+	go runner.keepContainersUpToDate()
+	go runner.keepContainersAlive()
+
 	return nil
 }
 
@@ -141,8 +144,10 @@ func (runner *Runner) removeContainerWithProps(name, id string) error {
 	return nil
 }
 
-func (runner *Runner) receive() {
+func (runner *Runner) keepContainersUpToDate() {
 	for latestRefs := range runner.imgStore.Latest() {
+		runner.containerMu.Lock()
+
 		logger := log.WithField("supervisor", latestRefs.Supervisor).WithField("updater", latestRefs.Updater)
 		if latestRefs.ReleaseInfo != nil {
 			logger = logger.WithFields(log.Fields{
@@ -171,6 +176,8 @@ func (runner *Runner) receive() {
 		} else {
 			logger.Info("skipping supervisor launch for now")
 		}
+
+		runner.containerMu.Unlock()
 	}
 }
 
@@ -292,5 +299,41 @@ func (runner *Runner) startSupervisor(logger *log.Entry, latestRefs store.ImageR
 		logger.WithError(err).Error("error while waiting for supervisor start")
 		return err
 	}
+	return nil
+}
+
+func (runner *Runner) keepContainersAlive() {
+	ticker := time.NewTicker(time.Second * 10)
+	for {
+		select {
+		case <-ticker.C:
+			if err := runner.doKeepContainersAlive(); err != nil {
+				log.WithError(err).Error("failed while keeping containers alive")
+			}
+
+		case <-runner.ctx.Done():
+			return
+		}
+	}
+}
+
+func (runner *Runner) doKeepContainersAlive() error {
+	runner.containerMu.Lock()
+	defer runner.containerMu.Unlock()
+
+	if runner.supervisorContainer != nil {
+		container, err := runner.dockerClient.GetContainerByID(runner.ctx, runner.supervisorContainer.ID)
+		if err == nil && container.State == "exited" {
+			runner.dockerClient.StartContainer(runner.ctx, runner.supervisorContainer.Config)
+		}
+	}
+
+	if runner.updaterContainer != nil {
+		container, err := runner.dockerClient.GetContainerByID(runner.ctx, runner.updaterContainer.ID)
+		if err == nil && container.State == "exited" {
+			runner.dockerClient.StartContainer(runner.ctx, runner.updaterContainer.Config)
+		}
+	}
+
 	return nil
 }

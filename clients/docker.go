@@ -29,8 +29,7 @@ var defaultLabels = map[string]string{dockerResourcesLabel: "true"}
 
 // Client errors
 var (
-	ErrAlreadyExistsInNetwork = errors.New("already exists in network")
-	ErrContainerNotFound      = errors.New("container not found")
+	ErrContainerNotFound = errors.New("container not found")
 )
 
 // DockerContainer is a resulting container reference, including the ID and configuration
@@ -195,7 +194,7 @@ func (d *dockerClient) AttachNetwork(ctx context.Context, containerID string, ne
 		return nil
 	}
 	if strings.Contains(err.Error(), "already exists") {
-		return ErrAlreadyExistsInNetwork
+		return nil
 	}
 	return err
 }
