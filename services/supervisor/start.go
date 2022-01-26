@@ -82,7 +82,7 @@ func (sup *SupervisorService) start() error {
 	sup.maxLogSize = sup.config.Config.Log.MaxLogSize
 	sup.maxLogFiles = sup.config.Config.Log.MaxLogFiles
 
-	if err := sup.client.Prune(sup.ctx); err != nil {
+	if err := sup.client.Nuke(sup.ctx); err != nil {
 		return err
 	}
 

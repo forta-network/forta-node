@@ -22,6 +22,7 @@ type DockerClient interface {
 	GetContainers(ctx context.Context) (DockerContainerList, error)
 	GetFortaServiceContainers(ctx context.Context) (fortaContainers DockerContainerList, err error)
 	GetContainerByName(ctx context.Context, name string) (*types.Container, error)
+	GetContainerByID(ctx context.Context, id string) (*types.Container, error)
 	StartContainer(ctx context.Context, config DockerContainerConfig) (*DockerContainer, error)
 	StopContainer(ctx context.Context, ID string) error
 	InterruptContainer(ctx context.Context, ID string) error

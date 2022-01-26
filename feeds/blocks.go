@@ -101,6 +101,10 @@ func (bf *blockFeed) StartRange(start int64, end int64, rate int64) {
 }
 
 func (bf *blockFeed) loop() {
+	if err := bf.initialize(); err != nil {
+		log.WithError(err).Panic("failed to initialize")
+	}
+
 	bf.started = true
 	defer func() {
 		bf.started = false
@@ -110,7 +114,7 @@ func (bf *blockFeed) loop() {
 		return
 	}
 	if err != ErrEndBlockReached {
-		log.Warnf("failed while processing blocks: %v", err)
+		log.WithError(err).Warn("failed while processing blocks")
 	}
 	for _, handler := range bf.handlers {
 		handler.ErrCh <- err
@@ -206,9 +210,6 @@ func NewBlockFeed(ctx context.Context, client ethereum.Client, traceClient ether
 		chainID:     cfg.ChainID,
 		tracing:     cfg.Tracing,
 		rateLimit:   cfg.RateLimit,
-	}
-	if err := bf.initialize(); err != nil {
-		return nil, err
 	}
 	return bf, nil
 }
