@@ -87,7 +87,7 @@ func (s *Suite) SetupTest() {
 	service.config.Config.TelemetryConfig.Disable = true
 	service.config.Config.Log.Level = "debug"
 
-	s.dockerClient.EXPECT().Prune(service.ctx)
+	s.dockerClient.EXPECT().Nuke(service.ctx)
 	s.dockerClient.EXPECT().EnsureLocalImage(service.ctx, gomock.Any(), gomock.Any()) // needs to get nats once
 	s.dockerClient.EXPECT().CreatePublicNetwork(service.ctx, gomock.Any()).Return(testNodeNetworkID, nil)
 	s.dockerClient.EXPECT().CreateInternalNetwork(service.ctx, gomock.Any()).Return(testNatsNetworkID, nil) // for nats
