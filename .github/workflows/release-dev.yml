@@ -7,14 +7,15 @@ on:
     branches: [master]
   pull_request:
 
+defaults:
+  run:
+    working-directory: _release
+
 jobs:
   release:
     name: Release dev
     runs-on: ubuntu-18.04
     environment: dev
-    defaults:
-      run:
-        working-directory: _release
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -27,8 +28,6 @@ jobs:
         id: latest-tag-rev
         run: |
           TAG_REV=$(git rev-list -n 1 ${{ steps.latest-tag.outputs.tag }})
-          git rev-list -n 1 ${{ steps.latest-tag.outputs.tag }}
-          echo $TAG_REV
           echo "::set-output name=revision::$TAG_REV"
       - name: Release
         id: release
