@@ -131,7 +131,7 @@ runs:
     - name: Add Debian package to Aptly repo and publish
       shell: bash
       env:
-        REVISION: ${{ env.forta_revision }}
+        REVISION: ${{ inputs.revision }}
         SEMVER: ${{ env.forta_semver }}
         GPG_NAME: ${{ inputs.pgp_key_name }}
         PASSPHRASE: ${{ inputs.pgp_passphrase }}
@@ -147,7 +147,7 @@ runs:
       shell: bash
       env:
         RELEASE_ARTIFACTS_URL: ${{ inputs.release_artifacts_url }}
-        REVISION: ${{ env.forta_revision }}
+        REVISION: ${{ inputs.revision }}
         SEMVER: ${{ env.forta_semver }}
       run: |
         sed -i "s,ARTIFACTS_URL,$RELEASE_ARTIFACTS_URL,g" yum/forta.spec
