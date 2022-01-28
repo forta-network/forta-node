@@ -27,7 +27,7 @@ jobs:
         id: latest-tag-rev
         run:
           TAG_REV=$(git rev-list -n 1 ${{ steps.latest-tag.outputs.tag }})
-          ::set-output name=revision::$TAG_REV
+          echo "::set-output name=revision::$TAG_REV"
       - name: Release
         id: release
         uses: ./.github/actions/release
