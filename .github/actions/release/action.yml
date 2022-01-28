@@ -134,7 +134,7 @@ runs:
         REVISION: ${{ env.forta_revision }}
         SEMVER: ${{ env.forta_semver }}
         GPG_NAME: ${{ inputs.pgp_key_name }}
-        PASSPHRASE: ${{ secrets.pgp_passphrase }}
+        PASSPHRASE: ${{ inputs.pgp_passphrase }}
       run: |
         ./scripts/aptly-publish.sh $REVISION $SEMVER $GPG_NAME $PASSPHRASE
 
