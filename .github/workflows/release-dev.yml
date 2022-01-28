@@ -7,10 +7,6 @@ on:
     branches: [master]
   pull_request:
 
-defaults:
-  run:
-    working-directory: _release
-
 jobs:
   release:
     name: Release dev

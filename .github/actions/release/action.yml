@@ -37,6 +37,7 @@ inputs:
   pgp_passphrase:
     description: 'Passphrase for the PGP key'
     required: true
+
 runs:
   using: "composite"
   steps:
@@ -94,6 +95,7 @@ runs:
     # Release for APT
     - name: Build Debian package
       shell: bash
+      working-directory: _release
       env:
         RELEASE_ARTIFACTS_URL: ${{ inputs.release_artifacts_url }}
         REVISION: ${{ inputs.revision }}
@@ -121,6 +123,7 @@ runs:
         cd ..
     - name: Initialize Aptly
       shell: bash
+      working-directory: _release
       env:
         RELEASES_BUCKET_NAME: ${{ inputs.release_artifacts_bucket_name }}
         AWS_ACCESS_KEY: ${{ inputs.aws_access_key }}
@@ -130,6 +133,7 @@ runs:
         ./scripts/init-aptly.sh us-east-1 $RELEASES_BUCKET_NAME $AWS_ACCESS_KEY $AWS_SECRET_KEY $APT_REPOSITORIES_URL
     - name: Add Debian package to Aptly repo and publish
       shell: bash
+      working-directory: _release
       env:
         REVISION: ${{ inputs.revision }}
         SEMVER: ${{ env.forta_semver }}
@@ -145,6 +149,7 @@ runs:
         sudo ln -sf /usr/bin/gpg2 /usr/bin/gpg
     - name: Get RPM spec file ready for env release
       shell: bash
+      working-directory: _release
       env:
         RELEASE_ARTIFACTS_URL: ${{ inputs.release_artifacts_url }}
         REVISION: ${{ inputs.revision }}
@@ -155,6 +160,7 @@ runs:
         sed -i "s,SEMVER,$SEMVER,g" yum/forta.spec
     - name: Prepare .rpmmacros so we can sign the RPM package
       shell: bash
+      working-directory: _release
       env:
         GPG_NAME: ${{ inputs.pgp_key_name }}
         PASSPHRASE: ${{ inputs.pgp_passphrase }}
@@ -164,6 +170,7 @@ runs:
         cp .rpmmacros ~/.rpmmacros
     - name: Build and sign RPM package
       shell: bash
+      working-directory: _release
       run: |
         SYSTEMD_USER_DIR=yum/rpmbuild/BUILDROOT/usr/lib/systemd/system
         mkdir -p $SYSTEMD_USER_DIR
@@ -173,6 +180,7 @@ runs:
         rpm --addsign yum/rpmbuild/RPMS/**/*.rpm
     - name: Re-create and sign local YUM repository
       shell: bash
+      working-directory: _release
       env:
         RELEASES_BUCKET_NAME: ${{ inputs.release_artifacts_bucket_name }}
       run: |
@@ -184,12 +192,14 @@ runs:
         gpg --detach-sign --armor yum/repo-dev/repodata/repomd.xml
     - name: Put PGP private key for YUM env-release
       shell: bash
+      working-directory: _release
       env:
         PUBLIC_KEY: ${{ inputs.pgp_public_key }}
       run: |
         echo "$PUBLIC_KEY" > yum/repo-dev/pgp.public
     - name: Put YUM repository file for env release
       shell: bash
+      working-directory: _release
       env:
         BASE_URL: ${{ inputs.dist_base_url }}
       run: |
@@ -197,6 +207,7 @@ runs:
         cp yum/Forta.repo yum/repo-dev
     - name: Replace remote YUM repository
       shell: bash
+      working-directory: _release
       env:
         RELEASES_BUCKET_NAME: ${{ inputs.release_artifacts_bucket_name }}
       run: |
