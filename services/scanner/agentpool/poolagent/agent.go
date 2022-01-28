@@ -2,11 +2,11 @@ package poolagent
 
 import (
 	"context"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/forta-protocol/forta-node/metrics"
 
 	"github.com/forta-protocol/forta-node/clients"
@@ -247,18 +247,18 @@ func calculateResponseTime(startTime *time.Time) (timestamp string, latencyMs ui
 }
 
 // ShouldProcessBlock tells if the agent should process block.
-func (agent *Agent) ShouldProcessBlock(blockNumber string) bool {
-	n, _ := strconv.ParseUint(blockNumber, 10, 64)
+func (agent *Agent) ShouldProcessBlock(blockNumberHex string) bool {
+	blockNumber, _ := hexutil.DecodeUint64(blockNumberHex)
 	var isAtLeastStartBlock bool
 	if agent.config.StartBlock != nil {
-		isAtLeastStartBlock = *agent.config.StartBlock >= n
+		isAtLeastStartBlock = blockNumber >= *agent.config.StartBlock
 	} else {
 		isAtLeastStartBlock = true
 	}
 
 	var isAtMostStopBlock bool
 	if agent.config.StopBlock != nil {
-		isAtMostStopBlock = *agent.config.StopBlock <= n
+		isAtMostStopBlock = blockNumber <= *agent.config.StopBlock
 	} else {
 		isAtMostStopBlock = true
 	}

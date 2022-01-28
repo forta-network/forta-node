@@ -88,6 +88,7 @@ func (s *Suite) TestStartProcessStop() {
 	blockResp := &protocol.EvaluateBlockResponse{Metadata: map[string]string{}}
 	s.agentClient.EXPECT().EvaluateTx(gomock.Any(), txReq).Return(txResp, nil)
 	s.agentClient.EXPECT().EvaluateBlock(gomock.Any(), blockReq).Return(blockResp, nil)
+	s.msgClient.EXPECT().Publish(messaging.SubjectScannerBlock, gomock.Any())
 	s.ap.SendEvaluateTxRequest(txReq)
 	s.ap.SendEvaluateBlockRequest(blockReq)
 	txResult := <-s.ap.TxResults()

@@ -67,6 +67,9 @@ type Publisher struct {
 	lastBatchSkipReason health.MessageTracker
 	lastBatchPublishErr health.ErrorTracker
 	lastMetricsFlush    health.TimeTracker
+
+	latestBlockInput   uint64
+	latestBlockInputMu sync.RWMutex
 }
 
 // TestAlertLogger logs the test alerts.
@@ -119,6 +122,14 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 	}
 	if pub.parent != "" {
 		batch.Parent = pub.parent
+	}
+
+	// use the latest block input from scanner, fall back to latest block number from the batch
+	pub.latestBlockInputMu.RLock()
+	batch.LatestBlockInput = pub.latestBlockInput
+	pub.latestBlockInputMu.RUnlock()
+	if batch.LatestBlockInput == 0 {
+		batch.LatestBlockInput = batch.BlockEnd
 	}
 
 	signedBatch, err := security.SignBatch(pub.cfg.Key, batch)
@@ -198,8 +209,26 @@ func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, 
 		pub.skipEmpty && batch.AlertCount == uint32(0)
 }
 
-func (pub *Publisher) listenForMetrics() {
+func (pub *Publisher) registerMessageHandlers() {
 	pub.messageClient.Subscribe(messaging.SubjectMetricAgent, messaging.AgentMetricHandler(pub.metricsAggregator.AddAgentMetrics))
+	pub.messageClient.Subscribe(messaging.SubjectScannerBlock, messaging.ScannerHandler(pub.handleScannerBlock))
+}
+
+func (pub *Publisher) handleScannerBlock(payload messaging.ScannerPayload) error {
+	pub.latestBlockInputMu.Lock()
+	defer pub.latestBlockInputMu.Unlock()
+
+	logger := log.WithFields(log.Fields{
+		"newLatestBlockInput":  payload.LatestBlockInput,
+		"prevLatestBlockInput": pub.latestBlockInput,
+	})
+	if payload.LatestBlockInput < pub.latestBlockInput {
+		logger.Warn("skipping scanner update (lower than previous)")
+		return nil
+	}
+	logger.Info("received scanner update")
+	pub.latestBlockInput = payload.LatestBlockInput
+	return nil
 }
 
 func (pub *Publisher) publishBatches() {
@@ -470,7 +499,7 @@ func (pub *Publisher) Start() error {
 
 	go pub.prepareBatches()
 	go pub.publishBatches()
-	go pub.listenForMetrics()
+	pub.registerMessageHandlers()
 
 	utils.GoGrpcServe(pub.server, lis)
 	return nil
