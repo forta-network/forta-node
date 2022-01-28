@@ -216,9 +216,18 @@ func (pub *Publisher) registerMessageHandlers() {
 
 func (pub *Publisher) handleScannerBlock(payload messaging.ScannerPayload) error {
 	pub.latestBlockInputMu.Lock()
+	defer pub.latestBlockInputMu.Unlock()
+
+	logger := log.WithFields(log.Fields{
+		"newLatestBlockInput":  payload.LatestBlockInput,
+		"prevLatestBlockInput": pub.latestBlockInput,
+	})
+	if payload.LatestBlockInput < pub.latestBlockInput {
+		logger.Warn("skipping scanner update (lower than previous)")
+		return nil
+	}
+	logger.Info("received scanner update")
 	pub.latestBlockInput = payload.LatestBlockInput
-	log.WithField("latestBlockInput", pub.latestBlockInput).Info("received latest update from scanner")
-	pub.latestBlockInputMu.Unlock()
 	return nil
 }
 
