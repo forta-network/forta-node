@@ -25,6 +25,7 @@ jobs:
         uses: WyriHaximus/github-action-get-previous-tag@v1
       - name: Find tag revision
         id: latest-tag-rev
+        run:
           $TAG_REV=$(git rev-list -n 1 ${{ steps.previoustag.outputs.tag }})
           ::set-output name=revision::$TAG_REV
       - name: Release
