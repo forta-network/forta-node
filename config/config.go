@@ -135,7 +135,7 @@ func GetConfigForContainer() (Config, error) {
 // apply defaults that apply in certain contexts
 func applyContextDefaults(cfg *Config) {
 	if cfg.ChainID == 1 {
-		cfg.Trace.Enabled = true
+		//cfg.Trace.Enabled = true
 	}
 	if cfg.ENSConfig.DefaultContract {
 		cfg.ENSConfig.ContractAddress = ""

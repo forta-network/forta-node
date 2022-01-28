@@ -1,11 +1,12 @@
 package metrics
 
 import (
+	"time"
+
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/protocol"
-	"time"
 )
 
 const (

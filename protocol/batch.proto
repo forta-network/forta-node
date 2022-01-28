@@ -26,6 +26,7 @@ message AlertBatch {
   ScannerVersion scannerVersion = 9;
   string parent = 10;
   repeated AgentAlerts privateAlerts = 11;
+  uint64 latestBlockInput = 12;
 }
 
 message BlockResults {

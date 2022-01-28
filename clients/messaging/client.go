@@ -52,6 +52,7 @@ func NewClient(name, natsURL string) *Client {
 // AgentsHandler handles agents.* subjects.
 type AgentsHandler func(AgentPayload) error
 type AgentMetricHandler func(*protocol.AgentMetricList) error
+type ScannerHandler func(ScannerPayload) error
 
 // Subscribe subscribes the consumer to this client.
 func (client *Client) Subscribe(subject string, handler interface{}) {
@@ -69,6 +70,7 @@ func (client *Client) Subscribe(subject string, handler interface{}) {
 				break
 			}
 			err = h(payload)
+
 		case AgentMetricHandler:
 			var payload protocol.AgentMetricList
 			err = proto.Unmarshal(m.Data, &payload)
@@ -76,6 +78,15 @@ func (client *Client) Subscribe(subject string, handler interface{}) {
 				break
 			}
 			err = h(&payload)
+
+		case ScannerHandler:
+			var payload ScannerPayload
+			err = json.Unmarshal(m.Data, &payload)
+			if err != nil {
+				break
+			}
+			err = h(payload)
+
 		default:
 			logger.Panicf("no handler found")
 		}

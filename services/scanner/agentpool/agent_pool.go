@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/forta-protocol/forta-node/metrics"
 
 	"github.com/forta-protocol/forta-node/clients"
@@ -192,6 +193,12 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 			"duration": time.Since(startTime),
 		}).Debug("sent tx request to evalBlockCh")
 	}
+
+	blockNumber, _ := hexutil.DecodeUint64(req.Event.BlockNumber)
+	ap.msgClient.Publish(messaging.SubjectScannerBlock, &messaging.ScannerPayload{
+		LatestBlockInput: blockNumber,
+	})
+
 	metrics.SendAgentMetrics(ap.msgClient, metricsList)
 	lg.WithFields(log.Fields{
 		"duration": time.Since(startTime),
