@@ -69,7 +69,7 @@ runs:
       env:
         BUILD_BUCKET_NAME: ${{ inputs.build_artifacts_bucket_name }}
         RELEASES_BUCKET_NAME: ${{ inputs.release_artifacts_bucket_name }}
-        REVISION: ${{ env.forta_revision }}
+        REVISION: ${{ inputs.revision }}
       run: |
         aws s3 cp "s3://$BUILD_BUCKET_NAME/forta-$REVISION" "s3://$RELEASES_BUCKET_NAME/artifacts/forta-$REVISION"
         aws s3 cp "s3://$BUILD_BUCKET_NAME/forta-$REVISION" "s3://$RELEASES_BUCKET_NAME/artifacts/forta"
