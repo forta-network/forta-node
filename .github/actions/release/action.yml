@@ -1,0 +1,204 @@
+name: 'Release Forta'
+description: 'Release Forta'
+inputs:
+  version:
+    description: 'Semver tag'
+    required: true
+  revision:
+    description: 'Git revision'
+    required: true
+  aws_access_key:
+    description: 'AWS Access Key'
+    required: true
+  aws_secret_key:
+    description: 'AWS Secret Key'
+    required: true
+  build_artifacts_bucket_name:
+    description: 'AWS build artifacts bucket name'
+    required: true
+  release_artifacts_bucket_name:
+    description: 'AWS release artifacts bucket name'
+    required: true
+  release_artifacts_url:
+    description: 'URL for the publicly accessible release artifacts'
+    required: true
+  dist_base_url:
+    description: 'URL for the publicly accessible distributions'
+    required: true
+  pgp_key_name:
+    description: 'PGP key name saved in GPG'
+    required: true
+  pgp_private_key:
+    description: 'Release PGP private key'
+    required: true
+  pgp_public_key:
+    description: 'Release PGP public key'
+    required: true
+  pgp_passphrase:
+    description: 'Passphrase for the PGP key'
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Install tools
+      shell: bash
+      run: |
+        sudo apt-get update &> /dev/null
+        sudo apt-get install tree gpg rpm createrepo aptly devscripts build-essential lintian
+        sudo apt-get install -t bionic-backports debhelper
+        sudo apt-get install gnupg1 gpgv1
+
+        sudo mv /usr/bin/gpg /usr/bin/gpg2 # have no default
+        sudo ln -sf /usr/bin/gpg1 /usr/bin/gpg # make gpg1 default
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ inputs.aws_access_key }}
+        aws-secret-access-key: ${{ inputs.aws_secret_key }}
+        aws-region: us-east-1
+    - name: Read release revision
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        echo "forta_semver=${VERSION/v/}" >> $GITHUB_ENV
+    - name: Copy build artifact to release artifacts bucket
+      shell: bash
+      env:
+        BUILD_BUCKET_NAME: ${{ inputs.build_artifacts_bucket_name }}
+        RELEASES_BUCKET_NAME: ${{ inputs.release_artifacts_bucket_name }}
+        REVISION: ${{ env.forta_revision }}
+      run: |
+        aws s3 cp "s3://$BUILD_BUCKET_NAME/forta-$REVISION" "s3://$RELEASES_BUCKET_NAME/artifacts/forta-$REVISION"
+        aws s3 cp "s3://$BUILD_BUCKET_NAME/forta-$REVISION" "s3://$RELEASES_BUCKET_NAME/artifacts/forta"
+    - name: Import PGP private key
+      shell: bash
+      env:
+        PRIVATE_KEY: ${{ inputs.pgp_private_key }}
+        PASSPHRASE: ${{ inputs.pgp_passphrase }}
+      run: |
+        echo "$PRIVATE_KEY" > pgp.private
+        gpg --passphrase "$PASSPHRASE" --import pgp.private
+    - name: Import and publish PGP public key
+      shell: bash
+      env:
+        PUBLIC_KEY: ${{ inputs.pgp_public_key }}
+        RELEASES_BUCKET_NAME: ${{ inputs.release_artifacts_bucket_name }}
+      run: |
+        echo "$PUBLIC_KEY" > pgp.public
+        gpg --passphrase "$PASSPHRASE" --no-default-keyring --keyring trustedkeys.gpg  --import pgp.public
+        aws s3 cp pgp.public "s3://$RELEASES_BUCKET_NAME/pgp.public"
+
+    # Release for APT
+    - name: Build Debian package
+      shell: bash
+      env:
+        RELEASE_ARTIFACTS_URL: ${{ inputs.release_artifacts_url }}
+        REVISION: ${{ inputs.revision }}
+        SEMVER: ${{ env.forta_semver }}
+      run: |
+        MAJOR_MINOR=$(./scripts/major-minor.sh $SEMVER)
+        DEBIAN_VERSION=$(./scripts/debian-version.sh $SEMVER)
+
+        cp systemd/forta.service apt/debian
+        cd apt
+        FORTA_DIR="forta-$SEMVER"
+
+        cp -r forta-x "$FORTA_DIR"
+        sed -i "s,ARTIFACTS_URL,$RELEASE_ARTIFACTS_URL,g" "$FORTA_DIR/Makefile"
+        sed -i "s,REVISION,$REVISION,g" "$FORTA_DIR/Makefile"
+        cp -r "$FORTA_DIR" "$FORTA_DIR.orig"
+        tar czvf "forta_$SEMVER.orig.tar.gz" "$FORTA_DIR"
+        tar czvf "forta_$MAJOR_MINOR.orig.tar.gz" "$FORTA_DIR"
+
+        cp -r debian "$FORTA_DIR"
+        sed -i "s,DEBIAN_VERSION,$DEBIAN_VERSION,g" "$FORTA_DIR/debian/changelog"
+
+        cd "$FORTA_DIR"
+        debuild
+        cd ..
+    - name: Initialize Aptly
+      shell: bash
+      env:
+        RELEASES_BUCKET_NAME: ${{ inputs.release_artifacts_bucket_name }}
+        AWS_ACCESS_KEY: ${{ inputs.aws_access_key }}
+        AWS_SECRET_KEY: ${{ inputs.aws_secret_key }}
+        APT_REPOSITORIES_URL: ${{ inputs.dist_base_url }}/repositories/apt
+      run: |
+        ./scripts/init-aptly.sh us-east-1 $RELEASES_BUCKET_NAME $AWS_ACCESS_KEY $AWS_SECRET_KEY $APT_REPOSITORIES_URL
+    - name: Add Debian package to Aptly repo and publish
+      shell: bash
+      env:
+        REVISION: ${{ env.forta_revision }}
+        SEMVER: ${{ env.forta_semver }}
+        GPG_NAME: ${{ inputs.pgp_key_name }}
+        PASSPHRASE: ${{ secrets.pgp_passphrase }}
+      run: |
+        ./scripts/aptly-publish.sh $REVISION $SEMVER $GPG_NAME $PASSPHRASE
+
+    # Release for YUM
+    - name: Switch back to gpg2
+      shell: bash
+      run: |
+        sudo ln -sf /usr/bin/gpg2 /usr/bin/gpg
+    - name: Get RPM spec file ready for env release
+      shell: bash
+      env:
+        RELEASE_ARTIFACTS_URL: ${{ inputs.release_artifacts_url }}
+        REVISION: ${{ env.forta_revision }}
+        SEMVER: ${{ env.forta_semver }}
+      run: |
+        sed -i "s,ARTIFACTS_URL,$RELEASE_ARTIFACTS_URL,g" yum/forta.spec
+        sed -i "s/REVISION/$REVISION/g" yum/forta.spec
+        sed -i "s,SEMVER,$SEMVER,g" yum/forta.spec
+    - name: Prepare .rpmmacros so we can sign the RPM package
+      shell: bash
+      env:
+        GPG_NAME: ${{ inputs.pgp_key_name }}
+        PASSPHRASE: ${{ inputs.pgp_passphrase }}
+      run: |
+        sed -i "s/GPG_NAME/$GPG_NAME/g" .rpmmacros
+        sed -i "s/PASSPHRASE/$PASSPHRASE/g" .rpmmacros
+        cp .rpmmacros ~/.rpmmacros
+    - name: Build and sign RPM package
+      shell: bash
+      run: |
+        SYSTEMD_USER_DIR=yum/rpmbuild/BUILDROOT/usr/lib/systemd/system
+        mkdir -p $SYSTEMD_USER_DIR
+        cp systemd/forta.service $SYSTEMD_USER_DIR
+        rpmbuild -v --define "_topdir `pwd`/yum/rpmbuild" --define "buildroot `pwd`/yum/rpmbuild/BUILDROOT" --target x86_64 -bb yum/forta.spec
+        tree yum
+        rpm --addsign yum/rpmbuild/RPMS/**/*.rpm
+    - name: Re-create and sign local YUM repository
+      shell: bash
+      env:
+        RELEASES_BUCKET_NAME: ${{ inputs.release_artifacts_bucket_name }}
+      run: |
+        mkdir -p yum/repo-dev/{Packages,repodata}
+        aws s3 cp --recursive "s3://$RELEASES_BUCKET_NAME/repositories/yum" yum/repo-dev
+        cp -f yum/rpmbuild/RPMS/**/*.rpm yum/repo-dev/Packages
+        rm -f yum/repo-dev/repodata/*
+        createrepo yum/repo-dev
+        gpg --detach-sign --armor yum/repo-dev/repodata/repomd.xml
+    - name: Put PGP private key for YUM env-release
+      shell: bash
+      env:
+        PUBLIC_KEY: ${{ inputs.pgp_public_key }}
+      run: |
+        echo "$PUBLIC_KEY" > yum/repo-dev/pgp.public
+    - name: Put YUM repository file for env release
+      shell: bash
+      env:
+        BASE_URL: ${{ inputs.dist_base_url }}
+      run: |
+        sed -i "s,BASE_URL,$BASE_URL,g" yum/Forta.repo
+        cp yum/Forta.repo yum/repo-dev
+    - name: Replace remote YUM repository
+      shell: bash
+      env:
+        RELEASES_BUCKET_NAME: ${{ inputs.release_artifacts_bucket_name }}
+      run: |
+        aws s3 rm "s3://$RELEASES_BUCKET_NAME/repositories/yum"
+        aws s3 cp --recursive yum/repo-dev "s3://$RELEASES_BUCKET_NAME/repositories/yum"

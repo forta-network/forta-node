@@ -1,0 +1,3 @@
+%_signature gpg
+%_gpg_name GPG_NAME
+%__gpg_sign_cmd %{__gpg} gpg --no-verbose --no-armor --pinentry-mode loopback --passphrase PASSPHRASE %{?_gpg_digest_algo:--digest-algo %{_gpg_digest_algo}} %{?_gpg_sign_cmd_extra_args:%{_gpg_sign_cmd_extra_args}} -u "%{_gpg_name}" -sbo %{__signature_filename} %{__plaintext_filename}
