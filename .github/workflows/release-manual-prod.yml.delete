@@ -1,17 +1,16 @@
-name: Release Dev
+name: Manually release prod with latest tag
 
 on:
   push:
     branches: [master]
   workflow_dispatch:
     branches: [master]
-  pull_request:
 
 jobs:
   release:
-    name: Release dev
+    name: Release prod
     runs-on: ubuntu-18.04
-    environment: dev
+    environment: prod
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -31,13 +30,13 @@ jobs:
         with:
           version: ${{ steps.latest-tag.outputs.tag }}
           revision: ${{ steps.latest-tag-rev.outputs.revision }}
-          aws_access_key: ${{ secrets.DEV_RELEASE_AWS_ACCESS_KEY }}
-          aws_secret_key: ${{ secrets.DEV_RELEASE_AWS_SECRET_KEY }}
-          build_artifacts_bucket_name: dev-forta-build-artifacts
-          release_artifacts_bucket_name: dev-forta-releases
-          release_artifacts_url: https://dist-dev.forta.network/artifacts
-          dist_base_url: https://dist-dev.forta.network
-          pgp_key_name: ${{ secrets.DEV_PGP_KEY_NAME }}
-          pgp_private_key: ${{ secrets.DEV_PGP_PRIVATE_KEY }}
-          pgp_public_key: ${{ secrets.DEV_PGP_PUBLIC_KEY }}
-          pgp_passphrase: ${{ secrets.DEV_PGP_PASSPHRASE }}
+          aws_access_key: ${{ secrets.PROD_RELEASE_AWS_ACCESS_KEY }}
+          aws_secret_key: ${{ secrets.PROD_RELEASE_AWS_SECRET_KEY }}
+          build_artifacts_bucket_name: prod-forta-build-artifacts
+          release_artifacts_bucket_name: prod-forta-releases
+          release_artifacts_url: https://dist.forta.network/artifacts
+          dist_base_url: https://dist.forta.network
+          pgp_key_name: ${{ secrets.PROD_PGP_KEY_NAME }}
+          pgp_private_key: ${{ secrets.PROD_PGP_PRIVATE_KEY }}
+          pgp_public_key: ${{ secrets.PROD_PGP_PUBLIC_KEY }}
+          pgp_passphrase: ${{ secrets.PROD_PGP_PASSPHRASE }}

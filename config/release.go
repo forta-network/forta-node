@@ -10,13 +10,14 @@ import (
 var (
 	CommitHash = ""
 	ReleaseCid = ""
+	Version    = ""
 )
 
 // ReleaseSummary contains concise release info.
 type ReleaseSummary struct {
-	Commit string `json:"commit,omitempty"`
-	IPFS   string `json:"ipfs,omitempty"`
-	// Version string `json:"version,omitempty"` TODO: Use this when semver is injected
+	Commit  string `json:"commit,omitempty"`
+	IPFS    string `json:"ipfs,omitempty"`
+	Version string `json:"version,omitempty"`
 }
 
 // GetBuildReleaseSummary returns the build summary from build vars.
@@ -26,8 +27,9 @@ func GetBuildReleaseSummary() (*ReleaseSummary, bool) {
 	}
 
 	return &ReleaseSummary{
-		Commit: CommitHash,
-		IPFS:   ReleaseCid,
+		Commit:  CommitHash,
+		IPFS:    ReleaseCid,
+		Version: Version,
 	}, true
 }
 
@@ -96,10 +98,11 @@ type ReleaseManifest struct {
 
 // Release contains release data.
 type Release struct {
-	Timestamp  string          `json:"timestamp"`
-	Repository string          `json:"repository"`
-	Commit     string          `json:"commit"`
-	Services   ReleaseServices `json:"services"`
+	Timestamp      string          `json:"timestamp"`
+	Repository     string          `json:"repository"`
+	ReleaseVersion string          `json:"releaseVersion"`
+	Commit         string          `json:"commit"`
+	Services       ReleaseServices `json:"services"`
 }
 
 // ReleaseServices are the services to run for scanner node.
