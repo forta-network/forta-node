@@ -10,7 +10,7 @@ MIRROR_URL="$5"
 
 cd "$HOME" || exit 1
 
-aptly mirror create fortamirror "$MIRROR_URL" stable # we refer to where we publish as a mirror here, to load light packages
+aptly mirror create fortamirror "$MIRROR_URL" stable # we refer to where we publish as a mirror here, to load packages
 aptly mirror update fortamirror
 aptly repo create forta
 aptly repo import fortamirror forta forta
