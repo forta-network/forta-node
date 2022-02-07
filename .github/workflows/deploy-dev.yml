@@ -9,6 +9,7 @@ on:
 
 env:
   DEFAULT_DEV_VERSION: v0.4.0
+  OTHER_VAR: '12345'
 
 jobs:
   containers:
