@@ -116,8 +116,9 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 	// add release info if it's available
 	if pub.cfg.ReleaseSummary != nil {
 		batch.ScannerVersion = &protocol.ScannerVersion{
-			Commit: pub.cfg.ReleaseSummary.Commit,
-			Ipfs:   pub.cfg.ReleaseSummary.IPFS,
+			Commit:  pub.cfg.ReleaseSummary.Commit,
+			Ipfs:    pub.cfg.ReleaseSummary.IPFS,
+			Version: pub.cfg.ReleaseSummary.Version,
 		}
 	}
 	if pub.parent != "" {

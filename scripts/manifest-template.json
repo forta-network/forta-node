@@ -2,7 +2,7 @@
   "release": {
     "timestamp": "%TIMESTAMP%",
     "repository": "https://github.com/forta-protocol/forta-node",
-    "imageVersion": "%VERSION%",
+    "version": "%VERSION%",
     "commit": "%COMMIT_SHA%",
     "services": {
       "updater": "%NODE_IMAGE%",

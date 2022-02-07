@@ -40,7 +40,8 @@ func GetBuildReleaseInfo() *ReleaseInfo {
 		IPFS:      ReleaseCid,
 		Manifest: ReleaseManifest{
 			Release: Release{
-				Commit: CommitHash,
+				Version: Version,
+				Commit:  CommitHash,
 			},
 		},
 	}
@@ -86,8 +87,9 @@ func MakeSummaryFromReleaseInfo(releaseInfo *ReleaseInfo) *ReleaseSummary {
 		return nil
 	}
 	return &ReleaseSummary{
-		Commit: releaseInfo.Manifest.Release.Commit,
-		IPFS:   releaseInfo.IPFS,
+		Commit:  releaseInfo.Manifest.Release.Commit,
+		IPFS:    releaseInfo.IPFS,
+		Version: releaseInfo.Manifest.Release.Version,
 	}
 }
 
@@ -98,11 +100,11 @@ type ReleaseManifest struct {
 
 // Release contains release data.
 type Release struct {
-	Timestamp      string          `json:"timestamp"`
-	Repository     string          `json:"repository"`
-	ReleaseVersion string          `json:"releaseVersion"`
-	Commit         string          `json:"commit"`
-	Services       ReleaseServices `json:"services"`
+	Timestamp  string          `json:"timestamp"`
+	Repository string          `json:"repository"`
+	Version    string          `json:"version"`
+	Commit     string          `json:"commit"`
+	Services   ReleaseServices `json:"services"`
 }
 
 // ReleaseServices are the services to run for scanner node.

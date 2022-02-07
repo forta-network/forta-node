@@ -60,4 +60,5 @@ message BatchAgent {
 message ScannerVersion {
   string commit = 1;
   string ipfs = 2;
+  string version = 3;
 }
