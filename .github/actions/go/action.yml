@@ -1,0 +1,30 @@
+name: Go
+description: Validate and test Go code
+runs:
+  using: composite
+  steps:
+  - uses: actions/checkout@v2
+  - name: Set up Go
+    uses: actions/setup-go@v2
+    with:
+      go-version: 1.16
+  - name: Install Protoc
+    uses: arduino/setup-protoc@v1
+  - name: Install protoc-gen-go-grpc
+    shell: bash
+    run: |
+      go get -u github.com/golang/protobuf/protoc-gen-go
+      go get -u google.golang.org/grpc/cmd/protoc-gen-go-grpc
+      go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
+  - name: Install mockgen
+    shell: bash
+    run: go install github.com/golang/mock/mockgen@v1.5.0
+  - name: Make Protocol
+    shell: bash
+    run: make proto
+  - name: Build
+    shell: bash
+    run: go build -v ./...
+  - name: Test
+    shell: bash
+    run: make test

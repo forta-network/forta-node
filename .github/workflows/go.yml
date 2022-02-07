@@ -1,32 +1,14 @@
 name: Go
 
 on:
-  push:
-    branches: [ master ]
   pull_request:
 
 jobs:
-
-  build:
+  go:
+    name: Go
     runs-on: ubuntu-latest
+    environment: prod
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.16
-    - name: Install Protoc
-      uses: arduino/setup-protoc@v1
-    - name: Install protoc-gen-go-grpc
-      run: |
-        go get -u github.com/golang/protobuf/protoc-gen-go
-        go get -u google.golang.org/grpc/cmd/protoc-gen-go-grpc
-        go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
-    - name: Install mockgen
-      run: go install github.com/golang/mock/mockgen@v1.5.0
-    - name: Make Protocol
-      run: make proto
-    - name: Build
-      run: go build -v ./...
-    - name: Test
-      run: make test
+      - name: Validate and test Go code
+        id: go
+        uses: ./.github/actions/go

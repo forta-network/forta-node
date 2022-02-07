@@ -1,14 +1,22 @@
-name: Release prod
+name: Release to Prod
 
 on:
-  workflow_dispatch: 
-    branches: [ master ]
   release:
     types: [released]
 
 jobs:
+  go:
+    name: Go
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - name: Validate and test Go code
+        id: go
+        uses: ./.github/actions/go
+
   containers:
     name: Build and push containers
+    needs: go
     runs-on: ubuntu-latest
     environment: prod
     outputs:
@@ -96,10 +104,10 @@ jobs:
           aws s3 cp forta "s3://$BUCKET_NAME/forta-$REVISION"
 
   release:
-    name: Release dev
+    name: Release to prod
     needs: build
     runs-on: ubuntu-18.04
-    environment: dev
+    environment: prod
     steps:
       - name: Checkout
         uses: actions/checkout@v2
