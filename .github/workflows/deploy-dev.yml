@@ -5,6 +5,10 @@ on:
     branches: [master]
   workflow_dispatch:
     branches: [master]
+  pull_request:
+
+env:
+  DEFAULT_DEV_VERSION: v0.4.0
 
 jobs:
   containers:
@@ -34,6 +38,7 @@ jobs:
         with:
           registry: disco-dev.forta.network
           name: ${{ matrix.image-name }}
+          version: ${{ DEFAULT_DEV_VERSION }}
       - name: Write output values
         id: write-output
         run: |
@@ -79,7 +84,7 @@ jobs:
       - name: Create build for revision
         run: |
           ./scripts/build.sh ${{ needs.containers.outputs.node-image-ref }} \
-            'remote' ${{ needs.containers.outputs.node-release-cid }} ${{ github.sha }}
+            'remote' ${{ needs.containers.outputs.node-release-cid }} ${{ github.sha }} ${{ DEFAULT_DEV_VERSION }}
           chmod 755 forta
       - name: Configure AWS credentials (build artifact -> S3)
         uses: aws-actions/configure-aws-credentials@v1
@@ -125,3 +130,27 @@ jobs:
           s3_bucket: dev-forta-codedeploy
           s3_folder: dev
           directory: ./dist/
+
+  release:
+    name: Release dev
+    runs-on: ubuntu-18.04
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Release
+        id: release
+        uses: ./.github/actions/release
+        with:
+          version: ${{ DEFAULT_DEV_VERSION }}
+          revision: ${{ github.sha }}
+          aws_access_key: ${{ secrets.DEV_RELEASE_AWS_ACCESS_KEY }}
+          aws_secret_key: ${{ secrets.DEV_RELEASE_AWS_SECRET_KEY }}
+          build_artifacts_bucket_name: dev-forta-build-artifacts
+          release_artifacts_bucket_name: dev-forta-releases
+          release_artifacts_url: https://dist-dev.forta.network/artifacts
+          dist_base_url: https://dist-dev.forta.network
+          pgp_key_name: ${{ secrets.DEV_PGP_KEY_NAME }}
+          pgp_private_key: ${{ secrets.DEV_PGP_PRIVATE_KEY }}
+          pgp_public_key: ${{ secrets.DEV_PGP_PUBLIC_KEY }}
+          pgp_passphrase: ${{ secrets.DEV_PGP_PASSPHRASE }}
