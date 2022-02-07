@@ -39,6 +39,7 @@ func initPublisher(ctx context.Context, cfg config.Config) (*publisher.Publisher
 		Key:             key,
 		PublisherConfig: cfg.Publish,
 		ReleaseSummary:  releaseSummary,
+		Config:          cfg,
 	})
 }
 
