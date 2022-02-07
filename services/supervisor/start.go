@@ -85,6 +85,9 @@ func (sup *SupervisorService) start() error {
 	if err != nil {
 		return fmt.Errorf("failed to get full release info: %v", err)
 	}
+	if releaseInfo != nil {
+		config.LogReleaseInfo(releaseInfo)
+	}
 
 	sup.maxLogSize = sup.config.Config.Log.MaxLogSize
 	sup.maxLogFiles = sup.config.Config.Log.MaxLogFiles

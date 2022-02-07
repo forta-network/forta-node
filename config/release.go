@@ -72,13 +72,23 @@ func ReleaseInfoFromString(s string) *ReleaseInfo {
 	var releaseInfo ReleaseInfo
 	json.Unmarshal([]byte(s), &releaseInfo)
 	if len(releaseInfo.Manifest.Release.Commit) > 0 {
-		log.WithFields(log.Fields{
-			"commit":    releaseInfo.Manifest.Release.Commit,
-			"ipfs":      releaseInfo.IPFS,
-			"fromBuild": releaseInfo.FromBuild,
-		}).Info("found release info")
+		LogReleaseInfo(&releaseInfo)
 	}
 	return &releaseInfo
+}
+
+// LogReleaseInfo logs the release info.
+func LogReleaseInfo(releaseInfo *ReleaseInfo) {
+	if releaseInfo == nil {
+		return
+	}
+	log.WithFields(log.Fields{
+		"commit":    releaseInfo.Manifest.Release.Commit,
+		"version":   releaseInfo.Manifest.Release.Version,
+		"timestamp": releaseInfo.Manifest.Release.Timestamp,
+		"ipfs":      releaseInfo.IPFS,
+		"fromBuild": releaseInfo.FromBuild,
+	}).Info("release info")
 }
 
 // MakeSummaryFromReleaseInfo transforms the release info into a more compact and common form.
