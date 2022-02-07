@@ -3,7 +3,6 @@ description: Validate and test Go code
 runs:
   using: composite
   steps:
-  - uses: actions/checkout@v2
   - name: Set up Go
     uses: actions/setup-go@v2
     with:
