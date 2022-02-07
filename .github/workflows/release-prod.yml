@@ -44,7 +44,7 @@ jobs:
         with:
           registry: disco.forta.network
           name: ${{ matrix.image-name }}
-          version: ${{ github.ref }}
+          version: ${{ github.ref_name }}
       - name: Write image reference as output
         id: write-output
         run: |
@@ -90,7 +90,7 @@ jobs:
       - name: Create build for revision
         run: |
           ./scripts/build.sh ${{ needs.containers.outputs.node-image-ref }} \
-            'remote' ${{ needs.containers.outputs.node-release-cid }} ${{ github.sha }} ${{ github.ref }}
+            'remote' ${{ needs.containers.outputs.node-release-cid }} ${{ github.sha }} ${{ github.ref_name }}
           chmod 755 forta
       - name: Configure AWS credentials (build artifact -> S3)
         uses: aws-actions/configure-aws-credentials@v1
@@ -117,7 +117,7 @@ jobs:
         id: release
         uses: ./.github/actions/release
         with:
-          version: ${{ github.ref }}
+          version: ${{ github.ref_name }}
           revision: ${{ github.sha }}
           aws_access_key: ${{ secrets.PROD_RELEASE_AWS_ACCESS_KEY }}
           aws_secret_key: ${{ secrets.PROD_RELEASE_AWS_SECRET_KEY }}
