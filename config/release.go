@@ -10,13 +10,14 @@ import (
 var (
 	CommitHash = ""
 	ReleaseCid = ""
+	Version    = ""
 )
 
 // ReleaseSummary contains concise release info.
 type ReleaseSummary struct {
-	Commit string `json:"commit,omitempty"`
-	IPFS   string `json:"ipfs,omitempty"`
-	// Version string `json:"version,omitempty"` TODO: Use this when semver is injected
+	Commit  string `json:"commit,omitempty"`
+	IPFS    string `json:"ipfs,omitempty"`
+	Version string `json:"version,omitempty"`
 }
 
 // GetBuildReleaseSummary returns the build summary from build vars.
@@ -26,8 +27,9 @@ func GetBuildReleaseSummary() (*ReleaseSummary, bool) {
 	}
 
 	return &ReleaseSummary{
-		Commit: CommitHash,
-		IPFS:   ReleaseCid,
+		Commit:  CommitHash,
+		IPFS:    ReleaseCid,
+		Version: Version,
 	}, true
 }
 
@@ -38,7 +40,8 @@ func GetBuildReleaseInfo() *ReleaseInfo {
 		IPFS:      ReleaseCid,
 		Manifest: ReleaseManifest{
 			Release: Release{
-				Commit: CommitHash,
+				Version: Version,
+				Commit:  CommitHash,
 			},
 		},
 	}
@@ -69,13 +72,23 @@ func ReleaseInfoFromString(s string) *ReleaseInfo {
 	var releaseInfo ReleaseInfo
 	json.Unmarshal([]byte(s), &releaseInfo)
 	if len(releaseInfo.Manifest.Release.Commit) > 0 {
-		log.WithFields(log.Fields{
-			"commit":    releaseInfo.Manifest.Release.Commit,
-			"ipfs":      releaseInfo.IPFS,
-			"fromBuild": releaseInfo.FromBuild,
-		}).Info("found release info")
+		LogReleaseInfo(&releaseInfo)
 	}
 	return &releaseInfo
+}
+
+// LogReleaseInfo logs the release info.
+func LogReleaseInfo(releaseInfo *ReleaseInfo) {
+	if releaseInfo == nil {
+		return
+	}
+	log.WithFields(log.Fields{
+		"commit":    releaseInfo.Manifest.Release.Commit,
+		"version":   releaseInfo.Manifest.Release.Version,
+		"timestamp": releaseInfo.Manifest.Release.Timestamp,
+		"ipfs":      releaseInfo.IPFS,
+		"fromBuild": releaseInfo.FromBuild,
+	}).Info("release info")
 }
 
 // MakeSummaryFromReleaseInfo transforms the release info into a more compact and common form.
@@ -84,8 +97,9 @@ func MakeSummaryFromReleaseInfo(releaseInfo *ReleaseInfo) *ReleaseSummary {
 		return nil
 	}
 	return &ReleaseSummary{
-		Commit: releaseInfo.Manifest.Release.Commit,
-		IPFS:   releaseInfo.IPFS,
+		Commit:  releaseInfo.Manifest.Release.Commit,
+		IPFS:    releaseInfo.IPFS,
+		Version: releaseInfo.Manifest.Release.Version,
 	}
 }
 
@@ -98,6 +112,7 @@ type ReleaseManifest struct {
 type Release struct {
 	Timestamp  string          `json:"timestamp"`
 	Repository string          `json:"repository"`
+	Version    string          `json:"version"`
 	Commit     string          `json:"commit"`
 	Services   ReleaseServices `json:"services"`
 }

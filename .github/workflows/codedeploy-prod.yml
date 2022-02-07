@@ -1,0 +1,68 @@
+name: CodeDeploy to Prod (All Scanners)
+
+on:
+  workflow_dispatch:
+    branches: [ master ]
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - name: Clear artifacts
+        uses: kolpav/purge-artifacts-action@v1
+        continue-on-error: true
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          expire-in: 7days
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Configure AWS credentials (S3 -> local build artifact)
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.PROD_RELEASE_AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.PROD_RELEASE_AWS_SECRET_KEY }}
+          aws-region: us-east-1
+      - name: Copy latest build from build artifacts bucket
+        env:
+          BUCKET_NAME: ${{ secrets.PROD_BUILD_ARTIFACTS_BUCKET_NAME }}
+          REVISION: ${{ github.sha }}
+        run: |
+          aws s3 cp "s3://$BUCKET_NAME/forta" forta
+          chmod 755 forta
+
+      - name: Prepare Distribution
+        run: |
+          mkdir dist
+          cp forta dist/
+          cp appspec.yml dist/
+          cp -R scripts dist/
+      - name: Zip Distribution
+        uses: vimtor/action-zip@v1
+        with:
+          files: dist/
+          dest: deploy.zip
+      - uses: actions/upload-artifact@v1
+        with:
+          name: deploy-artifact
+          path: ${{ github.workspace }}/deploy.zip
+
+      - name: Configure AWS credentials (CodeDeploy)
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.PROD_DEPLOY_AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.PROD_DEPLOY_AWS_SECRET_KEY }}
+          aws-region: us-east-1
+      - name: AWS CodeDeploy
+        uses: sourcetoad/aws-codedeploy-action@v1
+        with:
+          aws_access_key: ${{ secrets.PROD_DEPLOY_AWS_ACCESS_KEY }}
+          aws_secret_key: ${{ secrets.PROD_DEPLOY_AWS_SECRET_KEY }}
+          aws_region: us-east-1
+          codedeploy_name: prod-forta-node
+          codedeploy_group: prod-forta-deploy-group
+          s3_bucket: prod-forta-codedeploy
+          s3_folder: prod
+          directory: ./dist/

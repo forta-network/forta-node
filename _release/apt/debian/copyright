@@ -1,0 +1,14 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: forta
+Upstream-Contact: info@forta.org
+Source: https://github.com/forta-protocol/forta-node
+#
+# Please double check copyright with the licensecheck(1) command.
+
+Files:     Makefile
+Copyright: FIXME
+License:   FIXME
+
+#----------------------------------------------------------------------------
+# License file: LICENSE
+ No license.

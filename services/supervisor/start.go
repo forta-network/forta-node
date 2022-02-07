@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ipfs/go-cid"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/forta-protocol/forta-node/clients"
@@ -16,6 +17,7 @@ import (
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/security"
+	"github.com/forta-protocol/forta-node/store"
 )
 
 // SupervisorService manages the scanner node's service and agent containers.
@@ -23,6 +25,7 @@ type SupervisorService struct {
 	ctx          context.Context
 	client       clients.DockerClient
 	globalClient clients.DockerClient
+	ipfsClient   store.IPFSClient
 
 	msgClient   clients.MessageClient
 	config      SupervisorServiceConfig
@@ -78,6 +81,13 @@ func (sup *SupervisorService) start() error {
 		return fmt.Errorf("supervisor needs to know $%s to mount to the other containers it runs", config.EnvHostFortaDir)
 	}
 	releaseInfo := config.ReleaseInfoFromString(os.Getenv(config.EnvReleaseInfo))
+	releaseInfo, err = sup.getFullReleaseInfo(releaseInfo)
+	if err != nil {
+		return fmt.Errorf("failed to get full release info: %v", err)
+	}
+	if releaseInfo != nil {
+		config.LogReleaseInfo(releaseInfo)
+	}
 
 	sup.maxLogSize = sup.config.Config.Log.MaxLogSize
 	sup.maxLogFiles = sup.config.Config.Log.MaxLogFiles
@@ -279,6 +289,28 @@ func (sup *SupervisorService) doSyncTelemetryData() error {
 	)
 }
 
+// complete release info in case runner is old and starts supervisor by providing missing release properties
+func (sup *SupervisorService) getFullReleaseInfo(releaseInfo *config.ReleaseInfo) (*config.ReleaseInfo, error) {
+	if releaseInfo == nil {
+		return nil, nil
+	}
+	if len(releaseInfo.IPFS) == 0 {
+		return releaseInfo, nil
+	}
+	if _, err := cid.Parse(releaseInfo.IPFS); err != nil {
+		return releaseInfo, nil
+	}
+	fullReleaseManifest, err := sup.ipfsClient.GetReleaseManifest(releaseInfo.IPFS)
+	if err != nil {
+		return nil, err
+	}
+	return &config.ReleaseInfo{
+		FromBuild: false,
+		IPFS:      releaseInfo.IPFS,
+		Manifest:  *fullReleaseManifest,
+	}, nil
+}
+
 func (sup *SupervisorService) Stop() error {
 	sup.mu.RLock()
 	defer sup.mu.RUnlock()
@@ -338,10 +370,12 @@ func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*Su
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the global docker client: %v", err)
 	}
+	ipfsClient := store.NewIPFSClient(cfg.Config.Registry.IPFS.GatewayURL)
 	return &SupervisorService{
 		ctx:          ctx,
 		client:       dockerClient,
 		globalClient: globalClient,
+		ipfsClient:   ipfsClient,
 		config:       cfg,
 		healthClient: health.NewClient(),
 	}, nil

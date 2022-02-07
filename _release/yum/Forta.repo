@@ -1,0 +1,7 @@
+[forta]
+name=Forta
+metadata_expire=1
+enabled=1
+gpgcheck=1
+baseurl=BASE_URL/repositories/yum
+gpgkey=BASE_URL/pgp.public

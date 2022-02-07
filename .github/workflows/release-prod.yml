@@ -1,12 +1,24 @@
-name: Deploy Prod with Codedeploy
+name: Release to Prod
 
 on:
-  workflow_dispatch:
-    branches: [ master ]
+  release:
+    types: [released]
 
 jobs:
+  go:
+    name: Go
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Validate and test Go code
+        id: go
+        uses: ./.github/actions/go
+
   containers:
     name: Build and push containers
+    needs: go
     runs-on: ubuntu-latest
     environment: prod
     outputs:
@@ -32,6 +44,7 @@ jobs:
         with:
           registry: disco.forta.network
           name: ${{ matrix.image-name }}
+          version: ${{ github.ref }}
       - name: Write image reference as output
         id: write-output
         run: |
@@ -53,8 +66,8 @@ jobs:
         run: |
           ./scripts/publish-release.sh ${{ needs.containers.outputs.node-release-cid }} ${{ secrets.PROD_PUBLISH_AUTOTASK_KEY }} ${{ secrets.PROD_PUBLISH_AUTOTASK_URL }}
 
-  build-deploy:
-    name: Build and deploy
+  build:
+    name: Build
     needs: containers
     runs-on: ubuntu-latest
     environment: prod
@@ -77,7 +90,7 @@ jobs:
       - name: Create build for revision
         run: |
           ./scripts/build.sh ${{ needs.containers.outputs.node-image-ref }} \
-            'remote' ${{ needs.containers.outputs.node-release-cid }} ${{ github.sha }}
+            'remote' ${{ needs.containers.outputs.node-release-cid }} ${{ github.sha }} ${{ github.ref }}
           chmod 755 forta
       - name: Configure AWS credentials (build artifact -> S3)
         uses: aws-actions/configure-aws-credentials@v1
@@ -91,35 +104,28 @@ jobs:
           REVISION: ${{ github.sha }}
         run: |
           aws s3 cp forta "s3://$BUCKET_NAME/forta-$REVISION"
-      - name: Configure AWS credentials (CodeDeploy)
-        uses: aws-actions/configure-aws-credentials@v1
+
+  release:
+    name: Release to prod
+    needs: build
+    runs-on: ubuntu-18.04
+    environment: prod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Release
+        id: release
+        uses: ./.github/actions/release
         with:
-          aws-access-key-id: ${{ secrets.PROD_DEPLOY_AWS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.PROD_DEPLOY_AWS_SECRET_KEY }}
-          aws-region: us-east-1
-      - name: Prepare Distribution
-        run: |
-          mkdir dist
-          cp forta dist/
-          cp appspec.yml dist/
-          cp -R scripts dist/
-      - name: Zip Distribution
-        uses: vimtor/action-zip@v1
-        with:
-          files: dist/
-          dest: deploy.zip
-      - uses: actions/upload-artifact@v1
-        with:
-          name: deploy-artifact
-          path: ${{ github.workspace }}/deploy.zip
-      - name: AWS CodeDeploy
-        uses: sourcetoad/aws-codedeploy-action@v1
-        with:
-          aws_access_key: ${{ secrets.PROD_DEPLOY_AWS_ACCESS_KEY }}
-          aws_secret_key: ${{ secrets.PROD_DEPLOY_AWS_SECRET_KEY }}
-          aws_region: us-east-1
-          codedeploy_name: prod-forta-node
-          codedeploy_group: prod-forta-deploy-group
-          s3_bucket: prod-forta-codedeploy
-          s3_folder: prod
-          directory: ./dist/
+          version: ${{ github.ref }}
+          revision: ${{ github.sha }}
+          aws_access_key: ${{ secrets.PROD_RELEASE_AWS_ACCESS_KEY }}
+          aws_secret_key: ${{ secrets.PROD_RELEASE_AWS_SECRET_KEY }}
+          build_artifacts_bucket_name: prod-forta-build-artifacts
+          release_artifacts_bucket_name: prod-forta-releases
+          release_artifacts_url: https://dist.forta.network/artifacts
+          dist_base_url: https://dist.forta.network
+          pgp_key_name: ${{ secrets.PROD_PGP_KEY_NAME }}
+          pgp_private_key: ${{ secrets.PROD_PGP_PRIVATE_KEY }}
+          pgp_public_key: ${{ secrets.PROD_PGP_PUBLIC_KEY }}
+          pgp_passphrase: ${{ secrets.PROD_PGP_PASSPHRASE }}

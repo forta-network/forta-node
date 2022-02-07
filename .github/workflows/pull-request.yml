@@ -1,0 +1,16 @@
+name: Pull Request
+
+on:
+  pull_request:
+
+jobs:
+  go:
+    name: Go
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Validate and test Go code
+        id: go
+        uses: ./.github/actions/go
