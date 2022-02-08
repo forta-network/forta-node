@@ -13,6 +13,7 @@ import (
 
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/domain"
+	"github.com/forta-protocol/forta-node/store"
 
 	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/clients/messaging"
@@ -49,10 +50,10 @@ type Publisher struct {
 	metricsAggregator *AgentMetricsAggregator
 	messageClient     *messaging.Client
 	alertClient       clients.AlertAPIClient
+	batchRefStore     store.BatchRefStore
 
 	server *grpc.Server
 
-	parent        string
 	initialize    sync.Once
 	skipEmpty     bool
 	skipPublish   bool
@@ -97,6 +98,7 @@ type PublisherConfig struct {
 	Key             *keystore.Key
 	PublisherConfig config.PublisherConfig
 	ReleaseSummary  *config.ReleaseSummary
+	Config          config.Config
 }
 
 func (pub *Publisher) Notify(ctx context.Context, req *protocol.NotifyRequest) (*protocol.NotifyResponse, error) {
@@ -121,8 +123,9 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 			Version: pub.cfg.ReleaseSummary.Version,
 		}
 	}
-	if pub.parent != "" {
-		batch.Parent = pub.parent
+	lastBatchRef, err := pub.batchRefStore.GetLast()
+	if err == nil {
+		batch.Parent = lastBatchRef
 	}
 
 	// use the latest block input from scanner, fall back to latest block number from the batch
@@ -164,7 +167,9 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 	if err != nil {
 		return fmt.Errorf("failed to store alert data to ipfs: %v", err)
 	}
-	pub.parent = cid
+	if err := pub.batchRefStore.Put(cid); err != nil {
+		return fmt.Errorf("failed to write last batch ref: %v", err)
+	}
 
 	logger := log.WithFields(
 		log.Fields{
@@ -572,6 +577,7 @@ func NewPublisher(ctx context.Context, mc *messaging.Client, alertClient clients
 		metricsAggregator: NewMetricsAggregator(),
 		messageClient:     mc,
 		alertClient:       alertClient,
+		batchRefStore:     store.NewBatchRefStore(cfg.Config.FortaDir),
 
 		skipEmpty:     cfg.PublisherConfig.Batch.SkipEmpty,
 		skipPublish:   cfg.PublisherConfig.SkipPublish,
