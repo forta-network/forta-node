@@ -32,8 +32,9 @@ var (
 	cfg config.Config
 
 	parsedArgs struct {
-		Version  uint64
-		NoUpdate bool
+		Version     uint64
+		NoUpdate    bool
+		PrivateMode bool
 	}
 
 	cmdForta = &cobra.Command{

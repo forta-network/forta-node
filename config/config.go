@@ -89,6 +89,11 @@ type TelemetryConfig struct {
 	Disable bool   `yaml:"disable" json:"disable" validate:"omitempty,boolean"`
 }
 
+type PrivateModeConfig struct {
+	Enable      bool     `yaml:"enable" json:"enable" validate:"omitempty,boolean"`
+	AgentImages []string `yaml:"agentImages" json:"agentImages" validate:"required_if=Enable true"`
+}
+
 type Config struct {
 	ChainID                       int            `yaml:"chainId" json:"chainId" default:"1" `
 	Development                   bool           `yaml:"-" json:"_development"`
@@ -105,13 +110,14 @@ type Config struct {
 	Scan  ScannerConfig `yaml:"scan" json:"scan"`
 	Trace TraceConfig   `yaml:"trace" json:"trace"`
 
-	Registry        RegistryConfig     `yaml:"registry" json:"registry"`
-	Publish         PublisherConfig    `yaml:"publish" json:"publish"`
-	JsonRpcProxy    JsonRpcProxyConfig `yaml:"jsonRpcProxy" json:"jsonRpcProxy"`
-	Log             LogConfig          `yaml:"log" json:"log"`
-	ResourcesConfig ResourcesConfig    `yaml:"resources" json:"resources"`
-	ENSConfig       ENSConfig          `yaml:"ens" json:"ens"`
-	TelemetryConfig TelemetryConfig    `yaml:"telemetry" json:"telemetry"`
+	Registry          RegistryConfig     `yaml:"registry" json:"registry"`
+	Publish           PublisherConfig    `yaml:"publish" json:"publish"`
+	JsonRpcProxy      JsonRpcProxyConfig `yaml:"jsonRpcProxy" json:"jsonRpcProxy"`
+	Log               LogConfig          `yaml:"log" json:"log"`
+	ResourcesConfig   ResourcesConfig    `yaml:"resources" json:"resources"`
+	ENSConfig         ENSConfig          `yaml:"ens" json:"ens"`
+	TelemetryConfig   TelemetryConfig    `yaml:"telemetry" json:"telemetry"`
+	PrivateModeConfig PrivateModeConfig  `yaml:"privateMode" json:"privateMode"`
 }
 
 func (cfg *Config) ConfigFilePath() string {
