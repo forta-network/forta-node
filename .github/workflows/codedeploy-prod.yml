@@ -3,6 +3,7 @@ name: CodeDeploy to Prod (All Scanners)
 on:
   workflow_dispatch:
     branches: [ master ]
+  pull_request:
 
 jobs:
   deploy:
