@@ -15,6 +15,10 @@ import (
 	"github.com/forta-protocol/forta-node/config"
 )
 
+const (
+	defaultServiceStartDelay = time.Minute * 10
+)
+
 // Service is a service abstraction.
 type Service interface {
 	Start() error
@@ -131,7 +135,7 @@ func StartServices(ctx context.Context, cancelMainCtx context.CancelFunc, logger
 		}()
 
 		select {
-		case <-time.After(time.Minute):
+		case <-time.After(defaultServiceStartDelay):
 			logger.Error("took too long to start service")
 			cancelMainCtx()
 			break
