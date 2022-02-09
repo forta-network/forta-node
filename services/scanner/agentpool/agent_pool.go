@@ -40,6 +40,7 @@ type AgentPool struct {
 // NewAgentPool creates a new agent pool.
 func NewAgentPool(ctx context.Context, cfg config.ScannerConfig, msgClient clients.MessageClient) *AgentPool {
 	agentPool := &AgentPool{
+		ctx:          ctx,
 		txResults:    make(chan *scanner.TxResult, DefaultBufferSize),
 		blockResults: make(chan *scanner.BlockResult, DefaultBufferSize),
 		msgClient:    msgClient,
