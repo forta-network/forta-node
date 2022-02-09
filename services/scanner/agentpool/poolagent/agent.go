@@ -2,7 +2,6 @@ package poolagent
 
 import (
 	"context"
-	"strings"
 	"sync"
 	"time"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/protocol"
 	"github.com/forta-protocol/forta-node/services/scanner"
-	"google.golang.org/grpc/codes"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -27,6 +25,7 @@ const (
 
 // Agent receives blocks and transactions, and produces results.
 type Agent struct {
+	ctx    context.Context
 	config config.AgentConfig
 
 	txRequests    chan *protocol.EvaluateTxRequest // never closed - deallocated when agent is discarded
@@ -45,8 +44,9 @@ type Agent struct {
 }
 
 // New creates a new agent.
-func New(agentCfg config.AgentConfig, msgClient clients.MessageClient, txResults chan<- *scanner.TxResult, blockResults chan<- *scanner.BlockResult) *Agent {
+func New(ctx context.Context, agentCfg config.AgentConfig, msgClient clients.MessageClient, txResults chan<- *scanner.TxResult, blockResults chan<- *scanner.BlockResult) *Agent {
 	return &Agent{
+		ctx:           ctx,
 		config:        agentCfg,
 		txRequests:    make(chan *protocol.EvaluateTxRequest, DefaultBufferSize),
 		txResults:     txResults,
@@ -60,9 +60,10 @@ func New(agentCfg config.AgentConfig, msgClient clients.MessageClient, txResults
 }
 
 func isCriticalErr(err error) bool {
-	errStr := err.Error()
-	return strings.Contains(errStr, codes.DeadlineExceeded.String()) ||
-		strings.Contains(errStr, codes.Unavailable.String())
+	return false
+	// errStr := err.Error()
+	// return strings.Contains(errStr, codes.DeadlineExceeded.String()) ||
+	// 	strings.Contains(errStr, codes.Unavailable.String())
 }
 
 // LogStatus logs the status of the agent.
@@ -166,7 +167,7 @@ func (agent *Agent) processTransactions() {
 		if agent.IsClosed() {
 			return
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), AgentTimeout)
+		ctx, cancel := context.WithTimeout(agent.ctx, AgentTimeout)
 		lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
 		resp, err := agent.client.EvaluateTx(ctx, request)
 		cancel()
@@ -213,7 +214,7 @@ func (agent *Agent) processBlocks() {
 			return
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), AgentTimeout)
+		ctx, cancel := context.WithTimeout(agent.ctx, AgentTimeout)
 		lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
 		resp, err := agent.client.EvaluateBlock(ctx, request)
 		cancel()

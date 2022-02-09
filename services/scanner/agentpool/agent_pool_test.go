@@ -1,6 +1,7 @@
 package agentpool
 
 import (
+	"context"
 	"testing"
 
 	"github.com/forta-protocol/forta-node/clients"
@@ -44,6 +45,7 @@ func (s *Suite) SetupTest() {
 	s.msgClient = mock_clients.NewMockMessageClient(gomock.NewController(s.T()))
 	s.agentClient = mock_clients.NewMockAgentClient(gomock.NewController(s.T()))
 	s.ap = &AgentPool{
+		ctx:          context.Background(),
 		txResults:    make(chan *scanner.TxResult, DefaultBufferSize),
 		blockResults: make(chan *scanner.BlockResult, DefaultBufferSize),
 		msgClient:    s.msgClient,

@@ -1,6 +1,7 @@
 package agentpool
 
 import (
+	"context"
 	"strconv"
 	"sync"
 	"time"
@@ -27,6 +28,7 @@ const (
 // AgentPool maintains the pool of agents that the scanner should
 // interact with.
 type AgentPool struct {
+	ctx          context.Context
 	agents       []*poolagent.Agent
 	txResults    chan *scanner.TxResult
 	blockResults chan *scanner.BlockResult
@@ -36,8 +38,9 @@ type AgentPool struct {
 }
 
 // NewAgentPool creates a new agent pool.
-func NewAgentPool(cfg config.ScannerConfig, msgClient clients.MessageClient) *AgentPool {
+func NewAgentPool(ctx context.Context, cfg config.ScannerConfig, msgClient clients.MessageClient) *AgentPool {
 	agentPool := &AgentPool{
+		ctx:          ctx,
 		txResults:    make(chan *scanner.TxResult, DefaultBufferSize),
 		blockResults: make(chan *scanner.BlockResult, DefaultBufferSize),
 		msgClient:    msgClient,
@@ -246,7 +249,7 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 			found = found || (agent.Config().ContainerName() == agentCfg.ContainerName())
 		}
 		if !found {
-			newAgents = append(newAgents, poolagent.New(agentCfg, ap.msgClient, ap.txResults, ap.blockResults))
+			newAgents = append(newAgents, poolagent.New(ap.ctx, agentCfg, ap.msgClient, ap.txResults, ap.blockResults))
 			agentsToRun = append(agentsToRun, agentCfg)
 			log.WithField("agent", agentCfg.ID).Info("will trigger start")
 		}
