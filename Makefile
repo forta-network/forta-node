@@ -39,6 +39,7 @@ run:
 	go build -o forta . && ./forta --passphrase 123
 
 abigen:
+	./scripts/abigen.sh alerts
 	./scripts/abigen.sh agent_registry
 	./scripts/abigen.sh dispatch
 	./scripts/abigen.sh scanner_node_version
