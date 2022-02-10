@@ -11,10 +11,16 @@ import (
 	"github.com/forta-protocol/forta-node/testutils"
 
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/mock/gomock"
 
 	"github.com/stretchr/testify/assert"
 )
+
+const testAlertBatchSignature = "AlertBatch(bytes32,address,uint256,uint256,uint256,uint256,uint256,string)"
+
+// testAlertBatchTopic is the topic value for the AlertBatch event, which can be used for filtering
+var testAlertBatchTopic = crypto.Keccak256Hash([]byte(testAlertBatchSignature)).Hex()
 
 func TestLogFeed_ForEachLog(t *testing.T) {
 	ctx := context.Background()
@@ -35,7 +41,7 @@ func TestLogFeed_ForEachLog(t *testing.T) {
 
 	lf, err := NewLogFeed(ctx, client, LogFeedConfig{
 		Addresses: []string{addr},
-		Topics:    [][]string{{AlertBatchTopic}},
+		Topics:    [][]string{{testAlertBatchTopic}},
 	})
 	assert.NoError(t, err)
 

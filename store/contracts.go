@@ -1,8 +1,9 @@
 package store
 
 import (
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 )
 
 // implemented in contracts/dispatch.go
@@ -13,11 +14,11 @@ type dispatch interface {
 	}, error)
 
 	AgentRefAt(opts *bind.CallOpts, scannerId *big.Int, pos *big.Int) (struct {
-		AgentId  *big.Int
-		Enabled  bool
-		Version  *big.Int
-		Metadata string
-		ChainIds []*big.Int
+		AgentId      *big.Int
+		Enabled      bool
+		AgentVersion *big.Int
+		Metadata     string
+		ChainIds     []*big.Int
 	}, error)
 }
 

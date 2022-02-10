@@ -39,11 +39,10 @@ run:
 	go build -o forta . && ./forta --passphrase 123
 
 abigen:
-	abigen --abi ./contracts/agent_registry.json --out ./contracts/agent_registry.go --pkg contracts --type AgentRegistry
-	abigen --abi ./contracts/dispatch.json --out ./contracts/dispatch.go --pkg contracts --type Dispatch
-	abigen --abi ./contracts/alerts.json --out ./contracts/alerts.go --pkg contracts --type Alerts
-	abigen --abi ./contracts/scanner_registry.json --out ./contracts/scanner_registry.go --pkg contracts --type ScannerRegistry
-	abigen --abi ./contracts/scanner_node_version.json --out ./contracts/scanner_node_version.go --pkg contracts --type ScannerNodeVersion
+	abigen --abi ./contracts/contract_agent_registry/agent_registry.json --out ./contracts/contract_agent_registry/agent_registry.go --pkg contract_agent_registry --type AgentRegistry
+	abigen --abi ./contracts/contract_dispatch/dispatch.json --out ./contracts/contract_dispatch/dispatch.go --pkg contract_dispatch --type Dispatch
+	abigen --abi ./contracts/contract_scanner_registry/scanner_registry.json --out ./contracts/contract_scanner_registry/scanner_registry.go --pkg contract_scanner_registry --type ScannerRegistry --alias _register=underscoreRegister
+	abigen --abi ./contracts/contract_scanner_node_version/scanner_node_version.json --out ./contracts/contract_scanner_node_version/scanner_node_version.go --pkg contract_scanner_node_version --type ScannerNodeVersion
 
 build-local: ## Build for local installation from source
 	./scripts/build-for-local.sh
