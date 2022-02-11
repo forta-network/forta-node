@@ -184,7 +184,9 @@ func (sup *SupervisorService) start() error {
 		Image: commonNodeImage,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "json-rpc"},
 		Volumes: map[string]string{
-			hostFortaDir: config.DefaultContainerFortaDirPath,
+			// give access to host docker
+			"/var/run/docker.sock": "/var/run/docker.sock",
+			hostFortaDir:           config.DefaultContainerFortaDirPath,
 		},
 		Ports: map[string]string{
 			"": config.DefaultHealthPort, // random host port
@@ -227,6 +229,9 @@ func (sup *SupervisorService) start() error {
 			return err
 		}
 		if err := sup.attachToNetwork(config.DockerScannerContainerName, natsNetworkID); err != nil {
+			return err
+		}
+		if err := sup.attachToNetwork(config.DockerJSONRPCProxyContainerName, natsNetworkID); err != nil {
 			return err
 		}
 	}
