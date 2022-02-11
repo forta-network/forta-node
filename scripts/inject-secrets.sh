@@ -1,5 +1,7 @@
 #!/bin/bash
 
+mkdir -p /home/forta/.forta/
+chown -R forta.forta /home/forta
 configPath=/home/forta/.forta/config.yml
 # this looks up the alchemy credentials and injects them into the config yaml
 instanceId=$(curl -s http://instance-data/latest/meta-data/instance-id)
@@ -31,3 +33,5 @@ sed -i "s/ALCHEMY_URL/$apiUrl/g" $configPath
 sed -i "s/REGISTRY_API_URL/$registryApiUrl/g" $configPath
 sed -i "s/REGISTRY_WSS_URL/$registryWssUrl/g" $configPath
 sed -i "s/MAINNET_API_URL/$mainnetApiUrl/g" $configPath
+
+chown -R forta.forta /home/forta
