@@ -22,7 +22,7 @@ const (
 	MetricBlockSuccess   = "block.success"
 	MetricBlockDrop      = "block.drop"
 	MetricStop           = "agent.stop"
-	MetricJSONRPC        = "jsonrpc.request"
+	MetricJSONRPCRequest = "jsonrpc.request"
 	MetricJSONRPCLatency = "jsonrpc.latency"
 )
 
@@ -90,7 +90,7 @@ func GetTxMetrics(agt config.AgentConfig, resp *protocol.EvaluateTxResponse) []*
 
 func GetJSONRPCMetrics(agt config.AgentConfig, at time.Time, latencyMs time.Duration) []*protocol.AgentMetric {
 	return createMetrics(agt.ID, at.Format(time.RFC3339), map[string]float64{
-		MetricJSONRPC:        1,
+		MetricJSONRPCRequest: 1,
 		MetricJSONRPCLatency: float64(latencyMs.Milliseconds()),
 	})
 }
