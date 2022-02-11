@@ -117,6 +117,8 @@ func (s *Suite) SetupTest() {
 	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testScannerContainerID, testNatsNetworkID)
 	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerPublisherContainerName).Return(&types.Container{ID: testPublisherContainerID}, nil).AnyTimes()
 	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testPublisherContainerID, testNatsNetworkID)
+	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerJSONRPCProxyContainerName).Return(&types.Container{ID: testProxyContainerID}, nil).AnyTimes()
+	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testProxyContainerID, testNatsNetworkID)
 
 	s.dockerClient.EXPECT().WaitContainerStart(service.ctx, gomock.Any()).Return(nil).AnyTimes()
 	s.msgClient.EXPECT().Subscribe(messaging.SubjectAgentsActionRun, gomock.Any())
