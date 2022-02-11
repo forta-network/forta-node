@@ -175,14 +175,8 @@ func (bf *blockFeed) forEachBlock() error {
 			"blockNum": blockNum.Uint64(),
 			"blockHex": block.Number,
 		})
-		age, err := block.Age()
-		if err != nil || age == nil {
-			logger.WithError(err).Errorf("error getting age of block: ts=%s", block.Timestamp)
-			continue
-		}
-
 		// if not too old
-		tooOld := bf.maxBlockAge != nil && *age > *bf.maxBlockAge
+		tooOld, age := blockIsTooOld(block, bf.maxBlockAge)
 		if !tooOld {
 			evt := &domain.BlockEvent{EventType: domain.EventTypeBlock, Block: block, ChainID: bf.chainID, Traces: traces}
 			for _, handler := range bf.handlers {
@@ -199,6 +193,21 @@ func (bf *blockFeed) forEachBlock() error {
 	}
 }
 
+func blockIsTooOld(block *domain.Block, maxAge *time.Duration) (bool, *time.Duration) {
+	if maxAge == nil {
+		return false, nil
+	}
+	age, err := block.Age()
+	if err != nil || age == nil {
+		log.WithFields(log.Fields{
+			"blockHex": block.Number,
+		}).WithError(err).Errorf("error getting age of block")
+		return false, age
+	}
+	return *age > *maxAge, age
+
+}
+
 func NewBlockFeed(ctx context.Context, client ethereum.Client, traceClient ethereum.Client, cfg BlockFeedConfig) (*blockFeed, error) {
 	bf := &blockFeed{
 		start:       cfg.Start,
@@ -210,6 +219,7 @@ func NewBlockFeed(ctx context.Context, client ethereum.Client, traceClient ether
 		chainID:     cfg.ChainID,
 		tracing:     cfg.Tracing,
 		rateLimit:   cfg.RateLimit,
+		maxBlockAge: cfg.SkipBlocksOlderThan,
 	}
 	return bf, nil
 }

@@ -38,7 +38,7 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 		rateLimit = time.NewTicker(time.Duration(cfg.Scan.BlockRateLimit) * time.Millisecond)
 	}
 
-	maxAge := time.Hour
+	maxAge := 10 * time.Minute
 	blockFeed, err := feeds.NewBlockFeed(ctx, ethClient, traceClient, feeds.BlockFeedConfig{
 		ChainID:             chainID,
 		Tracing:             cfg.Trace.Enabled,
@@ -50,8 +50,9 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 	}
 
 	txStream, err := scanner.NewTxStreamService(ctx, ethClient, blockFeed, scanner.TxStreamServiceConfig{
-		JsonRpcConfig:      cfg.Scan.JsonRpc,
-		TraceJsonRpcConfig: cfg.Trace.JsonRpc,
+		JsonRpcConfig:       cfg.Scan.JsonRpc,
+		TraceJsonRpcConfig:  cfg.Trace.JsonRpc,
+		SkipBlocksOlderThan: &maxAge,
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create the tx stream service: %v", err)

@@ -3,6 +3,7 @@ package feeds
 import (
 	"context"
 	"errors"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
@@ -13,13 +14,14 @@ import (
 )
 
 type transactionFeed struct {
-	ctx       context.Context
-	cache     utils.Cache
-	client    ethereum.Client
-	blockFeed BlockFeed
-	workers   int
-	blockCh   chan *domain.BlockEvent
-	txCh      chan *domain.TransactionEvent
+	ctx         context.Context
+	cache       utils.Cache
+	client      ethereum.Client
+	blockFeed   BlockFeed
+	workers     int
+	blockCh     chan *domain.BlockEvent
+	txCh        chan *domain.TransactionEvent
+	maxBlockAge *time.Duration
 }
 
 func (tf *transactionFeed) streamTransactions() error {
@@ -30,7 +32,20 @@ func (tf *transactionFeed) streamTransactions() error {
 			return nil
 		}
 
-		log.Infof("tx-iterator: block(%s) processing %d transactions", blockEvt.Block.Number, len(blockEvt.Block.Transactions))
+		logger := log.WithFields(log.Fields{
+			"blockHex":     blockEvt.Block.Number,
+			"blockNum":     utils.HexToInt64(blockEvt.Block.Number),
+			"transactions": len(blockEvt.Block.Transactions),
+		})
+
+		// if sat in the channel too long, ignore if too old
+		tooOld, age := blockIsTooOld(blockEvt.Block, tf.maxBlockAge)
+		if tooOld {
+			logger.WithField("age", age).Warn("dropping block for being too old")
+			continue
+		}
+
+		logger.Infof("tx-iterator: processing block")
 		for _, tx := range blockEvt.Block.Transactions {
 			txTemp := tx
 			select {
@@ -116,11 +131,11 @@ func (tf *transactionFeed) ForEachTransaction(blockHandler func(evt *domain.Bloc
 	return grp.Wait()
 }
 
-func NewTransactionFeed(ctx context.Context, client ethereum.Client, blockFeed BlockFeed, workers int) (*transactionFeed, error) {
+func NewTransactionFeed(ctx context.Context, client ethereum.Client, blockFeed BlockFeed, maxBlockAge *time.Duration, workers int) (*transactionFeed, error) {
 	blocks := make(chan *domain.BlockEvent, 10)
 	txs := make(chan *domain.TransactionEvent, 100)
 	cache := utils.NewCache(1000000)
 	return &transactionFeed{
-		ctx: ctx, cache: cache, client: client, blockFeed: blockFeed, workers: workers, blockCh: blocks, txCh: txs,
+		ctx: ctx, cache: cache, client: client, blockFeed: blockFeed, workers: workers, blockCh: blocks, txCh: txs, maxBlockAge: maxBlockAge,
 	}, nil
 }
