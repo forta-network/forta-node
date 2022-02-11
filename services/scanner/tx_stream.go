@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"context"
+	"time"
 
 	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/config"
@@ -25,8 +26,9 @@ type TxStreamService struct {
 }
 
 type TxStreamServiceConfig struct {
-	JsonRpcConfig      config.JsonRpcConfig
-	TraceJsonRpcConfig config.JsonRpcConfig
+	JsonRpcConfig       config.JsonRpcConfig
+	TraceJsonRpcConfig  config.JsonRpcConfig
+	SkipBlocksOlderThan *time.Duration
 }
 
 func (t *TxStreamService) ReadOnlyBlockStream() <-chan *domain.BlockEvent {
@@ -86,7 +88,7 @@ func NewTxStreamService(ctx context.Context, ethClient ethereum.Client, blockFee
 	txOutput := make(chan *domain.TransactionEvent)
 	blockOutput := make(chan *domain.BlockEvent)
 
-	txFeed, err := feeds.NewTransactionFeed(ctx, ethClient, blockFeed, 10)
+	txFeed, err := feeds.NewTransactionFeed(ctx, ethClient, blockFeed, cfg.SkipBlocksOlderThan, 10)
 	if err != nil {
 		return nil, err
 	}
