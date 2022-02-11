@@ -123,6 +123,7 @@ func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 	agents := ap.agents
 	ap.mu.RUnlock()
 
+	drops := make(map[string]*protocol.AgentMetric)
 	var metricsList []*protocol.AgentMetric
 	for _, agent := range agents {
 		if !agent.IsReady() || !agent.ShouldProcessBlock(req.Event.Block.BlockNumber) {
@@ -139,8 +140,12 @@ func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 			ap.discardAgent(agent)
 		case agent.TxRequestCh() <- req:
 		default: // do not try to send if the buffer is full
-			lg.WithField("agent", agent.Config().ID).Warn("agent tx request buffer is full - skipping")
-			metricsList = append(metricsList, metrics.CreateAgentMetric(agent.Config().ID, metrics.MetricTxDrop, 1))
+			if _, ok := drops[agent.Config().ID]; !ok {
+				drops[agent.Config().ID] = metrics.CreateAgentMetric(agent.Config().ID, metrics.MetricTxDrop, 0)
+				metricsList = append(metricsList, drops[agent.Config().ID])
+			}
+			// increment metric
+			drops[agent.Config().ID].Value++
 		}
 		lg.WithFields(log.Fields{
 			"agent":    agent.Config().ID,
