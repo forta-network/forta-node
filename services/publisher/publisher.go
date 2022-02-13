@@ -163,7 +163,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		return nil
 	}
 
-	cid, err := pub.ipfs.Add(&buf, ipfsapi.Pin(true))
+	cid, err := pub.ipfs.Add(&buf, ipfsapi.OnlyHash(true))
 	if err != nil {
 		return fmt.Errorf("failed to store alert data to ipfs: %v", err)
 	}
@@ -198,6 +198,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		AlertCount:  int64(batch.AlertCount),
 		MaxSeverity: int64(batch.MaxSeverity),
 		Ref:         cid,
+		SignedBatch: signedBatch,
 	}, scannerJwt)
 
 	if err != nil {
