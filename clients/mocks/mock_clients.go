@@ -129,6 +129,21 @@ func (mr *MockDockerClientMockRecorder) GetContainerByName(ctx, name interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainerByName", reflect.TypeOf((*MockDockerClient)(nil).GetContainerByName), ctx, name)
 }
 
+// GetContainerLogs mocks base method.
+func (m *MockDockerClient) GetContainerLogs(ctx context.Context, containerID, tail string, truncate int) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetContainerLogs", ctx, containerID, tail, truncate)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetContainerLogs indicates an expected call of GetContainerLogs.
+func (mr *MockDockerClientMockRecorder) GetContainerLogs(ctx, containerID, tail, truncate interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainerLogs", reflect.TypeOf((*MockDockerClient)(nil).GetContainerLogs), ctx, containerID, tail, truncate)
+}
+
 // GetContainers mocks base method.
 func (m *MockDockerClient) GetContainers(ctx context.Context) (clients.DockerContainerList, error) {
 	m.ctrl.T.Helper()

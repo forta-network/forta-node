@@ -53,7 +53,7 @@ func (sup *SupervisorService) startAgent(agent config.AgentConfig) error {
 	return nil
 }
 
-func (sup *SupervisorService) getContainerUnsafe(name string) (*clients.DockerContainer, bool) {
+func (sup *SupervisorService) getContainerUnsafe(name string) (*Container, bool) {
 	for _, container := range sup.containers {
 		if container.Name == name {
 			return container, true
@@ -62,8 +62,16 @@ func (sup *SupervisorService) getContainerUnsafe(name string) (*clients.DockerCo
 	return nil, false
 }
 
-func (sup *SupervisorService) addContainerUnsafe(container ...*clients.DockerContainer) {
-	sup.containers = append(sup.containers, container...)
+func (sup *SupervisorService) addContainerUnsafe(container *clients.DockerContainer, agentConfig ...*config.AgentConfig) {
+	if agentConfig != nil {
+		sup.containers = append(sup.containers, &Container{
+			DockerContainer: *container,
+			IsAgent:         true,
+			AgentConfig:     agentConfig[0],
+		})
+		return
+	}
+	sup.containers = append(sup.containers, &Container{DockerContainer: *container})
 }
 
 func (sup *SupervisorService) handleAgentRun(payload messaging.AgentPayload) error {
@@ -116,7 +124,7 @@ func (sup *SupervisorService) handleAgentStop(payload messaging.AgentPayload) er
 	}
 
 	// Remove the stopped agents from the list.
-	var remainingContainers []*clients.DockerContainer
+	var remainingContainers []*Container
 	for _, container := range sup.containers {
 		if !stopped[container.ID] {
 			remainingContainers = append(remainingContainers, container)
