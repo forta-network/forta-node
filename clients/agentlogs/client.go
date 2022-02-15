@@ -75,6 +75,7 @@ func (client *client) SendLogs(agents Agents) error {
 	if err != nil {
 		return fmt.Errorf("request failed: %v", err)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed with code '%d'", resp.StatusCode)
 	}
