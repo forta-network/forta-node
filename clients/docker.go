@@ -610,6 +610,26 @@ func (d *dockerClient) EnsureLocalImage(ctx context.Context, name, ref string) e
 	return nil
 }
 
+// GetContainerLogs gets the container logs.
+func (d *dockerClient) GetContainerLogs(ctx context.Context, containerID, tail string, truncate int) (string, error) {
+	r, err := d.cli.ContainerLogs(ctx, containerID, types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Timestamps: true,
+		Tail:       tail,
+	})
+	if err != nil {
+		return "", err
+	}
+	if truncate > 0 {
+		var buf []byte
+		io.ReadAtLeast(r, buf, truncate)
+		return string(buf), nil
+	}
+	b, err := io.ReadAll(r)
+	return string(b), err
+}
+
 func (d *dockerClient) labelFilter() filters.Args {
 	filter := filters.NewArgs()
 	for k, v := range d.labels {

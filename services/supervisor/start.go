@@ -13,6 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/forta-protocol/forta-node/clients"
+	"github.com/forta-protocol/forta-node/clients/agentlogs"
 	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/config"
@@ -34,21 +35,33 @@ type SupervisorService struct {
 
 	scannerContainer *clients.DockerContainer
 	jsonRpcContainer *clients.DockerContainer
-	containers       []*clients.DockerContainer
+	containers       []*Container
 	mu               sync.RWMutex
 
 	lastRun                   health.TimeTracker
 	lastStop                  health.TimeTracker
 	lastTelemetryRequest      health.TimeTracker
 	lastTelemetryRequestError health.ErrorTracker
+	lastAgentLogsRequest      health.TimeTracker
+	lastAgentLogsRequestError health.ErrorTracker
 
 	healthClient health.HealthClient
+
+	agentLogsClient agentlogs.Client
+	prevAgentLogs   agentlogs.Agents
 }
 
 type SupervisorServiceConfig struct {
 	Config     config.Config
 	Passphrase string
 	Key        *keystore.Key
+}
+
+// Container extends the default container data.
+type Container struct {
+	clients.DockerContainer
+	IsAgent     bool
+	AgentConfig *config.AgentConfig
 }
 
 func (sup *SupervisorService) Start() error {
@@ -64,6 +77,9 @@ func (sup *SupervisorService) Start() error {
 func (sup *SupervisorService) start() error {
 	if !sup.config.Config.TelemetryConfig.Disable {
 		go sup.syncTelemetryData()
+	}
+	if !sup.config.Config.AgentLogsConfig.Disable {
+		go sup.syncAgentLogs()
 	}
 
 	sup.mu.Lock()
@@ -323,10 +339,10 @@ func (sup *SupervisorService) Stop() error {
 
 	ctx := context.Background()
 	for _, cnt := range sup.containers {
-		if err := sup.client.StopContainer(ctx, cnt.ID); err != nil {
-			log.Error(fmt.Sprintf("error stopping %s container", cnt.ID), err)
+		if err := sup.client.StopContainer(ctx, cnt.DockerContainer.ID); err != nil {
+			log.Error(fmt.Sprintf("error stopping %s container", cnt.DockerContainer.ID), err)
 		} else {
-			log.Infof("Container %s is stopped", cnt.ID)
+			log.Infof("Container %s is stopped", cnt.DockerContainer.ID)
 		}
 	}
 	return nil
@@ -362,16 +378,10 @@ func (sup *SupervisorService) Health() health.Reports {
 			Status:  health.StatusInfo,
 			Details: sup.lastStop.String(),
 		},
-		&health.Report{
-			Name:    "event.telemetry-sync.time",
-			Status:  health.StatusInfo,
-			Details: sup.lastTelemetryRequest.String(),
-		},
-		&health.Report{
-			Name:    "event.telemetry-sync.error",
-			Status:  health.StatusInfo,
-			Details: sup.lastTelemetryRequestError.String(),
-		},
+		sup.lastTelemetryRequest.GetReport("event.telemetry-sync.time"),
+		sup.lastTelemetryRequestError.GetReport("event.telemetry-sync.error"),
+		sup.lastAgentLogsRequest.GetReport("event.agent-logs-sync.time"),
+		sup.lastAgentLogsRequestError.GetReport("event.agent-logs-sync.error"),
 	}
 }
 
@@ -386,11 +396,12 @@ func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*Su
 	}
 	ipfsClient := store.NewIPFSClient(cfg.Config.Registry.IPFS.GatewayURL)
 	return &SupervisorService{
-		ctx:          ctx,
-		client:       dockerClient,
-		globalClient: globalClient,
-		ipfsClient:   ipfsClient,
-		config:       cfg,
-		healthClient: health.NewClient(),
+		ctx:             ctx,
+		client:          dockerClient,
+		globalClient:    globalClient,
+		ipfsClient:      ipfsClient,
+		config:          cfg,
+		healthClient:    health.NewClient(),
+		agentLogsClient: agentlogs.NewClient(cfg.Config.AgentLogsConfig.URL),
 	}, nil
 }
