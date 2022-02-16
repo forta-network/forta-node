@@ -159,8 +159,8 @@ func (bf *blockFeed) forEachBlock() error {
 			}
 		}
 
-		// if the block from the ethereum API hash different block hash than trace API,
-		// retry until both matches so we don't get affected by forking
+		// if the block from the ethereum API has different block hash than trace API,
+		// retry until both match so we don't get affected by forking
 		if len(traces) > 0 && block.Hash != utils.String(traces[0].BlockHash) {
 			log.WithFields(log.Fields{
 				"ethereumBlockHash": block.Hash,
