@@ -145,7 +145,12 @@ func (bf *blockFeed) forEachBlock() error {
 			<-bf.rateLimit.C
 		}
 
-		var err error
+		block, err := bf.client.BlockByNumber(bf.ctx, blockNum)
+		if err != nil {
+			log.WithError(err).Error("error getting block")
+			continue
+		}
+
 		var traces []domain.Trace
 		if bf.tracing {
 			traces, err = bf.traceClient.TraceBlock(bf.ctx, blockNum)
@@ -154,16 +159,13 @@ func (bf *blockFeed) forEachBlock() error {
 			}
 		}
 
-		var block *domain.Block
-		if len(traces) == 0 {
-			block, err = bf.client.BlockByNumber(bf.ctx, blockNum)
-		} else {
-			// this forces the SAME block to be returned as traces (so that a re-org doesn't split it)
-			hash := traces[0].BlockHash
-			block, err = bf.client.BlockByHash(bf.ctx, *hash)
-		}
-		if err != nil {
-			log.WithError(err).Error("error getting block")
+		// if the block from the ethereum API hash different block hash than trace API,
+		// retry until both matches so we don't get affected by forking
+		if len(traces) > 0 && block.Hash != utils.String(traces[0].BlockHash) {
+			log.WithFields(log.Fields{
+				"ethereumBlockHash": block.Hash,
+				"traceBlockHash":    utils.String(traces[0].BlockHash),
+			}).Warn("mismatching block hash from ethereum and trace APIs - will retry")
 			continue
 		}
 
