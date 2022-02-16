@@ -189,6 +189,7 @@ func (sup *SupervisorService) start() error {
 		Ports: map[string]string{
 			"": config.DefaultHealthPort, // random host port
 		},
+		DialHost:    true,
 		NetworkID:   nodeNetworkID,
 		MaxLogFiles: sup.maxLogFiles,
 		MaxLogSize:  sup.maxLogSize,
