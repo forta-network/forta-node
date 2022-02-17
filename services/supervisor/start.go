@@ -362,8 +362,16 @@ func (sup *SupervisorService) Health() health.Reports {
 			Status:  health.StatusInfo,
 			Details: sup.lastStop.String(),
 		},
-		sup.lastTelemetryRequest.GetReport("telemetry-sync.time"),
-		sup.lastTelemetryRequestError.GetReport("telemetry-sync.error"),
+		&health.Report{
+			Name:    "event.telemetry-sync.time",
+			Status:  health.StatusInfo,
+			Details: sup.lastTelemetryRequest.String(),
+		},
+		&health.Report{
+			Name:    "event.telemetry-sync.error",
+			Status:  health.StatusInfo,
+			Details: sup.lastTelemetryRequestError.String(),
+		},
 	}
 }
 
