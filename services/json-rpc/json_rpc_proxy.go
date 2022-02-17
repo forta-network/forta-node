@@ -40,6 +40,9 @@ type JsonRpcProxy struct {
 
 func (p *JsonRpcProxy) Start() error {
 	log.Infof("Starting %s", p.Name())
+
+	p.registerMessageHandlers()
+
 	rpcUrl, err := url.Parse(p.cfg.Url)
 	if err != nil {
 		return err
