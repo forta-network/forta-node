@@ -111,7 +111,7 @@ func (p *JsonRpcProxy) findAgentFromRemoteAddr(hostPort string) (*config.AgentCo
 	p.agentConfigMu.RLock()
 	defer p.agentConfigMu.RUnlock()
 
-	containerName := agentContainer.Names[0]
+	containerName := agentContainer.Names[0][1:]
 	for _, agentConfig := range p.agentConfigs {
 		if agentConfig.ContainerName() == containerName {
 			return &agentConfig, true
