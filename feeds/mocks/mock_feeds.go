@@ -8,7 +8,6 @@ import (
 	reflect "reflect"
 
 	types "github.com/ethereum/go-ethereum/core/types"
-	health "github.com/forta-protocol/forta-node/clients/health"
 	contracts "github.com/forta-protocol/forta-node/contracts"
 	domain "github.com/forta-protocol/forta-node/domain"
 	gomock "github.com/golang/mock/gomock"
@@ -37,20 +36,6 @@ func (m *MockBlockFeed) EXPECT() *MockBlockFeedMockRecorder {
 	return m.recorder
 }
 
-// Health mocks base method.
-func (m *MockBlockFeed) Health() health.Reports {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Health")
-	ret0, _ := ret[0].(health.Reports)
-	return ret0
-}
-
-// Health indicates an expected call of Health.
-func (mr *MockBlockFeedMockRecorder) Health() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Health", reflect.TypeOf((*MockBlockFeed)(nil).Health))
-}
-
 // IsStarted mocks base method.
 func (m *MockBlockFeed) IsStarted() bool {
 	m.ctrl.T.Helper()
@@ -63,20 +48,6 @@ func (m *MockBlockFeed) IsStarted() bool {
 func (mr *MockBlockFeedMockRecorder) IsStarted() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsStarted", reflect.TypeOf((*MockBlockFeed)(nil).IsStarted))
-}
-
-// Name mocks base method.
-func (m *MockBlockFeed) Name() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Name")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// Name indicates an expected call of Name.
-func (mr *MockBlockFeedMockRecorder) Name() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockBlockFeed)(nil).Name))
 }
 
 // Start mocks base method.

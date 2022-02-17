@@ -2,7 +2,6 @@ package feeds
 
 import (
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/contracts"
 
 	"github.com/forta-protocol/forta-node/domain"
@@ -14,7 +13,6 @@ type BlockFeed interface {
 	StartRange(start int64, end int64, rate int64)
 	IsStarted() bool
 	Subscribe(handler func(evt *domain.BlockEvent) error) <-chan error
-	health.Reporter
 }
 
 // TransactionFeed is a subscribable feed of transactions.

@@ -3,9 +3,11 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+
+	"github.com/forta-protocol/forta-node/ethereum"
 	"github.com/forta-protocol/forta-node/store"
 	"github.com/goccy/go-json"
-	"io/ioutil"
 
 	"github.com/fatih/color"
 	"github.com/forta-protocol/forta-node/config"
@@ -13,7 +15,12 @@ import (
 )
 
 func handleFortaAgentAdd(cmd *cobra.Command, args []string) error {
-	reg, err := store.NewRegistryStore(context.Background(), cfg)
+	ethClient, err := ethereum.NewStreamEthClient(context.Background(), "registry", cfg.Registry.JsonRpc.Url)
+	if err != nil {
+		return err
+	}
+
+	reg, err := store.NewRegistryStore(context.Background(), cfg, ethClient)
 	if err != nil {
 		return fmt.Errorf("failed to initialize registry")
 	}

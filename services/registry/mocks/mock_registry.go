@@ -11,6 +11,7 @@ import (
 
 	ethereum "github.com/ethereum/go-ethereum"
 	types "github.com/ethereum/go-ethereum/core/types"
+	health "github.com/forta-protocol/forta-node/clients/health"
 	domain "github.com/forta-protocol/forta-node/domain"
 	regtypes "github.com/forta-protocol/forta-node/services/registry/regtypes"
 	gomock "github.com/golang/mock/gomock"
@@ -162,6 +163,34 @@ func (m *MockEthClient) GetLogs(ctx context.Context, q ethereum.FilterQuery) ([]
 func (mr *MockEthClientMockRecorder) GetLogs(ctx, q interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLogs", reflect.TypeOf((*MockEthClient)(nil).GetLogs), ctx, q)
+}
+
+// Health mocks base method.
+func (m *MockEthClient) Health() health.Reports {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Health")
+	ret0, _ := ret[0].(health.Reports)
+	return ret0
+}
+
+// Health indicates an expected call of Health.
+func (mr *MockEthClientMockRecorder) Health() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Health", reflect.TypeOf((*MockEthClient)(nil).Health))
+}
+
+// Name mocks base method.
+func (m *MockEthClient) Name() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Name")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Name indicates an expected call of Name.
+func (mr *MockEthClientMockRecorder) Name() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockEthClient)(nil).Name))
 }
 
 // TraceBlock mocks base method.
