@@ -11,6 +11,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/domain"
 	mocks "github.com/forta-protocol/forta-node/ethereum/mocks"
 	"github.com/forta-protocol/forta-node/utils"
@@ -49,6 +50,16 @@ func (bf *mockBlockFeed) IsStarted() bool {
 
 // StartRange implements the BlockFeed interface.
 func (bf *mockBlockFeed) StartRange(start int64, end int64, rate int64) {}
+
+// Name implements the BlockFeed interface.
+func (bf *mockBlockFeed) Name() string {
+	return "mock-block-feed"
+}
+
+// Health implements the BlockFeed interface.
+func (bf *mockBlockFeed) Health() health.Reports {
+	return nil
+}
 
 // NewMockBlockFeed returns a new mockBlockFeed for tests
 func NewMockBlockFeed(blocks []*domain.BlockEvent) *mockBlockFeed {

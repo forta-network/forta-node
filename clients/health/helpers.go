@@ -83,6 +83,16 @@ func (et *ErrorTracker) GetReport(name string) *Report {
 	return &report
 }
 
+// String implements the fmt.Stringer interface.
+func (et *ErrorTracker) String() string {
+	et.mu.RLock()
+	defer et.mu.RUnlock()
+	if et.err != nil {
+		return et.err.Error()
+	}
+	return ""
+}
+
 // MessageTracker is useful for tracking the latest message about something.
 type MessageTracker struct {
 	msg string

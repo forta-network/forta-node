@@ -9,6 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/domain"
 	"github.com/forta-protocol/forta-node/ethereum"
 	"github.com/forta-protocol/forta-node/utils"
@@ -34,6 +35,11 @@ type blockFeed struct {
 	started     bool
 	rateLimit   *time.Ticker
 	maxBlockAge *time.Duration
+
+	lastBlockByNumberReq health.TimeTracker
+	lastBlockByNumberErr health.ErrorTracker
+	lastTraceBlockReq    health.TimeTracker
+	lastTraceBlockErr    health.ErrorTracker
 }
 
 type BlockFeedConfig struct {
@@ -149,12 +155,16 @@ func (bf *blockFeed) forEachBlock() error {
 		var traces []domain.Trace
 		if bf.tracing {
 			traces, err = bf.traceClient.TraceBlock(bf.ctx, blockNum)
+			bf.lastTraceBlockReq.Set()
+			bf.lastTraceBlockErr.Set(err)
 			if err != nil {
 				log.WithError(err).Error("error tracing block")
 			}
 		}
 
 		block, err := bf.client.BlockByNumber(bf.ctx, blockNum)
+		bf.lastBlockByNumberReq.Set()
+		bf.lastBlockByNumberErr.Set(err)
 		if err != nil {
 			log.WithError(err).Error("error getting block")
 			continue
@@ -206,7 +216,21 @@ func blockIsTooOld(block *domain.Block, maxAge *time.Duration) (bool, *time.Dura
 		return false, age
 	}
 	return *age > *maxAge, age
+}
 
+// Name returns the name of this implementation.
+func (bf *blockFeed) Name() string {
+	return "block-feed"
+}
+
+// Health implements the health.Reporter interface.
+func (bf *blockFeed) Health() health.Reports {
+	return health.Reports{
+		bf.lastBlockByNumberReq.GetReport("event.block-by-number.time"),
+		bf.lastBlockByNumberErr.GetReport("event.block-by-number.error"),
+		bf.lastTraceBlockReq.GetReport("event.trace-block.time"),
+		bf.lastTraceBlockErr.GetReport("event.trace-block.error"),
+	}
 }
 
 func NewBlockFeed(ctx context.Context, client ethereum.Client, traceClient ethereum.Client, cfg BlockFeedConfig) (*blockFeed, error) {

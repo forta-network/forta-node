@@ -126,13 +126,13 @@ func (updater *UpdaterService) updateLatestRelease() error {
 
 	ref, err := updater.us.GetLatestReference()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get the latest release manifest ref: %v", err)
 	}
 	if ref != updater.latestReference {
 		rm, err := updater.ipfs.GetReleaseManifest(ref)
 		if err != nil {
 			log.WithError(err).Error("error getting release manifest")
-			return err
+			return fmt.Errorf("failed while downloading the release manifest: %v", err)
 		}
 		updater.mu.Lock()
 		defer updater.mu.Unlock()

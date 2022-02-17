@@ -2,13 +2,13 @@ package store
 
 import (
 	"fmt"
-	"github.com/forta-protocol/forta-node/config"
-	"github.com/goccy/go-json"
-	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 
+	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/services/registry/regtypes"
+	"github.com/goccy/go-json"
+	log "github.com/sirupsen/logrus"
 )
 
 type IPFSClient interface {
