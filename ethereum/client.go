@@ -244,7 +244,7 @@ func (e *streamEthClient) BlockByNumber(ctx context.Context, number *big.Int) (*
 		MinBackoff:     pointDur(15 * time.Second),
 		MaxElapsedTime: pointDur(12 * time.Hour),
 		MaxBackoff:     pointDur(15 * time.Second),
-	}, &e.lastTraceBlockReq, &e.lastTraceBlockErr)
+	}, &e.lastBlockByNumberReq, &e.lastBlockByNumberErr)
 	return &result, err
 }
 
