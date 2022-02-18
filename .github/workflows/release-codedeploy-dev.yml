@@ -97,7 +97,7 @@ jobs:
           go-version: 1.16
       - name: Create build for revision
         run: |
-          echo ethereum/client.go
+          cat ethereum/client.go
           ./scripts/build.sh ${{ needs.containers.outputs.node-image-ref }} \
             'remote' ${{ needs.containers.outputs.node-release-cid }} ${{ github.sha }} ${{ env.DEFAULT_DEV_VERSION }}
           chmod 755 forta
