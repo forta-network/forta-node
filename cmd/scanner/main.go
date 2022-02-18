@@ -141,7 +141,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 
 	svcs := []services.Service{
 		health.NewService(ctx, health.CheckerFrom(
-			ethClient, traceClient, txStream, txAnalyzer, blockAnalyzer, agentPool, registryService,
+			ethClient, traceClient, blockFeed, txStream, txAnalyzer, blockAnalyzer, agentPool, registryService,
 		)),
 		txStream,
 		txAnalyzer,
