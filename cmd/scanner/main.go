@@ -108,12 +108,12 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 
-	ethClient, err := ethereum.NewStreamEthClient(ctx, cfg.Scan.JsonRpc.Url)
+	ethClient, err := ethereum.NewStreamEthClient(ctx, "chain", cfg.Scan.JsonRpc.Url)
 	if err != nil {
 		return nil, err
 	}
 
-	traceClient, err := ethereum.NewStreamEthClient(ctx, cfg.Trace.JsonRpc.Url)
+	traceClient, err := ethereum.NewStreamEthClient(ctx, "trace", cfg.Trace.JsonRpc.Url)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +123,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 
-	registryService := registry.New(cfg, key.Address, msgClient)
+	registryService := registry.New(cfg, key.Address, msgClient, ethClient)
 	agentPool := agentpool.NewAgentPool(ctx, cfg.Scan, msgClient)
 	txAnalyzer, err := initTxAnalyzer(ctx, cfg, as, txStream, agentPool, msgClient)
 	if err != nil {
@@ -141,7 +141,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 
 	svcs := []services.Service{
 		health.NewService(ctx, health.CheckerFrom(
-			blockFeed, txStream, txAnalyzer, blockAnalyzer, agentPool, registryService,
+			ethClient, traceClient, blockFeed, txStream, txAnalyzer, blockAnalyzer, agentPool, registryService,
 		)),
 		txStream,
 		txAnalyzer,

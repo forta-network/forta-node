@@ -36,10 +36,7 @@ type blockFeed struct {
 	rateLimit   *time.Ticker
 	maxBlockAge *time.Duration
 
-	lastBlockByNumberReq health.TimeTracker
-	lastBlockByNumberErr health.ErrorTracker
-	lastTraceBlockReq    health.TimeTracker
-	lastTraceBlockErr    health.ErrorTracker
+	lastBlock health.MessageTracker
 }
 
 type BlockFeedConfig struct {
@@ -151,20 +148,18 @@ func (bf *blockFeed) forEachBlock() error {
 			<-bf.rateLimit.C
 		}
 
+		bf.lastBlock.Set(blockNum.String())
+
 		var err error
 		var traces []domain.Trace
 		if bf.tracing {
 			traces, err = bf.traceClient.TraceBlock(bf.ctx, blockNum)
-			bf.lastTraceBlockReq.Set()
-			bf.lastTraceBlockErr.Set(err)
 			if err != nil {
 				log.WithError(err).Error("error tracing block")
 			}
 		}
 
 		block, err := bf.client.BlockByNumber(bf.ctx, blockNum)
-		bf.lastBlockByNumberReq.Set()
-		bf.lastBlockByNumberErr.Set(err)
 		if err != nil {
 			log.WithError(err).Error("error getting block")
 			continue
@@ -226,10 +221,7 @@ func (bf *blockFeed) Name() string {
 // Health implements the health.Reporter interface.
 func (bf *blockFeed) Health() health.Reports {
 	return health.Reports{
-		bf.lastBlockByNumberReq.GetReport("event.block-by-number.time"),
-		bf.lastBlockByNumberErr.GetReport("event.block-by-number.error"),
-		bf.lastTraceBlockReq.GetReport("event.trace-block.time"),
-		bf.lastTraceBlockErr.GetReport("event.trace-block.error"),
+		bf.lastBlock.GetReport("last-block"),
 	}
 }
 

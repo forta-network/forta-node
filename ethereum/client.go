@@ -12,6 +12,7 @@ import (
 
 	backoff "github.com/cenkalti/backoff/v4"
 
+	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/domain"
 	"github.com/forta-protocol/forta-node/utils"
 
@@ -36,6 +37,7 @@ type Client interface {
 	ChainID(ctx context.Context) (*big.Int, error)
 	TraceBlock(ctx context.Context, number *big.Int) ([]domain.Trace, error)
 	GetLogs(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error)
+	health.Reporter
 }
 
 const blocksByNumber = "eth_getBlockByNumber"
@@ -65,7 +67,15 @@ var maxBackoff = 1 * time.Minute
 
 // streamEthClient wraps a go-ethereum client purpose-built for streaming txs (with long retries/timeouts)
 type streamEthClient struct {
+	apiName   string
 	rpcClient rpcClient
+
+	lastBlockByNumberReq         health.TimeTracker
+	lastBlockByNumberErr         health.ErrorTracker
+	lastGetTransactionReceiptReq health.TimeTracker
+	lastGetTransactionReceiptErr health.ErrorTracker
+	lastTraceBlockReq            health.TimeTracker
+	lastTraceBlockErr            health.ErrorTracker
 }
 
 type RetryOptions struct {
@@ -75,7 +85,7 @@ type RetryOptions struct {
 }
 
 // Close invokes close on the underlying client
-func (e streamEthClient) Close() {
+func (e *streamEthClient) Close() {
 	e.rpcClient.Close()
 }
 
@@ -92,7 +102,10 @@ func isPermanentError(err error) bool {
 }
 
 // withBackoff wraps an operation in an exponential backoff logic
-func withBackoff(ctx context.Context, name string, operation func(ctx context.Context) error, options RetryOptions) error {
+func withBackoff(
+	ctx context.Context, name string, operation func(ctx context.Context) error, options RetryOptions,
+	timeTracker *health.TimeTracker, errorTracker *health.ErrorTracker,
+) error {
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxInterval = maxBackoff
 	bo.InitialInterval = minBackoff
@@ -113,6 +126,12 @@ func withBackoff(ctx context.Context, name string, operation func(ctx context.Co
 		tCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
 		err := operation(tCtx)
 		cancel()
+		if timeTracker != nil {
+			timeTracker.Set()
+		}
+		if errorTracker != nil {
+			errorTracker.Set(err)
+		}
 		if err == nil {
 			//success, returning now avoids failing on context timeouts in certain edge cases
 			return nil
@@ -138,7 +157,7 @@ func pointDur(d time.Duration) *time.Duration {
 }
 
 // BlockByHash returns the block by hash
-func (e streamEthClient) BlockByHash(ctx context.Context, hash string) (*domain.Block, error) {
+func (e *streamEthClient) BlockByHash(ctx context.Context, hash string) (*domain.Block, error) {
 	name := fmt.Sprintf("%s(%s)", blocksByHash, hash)
 	log.Debugf(name)
 	var result domain.Block
@@ -155,12 +174,12 @@ func (e streamEthClient) BlockByHash(ctx context.Context, hash string) (*domain.
 		MinBackoff:     pointDur(5 * time.Second),
 		MaxElapsedTime: pointDur(12 * time.Hour),
 		MaxBackoff:     pointDur(15 * time.Second),
-	})
+	}, nil, nil)
 	return &result, err
 }
 
 // TraceBlock returns the traced block
-func (e streamEthClient) TraceBlock(ctx context.Context, number *big.Int) ([]domain.Trace, error) {
+func (e *streamEthClient) TraceBlock(ctx context.Context, number *big.Int) ([]domain.Trace, error) {
 	name := fmt.Sprintf("%s(%s)", traceBlock, number)
 	log.Debugf(name)
 	var result []domain.Trace
@@ -177,12 +196,12 @@ func (e streamEthClient) TraceBlock(ctx context.Context, number *big.Int) ([]dom
 		MinBackoff:     pointDur(15 * time.Second),
 		MaxElapsedTime: pointDur(12 * time.Hour),
 		MaxBackoff:     pointDur(15 * time.Second),
-	})
+	}, &e.lastTraceBlockReq, &e.lastTraceBlockErr)
 	return result, err
 }
 
 // GetLogs returns the set of logs for a block
-func (e streamEthClient) GetLogs(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error) {
+func (e *streamEthClient) GetLogs(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error) {
 	name := fmt.Sprintf("%s(%v)", getLogs, q)
 	log.Debugf(name)
 	var result []types.Log
@@ -198,12 +217,12 @@ func (e streamEthClient) GetLogs(ctx context.Context, q ethereum.FilterQuery) ([
 		MinBackoff:     pointDur(5 * time.Second),
 		MaxElapsedTime: pointDur(12 * time.Hour),
 		MaxBackoff:     pointDur(15 * time.Second),
-	})
+	}, nil, nil)
 	return result, err
 }
 
 // BlockByNumber returns the block by number
-func (e streamEthClient) BlockByNumber(ctx context.Context, number *big.Int) (*domain.Block, error) {
+func (e *streamEthClient) BlockByNumber(ctx context.Context, number *big.Int) (*domain.Block, error) {
 	var result domain.Block
 	num := "latest"
 	if number != nil {
@@ -225,19 +244,19 @@ func (e streamEthClient) BlockByNumber(ctx context.Context, number *big.Int) (*d
 		MinBackoff:     pointDur(15 * time.Second),
 		MaxElapsedTime: pointDur(12 * time.Hour),
 		MaxBackoff:     pointDur(15 * time.Second),
-	})
+	}, &e.lastBlockByNumberReq, &e.lastBlockByNumberErr)
 	return &result, err
 }
 
 // BlockNumber returns the latest block number
-func (e streamEthClient) BlockNumber(ctx context.Context) (*big.Int, error) {
+func (e *streamEthClient) BlockNumber(ctx context.Context) (*big.Int, error) {
 	log.Debugf(blockNumber)
 	var result string
 	err := withBackoff(ctx, blockNumber, func(ctx context.Context) error {
 		return e.rpcClient.CallContext(ctx, &result, blockNumber)
 	}, RetryOptions{
 		MaxElapsedTime: pointDur(12 * time.Hour),
-	})
+	}, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -245,14 +264,14 @@ func (e streamEthClient) BlockNumber(ctx context.Context) (*big.Int, error) {
 }
 
 // ChainID gets the chainID for a network
-func (e streamEthClient) ChainID(ctx context.Context) (*big.Int, error) {
+func (e *streamEthClient) ChainID(ctx context.Context) (*big.Int, error) {
 	log.Debugf(chainId)
 	var result string
 	err := withBackoff(ctx, chainId, func(ctx context.Context) error {
 		return e.rpcClient.CallContext(ctx, &result, chainId)
 	}, RetryOptions{
 		MaxElapsedTime: pointDur(1 * time.Minute),
-	})
+	}, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +279,7 @@ func (e streamEthClient) ChainID(ctx context.Context) (*big.Int, error) {
 }
 
 // TransactionReceipt returns the receipt for a transaction
-func (e streamEthClient) TransactionReceipt(ctx context.Context, txHash string) (*domain.TransactionReceipt, error) {
+func (e *streamEthClient) TransactionReceipt(ctx context.Context, txHash string) (*domain.TransactionReceipt, error) {
 	name := fmt.Sprintf("%s(%s)", transactionReceipt, txHash)
 	log.Debugf(name)
 	var result domain.TransactionReceipt
@@ -274,8 +293,25 @@ func (e streamEthClient) TransactionReceipt(ctx context.Context, txHash string) 
 		return nil
 	}, RetryOptions{
 		MaxElapsedTime: pointDur(5 * time.Minute),
-	})
+	}, &e.lastGetTransactionReceiptReq, &e.lastGetTransactionReceiptErr)
 	return &result, err
+}
+
+// Name returns the name of this implementation.
+func (e *streamEthClient) Name() string {
+	return fmt.Sprintf("%s-json-rpc-client", e.apiName)
+}
+
+// Health implements the health.Reporter interface.
+func (e *streamEthClient) Health() health.Reports {
+	return health.Reports{
+		e.lastBlockByNumberReq.GetReport("request.block-by-number.time"),
+		e.lastBlockByNumberErr.GetReport("request.block-by-number.error"),
+		e.lastGetTransactionReceiptReq.GetReport("request.get-transaction-receipt.time"),
+		e.lastGetTransactionReceiptErr.GetReport("request.get-transaction-receipt.error"),
+		e.lastTraceBlockReq.GetReport("request.trace-block.time"),
+		e.lastTraceBlockErr.GetReport("request.trace-block.error"),
+	}
 }
 
 func NewRpcClient(url string) (*rpc.Client, error) {
@@ -294,7 +330,7 @@ func NewRpcClient(url string) (*rpc.Client, error) {
 }
 
 // NewStreamEthClient creates a new ethereum client
-func NewStreamEthClient(ctx context.Context, url string) (*streamEthClient, error) {
+func NewStreamEthClient(ctx context.Context, apiName, url string) (*streamEthClient, error) {
 	//TODO: consider NewClient with a custom RPC so that one can inject headers
 	rpcClient, err := NewRpcClient(url)
 
@@ -302,5 +338,5 @@ func NewStreamEthClient(ctx context.Context, url string) (*streamEthClient, erro
 		return nil, err
 	}
 	rpcClient.SetHeader("Content-Type", "application/json")
-	return &streamEthClient{rpcClient: rpcClient}, nil
+	return &streamEthClient{apiName: apiName, rpcClient: rpcClient}, nil
 }

@@ -146,7 +146,7 @@ func (rs *registryStore) optsWithLatestBlock() (*bind.CallOpts, error) {
 	}, nil
 }
 
-func NewRegistryStore(ctx context.Context, cfg config.Config) (*registryStore, error) {
+func NewRegistryStore(ctx context.Context, cfg config.Config, ethClient ethereum.Client) (*registryStore, error) {
 	agentRegAddress := cfg.AgentRegistryContractAddress
 
 	rpc, err := ethereum.NewRpcClient(cfg.Registry.JsonRpc.Url)
@@ -161,11 +161,6 @@ func NewRegistryStore(ctx context.Context, cfg config.Config) (*registryStore, e
 	}
 
 	d, err := contracts.NewDispatchCaller(common.HexToAddress(cfg.Registry.ContractAddress), client)
-	if err != nil {
-		return nil, err
-	}
-
-	ethClient, err := ethereum.NewStreamEthClient(context.Background(), cfg.Registry.JsonRpc.Url)
 	if err != nil {
 		return nil, err
 	}

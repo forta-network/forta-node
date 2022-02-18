@@ -24,6 +24,7 @@ type RegistryService struct {
 	cfg            config.Config
 	scannerAddress common.Address
 	msgClient      clients.MessageClient
+	ethClient      ethereum.Client
 
 	rpcClient     *rpc.Client
 	registryStore store.RegistryStore
@@ -49,18 +50,19 @@ type EthClient interface {
 }
 
 // New creates a new service.
-func New(cfg config.Config, scannerAddress common.Address, msgClient clients.MessageClient) *RegistryService {
+func New(cfg config.Config, scannerAddress common.Address, msgClient clients.MessageClient, ethClient ethereum.Client) *RegistryService {
 	return &RegistryService{
 		cfg:            cfg,
 		scannerAddress: scannerAddress,
 		msgClient:      msgClient,
+		ethClient:      ethClient,
 		done:           make(chan struct{}),
 	}
 }
 
 // Init only initializes the service.
 func (rs *RegistryService) Init() error {
-	regStr, err := store.NewRegistryStore(context.TODO(), rs.cfg)
+	regStr, err := store.NewRegistryStore(context.Background(), rs.cfg, rs.ethClient)
 	if err != nil {
 		return err
 	}
