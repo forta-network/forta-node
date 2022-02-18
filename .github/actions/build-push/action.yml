@@ -33,8 +33,9 @@ runs:
         REGISTRY: ${{ inputs.registry }}
         IMAGE_NAME: ${{ inputs.name }}
         VERSION: ${{ inputs.version }}
+        COMMIT_SHA: ${{ github.sha }}
       run: |
-        IMAGE_REF=$(./scripts/build-and-push.sh "$REGISTRY" "$IMAGE_NAME")
+        IMAGE_REF=$(./scripts/build-and-push.sh "$REGISTRY" "$IMAGE_NAME" "$COMMIT_SHA")
         echo "::set-output name=image-reference::$IMAGE_REF"
         ./scripts/build-manifest.sh ./scripts/manifest-template.json manifest.json "$GITHUB_SHA" "$IMAGE_REF" "$VERSION"
     - name: Push Manifest
