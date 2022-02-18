@@ -89,6 +89,8 @@ jobs:
           expire-in: 7days
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          ref: ${{ github.ref }}
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
