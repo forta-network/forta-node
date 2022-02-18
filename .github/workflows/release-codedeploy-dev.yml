@@ -123,10 +123,10 @@ jobs:
         with:
           files: dist/
           dest: deploy.zip
-      - uses: actions/upload-artifact@v1
-        with:
-          name: deploy-artifact
-          path: ${{ github.workspace }}/deploy.zip
+      # - uses: actions/upload-artifact@v1
+      #   with:
+      #     name: deploy-artifact
+      #     path: ${{ github.workspace }}/deploy.zip
 
       - name: Configure AWS credentials (CodeDeploy)
         uses: aws-actions/configure-aws-credentials@v1
