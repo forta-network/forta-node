@@ -101,7 +101,7 @@ func (sr *SummaryReport) Addf(msg string, args ...interface{}) *SummaryReport {
 // Punc puts a punctuation mark.
 func (sr *SummaryReport) Punc(punc string) *SummaryReport {
 	lastMsg := sr.lastMsg()
-	if lastMsg == "" || lastMsg == "." {
+	if lastMsg == "" || (lastMsg[len(lastMsg)-1] == '.') {
 		return sr
 	}
 	sr.messages = append(sr.messages, punc)
