@@ -13,6 +13,9 @@ import (
 // HealthChecker checks service health and generates reports.
 type HealthChecker func() Reports
 
+// Summarizer checks all reports and creates a summary report.
+type Summarizer func(Reports) *Report
+
 // Reporter is a health reporter interface.
 type Reporter interface {
 	Name() string
@@ -20,7 +23,7 @@ type Reporter interface {
 }
 
 // CheckerFrom makes a health checker handler from Reporter implementations.
-func CheckerFrom(reporters ...Reporter) HealthChecker {
+func CheckerFrom(summarizer Summarizer, reporters ...Reporter) HealthChecker {
 	return func() (allReports Reports) {
 		for _, reporter := range reporters {
 			reports := reporter.Health()
@@ -32,8 +35,12 @@ func CheckerFrom(reporters ...Reporter) HealthChecker {
 					report.Name = fmt.Sprintf("service.%s.%s", reporter.Name(), report.Name)
 				}
 			}
+			if summarizer != nil {
+				allReports = append(allReports, summarizer(allReports))
+			}
 			allReports = append(allReports, reports...)
 		}
+
 		return
 	}
 }

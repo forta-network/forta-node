@@ -1,7 +1,9 @@
 package health
 
 import (
+	"fmt"
 	"strings"
+	"time"
 
 	"github.com/forta-protocol/forta-node/utils"
 )
@@ -26,29 +28,97 @@ type Report struct {
 	Details string `json:"details"`
 }
 
-// ReportName constructs a new report name in publisher.alert_client.* format.
-func ReportName(service, component string, properties ...string) string {
-	var names []string
-	if len(service) > 0 {
-		names = append(names, service)
+// Time tries parsing details as time.
+func (report *Report) Time() (*time.Time, bool) {
+	t, err := time.Parse(report.Details, time.RFC3339)
+	if err != nil {
+		return nil, false
 	}
-	if len(component) > 0 {
-		names = append(names, component)
-	}
-	for _, prop := range properties {
-		if len(prop) > 0 {
-			names = append(names, prop)
-		}
-	}
-	return strings.Join(names, ".")
+	return &t, true
 }
 
 // Reports can be marshaled into CSV format.
 type Reports []*Report
+
+// NameContains finds a report by checking the name string.
+func (reports Reports) NameContains(name string) (*Report, bool) {
+	for _, report := range reports {
+		if strings.Contains(report.Name, name) {
+			return report, true
+		}
+	}
+	return nil, false
+}
+
+// GetByName finds a report by checking if there is an exact match.
+func (reports Reports) GetByName(name string) (*Report, bool) {
+	for _, report := range reports {
+		if report.Name == name {
+			return report, true
+		}
+	}
+	return nil, false
+}
 
 // ObfuscateDetails obfuscates details in each report.
 func (reports Reports) ObfuscateDetails() {
 	for _, report := range reports {
 		report.Details = utils.ObfuscateURLs(report.Details)
 	}
+}
+
+// SummaryReport implements some methods to help construct summary `Reports` easily.
+type SummaryReport struct {
+	report   Report
+	messages []string
+}
+
+// NewSummary creates a new summary report.
+func NewSummary() *SummaryReport {
+	return &SummaryReport{
+		report: Report{
+			Name:    "summary",
+			Status:  StatusOK,
+			Details: "all services are healthy",
+		},
+	}
+}
+
+// Add adds a summary message.
+func (sr *SummaryReport) Add(msg string) *SummaryReport {
+	if len(sr.messages) > 0 {
+		msg = " " + msg
+	}
+	sr.messages = append(sr.messages, msg)
+	return sr
+}
+
+// Addf adds a summary message.
+func (sr *SummaryReport) Addf(msg string, args ...interface{}) *SummaryReport {
+	return sr.Add(fmt.Sprintf(msg, args...))
+}
+
+// Punc puts a punctuation mark.
+func (sr *SummaryReport) Punc(punc string) *SummaryReport {
+	sr.messages = append(sr.messages, punc)
+	return sr
+}
+
+// Status sets the report status.
+func (sr *SummaryReport) Status(status Status) *SummaryReport {
+	sr.report.Status = status
+	return sr
+}
+
+// Finish constructs the summary message and returns the constructed report.
+func (sr *SummaryReport) Finish() *Report {
+	sr.report.Details = strings.Join(sr.messages, "")
+	return &sr.report
+}
+
+// Fail returns a negative summary.
+func (sr *SummaryReport) Fail() *Report {
+	sr.report.Status = StatusFailing
+	sr.report.Details = "failed to summarize statuses"
+	return &sr.report
 }
