@@ -225,7 +225,7 @@ func summarizeReports(reports health.Reports) *health.Report {
 	}
 	summary.Punc(".")
 
-	getTxReceiptErr, ok := reports.NameContains("chain-json-rpc-client.request.get-transaction-receipt")
+	getTxReceiptErr, ok := reports.NameContains("chain-json-rpc-client.request.get-transaction-receipt.error")
 	if ok && len(getTxReceiptErr.Details) > 0 {
 		summary.Addf("failing to get transaction receipt with error '%s', this can slow down block processing.", getTxReceiptErr.Details)
 	}
