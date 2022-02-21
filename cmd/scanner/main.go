@@ -233,6 +233,7 @@ func summarizeReports(reports health.Reports) *health.Report {
 	traceBlockErr, ok := reports.NameContains("trace-json-rpc-client.request.trace-block.error")
 	if ok && len(traceBlockErr.Details) > 0 {
 		summary.Addf("trace api (trace_block) is failing with error '%s'.", traceBlockErr.Details)
+		summary.Status(health.StatusFailing)
 	}
 
 	return summary.Finish()

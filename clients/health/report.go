@@ -100,8 +100,20 @@ func (sr *SummaryReport) Addf(msg string, args ...interface{}) *SummaryReport {
 
 // Punc puts a punctuation mark.
 func (sr *SummaryReport) Punc(punc string) *SummaryReport {
+	lastMsg := sr.lastMsg()
+	if lastMsg == "" || lastMsg == "." {
+		return sr
+	}
 	sr.messages = append(sr.messages, punc)
 	return sr
+}
+
+func (sr *SummaryReport) lastMsg() string {
+	length := len(sr.messages)
+	if length == 0 {
+		return ""
+	}
+	return sr.messages[length-1]
 }
 
 // Status sets the report status.

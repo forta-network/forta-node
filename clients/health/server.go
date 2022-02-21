@@ -35,12 +35,11 @@ func CheckerFrom(summarizer Summarizer, reporters ...Reporter) HealthChecker {
 					report.Name = fmt.Sprintf("service.%s.%s", reporter.Name(), report.Name)
 				}
 			}
-			if summarizer != nil {
-				allReports = append(allReports, summarizer(allReports))
-			}
 			allReports = append(allReports, reports...)
 		}
-
+		if summarizer != nil {
+			allReports = append(allReports, summarizer(allReports))
+		}
 		return
 	}
 }
