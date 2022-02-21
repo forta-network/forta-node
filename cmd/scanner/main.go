@@ -219,7 +219,7 @@ func summarizeReports(reports health.Reports) *health.Report {
 			checkDelay := time.Since(*t)
 			if checkDelay > time.Minute*5 {
 				summary.Punc(",")
-				summary.Addf("lagging to get block by %d minutes.", checkDelay.Minutes())
+				summary.Addf("lagging to get block by %d minutes.", int64(checkDelay.Minutes()))
 			}
 		}
 	}
