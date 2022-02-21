@@ -46,6 +46,7 @@ func summarizeReports(reports health.Reports) *health.Report {
 	checkedErr, ok := reports.NameContains("event.checked.error")
 	if !ok {
 		summary.Fail()
+		return summary.Finish()
 	}
 	if len(checkedErr.Details) > 0 {
 		summary.Addf("auto-updater is failing to check new versions with error '%s'", checkedErr.Details)

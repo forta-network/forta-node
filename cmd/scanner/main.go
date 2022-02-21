@@ -183,7 +183,7 @@ func summarizeReports(reports health.Reports) *health.Report {
 		checkedT, _ = checkedTime.Time()
 	}
 	var checkedE string
-	checkedErr, ok := reports.NameContains("registry.event.checked.time")
+	checkedErr, ok := reports.NameContains("registry.event.checked.error")
 	if ok {
 		checkedE = checkedErr.Details
 	}
@@ -212,7 +212,7 @@ func summarizeReports(reports health.Reports) *health.Report {
 		summary.Addf("failing to get block with error '%s'", blockByNumberErr.Details)
 		summary.Status(health.StatusFailing)
 	}
-	blockByNumberTime, ok := reports.NameContains("chain-json-rpc-client.request.block-by-number.error")
+	blockByNumberTime, ok := reports.NameContains("chain-json-rpc-client.request.block-by-number.time")
 	if ok && len(blockByNumberTime.Details) > 0 {
 		t, ok := blockByNumberTime.Time()
 		if ok {
