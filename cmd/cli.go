@@ -218,7 +218,6 @@ func initConfig() {
 	cfg.Development = viper.GetBool(keyFortaDevelopment)
 	cfg.Passphrase = viper.GetString(keyFortaPassphrase)
 	cfg.ExposeNats = viper.GetBool(keyFortaExposeNats)
-	cfg.NoUpdate = parsedArgs.NoUpdate
 
 	cfg.LocalAgentsPath = path.Join(cfg.FortaDir, config.DefaultLocalAgentsFileName)
 	cfg.LocalAgents, _ = readLocalAgents()

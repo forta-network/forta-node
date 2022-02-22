@@ -2,7 +2,6 @@ package config
 
 const (
 	EnvHostFortaDir = "HOST_FORTA_DIR" // for retrieving forta dir path on the host os
-	EnvNoUpdate     = "FORTA_NO_UPDATE"
 	EnvDevelopment  = "FORTA_DEVELOPMENT"
 	EnvReleaseInfo  = "FORTA_RELEASE_INFO"
 

@@ -17,6 +17,7 @@ const defaultImageCheckInterval = time.Second * 5
 // FortaImageStore keeps track of the latest Forta node image.
 type FortaImageStore interface {
 	Latest() <-chan ImageRefs
+	EmbeddedImageRefs() ImageRefs
 }
 
 // ImageRefs contains the latest image references.
@@ -50,19 +51,18 @@ func (store *fortaImageStore) loop(ctx context.Context) {
 	}
 }
 
+func (store *fortaImageStore) EmbeddedImageRefs() ImageRefs {
+	return ImageRefs{
+		Supervisor:  config.DockerSupervisorImage,
+		Updater:     config.DockerUpdaterImage,
+		ReleaseInfo: config.GetBuildReleaseInfo(),
+	}
+}
+
 func (store *fortaImageStore) check(ctx context.Context) {
 	latestReleaseInfo, err := store.getFromUpdater(ctx)
 	if err != nil {
 		log.WithError(err).Warn("failed to get the latest release from the updater")
-	}
-
-	if len(store.latestImgs.Supervisor) == 0 && latestReleaseInfo == nil {
-		store.latestImgs = ImageRefs{
-			Supervisor:  config.DockerSupervisorImage,
-			Updater:     config.DockerUpdaterImage,
-			ReleaseInfo: config.GetBuildReleaseInfo(),
-		}
-		store.latestCh <- store.latestImgs
 	}
 
 	if latestReleaseInfo == nil {
