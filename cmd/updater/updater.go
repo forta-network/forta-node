@@ -21,16 +21,14 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	}
 
 	developmentMode := utils.ParseBoolEnvVar(config.EnvDevelopment)
-	noUpdate := utils.ParseBoolEnvVar(config.EnvNoUpdate)
 
 	log.WithFields(log.Fields{
 		"developmentMode": developmentMode,
-		"noUpdate":        noUpdate,
 	}).Info("updater modes")
 
 	updaterService := updater.NewUpdaterService(
 		ctx, up, ipfs, config.DefaultContainerPort,
-		developmentMode, noUpdate,
+		developmentMode,
 	)
 
 	return []services.Service{
