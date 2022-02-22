@@ -51,9 +51,21 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	}
 
 	return []services.Service{
-		health.NewService(ctx, health.CheckerFrom(publisher)),
+		health.NewService(ctx, health.CheckerFrom(summarizeReports, publisher)),
 		publisher,
 	}, nil
+}
+
+func summarizeReports(reports health.Reports) *health.Report {
+	summary := health.NewSummary()
+
+	batchPublishErr, ok := reports.NameContains("publisher.event.batch-publish.error")
+	if ok && len(batchPublishErr.Details) > 0 {
+		summary.Addf("failed to publish the last batch with error '%s'", batchPublishErr.Details)
+		summary.Status(health.StatusFailing)
+	}
+
+	return summary.Finish()
 }
 
 func Run() {

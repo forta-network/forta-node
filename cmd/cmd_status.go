@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/forta-protocol/forta-node/clients/health"
@@ -21,12 +22,21 @@ const (
 	StatusFormatOneline = "oneline"
 	StatusFormatJSON    = "json"
 	StatusFormatCSV     = "csv"
+
+	StatusShowSummary   = "summary"
+	StatusShowImportant = "important"
+	StatusShowAll       = "all"
 )
 
 var ballPrefix = "⬤ "
 
 func handleFortaStatus(cmd *cobra.Command, args []string) error {
 	format, err := cmd.Flags().GetString("format")
+	if err != nil {
+		return err
+	}
+
+	show, err := cmd.Flags().GetString("show")
 	if err != nil {
 		return err
 	}
@@ -41,10 +51,28 @@ func handleFortaStatus(cmd *cobra.Command, args []string) error {
 	}
 
 	// call the runner health server on localhost
-	reports := health.NewClient().CheckHealth("forta", config.DefaultHealthPort)
-	sort.Slice(reports, func(i, j int) bool {
-		return sort.StringsAreSorted([]string{reports[i].Name, reports[j].Name})
+	allReports := health.NewClient().CheckHealth("forta", config.DefaultHealthPort)
+	sort.Slice(allReports, func(i, j int) bool {
+		return sort.StringsAreSorted([]string{allReports[i].Name, allReports[j].Name})
 	})
+
+	var reports health.Reports
+	for _, report := range allReports {
+		var shouldInclude bool
+		switch show {
+		case StatusShowSummary:
+			shouldInclude = strings.Contains(report.Name, "summary")
+
+		case StatusShowImportant:
+			shouldInclude = report.Status != health.StatusInfo
+
+		case StatusShowAll:
+			shouldInclude = true
+		}
+		if shouldInclude {
+			reports = append(reports, report)
+		}
+	}
 
 	switch format {
 	case StatusFormatPretty:

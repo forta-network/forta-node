@@ -187,6 +187,7 @@ func init() {
 	// forta status
 	cmdFortaStatus.Flags().String("format", StatusFormatPretty, "output formatting/encoding: pretty (default), oneline, json, csv")
 	cmdFortaStatus.Flags().Bool("no-color", false, "disable colors")
+	cmdFortaStatus.Flags().String("show", StatusShowSummary, "filter statuses to show: summary (default), important, all")
 }
 
 func initConfig() {
