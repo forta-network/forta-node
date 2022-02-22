@@ -78,9 +78,7 @@ func (sup *SupervisorService) start() error {
 	if !sup.config.Config.TelemetryConfig.Disable {
 		go sup.syncTelemetryData()
 	}
-	if !sup.config.Config.AgentLogsConfig.Disable {
-		go sup.syncAgentLogs()
-	}
+	go sup.syncAgentLogs()
 
 	sup.mu.Lock()
 	defer sup.mu.Unlock()
