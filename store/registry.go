@@ -155,6 +155,7 @@ func NewRegistryStore(ctx context.Context, cfg config.Config, ethClient ethereum
 	}
 	client := ethclient.NewClient(rpc)
 
+	log.WithField("url", cfg.Registry.JsonRpc.Url).Info("initialized json-rpc url")
 	log.WithField("address", common.HexToAddress(agentRegAddress)).Info("initialized agent registry")
 
 	ar, err := contracts.NewAgentRegistryCaller(common.HexToAddress(agentRegAddress), client)
@@ -162,7 +163,7 @@ func NewRegistryStore(ctx context.Context, cfg config.Config, ethClient ethereum
 		return nil, err
 	}
 
-	log.WithField("address", common.HexToAddress(cfg.Registry.ContractAddress)).Info("initialized dipatch contract")
+	log.WithField("address", common.HexToAddress(cfg.Registry.ContractAddress)).Info("initialized dispatch contract")
 
 	d, err := contracts.NewDispatchCaller(common.HexToAddress(cfg.Registry.ContractAddress), client)
 	if err != nil {
