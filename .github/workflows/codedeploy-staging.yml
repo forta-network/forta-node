@@ -47,7 +47,7 @@ jobs:
         id: build-and-push
         uses: ./.github/actions/build-push
         with:
-          registry: disco-staging.forta.network
+          registry: disco.forta.network
           name: ${{ matrix.image-name }}
           version: ${{ env.DEFAULT_STAGING_VERSION }}
       - name: Write output values
