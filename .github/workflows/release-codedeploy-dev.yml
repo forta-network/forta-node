@@ -5,6 +5,7 @@ on:
     branches: [master]
   workflow_dispatch:
     branches: [master]
+  pull_request:
 
 env:
   DEFAULT_DEV_VERSION: v0.4.0
