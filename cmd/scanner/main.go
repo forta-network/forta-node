@@ -153,7 +153,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	}
 
 	// for performance tests, this flag avoids using registry service
-	if !cfg.Registry.Disabled {
+	if !cfg.Registry.Disable {
 		svcs = append(svcs, registryService)
 	}
 

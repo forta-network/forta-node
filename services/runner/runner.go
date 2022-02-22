@@ -69,11 +69,11 @@ func (runner *Runner) Start() error {
 
 	health.StartServer(runner.ctx, runner.checkHealth)
 
-	if runner.cfg.AutoUpdate {
+	if runner.cfg.AutoUpdate.Disable {
+		runner.startEmbeddedSupervisor()
+	} else {
 		runner.startEmbeddedUpdater()
 		go runner.keepContainersUpToDate()
-	} else {
-		runner.startEmbeddedSupervisor()
 	}
 
 	go runner.keepContainersAlive()
@@ -353,7 +353,7 @@ func (runner *Runner) doKeepContainersAlive() error {
 	}
 
 	// only keep updater up if auto-update is enabled
-	if runner.updaterContainer != nil && runner.cfg.AutoUpdate {
+	if runner.updaterContainer != nil && !runner.cfg.AutoUpdate.Disable {
 		container, err := runner.dockerClient.GetContainerByID(runner.ctx, runner.updaterContainer.ID)
 		if err == nil && container.State == "exited" {
 			runner.dockerClient.StartContainer(runner.ctx, runner.updaterContainer.Config)
