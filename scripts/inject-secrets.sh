@@ -7,6 +7,7 @@ configPath=/home/forta/.forta/config.yml
 instanceId=$(curl -s http://instance-data/latest/meta-data/instance-id)
 region=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)
 envPrefix=$(aws ec2 describe-tags --region $region --filters "Name=resource-id,Values=$instanceId" "Name=key,Values=Environment" |jq -r '.Tags[0].Value')
+roleName=$(aws ec2 describe-tags --region $region --filters "Name=resource-id,Values=$instanceId" "Name=key,Values=Role" |jq -r '.Tags[0].Value')
 
 secretId="${envPrefix}_alchemy_api_url"
 apiUrlUnsafe=$(aws secretsmanager --region $region get-secret-value --secret-id $secretId |jq -r '.SecretString')
@@ -33,5 +34,9 @@ sed -i "s/ALCHEMY_URL/$apiUrl/g" $configPath
 sed -i "s/REGISTRY_API_URL/$registryApiUrl/g" $configPath
 sed -i "s/REGISTRY_WSS_URL/$registryWssUrl/g" $configPath
 sed -i "s/MAINNET_API_URL/$mainnetApiUrl/g" $configPath
+
+if [ "$roleName" == "staging-scanner" ]; then
+   sed -i "s/autoUpdate: true/autoUpdate: false/g" $configPath
+fi
 
 chown -R forta.forta /home/forta
