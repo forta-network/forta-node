@@ -91,7 +91,7 @@ type TelemetryConfig struct {
 }
 
 type AutoUpdateConfig struct {
-	Disable bool `yaml:"disable" json:"disable" validate:"omitempty,boolean"`
+	Disable bool `yaml:"disable" json:"disable" validate:"omitempty"`
 }
 
 type Config struct {
