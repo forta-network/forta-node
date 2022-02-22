@@ -23,9 +23,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const dockerResourcesLabel = "network.forta"
+const (
+	DockerLabelForta                         = "network.forta"
+	DockerLabelFortaSupervisor               = "network.forta.supervisor"
+	DockerLabelFortaSettingsAgentLogsEnabled = "network.forta.settings.agent-logs.enabled"
+)
 
-var defaultLabels = map[string]string{dockerResourcesLabel: "true"}
+var defaultLabels = map[string]string{DockerLabelForta: "true"}
 
 // Client errors
 var (
@@ -646,7 +650,7 @@ func initLabels(name string) map[string]string {
 	if len(name) == 0 {
 		return result
 	}
-	result["network.forta.supervisor"] = name
+	result[DockerLabelFortaSupervisor] = name
 	return result
 }
 
