@@ -187,6 +187,7 @@ func init() {
 	// forta status
 	cmdFortaStatus.Flags().String("format", StatusFormatPretty, "output formatting/encoding: pretty (default), oneline, json, csv")
 	cmdFortaStatus.Flags().Bool("no-color", false, "disable colors")
+	cmdFortaStatus.Flags().String("show", StatusShowSummary, "filter statuses to show: summary (default), important, all")
 }
 
 func initConfig() {
@@ -218,7 +219,6 @@ func initConfig() {
 	cfg.Development = viper.GetBool(keyFortaDevelopment)
 	cfg.Passphrase = viper.GetString(keyFortaPassphrase)
 	cfg.ExposeNats = viper.GetBool(keyFortaExposeNats)
-	cfg.NoUpdate = parsedArgs.NoUpdate
 
 	cfg.LocalAgentsPath = path.Join(cfg.FortaDir, config.DefaultLocalAgentsFileName)
 	cfg.LocalAgents, _ = readLocalAgents()

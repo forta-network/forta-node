@@ -69,7 +69,13 @@ func (runner *Runner) Start() error {
 
 	health.StartServer(runner.ctx, runner.checkHealth)
 
-	go runner.keepContainersUpToDate()
+	if runner.cfg.AutoUpdate {
+		runner.startEmbeddedUpdater()
+		go runner.keepContainersUpToDate()
+	} else {
+		runner.startEmbeddedSupervisor()
+	}
+
 	go runner.keepContainersAlive()
 
 	return nil
@@ -144,6 +150,28 @@ func (runner *Runner) removeContainerWithProps(name, id string) error {
 	return nil
 }
 
+func (runner *Runner) startEmbeddedUpdater() {
+	builtInRefs := runner.imgStore.EmbeddedImageRefs()
+	logger := log.WithField("supervisor", builtInRefs.Supervisor).WithField("updater", builtInRefs.Updater)
+
+	if err := runner.replaceUpdater(logger, builtInRefs); err != nil {
+		logger.WithError(err).Panic("error replacing updater")
+	} else {
+		runner.currentUpdaterImg = builtInRefs.Updater
+	}
+}
+
+func (runner *Runner) startEmbeddedSupervisor() {
+	builtInRefs := runner.imgStore.EmbeddedImageRefs()
+	logger := log.WithField("supervisor", builtInRefs.Supervisor).WithField("updater", builtInRefs.Updater)
+
+	if err := runner.replaceSupervisor(logger, builtInRefs); err != nil {
+		logger.WithError(err).Panic("error replacing supervisor")
+	} else {
+		runner.currentSupervisorImg = builtInRefs.Supervisor
+	}
+}
+
 func (runner *Runner) keepContainersUpToDate() {
 	for latestRefs := range runner.imgStore.Latest() {
 		runner.containerMu.Lock()
@@ -164,10 +192,7 @@ func (runner *Runner) keepContainersUpToDate() {
 			}
 		}
 
-		// don't run the supervisor if the release info is from compile time
-		// we need the up-to-date release info in order to start the whole stack
-		remoteReleaseInfo := latestRefs.ReleaseInfo != nil && !latestRefs.ReleaseInfo.FromBuild
-		if latestRefs.Supervisor != runner.currentSupervisorImg && remoteReleaseInfo {
+		if latestRefs.Supervisor != runner.currentSupervisorImg {
 			if err := runner.replaceSupervisor(logger, latestRefs); err != nil {
 				logger.WithError(err).Panic("error replacing supervisor")
 			} else {
@@ -233,7 +258,6 @@ func (runner *Runner) startUpdater(logger *log.Entry, latestRefs store.ImageRefs
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "updater"},
 		Env: map[string]string{
 			config.EnvDevelopment: strconv.FormatBool(runner.cfg.Development),
-			config.EnvNoUpdate:    strconv.FormatBool(runner.cfg.NoUpdate),
 			config.EnvReleaseInfo: latestRefs.ReleaseInfo.String(),
 		},
 		Volumes: map[string]string{
@@ -328,7 +352,8 @@ func (runner *Runner) doKeepContainersAlive() error {
 		}
 	}
 
-	if runner.updaterContainer != nil {
+	// only keep updater up if auto-update is enabled
+	if runner.updaterContainer != nil && runner.cfg.AutoUpdate {
 		container, err := runner.dockerClient.GetContainerByID(runner.ctx, runner.updaterContainer.ID)
 		if err == nil && container.State == "exited" {
 			runner.dockerClient.StartContainer(runner.ctx, runner.updaterContainer.Config)

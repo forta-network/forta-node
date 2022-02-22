@@ -101,7 +101,7 @@ type Config struct {
 	LocalAgents                   []*AgentConfig `yaml:"-" json:"_localAgents"`
 	AgentRegistryContractAddress  string         `yaml:"-" json:"_agentRegistry"`
 	ScannerVersionContractAddress string         `yaml:"-" json:"_scannerVersion"`
-	NoUpdate                      bool           `yaml:"-" json:"_noUpdate"`
+	AutoUpdate                    bool           `yaml:"autoUpdate" json:"autoUpdate" default:"true"`
 
 	Scan  ScannerConfig `yaml:"scan" json:"scan"`
 	Trace TraceConfig   `yaml:"trace" json:"trace"`
