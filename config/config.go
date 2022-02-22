@@ -91,8 +91,7 @@ type TelemetryConfig struct {
 }
 
 type AgentLogsConfig struct {
-	URL     string `yaml:"url" json:"url" default:"https://alerts.forta.network/logs/agents" validate:"url"`
-	Disable bool   `yaml:"disable" json:"disable" validate:"omitempty,boolean"`
+	URL string `yaml:"url" json:"url" default:"https://alerts.forta.network/logs/agents" validate:"url"`
 }
 
 type Config struct {
