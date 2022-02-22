@@ -30,7 +30,6 @@ type UpdaterService struct {
 	server *http.Server
 
 	developmentMode bool
-	noUpdate        bool
 
 	latestReference string
 	latestRelease   *config.ReleaseManifest
@@ -41,7 +40,7 @@ type UpdaterService struct {
 
 // NewUpdaterService creates a new updater service.
 func NewUpdaterService(ctx context.Context, us store.UpdaterStore, ipfs store.IPFSClient,
-	port string, developmentMode, noUpdate bool,
+	port string, developmentMode bool,
 ) *UpdaterService {
 	return &UpdaterService{
 		ctx:             ctx,
@@ -49,7 +48,6 @@ func NewUpdaterService(ctx context.Context, us store.UpdaterStore, ipfs store.IP
 		us:              us,
 		ipfs:            ipfs,
 		developmentMode: developmentMode,
-		noUpdate:        noUpdate,
 	}
 }
 
@@ -80,21 +78,14 @@ func (updater *UpdaterService) Start() error {
 		Handler: http.HandlerFunc(updater.handleGetVersion),
 	}
 
-	if !updater.noUpdate {
-		//initialize at start
-		if err := updater.updateLatestRelease(); err != nil {
-			log.WithError(err).Error("error initializing release")
-			return err
-		}
+	if err := updater.updateLatestRelease(); err != nil {
+		log.WithError(err).Error("error initializing release")
+		return err
 	}
 
 	utils.GoListenAndServe(updater.server)
 
 	go func() {
-		if updater.noUpdate {
-			return
-		}
-
 		t := time.NewTicker(updateInterval)
 		for {
 			select {
