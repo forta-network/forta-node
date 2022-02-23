@@ -160,10 +160,11 @@ func (s *Suite) TestAgentRun() {
 func (s *Suite) TestAgentRunAgain() {
 	s.TestAgentRun()
 
-	_, agentPayload := testAgentData()
+	agentConfig, agentPayload := testAgentData()
 
 	// Expect it to only publish a message again to ensure the subscribers that
 	// the agent is running.
+	s.dockerClient.EXPECT().EnsureLocalImage(s.service.ctx, "agent test-agent", agentConfig.Image).Return(nil)
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusRunning, agentPayload)
 
 	s.r.NoError(s.service.handleAgentRun(agentPayload))
