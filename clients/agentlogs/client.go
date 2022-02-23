@@ -32,6 +32,7 @@ func (agents Agents) Has(agentID, logs string) bool {
 func Encode(agents Agents) (io.Reader, error) {
 	var buf bytes.Buffer
 	w := gzip.NewWriter(&buf)
+	defer w.Close()
 	return &buf, json.NewEncoder(w).Encode(agents)
 }
 
