@@ -44,7 +44,7 @@ type RegistryConfig struct {
 	ContainerRegistry string        `yaml:"containerRegistry" json:"containerRegistry" validate:"hostname" default:"disco.forta.network" `
 	Username          string        `yaml:"username" json:"username"`
 	Password          string        `yaml:"password" json:"password"`
-	Disabled          bool          `yaml:"disabled" json:"disabled"` // for testing situations
+	Disable           bool          `yaml:"disable" json:"disable"` // for testing situations
 }
 
 type IPFSConfig struct {
@@ -90,6 +90,10 @@ type TelemetryConfig struct {
 	Disable bool   `yaml:"disable" json:"disable" validate:"omitempty,boolean"`
 }
 
+type AutoUpdateConfig struct {
+	Disable bool `yaml:"disable" json:"disable" validate:"omitempty"`
+}
+
 type Config struct {
 	ChainID                       int            `yaml:"chainId" json:"chainId" default:"1" `
 	Development                   bool           `yaml:"-" json:"_development"`
@@ -101,7 +105,6 @@ type Config struct {
 	LocalAgents                   []*AgentConfig `yaml:"-" json:"_localAgents"`
 	AgentRegistryContractAddress  string         `yaml:"-" json:"_agentRegistry"`
 	ScannerVersionContractAddress string         `yaml:"-" json:"_scannerVersion"`
-	AutoUpdate                    bool           `yaml:"autoUpdate" json:"autoUpdate" default:"true"`
 
 	Scan  ScannerConfig `yaml:"scan" json:"scan"`
 	Trace TraceConfig   `yaml:"trace" json:"trace"`
@@ -113,6 +116,7 @@ type Config struct {
 	ResourcesConfig ResourcesConfig    `yaml:"resources" json:"resources"`
 	ENSConfig       ENSConfig          `yaml:"ens" json:"ens"`
 	TelemetryConfig TelemetryConfig    `yaml:"telemetry" json:"telemetry"`
+	AutoUpdate      AutoUpdateConfig   `yaml:"autoUpdate" json:"autoUpdate"`
 }
 
 func (cfg *Config) ConfigFilePath() string {

@@ -1,0 +1,115 @@
+name: Release & CodeDeploy to Staging
+
+on:
+  workflow_dispatch:
+    branches: [master]
+
+env:
+  DEFAULT_STAGING_VERSION: v0.4.0
+
+jobs:
+  go:
+    name: Go
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Validate and test Go code
+        id: go
+        uses: ./.github/actions/go
+
+  containers:
+    name: Build and push containers
+    needs: go
+    runs-on: ubuntu-latest
+    environment: staging
+    outputs:
+      node-image-ref: ${{ steps.write-output.outputs.node-image-ref }}
+      node-release-cid: ${{ steps.write-output.outputs.node-release-cid }}
+    strategy:
+      matrix:
+        image-name: [
+            "node"
+        ]
+    steps:
+      - name: Clear artifacts
+        uses: kolpav/purge-artifacts-action@v1
+        continue-on-error: true
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          expire-in: 7days
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build and push container
+        id: build-and-push
+        uses: ./.github/actions/build-push
+        with:
+          registry: disco.forta.network
+          name: ${{ matrix.image-name }}
+          version: ${{ env.DEFAULT_STAGING_VERSION }}
+      - name: Write output values
+        id: write-output
+        run: |
+          echo "::set-output name=${{ matrix.image-name }}-release-cid::${{ steps.build-and-push.outputs.release-cid }}"
+          echo "::set-output name=${{ matrix.image-name }}-image-ref::${{ steps.build-and-push.outputs.image-reference }}"
+
+  build-deploy:
+    name: Build and deploy
+    needs: containers
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Echo Image References
+        run: |
+          echo "node=${{ needs.containers.outputs.node-image-ref }}"
+      - name: Clear artifacts
+        uses: kolpav/purge-artifacts-action@v1
+        continue-on-error: true
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          expire-in: 7days
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+      - name: Create build for revision
+        run: |
+          ./scripts/build.sh ${{ needs.containers.outputs.node-image-ref }} \
+            'remote' ${{ needs.containers.outputs.node-release-cid }} ${{ github.sha }} ${{ env.DEFAULT_STAGING_VERSION }}
+          chmod 755 forta
+      - name: Prepare Distribution
+        run: |
+          mkdir dist
+          cp forta dist/
+          cp appspec.yml dist/
+          cp -R scripts dist/
+      - name: Zip Distribution
+        uses: vimtor/action-zip@v1
+        with:
+          files: dist/
+          dest: deploy.zip
+      - uses: actions/upload-artifact@v1
+        with:
+          name: deploy-artifact
+          path: ${{ github.workspace }}/deploy.zip
+
+      - name: Configure AWS credentials (CodeDeploy)
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.PROD_DEPLOY_AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.PROD_DEPLOY_AWS_SECRET_KEY }}
+          aws-region: us-east-1
+      - name: AWS CodeDeploy
+        uses: sourcetoad/aws-codedeploy-action@v1
+        with:
+          aws_access_key: ${{ secrets.PROD_DEPLOY_AWS_ACCESS_KEY }}
+          aws_secret_key: ${{ secrets.PROD_DEPLOY_AWS_SECRET_KEY }}
+          aws_region: us-east-1
+          codedeploy_name: prod-forta-node
+          codedeploy_group: prod-forta-staging-scanners-deploy-group
+          s3_bucket: prod-forta-codedeploy
+          s3_folder: prod
+          directory: ./dist/
