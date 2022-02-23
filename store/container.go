@@ -39,6 +39,7 @@ func NewFortaImageStore(ctx context.Context, updaterPort string, autoUpdate bool
 		updaterPort: updaterPort,
 		latestCh:    make(chan ImageRefs),
 	}
+	store.latestImgs = store.EmbeddedImageRefs()
 	if autoUpdate {
 		go store.loop(ctx)
 	}

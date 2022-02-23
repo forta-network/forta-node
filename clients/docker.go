@@ -558,7 +558,7 @@ func (d *dockerClient) WaitContainerStart(ctx context.Context, id string) error 
 
 // WaitContainerPrune waits for container prune by checking periodically.
 func (d *dockerClient) WaitContainerPrune(ctx context.Context, id string) error {
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(500 * time.Millisecond)
 	logger := log.WithFields(log.Fields{
 		"id": id,
 	})
@@ -566,7 +566,7 @@ func (d *dockerClient) WaitContainerPrune(ctx context.Context, id string) error 
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
-	for range ticker.C {
+	for {
 		logger.Infof("waiting for container prune")
 		c, err := d.GetContainerByID(ctx, id)
 		if err != nil && errors.Is(err, ErrContainerNotFound) {
@@ -582,8 +582,8 @@ func (d *dockerClient) WaitContainerPrune(ctx context.Context, id string) error 
 			logger.WithError(err).Error("error while waiting for prune")
 			return err
 		}
+		<-ticker.C
 	}
-	return nil
 }
 
 // HasLocalImage checks if we have an image locally.
