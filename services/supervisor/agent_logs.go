@@ -7,6 +7,7 @@ import (
 
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/agentlogs"
+	"github.com/forta-protocol/forta-node/security"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -71,7 +72,13 @@ func (sup *SupervisorService) doSyncAgentLogs() error {
 		}
 	}
 
-	if err := sup.agentLogsClient.SendLogs(sendLogs); err != nil {
+	scannerJwt, err := security.CreateScannerJWT(sup.config.Key, map[string]interface{}{
+		"access": "agent_logs",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create scanner token: %v", err)
+	}
+	if err := sup.agentLogsClient.SendLogs(sendLogs, scannerJwt); err != nil {
 		return fmt.Errorf("failed to send agent logs: %v", err)
 	}
 

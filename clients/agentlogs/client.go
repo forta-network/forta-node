@@ -47,7 +47,7 @@ func Decode(r io.Reader) (agents Agents, err error) {
 
 // Client interacts with the agent logs API.
 type Client interface {
-	SendLogs(Agents) error
+	SendLogs(agents Agents, authToken string) error
 }
 
 type client struct {
@@ -59,7 +59,7 @@ func NewClient(endpoint string) *client {
 	return &client{endpoint: endpoint}
 }
 
-func (client *client) SendLogs(agents Agents) error {
+func (client *client) SendLogs(agents Agents, authToken string) error {
 	body, err := Encode(agents)
 	if err != nil {
 		return err
@@ -70,6 +70,9 @@ func (client *client) SendLogs(agents Agents) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
+	if len(authToken) > 0 {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
