@@ -1,8 +1,6 @@
 name: Release & CodeDeploy to Staging
 
 on:
-  pull_request:
-    branches: [master]
   workflow_dispatch:
     branches: [master]
 
