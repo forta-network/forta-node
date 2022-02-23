@@ -124,7 +124,12 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 
-	registryService := registry.New(cfg, key.Address, msgClient, ethClient)
+	registryClient, err := ethereum.NewStreamEthClient(ctx, "registry", cfg.Registry.JsonRpc.Url)
+	if err != nil {
+		return nil, err
+	}
+
+	registryService := registry.New(cfg, key.Address, msgClient, registryClient)
 	agentPool := agentpool.NewAgentPool(ctx, cfg.Scan, msgClient)
 	txAnalyzer, err := initTxAnalyzer(ctx, cfg, as, txStream, agentPool, msgClient)
 	if err != nil {
