@@ -13,7 +13,7 @@ import (
 )
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
-	imgStore, err := store.NewFortaImageStore(ctx, config.DefaultContainerPort)
+	imgStore, err := store.NewFortaImageStore(ctx, config.DefaultContainerPort, !cfg.AutoUpdate.Disable)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the image store: %v", err)
 	}

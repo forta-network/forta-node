@@ -34,12 +34,14 @@ type fortaImageStore struct {
 }
 
 // NewFortaImageStore creates a new store.
-func NewFortaImageStore(ctx context.Context, updaterPort string) (*fortaImageStore, error) {
+func NewFortaImageStore(ctx context.Context, updaterPort string, autoUpdate bool) (*fortaImageStore, error) {
 	store := &fortaImageStore{
 		updaterPort: updaterPort,
 		latestCh:    make(chan ImageRefs),
 	}
-	go store.loop(ctx)
+	if autoUpdate {
+		go store.loop(ctx)
+	}
 	return store, nil
 }
 
