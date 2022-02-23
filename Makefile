@@ -39,11 +39,11 @@ run:
 	go build -o forta . && ./forta --passphrase 123
 
 abigen:
-	abigen --abi ./contracts/agent_registry.json --out ./contracts/agent_registry.go --pkg contracts --type AgentRegistry
-	abigen --abi ./contracts/dispatch.json --out ./contracts/dispatch.go --pkg contracts --type Dispatch
-	abigen --abi ./contracts/alerts.json --out ./contracts/alerts.go --pkg contracts --type Alerts
-	abigen --abi ./contracts/scanner_registry.json --out ./contracts/scanner_registry.go --pkg contracts --type ScannerRegistry
-	abigen --abi ./contracts/scanner_node_version.json --out ./contracts/scanner_node_version.go --pkg contracts --type ScannerNodeVersion
+	./scripts/abigen.sh alerts
+	./scripts/abigen.sh agent_registry
+	./scripts/abigen.sh dispatch
+	./scripts/abigen.sh scanner_node_version
+	./scripts/abigen.sh scanner_registry "--alias _register=underscoreRegister"
 
 build-local: ## Build for local installation from source
 	./scripts/build-for-local.sh

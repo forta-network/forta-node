@@ -12,7 +12,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/contracts"
+	"github.com/forta-protocol/forta-node/contracts/contract_agent_registry"
+	"github.com/forta-protocol/forta-node/contracts/contract_dispatch"
 	"github.com/forta-protocol/forta-node/ethereum"
 	"github.com/forta-protocol/forta-node/services/registry/regtypes"
 	"github.com/forta-protocol/forta-node/utils"
@@ -155,12 +156,12 @@ func NewRegistryStore(ctx context.Context, cfg config.Config, ethClient ethereum
 	}
 	client := ethclient.NewClient(rpc)
 
-	ar, err := contracts.NewAgentRegistryCaller(common.HexToAddress(agentRegAddress), client)
+	ar, err := contract_agent_registry.NewAgentRegistryCaller(common.HexToAddress(agentRegAddress), client)
 	if err != nil {
 		return nil, err
 	}
 
-	d, err := contracts.NewDispatchCaller(common.HexToAddress(cfg.Registry.ContractAddress), client)
+	d, err := contract_dispatch.NewDispatchCaller(common.HexToAddress(cfg.Registry.ContractAddress), client)
 	if err != nil {
 		return nil, err
 	}

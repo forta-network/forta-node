@@ -8,7 +8,6 @@ import (
 	reflect "reflect"
 
 	types "github.com/ethereum/go-ethereum/core/types"
-	contracts "github.com/forta-protocol/forta-node/contracts"
 	domain "github.com/forta-protocol/forta-node/domain"
 	gomock "github.com/golang/mock/gomock"
 )
@@ -160,41 +159,4 @@ func (m *MockLogFeed) ForEachLog(handler func(*domain.Block, types.Log) error, f
 func (mr *MockLogFeedMockRecorder) ForEachLog(handler, finishBlockHandler interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForEachLog", reflect.TypeOf((*MockLogFeed)(nil).ForEachLog), handler, finishBlockHandler)
-}
-
-// MockAlertFeed is a mock of AlertFeed interface.
-type MockAlertFeed struct {
-	ctrl     *gomock.Controller
-	recorder *MockAlertFeedMockRecorder
-}
-
-// MockAlertFeedMockRecorder is the mock recorder for MockAlertFeed.
-type MockAlertFeedMockRecorder struct {
-	mock *MockAlertFeed
-}
-
-// NewMockAlertFeed creates a new mock instance.
-func NewMockAlertFeed(ctrl *gomock.Controller) *MockAlertFeed {
-	mock := &MockAlertFeed{ctrl: ctrl}
-	mock.recorder = &MockAlertFeedMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockAlertFeed) EXPECT() *MockAlertFeedMockRecorder {
-	return m.recorder
-}
-
-// ForEachAlert mocks base method.
-func (m *MockAlertFeed) ForEachAlert(handler func(*domain.Block, *contracts.AlertsAlertBatch) error, finishBlockHandler func(*domain.Block) error) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ForEachAlert", handler, finishBlockHandler)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ForEachAlert indicates an expected call of ForEachAlert.
-func (mr *MockAlertFeedMockRecorder) ForEachAlert(handler, finishBlockHandler interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForEachAlert", reflect.TypeOf((*MockAlertFeed)(nil).ForEachAlert), handler, finishBlockHandler)
 }

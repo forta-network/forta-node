@@ -11,6 +11,22 @@
     "type": "constructor"
   },
   {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "MissingRole",
+    "type": "error"
+  },
+  {
     "anonymous": false,
     "inputs": [
       {
@@ -217,7 +233,7 @@
     "inputs": [
       {
         "internalType": "string",
-        "name": "version",
+        "name": "newVersion",
         "type": "string"
       }
     ],
@@ -255,6 +271,19 @@
     "name": "upgradeToAndCall",
     "outputs": [],
     "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "version",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   }
 ]
