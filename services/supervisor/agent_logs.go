@@ -72,14 +72,16 @@ func (sup *SupervisorService) doSyncAgentLogs() error {
 		}
 	}
 
-	scannerJwt, err := security.CreateScannerJWT(sup.config.Key, map[string]interface{}{
-		"access": "agent_logs",
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create scanner token: %v", err)
-	}
-	if err := sup.agentLogsClient.SendLogs(sendLogs, scannerJwt); err != nil {
-		return fmt.Errorf("failed to send agent logs: %v", err)
+	if len(sendLogs) > 0 {
+		scannerJwt, err := security.CreateScannerJWT(sup.config.Key, map[string]interface{}{
+			"access": "agent_logs",
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create scanner token: %v", err)
+		}
+		if err := sup.agentLogsClient.SendLogs(sendLogs, scannerJwt); err != nil {
+			return fmt.Errorf("failed to send agent logs: %v", err)
+		}
 	}
 
 	sup.prevAgentLogs = keepLogs

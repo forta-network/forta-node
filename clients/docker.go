@@ -625,13 +625,14 @@ func (d *dockerClient) GetContainerLogs(ctx context.Context, containerID, tail s
 	if err != nil {
 		return "", err
 	}
-	if truncate > 0 {
-		var buf []byte
-		io.ReadAtLeast(r, buf, truncate)
-		return string(buf), nil
-	}
 	b, err := io.ReadAll(r)
-	return string(b), err
+	if err != nil {
+		return "", err
+	}
+	if truncate >= 0 && len(b) > truncate {
+		b = b[:truncate]
+	}
+	return string(b), nil
 }
 
 func (d *dockerClient) labelFilter() filters.Args {
