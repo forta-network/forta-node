@@ -22,11 +22,11 @@ func (sup *SupervisorService) syncAgentLogs() {
 	ticker := time.NewTicker(defaultAgentLogSendInterval)
 	for range ticker.C {
 		err := sup.doSyncAgentLogs()
+		sup.lastAgentLogsRequest.Set()
+		sup.lastAgentLogsRequestError.Set(err)
 		if err != nil {
 			log.WithError(err).Warn("failed to sync agent logs")
 		}
-		sup.lastAgentLogsRequest.Set()
-		sup.lastAgentLogsRequestError.Set(err)
 	}
 }
 
