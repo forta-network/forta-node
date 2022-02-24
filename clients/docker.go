@@ -632,7 +632,16 @@ func (d *dockerClient) GetContainerLogs(ctx context.Context, containerID, tail s
 	if truncate >= 0 && len(b) > truncate {
 		b = b[:truncate]
 	}
-	return string(b), nil
+	// remove strange 8-byte prefix in each line
+	lines := strings.Split(string(b), "\n")
+	for i, line := range lines {
+		if len(line) == 0 {
+			continue
+		}
+		prefixEnd := strings.Index(line, "2") // timestamp beginning
+		lines[i] = line[prefixEnd:]
+	}
+	return strings.Join(lines, "\n"), nil
 }
 
 func (d *dockerClient) labelFilter() filters.Args {
