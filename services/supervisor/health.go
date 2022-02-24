@@ -1,7 +1,6 @@
 package supervisor
 
 import (
-	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/utils"
 
 	"fmt"
@@ -73,7 +72,7 @@ func (sup *SupervisorService) doHealthCheck() error {
 	return nil
 }
 
-func (sup *SupervisorService) ensureUp(knownContainer *clients.DockerContainer, foundContainer *types.Container) error {
+func (sup *SupervisorService) ensureUp(knownContainer *Container, foundContainer *types.Container) error {
 	switch foundContainer.State {
 	case "created", "running", "restarting", "paused", "dead":
 		return nil

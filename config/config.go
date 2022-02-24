@@ -94,6 +94,10 @@ type AutoUpdateConfig struct {
 	Disable bool `yaml:"disable" json:"disable" validate:"omitempty"`
 }
 
+type AgentLogsConfig struct {
+	URL string `yaml:"url" json:"url" default:"https://alerts.forta.network/logs/agents" validate:"url"`
+}
+
 type Config struct {
 	ChainID                       int            `yaml:"chainId" json:"chainId" default:"1" `
 	Development                   bool           `yaml:"-" json:"_development"`
@@ -117,6 +121,7 @@ type Config struct {
 	ENSConfig       ENSConfig          `yaml:"ens" json:"ens"`
 	TelemetryConfig TelemetryConfig    `yaml:"telemetry" json:"telemetry"`
 	AutoUpdate      AutoUpdateConfig   `yaml:"autoUpdate" json:"autoUpdate"`
+	AgentLogsConfig AgentLogsConfig    `yaml:"agentLogs" json:"agentLogs"`
 }
 
 func (cfg *Config) ConfigFilePath() string {

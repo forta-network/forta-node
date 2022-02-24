@@ -33,6 +33,7 @@ type DockerClient interface {
 	Nuke(ctx context.Context) error
 	HasLocalImage(ctx context.Context, ref string) bool
 	EnsureLocalImage(ctx context.Context, name, ref string) error
+	GetContainerLogs(ctx context.Context, containerID, tail string, truncate int) (string, error)
 }
 
 // MessageClient receives and publishes messages.

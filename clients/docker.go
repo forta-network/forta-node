@@ -23,9 +23,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const dockerResourcesLabel = "network.forta"
+const (
+	DockerLabelForta                        = "network.forta"
+	DockerLabelFortaSupervisor              = "network.forta.supervisor"
+	DockerLabelFortaSettingsAgentLogsEnable = "network.forta.settings.agent-logs.enable"
+)
 
-var defaultLabels = map[string]string{dockerResourcesLabel: "true"}
+var defaultLabels = map[string]string{DockerLabelForta: "true"}
 
 // Client errors
 var (
@@ -610,6 +614,36 @@ func (d *dockerClient) EnsureLocalImage(ctx context.Context, name, ref string) e
 	return nil
 }
 
+// GetContainerLogs gets the container logs.
+func (d *dockerClient) GetContainerLogs(ctx context.Context, containerID, tail string, truncate int) (string, error) {
+	r, err := d.cli.ContainerLogs(ctx, containerID, types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Timestamps: true,
+		Tail:       tail,
+	})
+	if err != nil {
+		return "", err
+	}
+	b, err := io.ReadAll(r)
+	if err != nil {
+		return "", err
+	}
+	if truncate >= 0 && len(b) > truncate {
+		b = b[:truncate]
+	}
+	// remove strange 8-byte prefix in each line
+	lines := strings.Split(string(b), "\n")
+	for i, line := range lines {
+		if len(line) == 0 {
+			continue
+		}
+		prefixEnd := strings.Index(line, "2") // timestamp beginning
+		lines[i] = line[prefixEnd:]
+	}
+	return strings.Join(lines, "\n"), nil
+}
+
 func (d *dockerClient) labelFilter() filters.Args {
 	filter := filters.NewArgs()
 	for k, v := range d.labels {
@@ -626,7 +660,7 @@ func initLabels(name string) map[string]string {
 	if len(name) == 0 {
 		return result
 	}
-	result["network.forta.supervisor"] = name
+	result[DockerLabelFortaSupervisor] = name
 	return result
 }
 
