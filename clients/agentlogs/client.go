@@ -42,6 +42,7 @@ func Decode(r io.Reader) (agents Agents, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create gzip reader: %v", err)
 	}
+	defer gzipReader.Close()
 	err = json.NewDecoder(gzipReader).Decode(&agents)
 	return
 }
