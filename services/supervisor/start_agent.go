@@ -61,7 +61,7 @@ func (sup *SupervisorService) startAgent(agent config.AgentConfig) error {
 		}
 	}
 
-	sup.addContainerUnsafe(agentContainer)
+	sup.addContainerUnsafe(agentContainer, &agent)
 
 	return nil
 }

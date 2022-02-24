@@ -19,7 +19,6 @@ const (
 )
 
 func (sup *SupervisorService) syncAgentLogs() {
-	time.After(time.Minute) // rate limit crash loops
 	ticker := time.NewTicker(defaultAgentLogSendInterval)
 	for range ticker.C {
 		err := sup.doSyncAgentLogs()
