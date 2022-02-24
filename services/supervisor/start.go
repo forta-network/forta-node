@@ -286,11 +286,11 @@ func (sup *SupervisorService) syncTelemetryData() {
 	ticker := time.NewTicker(time.Minute) // slow down with auto-upgrade later
 	for {
 		err := sup.doSyncTelemetryData()
+		sup.lastTelemetryRequest.Set()
+		sup.lastTelemetryRequestError.Set(err)
 		if err != nil {
 			log.WithError(err).Warn("telemetry sync failed")
 		}
-		sup.lastTelemetryRequest.Set()
-		sup.lastTelemetryRequestError.Set(err)
 		<-ticker.C
 	}
 }

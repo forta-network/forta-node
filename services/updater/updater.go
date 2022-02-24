@@ -94,12 +94,13 @@ func (updater *UpdaterService) Start() error {
 				updater.stopServer()
 				return
 			case <-t.C:
-				if err := updater.updateLatestRelease(); err != nil {
+				err := updater.updateLatestRelease()
+				updater.lastErr.Set(err)
+				updater.lastChecked.Set()
+				if err != nil {
 					log.WithError(err).Error("error getting release")
-					updater.lastErr.Set(err)
 					// continue, wait ticker
 				}
-				updater.lastChecked.Set()
 			}
 		}
 	}()

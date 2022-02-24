@@ -86,10 +86,10 @@ func (rs *RegistryService) start() error {
 		ticker := time.NewTicker(15 * time.Second)
 		for {
 			err := rs.publishLatestAgents()
+			rs.lastErr.Set(err)
 			if err != nil {
 				log.WithError(err).Error("failed to publish the latest agents")
 			}
-			rs.lastErr.Set(err)
 			<-ticker.C
 		}
 	}()

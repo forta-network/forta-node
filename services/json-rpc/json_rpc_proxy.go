@@ -164,9 +164,7 @@ func (p *JsonRpcProxy) apiHealthChecker() {
 
 func (p *JsonRpcProxy) testAPI() {
 	err := ethereum.TestAPI(p.ctx, "http://localhost:8545")
-	if err != nil {
-		p.lastErr.Set(err)
-	}
+	p.lastErr.Set(err)
 }
 
 func (p *JsonRpcProxy) registerMessageHandlers() {
