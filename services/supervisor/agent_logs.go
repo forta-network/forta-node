@@ -48,7 +48,7 @@ func (sup *SupervisorService) doSyncAgentLogs() error {
 			log.WithError(err).Warn("failed to get agent container")
 			continue
 		}
-		if dockerContainer.Labels[clients.DockerLabelFortaSettingsAgentLogsEnabled] != "true" {
+		if dockerContainer.Labels[clients.DockerLabelFortaSettingsAgentLogsEnable] != "true" {
 			continue
 		}
 		logs, err := sup.client.GetContainerLogs(
@@ -85,6 +85,7 @@ func (sup *SupervisorService) doSyncAgentLogs() error {
 		if err := sup.agentLogsClient.SendLogs(sendLogs, scannerJwt); err != nil {
 			return fmt.Errorf("failed to send agent logs: %v", err)
 		}
+		log.WithField("count", len(sendLogs)).Debug("successfully sent new agent logs")
 	} else {
 		log.Debug("no new agent logs were found - not sending")
 	}

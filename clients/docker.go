@@ -24,9 +24,9 @@ import (
 )
 
 const (
-	DockerLabelForta                         = "network.forta"
-	DockerLabelFortaSupervisor               = "network.forta.supervisor"
-	DockerLabelFortaSettingsAgentLogsEnabled = "network.forta.settings.agent-logs.enabled"
+	DockerLabelForta                        = "network.forta"
+	DockerLabelFortaSupervisor              = "network.forta.supervisor"
+	DockerLabelFortaSettingsAgentLogsEnable = "network.forta.settings.agent-logs.enable"
 )
 
 var defaultLabels = map[string]string{DockerLabelForta: "true"}
