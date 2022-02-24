@@ -68,7 +68,10 @@ func (sup *SupervisorService) doSyncAgentLogs() error {
 		// so we can check
 		keepLogs = append(keepLogs, agent)
 		if !sup.prevAgentLogs.Has(container.AgentConfig.ID, logs) {
+			log.WithField("agent", agent.ID).Debug("new agent logs found")
 			sendLogs = append(sendLogs, agent)
+		} else {
+			log.WithField("agent", agent.ID).Debug("no new agent logs")
 		}
 	}
 
@@ -82,6 +85,8 @@ func (sup *SupervisorService) doSyncAgentLogs() error {
 		if err := sup.agentLogsClient.SendLogs(sendLogs, scannerJwt); err != nil {
 			return fmt.Errorf("failed to send agent logs: %v", err)
 		}
+	} else {
+		log.Debug("no new agent logs were found - not sending")
 	}
 
 	sup.prevAgentLogs = keepLogs
