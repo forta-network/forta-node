@@ -89,7 +89,7 @@ func (runner *Runner) Name() string {
 
 // Stop stops the service
 func (runner *Runner) Stop() error {
-	if err := runner.dockerClient.Nuke(context.Background()); err != nil {
+	if err := runner.globalClient.Nuke(context.Background()); err != nil {
 		return fmt.Errorf("failed to nuke containers before exiting: %v", err)
 	}
 	return nil
