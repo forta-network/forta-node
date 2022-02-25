@@ -89,7 +89,7 @@ func (runner *Runner) Name() string {
 
 // Stop stops the service
 func (runner *Runner) Stop() error {
-	if err := runner.globalClient.Nuke(context.Background()); err != nil {
+	if err := runner.dockerClient.Nuke(context.Background()); err != nil {
 		return fmt.Errorf("failed to nuke containers before exiting: %v", err)
 	}
 	return nil
@@ -134,7 +134,7 @@ func (runner *Runner) removeContainer(container *clients.DockerContainer) error 
 
 func (runner *Runner) removeContainerWithProps(name, id string) error {
 	logger := log.WithField("container", id).WithField("name", name)
-	if err := runner.dockerClient.InterruptContainer(context.Background(), id); err != nil {
+	if err := runner.dockerClient.TerminateContainer(context.Background(), id); err != nil {
 		logger.WithError(err).Error("error stopping container")
 	} else {
 		logger.Info("interrupted")

@@ -189,17 +189,17 @@ func (mr *MockDockerClientMockRecorder) HasLocalImage(ctx, ref interface{}) *gom
 }
 
 // InterruptContainer mocks base method.
-func (m *MockDockerClient) InterruptContainer(ctx context.Context, ID string) error {
+func (m *MockDockerClient) InterruptContainer(ctx context.Context, id string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InterruptContainer", ctx, ID)
+	ret := m.ctrl.Call(m, "InterruptContainer", ctx, id)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // InterruptContainer indicates an expected call of InterruptContainer.
-func (mr *MockDockerClientMockRecorder) InterruptContainer(ctx, ID interface{}) *gomock.Call {
+func (mr *MockDockerClientMockRecorder) InterruptContainer(ctx, id interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InterruptContainer", reflect.TypeOf((*MockDockerClient)(nil).InterruptContainer), ctx, ID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InterruptContainer", reflect.TypeOf((*MockDockerClient)(nil).InterruptContainer), ctx, id)
 }
 
 // Nuke mocks base method.
@@ -244,6 +244,34 @@ func (mr *MockDockerClientMockRecorder) PullImage(ctx, refStr interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PullImage", reflect.TypeOf((*MockDockerClient)(nil).PullImage), ctx, refStr)
 }
 
+// RemoveContainer mocks base method.
+func (m *MockDockerClient) RemoveContainer(ctx context.Context, containerID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveContainer", ctx, containerID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RemoveContainer indicates an expected call of RemoveContainer.
+func (mr *MockDockerClientMockRecorder) RemoveContainer(ctx, containerID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveContainer", reflect.TypeOf((*MockDockerClient)(nil).RemoveContainer), ctx, containerID)
+}
+
+// RemoveNetworkByName mocks base method.
+func (m *MockDockerClient) RemoveNetworkByName(ctx context.Context, networkName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveNetworkByName", ctx, networkName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RemoveNetworkByName indicates an expected call of RemoveNetworkByName.
+func (mr *MockDockerClientMockRecorder) RemoveNetworkByName(ctx, networkName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveNetworkByName", reflect.TypeOf((*MockDockerClient)(nil).RemoveNetworkByName), ctx, networkName)
+}
+
 // StartContainer mocks base method.
 func (m *MockDockerClient) StartContainer(ctx context.Context, config clients.DockerContainerConfig) (*clients.DockerContainer, error) {
 	m.ctrl.T.Helper()
@@ -260,17 +288,31 @@ func (mr *MockDockerClientMockRecorder) StartContainer(ctx, config interface{}) 
 }
 
 // StopContainer mocks base method.
-func (m *MockDockerClient) StopContainer(ctx context.Context, ID string) error {
+func (m *MockDockerClient) StopContainer(ctx context.Context, id string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StopContainer", ctx, ID)
+	ret := m.ctrl.Call(m, "StopContainer", ctx, id)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // StopContainer indicates an expected call of StopContainer.
-func (mr *MockDockerClientMockRecorder) StopContainer(ctx, ID interface{}) *gomock.Call {
+func (mr *MockDockerClientMockRecorder) StopContainer(ctx, id interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopContainer", reflect.TypeOf((*MockDockerClient)(nil).StopContainer), ctx, ID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopContainer", reflect.TypeOf((*MockDockerClient)(nil).StopContainer), ctx, id)
+}
+
+// TerminateContainer mocks base method.
+func (m *MockDockerClient) TerminateContainer(ctx context.Context, id string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TerminateContainer", ctx, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// TerminateContainer indicates an expected call of TerminateContainer.
+func (mr *MockDockerClientMockRecorder) TerminateContainer(ctx, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TerminateContainer", reflect.TypeOf((*MockDockerClient)(nil).TerminateContainer), ctx, id)
 }
 
 // WaitContainerExit mocks base method.

@@ -24,8 +24,10 @@ import (
 )
 
 const (
-	DockerLabelForta                        = "network.forta"
-	DockerLabelFortaSupervisor              = "network.forta.supervisor"
+	DockerLabelForta                          = "network.forta"
+	DockerLabelFortaSupervisor                = "network.forta.supervisor"
+	DockerLabelFortaSupervisorStrategyVersion = "network.forta.supervisor.strategy-version"
+
 	DockerLabelFortaSettingsAgentLogsEnable = "network.forta.settings.agent-logs.enable"
 )
 
@@ -190,6 +192,19 @@ func (d *dockerClient) createNetwork(ctx context.Context, name string, internal 
 		return "", err
 	}
 	return resp.ID, nil
+}
+
+func (d *dockerClient) RemoveNetworkByName(ctx context.Context, networkName string) error {
+	networks, err := d.cli.NetworkList(ctx, types.NetworkListOptions{
+		Filters: filters.NewArgs(filters.KeyValuePair{Key: "name", Value: networkName}),
+	})
+	if err != nil {
+		return err
+	}
+	if len(networks) == 0 {
+		return nil
+	}
+	return d.cli.NetworkRemove(ctx, networks[0].ID)
 }
 
 func (d *dockerClient) AttachNetwork(ctx context.Context, containerID string, networkID string) error {
@@ -466,11 +481,27 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 }
 
 // StopContainer kills a container by ID
-func (d *dockerClient) StopContainer(ctx context.Context, ID string) error {
+func (d *dockerClient) StopContainer(ctx context.Context, id string) error {
+	return d.stopContainer(ctx, id, "SIGKILL")
+}
+
+// InterruptContainer stops a container by sending an interrupt signal.
+func (d *dockerClient) InterruptContainer(ctx context.Context, id string) error {
+	return d.stopContainer(ctx, id, "SIGINT")
+}
+
+// TerminateContainer stops a container by sending an termination signal.
+func (d *dockerClient) TerminateContainer(ctx context.Context, id string) error {
+	return d.stopContainer(ctx, id, "SIGTERM")
+}
+
+// TerminateContainer stops a container by sending an termination signal.
+func (d *dockerClient) stopContainer(ctx context.Context, containerID, signal string) error {
 	log.WithFields(log.Fields{
-		"id": ID,
-	}).Info("stop container (SIGKILL)")
-	err := d.cli.ContainerKill(ctx, ID, "SIGKILL")
+		"id":     containerID,
+		"signal": signal,
+	}).Infof("stopping container")
+	err := d.cli.ContainerKill(ctx, containerID, signal)
 	if err == nil {
 		return nil
 	}
@@ -480,19 +511,11 @@ func (d *dockerClient) StopContainer(ctx context.Context, ID string) error {
 	return err
 }
 
-// InterruptContainer stops a container by sending an interrupt signal.
-func (d *dockerClient) InterruptContainer(ctx context.Context, ID string) error {
-	log.WithFields(log.Fields{
-		"id": ID,
-	}).Info("stop container (SIGINT)")
-	err := d.cli.ContainerKill(ctx, ID, "SIGINT")
-	if err == nil {
-		return nil
-	}
-	if isNoSuchContainerErr(err) || isNotRunningErr(err) {
-		return nil
-	}
-	return err
+// RemoveContainer kills and a container by ID.
+func (d *dockerClient) RemoveContainer(ctx context.Context, containerID string) error {
+	return d.cli.ContainerRemove(ctx, containerID, types.ContainerRemoveOptions{
+		Force: true,
+	})
 }
 
 func isNoSuchContainerErr(err error) bool {

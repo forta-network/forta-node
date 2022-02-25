@@ -19,13 +19,16 @@ type DockerClient interface {
 	CreatePublicNetwork(ctx context.Context, name string) (string, error)
 	CreateInternalNetwork(ctx context.Context, name string) (string, error)
 	AttachNetwork(ctx context.Context, containerID string, networkID string) error
+	RemoveNetworkByName(ctx context.Context, networkName string) error
 	GetContainers(ctx context.Context) (DockerContainerList, error)
 	GetFortaServiceContainers(ctx context.Context) (fortaContainers DockerContainerList, err error)
 	GetContainerByName(ctx context.Context, name string) (*types.Container, error)
 	GetContainerByID(ctx context.Context, id string) (*types.Container, error)
 	StartContainer(ctx context.Context, config DockerContainerConfig) (*DockerContainer, error)
-	StopContainer(ctx context.Context, ID string) error
-	InterruptContainer(ctx context.Context, ID string) error
+	StopContainer(ctx context.Context, id string) error
+	InterruptContainer(ctx context.Context, id string) error
+	TerminateContainer(ctx context.Context, id string) error
+	RemoveContainer(ctx context.Context, containerID string) error
 	WaitContainerExit(ctx context.Context, id string) error
 	WaitContainerStart(ctx context.Context, id string) error
 	Prune(ctx context.Context) error

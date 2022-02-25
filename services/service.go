@@ -19,6 +19,10 @@ const (
 	defaultServiceStartDelay = time.Minute * 10
 )
 
+const (
+	GracefulShutdownSignal = syscall.SIGINT
+)
+
 // Service is a service abstraction.
 type Service interface {
 	Start() error
@@ -103,6 +107,13 @@ func ContainerMain(name string, getServices func(ctx context.Context, cfg config
 	}
 }
 
+var gracefulShutdown bool
+
+// IsGracefulShutdown tells if we have reached a graceful shutdown condition.
+func IsGracefulShutdown() bool {
+	return gracefulShutdown
+}
+
 func InitMainContext() (context.Context, context.CancelFunc) {
 	execIDCtx := initExecID(context.Background())
 	ctx, cancel := context.WithCancel(execIDCtx)
@@ -116,6 +127,7 @@ func InitMainContext() (context.Context, context.CancelFunc) {
 		syscall.SIGQUIT)
 	go func() {
 		sig := <-sigc
+		gracefulShutdown = sig == GracefulShutdownSignal
 		log.Infof("received signal: %s", sig.String())
 		cancel()
 	}()
