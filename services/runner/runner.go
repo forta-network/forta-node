@@ -8,14 +8,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/forta-protocol/forta-core-go/clients/health"
+	"github.com/forta-protocol/forta-core-go/domain"
+	"github.com/forta-protocol/forta-core-go/ethereum"
+	"github.com/forta-protocol/forta-core-go/utils"
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/alertapi"
-	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/domain"
-	"github.com/forta-protocol/forta-node/ethereum"
 	"github.com/forta-protocol/forta-node/store"
-	"github.com/forta-protocol/forta-node/utils"
 	log "github.com/sirupsen/logrus"
 )
 

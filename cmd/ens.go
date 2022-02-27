@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/forta-protocol/forta-node/ens"
+	"github.com/forta-protocol/forta-core-go/ens"
 	"github.com/goccy/go-json"
 	"io/ioutil"
 	"path"
@@ -44,13 +44,19 @@ func ensureLatestContractAddresses() error {
 	if cfg.ENSConfig.DefaultContract {
 		cfg.ENSConfig.ContractAddress = ""
 	}
-	contracts, err := ens.ResolveFortaContracts(cfg.ENSConfig.JsonRpc.Url, cfg.ENSConfig.ContractAddress)
+	es, err := ens.DialENSStoreAt(cfg.ENSConfig.JsonRpc.Url, cfg.ENSConfig.ContractAddress)
 	if err != nil {
 		return err
 	}
-	cache.Dispatch = contracts.Dispatch
-	cache.Agents = contracts.Agent
-	cache.ScannerVersion = contracts.ScannerVersion
+
+	contracts, err := es.ResolveRegistryContracts()
+	if err != nil {
+		return err
+	}
+
+	cache.Dispatch = contracts.Dispatch.Hex()
+	cache.Agents = contracts.AgentRegistry.Hex()
+	cache.ScannerVersion = contracts.ScannerRegistry.Hex()
 	cache.ExpiresAt = time.Now().UTC().Add(contractAddressCacheExpiry)
 
 	b, err := json.MarshalIndent(&cache, "", "  ") // indent by two spaces

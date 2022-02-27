@@ -7,9 +7,9 @@ import (
 	"os"
 	"path"
 
-	"github.com/forta-protocol/forta-node/encoding"
-	"github.com/forta-protocol/forta-node/protocol"
-	"github.com/forta-protocol/forta-node/security"
+	"github.com/forta-protocol/forta-core-go/encoding"
+	"github.com/forta-protocol/forta-core-go/protocol"
+	"github.com/forta-protocol/forta-core-go/security"
 	"github.com/ipfs/go-cid"
 	"github.com/spf13/cobra"
 )

@@ -3,11 +3,11 @@ package json_rpc
 import (
 	"context"
 
-	"github.com/forta-protocol/forta-node/clients/health"
+	"github.com/forta-protocol/forta-core-go/clients/health"
+	"github.com/forta-protocol/forta-core-go/utils"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/services"
 	jrp "github.com/forta-protocol/forta-node/services/json-rpc"
-	"github.com/forta-protocol/forta-node/utils"
 )
 
 func initJsonRpcProxy(ctx context.Context, cfg config.Config) (*jrp.JsonRpcProxy, error) {

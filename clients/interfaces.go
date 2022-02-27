@@ -4,13 +4,13 @@ import (
 	"context"
 	"io"
 
-	"github.com/forta-protocol/forta-node/domain"
+	"github.com/forta-protocol/forta-core-go/domain"
 
 	"github.com/docker/docker/api/types"
 	"github.com/golang/protobuf/proto"
 
+	"github.com/forta-protocol/forta-core-go/protocol"
 	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/protocol"
 )
 
 // DockerClient is a client interface for interacting with docker

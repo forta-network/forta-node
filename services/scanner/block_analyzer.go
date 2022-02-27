@@ -5,7 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/forta-protocol/forta-node/clients/health"
+	"github.com/forta-protocol/forta-core-go/clients/health"
+	"github.com/forta-protocol/forta-core-go/domain"
+	"github.com/forta-protocol/forta-core-go/utils"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/metrics"
 
@@ -14,10 +16,8 @@ import (
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/forta-protocol/forta-core-go/protocol"
 	"github.com/forta-protocol/forta-node/clients"
-	"github.com/forta-protocol/forta-node/domain"
-	"github.com/forta-protocol/forta-node/protocol"
-	"github.com/forta-protocol/forta-node/utils"
 )
 
 // BlockAnalyzerService reads TX info, calls agents, and emits results

@@ -2,8 +2,8 @@ package config
 
 import (
 	"fmt"
-	"github.com/forta-protocol/forta-node/protocol"
-	"github.com/forta-protocol/forta-node/utils"
+	"github.com/forta-protocol/forta-core-go/protocol"
+	"github.com/forta-protocol/forta-core-go/utils"
 )
 
 type AgentConfig struct {

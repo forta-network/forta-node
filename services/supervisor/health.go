@@ -1,7 +1,7 @@
 package supervisor
 
 import (
-	"github.com/forta-protocol/forta-node/utils"
+	"github.com/forta-protocol/forta-core-go/utils"
 
 	"fmt"
 	"time"

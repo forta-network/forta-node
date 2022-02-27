@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/forta-protocol/forta-core-go/protocol"
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	mock_clients "github.com/forta-protocol/forta-node/clients/mocks"
 	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/protocol"
 	"github.com/forta-protocol/forta-node/services/scanner"
 
 	"github.com/golang/mock/gomock"

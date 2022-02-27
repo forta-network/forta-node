@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/forta-protocol/forta-node/protocol"
+	"github.com/forta-protocol/forta-core-go/protocol"
 )
 
 // Logger logs the test alerts either to a log file or to a webhook.

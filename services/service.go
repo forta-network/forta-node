@@ -7,7 +7,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/forta-protocol/forta-node/ens"
+	"github.com/forta-protocol/forta-core-go/ens"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -47,15 +47,21 @@ func initExecID(ctx context.Context) context.Context {
 }
 
 func setContracts(cfg *config.Config) error {
-	contracts, err := ens.ResolveFortaContracts(cfg.ENSConfig.JsonRpc.Url, cfg.ENSConfig.ContractAddress)
+	es, err := ens.DialENSStoreAt(cfg.ENSConfig.JsonRpc.Url, cfg.ENSConfig.ContractAddress)
 	if err != nil {
 		return err
 	}
-	if cfg.Registry.ContractAddress == "" {
-		cfg.Registry.ContractAddress = contracts.Dispatch
+
+	contracts, err := es.ResolveRegistryContracts()
+	if err != nil {
+		return err
 	}
-	cfg.ScannerVersionContractAddress = contracts.ScannerVersion
-	cfg.AgentRegistryContractAddress = contracts.Agent
+
+	if cfg.Registry.ContractAddress == "" {
+		cfg.Registry.ContractAddress = contracts.Dispatch.Hex()
+	}
+	cfg.ScannerVersionContractAddress = contracts.ScannerRegistry.Hex()
+	cfg.AgentRegistryContractAddress = contracts.AgentRegistry.Hex()
 	return nil
 }
 

@@ -12,12 +12,12 @@ import (
 	"github.com/ipfs/go-cid"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/forta-protocol/forta-core-go/clients/agentlogs"
+	"github.com/forta-protocol/forta-core-go/clients/health"
+	"github.com/forta-protocol/forta-core-go/security"
 	"github.com/forta-protocol/forta-node/clients"
-	"github.com/forta-protocol/forta-node/clients/agentlogs"
-	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/security"
 	"github.com/forta-protocol/forta-node/store"
 )
 

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/forta-protocol/forta-core-go/protocol"
 	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/protocol"
 
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"

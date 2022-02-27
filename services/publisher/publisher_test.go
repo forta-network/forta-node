@@ -1,7 +1,7 @@
 package publisher
 
 import (
-	"github.com/forta-protocol/forta-node/protocol"
+	"github.com/forta-protocol/forta-core-go/protocol"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
