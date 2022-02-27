@@ -3,6 +3,7 @@ package publisher
 import (
 	"context"
 	"fmt"
+	"github.com/forta-protocol/forta-core-go/release"
 	"os"
 
 	"github.com/forta-protocol/forta-core-go/clients/health"
@@ -26,10 +27,10 @@ func initPublisher(ctx context.Context, cfg config.Config) (*publisher.Publisher
 	}
 
 	releaseInfoStr := os.Getenv(config.EnvReleaseInfo)
-	var releaseSummary *config.ReleaseSummary
+	var releaseSummary *release.ReleaseSummary
 	if len(releaseInfoStr) > 0 {
-		releaseInfo := config.ReleaseInfoFromString(releaseInfoStr)
-		releaseSummary = config.MakeSummaryFromReleaseInfo(releaseInfo)
+		releaseInfo := release.ReleaseInfoFromString(releaseInfoStr)
+		releaseSummary = release.MakeSummaryFromReleaseInfo(releaseInfo)
 	}
 
 	apiClient := alertapi.NewClient(cfg.Publish.APIURL)

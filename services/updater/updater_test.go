@@ -2,22 +2,25 @@ package updater
 
 import (
 	"context"
+	"github.com/forta-protocol/forta-core-go/release"
 	"testing"
 
-	"github.com/forta-protocol/forta-node/config"
-	ms "github.com/forta-protocol/forta-node/store/mocks"
+	im "github.com/forta-protocol/forta-core-go/release/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+
+	ms "github.com/forta-protocol/forta-node/store/mocks"
 )
 
 func TestUpdaterService_UpdateLatestRelease(t *testing.T) {
 	c := gomock.NewController(t)
+
 	us := ms.NewMockUpdaterStore(c)
-	is := ms.NewMockIPFSClient(c)
+	is := im.NewMockClient(c)
 	updater := NewUpdaterService(context.Background(), us, is, "8080", false)
 
 	us.EXPECT().GetLatestReference().Return("reference", nil).Times(1)
-	is.EXPECT().GetReleaseManifest("reference").Return(&config.ReleaseManifest{}, nil).Times(1)
+	is.EXPECT().GetReleaseManifest(gomock.Any(), "reference").Return(&release.ReleaseManifest{}, nil).Times(1)
 	err := updater.updateLatestRelease()
 	assert.NoError(t, err)
 }
@@ -25,14 +28,14 @@ func TestUpdaterService_UpdateLatestRelease(t *testing.T) {
 func TestUpdaterService_UpdateLatestReleaseCached(t *testing.T) {
 	c := gomock.NewController(t)
 	us := ms.NewMockUpdaterStore(c)
-	is := ms.NewMockIPFSClient(c)
+	is := im.NewMockClient(c)
 	updater := NewUpdaterService(context.Background(), us, is, "8080", false)
 
 	// update twice
 	us.EXPECT().GetLatestReference().Return("reference", nil).Times(2)
 
 	// only call ipfs once (because value is the same)
-	is.EXPECT().GetReleaseManifest("reference").Return(&config.ReleaseManifest{}, nil).Times(1)
+	is.EXPECT().GetReleaseManifest(gomock.Any(), "reference").Return(&release.ReleaseManifest{}, nil).Times(1)
 	assert.NoError(t, updater.updateLatestRelease())
 	assert.NoError(t, updater.updateLatestRelease())
 }
@@ -40,7 +43,7 @@ func TestUpdaterService_UpdateLatestReleaseCached(t *testing.T) {
 func TestUpdaterService_UpdateLatestReleaseNotCached(t *testing.T) {
 	c := gomock.NewController(t)
 	us := ms.NewMockUpdaterStore(c)
-	is := ms.NewMockIPFSClient(c)
+	is := im.NewMockClient(c)
 	updater := NewUpdaterService(context.Background(), us, is, "8080", false)
 
 	// update twice
@@ -48,8 +51,8 @@ func TestUpdaterService_UpdateLatestReleaseNotCached(t *testing.T) {
 	us.EXPECT().GetLatestReference().Return("reference2", nil).Times(1)
 
 	// only call ipfs once (because value is the same)
-	is.EXPECT().GetReleaseManifest("reference1").Return(&config.ReleaseManifest{}, nil).Times(1)
-	is.EXPECT().GetReleaseManifest("reference2").Return(&config.ReleaseManifest{}, nil).Times(1)
+	is.EXPECT().GetReleaseManifest(gomock.Any(), "reference1").Return(&release.ReleaseManifest{}, nil).Times(1)
+	is.EXPECT().GetReleaseManifest(gomock.Any(), "reference2").Return(&release.ReleaseManifest{}, nil).Times(1)
 
 	assert.NoError(t, updater.updateLatestRelease())
 	assert.NoError(t, updater.updateLatestRelease())

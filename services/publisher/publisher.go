@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/forta-protocol/forta-core-go/release"
 	"io"
 	"math/big"
 	"net"
@@ -97,7 +98,7 @@ type PublisherConfig struct {
 	ChainID         int
 	Key             *keystore.Key
 	PublisherConfig config.PublisherConfig
-	ReleaseSummary  *config.ReleaseSummary
+	ReleaseSummary  *release.ReleaseSummary
 	Config          config.Config
 }
 

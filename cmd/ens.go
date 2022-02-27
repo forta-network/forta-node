@@ -1,15 +1,11 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/forta-protocol/forta-core-go/ens"
 	"github.com/goccy/go-json"
 	"io/ioutil"
 	"path"
 	"time"
-
-	"github.com/fatih/color"
-	"github.com/forta-protocol/forta-node/store"
 )
 
 const (
@@ -70,17 +66,6 @@ func ensureLatestContractAddresses() error {
 
 	setContractAddressesFromCache(cache)
 	return nil
-}
-
-func findContractAddress(ens store.ENS, input string) (string, error) {
-	addr, err := ens.Resolve(input)
-	if err != nil {
-		return "", err
-	}
-
-	fmt.Printf("%s: %s\n", input, color.New(color.FgYellow).Sprintf(addr.String()))
-
-	return addr.String(), nil
 }
 
 // sets only if not overridden

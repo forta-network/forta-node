@@ -4,20 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/big"
+	"github.com/forta-protocol/forta-core-go/manifest"
+	"github.com/forta-protocol/forta-core-go/registry"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-
-	"github.com/forta-protocol/forta-core-go/contracts/contract_agent_registry"
-	"github.com/forta-protocol/forta-core-go/contracts/contract_dispatch"
 	"github.com/forta-protocol/forta-core-go/ethereum"
 	"github.com/forta-protocol/forta-core-go/utils"
 	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/services/registry/regtypes"
 )
 
 type RegistryStore interface {
@@ -26,50 +21,46 @@ type RegistryStore interface {
 }
 
 type registryStore struct {
-	ctx        context.Context
-	eth        ethereum.Client
-	dispatch   dispatch
-	agents     agentRegistry
-	ipfsClient IPFSClient
-	cfg        config.Config
-	version    string
+	ctx context.Context
+	mc  manifest.Client
+	rc  registry.Client
+	cfg config.Config
+
+	version string
+	mu      sync.Mutex
 }
 
 func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConfig, bool, error) {
-	_, versionHash, err := rs.getAgentListHash(nil, scanner)
+	// because we peg the latest block, it can be problematic if this is called concurrently
+	rs.mu.Lock()
+	defer rs.mu.Unlock()
+	hash, err := rs.rc.GetAssignmentHash(scanner)
 	if err != nil {
 		return nil, false, err
 	}
-	if rs.version != versionHash {
+
+	if rs.version != hash.Hash {
+		if err := rs.rc.PegLatestBlock(); err != nil {
+			return nil, false, err
+		}
+		defer rs.rc.ResetOpts()
 		var agts []*config.AgentConfig
-		opts, err := rs.optsWithLatestBlock()
-		if err != nil {
-			return nil, false, err
-		}
-		// get it again, so that the block is fixed throughout iteration
-		// this avoids getting the opts (getBlock) in the normal nothing-changed case
-		length, hash, err := rs.getAgentListHash(opts, scanner)
-		if err != nil {
-			return nil, false, err
-		}
 
-		scannerID := common.HexToHash(scanner).Big()
-
-		var i int64
 		var failedLoadingAny bool
-		for i = 0; i < length.Int64(); i++ {
-			pos := big.NewInt(i)
-			res, err := rs.dispatch.AgentRefAt(opts, scannerID, pos)
-			if err != nil {
-				return nil, false, err
-			}
-			agtCfg, err := rs.makeAgentConfig(utils.BytesToHex(res.AgentId.Bytes()), res.Metadata)
+		err := rs.rc.ForEachAssignedAgent(scanner, func(a *registry.Agent) error {
+			agtCfg, err := rs.makeAgentConfig(a.AgentID, a.Manifest)
 			if err != nil {
 				failedLoadingAny = true
-				log.WithError(err).Warn("could not parse config for agent")
-			} else {
-				agts = append(agts, agtCfg)
+				log.WithField("agentId", a.AgentID).WithError(err).Warn("could not parse config for agent")
+				// ignore agent and move on by not returning the error
+				return nil
 			}
+			agts = append(agts, agtCfg)
+			return nil
+		})
+
+		if err != nil {
+			return nil, false, err
 		}
 
 		// failed to load all: not doing this can cause getting stuck with the latest hash and zero agents
@@ -77,42 +68,29 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 			return nil, false, errors.New("loaded zero agents")
 		}
 
-		rs.version = hash
+		rs.version = hash.Hash
 		return agts, true, nil
 	}
 	return nil, false, nil
 }
 
-func (rs *registryStore) getAgentListHash(opts *bind.CallOpts, scanner string) (*big.Int, string, error) {
-	res, err := rs.dispatch.ScannerHash(opts, common.HexToHash(scanner).Big())
-	if err != nil {
-		return nil, "", err
-	}
-
-	return res.Length, utils.Bytes32ToHex(res.Manifest), nil
-}
-
 func (rs *registryStore) FindAgentGlobally(agentID string) (*config.AgentConfig, error) {
-	opts, err := rs.optsWithLatestBlock()
+	agt, err := rs.rc.GetAgent(agentID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get the latest ref: %v, agentID: %s", err, agentID)
 	}
-	agt, err := rs.agents.GetAgent(opts, common.HexToHash(agentID).Big())
-	if err != nil {
-		return nil, fmt.Errorf("failed to get the latest ref: %v", err)
-	}
-	return rs.makeAgentConfig(agentID, agt.Metadata)
+	return rs.makeAgentConfig(agentID, agt.Manifest)
 }
 
 func (rs *registryStore) makeAgentConfig(agentID string, ref string) (*config.AgentConfig, error) {
 	if len(ref) == 0 {
 		return nil, nil
 	}
-	var agentData *regtypes.AgentFile
+	var agentData *manifest.SignedAgentManifest
 
 	var err error
 	for i := 0; i < 10; i++ {
-		agentData, err = rs.ipfsClient.GetAgentFile(ref)
+		agentData, err = rs.mc.GetAgentManifest(rs.ctx, ref)
 		if err == nil {
 			break
 		}
@@ -122,9 +100,13 @@ func (rs *registryStore) makeAgentConfig(agentID string, ref string) (*config.Ag
 		return nil, err
 	}
 
-	image, err := utils.ValidateDiscoImageRef(rs.cfg.Registry.ContainerRegistry, agentData.Manifest.ImageReference)
+	if agentData.Manifest.ImageReference == nil {
+		return nil, fmt.Errorf("invalid agent image reference, it is nil")
+	}
+
+	image, err := utils.ValidateDiscoImageRef(rs.cfg.Registry.ContainerRegistry, *agentData.Manifest.ImageReference)
 	if err != nil {
-		return nil, fmt.Errorf("invalid agent image reference '%s': %v", agentData.Manifest.ImageReference, err)
+		return nil, fmt.Errorf("invalid agent image reference '%s': %v", *agentData.Manifest.ImageReference, err)
 	}
 
 	return &config.AgentConfig{
@@ -134,50 +116,25 @@ func (rs *registryStore) makeAgentConfig(agentID string, ref string) (*config.Ag
 	}, nil
 }
 
-func (rs *registryStore) optsWithLatestBlock() (*bind.CallOpts, error) {
-	blk, err := rs.eth.BlockByNumber(rs.ctx, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get the block for agents: %v", err)
-	}
-	num, err := utils.HexToBigInt(blk.Number)
-	if err != nil {
-		return nil, err
-	}
-	return &bind.CallOpts{
-		BlockNumber: num,
-	}, nil
-}
-
 func NewRegistryStore(ctx context.Context, cfg config.Config, ethClient ethereum.Client) (*registryStore, error) {
-	agentRegAddress := cfg.AgentRegistryContractAddress
-
-	rpc, err := ethereum.NewRpcClient(cfg.Registry.JsonRpc.Url)
-	if err != nil {
-		return nil, err
-	}
-	client := ethclient.NewClient(rpc)
-
-	log.WithField("url", cfg.Registry.JsonRpc.Url).Info("initialized json-rpc url")
-	log.WithField("address", common.HexToAddress(agentRegAddress)).Info("initialized agent registry")
-
-	ar, err := contract_agent_registry.NewAgentRegistryCaller(common.HexToAddress(agentRegAddress), client)
+	mc, err := manifest.NewClient(cfg.Registry.IPFS.GatewayURL)
 	if err != nil {
 		return nil, err
 	}
 
-	log.WithField("address", common.HexToAddress(cfg.Registry.ContractAddress)).Info("initialized dispatch contract")
-
-	d, err := contract_dispatch.NewDispatchCaller(common.HexToAddress(cfg.Registry.ContractAddress), client)
+	rc, err := registry.NewClient(ctx, registry.ClientConfig{
+		JsonRpcUrl: cfg.Registry.JsonRpc.Url,
+		ENSAddress: cfg.ENSConfig.ContractAddress,
+		Name:       "registry-store",
+	})
 	if err != nil {
 		return nil, err
 	}
 
 	return &registryStore{
-		ctx:        ctx,
-		eth:        ethClient,
-		cfg:        cfg,
-		dispatch:   d,
-		agents:     ar,
-		ipfsClient: &ipfsClient{cfg.Registry.IPFS.GatewayURL},
+		ctx: ctx,
+		cfg: cfg,
+		mc:  mc,
+		rc:  rc,
 	}, nil
 }

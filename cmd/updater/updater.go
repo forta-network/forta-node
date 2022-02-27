@@ -2,6 +2,7 @@ package updater
 
 import (
 	"context"
+	"github.com/forta-protocol/forta-core-go/release"
 	"time"
 
 	"github.com/forta-protocol/forta-core-go/clients/health"
@@ -15,7 +16,11 @@ import (
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
 
-	ipfs := store.NewIPFSClient(cfg.Registry.IPFS.GatewayURL)
+	rc, err := release.NewClient(cfg.Registry.IPFS.GatewayURL)
+	if err != nil {
+		return nil, err
+	}
+
 	up, err := store.NewContractUpdaterStore(cfg)
 	if err != nil {
 		return nil, err
@@ -28,7 +33,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	}).Info("updater modes")
 
 	updaterService := updater.NewUpdaterService(
-		ctx, up, ipfs, config.DefaultContainerPort,
+		ctx, up, rc, config.DefaultContainerPort,
 		developmentMode,
 	)
 

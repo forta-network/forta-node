@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-protocol/forta-core-go/release"
 	"github.com/goccy/go-json"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/forta-protocol/forta-node/config"
 )
 
 const defaultImageCheckInterval = time.Second * 5
@@ -24,7 +26,7 @@ type FortaImageStore interface {
 type ImageRefs struct {
 	Supervisor  string
 	Updater     string
-	ReleaseInfo *config.ReleaseInfo
+	ReleaseInfo *release.ReleaseInfo
 }
 
 type fortaImageStore struct {
@@ -85,7 +87,7 @@ func (store *fortaImageStore) check(ctx context.Context) {
 	}
 }
 
-func (store *fortaImageStore) getFromUpdater(ctx context.Context) (*config.ReleaseInfo, error) {
+func (store *fortaImageStore) getFromUpdater(ctx context.Context) (*release.ReleaseInfo, error) {
 	resp, err := http.Get(fmt.Sprintf("http://localhost:%s", store.updaterPort))
 	if err != nil {
 		return nil, err
@@ -100,7 +102,7 @@ func (store *fortaImageStore) getFromUpdater(ctx context.Context) (*config.Relea
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected updater response with code %d: %s", resp.StatusCode, string(respBody))
 	}
-	var releaseInfo config.ReleaseInfo
+	var releaseInfo release.ReleaseInfo
 	return &releaseInfo, json.Unmarshal(respBody, &releaseInfo)
 }
 

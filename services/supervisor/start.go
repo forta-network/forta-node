@@ -3,6 +3,8 @@ package supervisor
 import (
 	"context"
 	"fmt"
+	"github.com/forta-protocol/forta-core-go/manifest"
+	"github.com/forta-protocol/forta-core-go/release"
 	"os"
 	"strconv"
 	"sync"
@@ -18,15 +20,15 @@ import (
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/store"
 )
 
 // SupervisorService manages the scanner node's service and agent containers.
 type SupervisorService struct {
-	ctx          context.Context
-	client       clients.DockerClient
-	globalClient clients.DockerClient
-	ipfsClient   store.IPFSClient
+	ctx            context.Context
+	client         clients.DockerClient
+	globalClient   clients.DockerClient
+	manifestClient manifest.Client
+	releaseClient  release.Client
 
 	msgClient   clients.MessageClient
 	config      SupervisorServiceConfig
@@ -94,13 +96,13 @@ func (sup *SupervisorService) start() error {
 	if len(hostFortaDir) == 0 {
 		return fmt.Errorf("supervisor needs to know $%s to mount to the other containers it runs", config.EnvHostFortaDir)
 	}
-	releaseInfo := config.ReleaseInfoFromString(os.Getenv(config.EnvReleaseInfo))
+	releaseInfo := release.ReleaseInfoFromString(os.Getenv(config.EnvReleaseInfo))
 	releaseInfo, err = sup.getFullReleaseInfo(releaseInfo)
 	if err != nil {
 		return fmt.Errorf("failed to get full release info: %v", err)
 	}
 	if releaseInfo != nil {
-		config.LogReleaseInfo(releaseInfo)
+		release.LogReleaseInfo(releaseInfo)
 	}
 
 	sup.maxLogSize = sup.config.Config.Log.MaxLogSize
@@ -310,7 +312,7 @@ func (sup *SupervisorService) doSyncTelemetryData() error {
 }
 
 // complete release info in case runner is old and starts supervisor by providing missing release properties
-func (sup *SupervisorService) getFullReleaseInfo(releaseInfo *config.ReleaseInfo) (*config.ReleaseInfo, error) {
+func (sup *SupervisorService) getFullReleaseInfo(releaseInfo *release.ReleaseInfo) (*release.ReleaseInfo, error) {
 	if releaseInfo == nil {
 		return nil, nil
 	}
@@ -320,11 +322,11 @@ func (sup *SupervisorService) getFullReleaseInfo(releaseInfo *config.ReleaseInfo
 	if _, err := cid.Parse(releaseInfo.IPFS); err != nil {
 		return releaseInfo, nil
 	}
-	fullReleaseManifest, err := sup.ipfsClient.GetReleaseManifest(releaseInfo.IPFS)
+	fullReleaseManifest, err := sup.releaseClient.GetReleaseManifest(sup.ctx, releaseInfo.IPFS)
 	if err != nil {
 		return nil, err
 	}
-	return &config.ReleaseInfo{
+	return &release.ReleaseInfo{
 		FromBuild: false,
 		IPFS:      releaseInfo.IPFS,
 		Manifest:  *fullReleaseManifest,
@@ -392,12 +394,17 @@ func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*Su
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the global docker client: %v", err)
 	}
-	ipfsClient := store.NewIPFSClient(cfg.Config.Registry.IPFS.GatewayURL)
+
+	releaseClient, err := release.NewClient(cfg.Config.Registry.IPFS.GatewayURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create the release client: %v", err)
+	}
+
 	return &SupervisorService{
 		ctx:             ctx,
 		client:          dockerClient,
 		globalClient:    globalClient,
-		ipfsClient:      ipfsClient,
+		releaseClient:   releaseClient,
 		config:          cfg,
 		healthClient:    health.NewClient(),
 		agentLogsClient: agentlogs.NewClient(cfg.Config.AgentLogsConfig.URL),
