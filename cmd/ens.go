@@ -52,7 +52,7 @@ func ensureLatestContractAddresses() error {
 
 	cache.Dispatch = contracts.Dispatch.Hex()
 	cache.Agents = contracts.AgentRegistry.Hex()
-	cache.ScannerVersion = contracts.ScannerRegistry.Hex()
+	cache.ScannerVersion = contracts.ScannerNodeVersion.Hex()
 	cache.ExpiresAt = time.Now().UTC().Add(contractAddressCacheExpiry)
 
 	b, err := json.MarshalIndent(&cache, "", "  ") // indent by two spaces

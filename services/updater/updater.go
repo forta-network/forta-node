@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/forta-protocol/forta-core-go/registry"
 	"io/ioutil"
 	"net/http"
 	"path"
@@ -15,7 +16,6 @@ import (
 	"github.com/forta-protocol/forta-core-go/utils"
 
 	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/store"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -26,10 +26,9 @@ type UpdaterService struct {
 	ctx  context.Context
 	port string
 
-	mu sync.RWMutex
-	rc release.Client
-
-	us     store.UpdaterStore
+	mu     sync.RWMutex
+	rl     release.Client
+	rg     registry.Client
 	server *http.Server
 
 	developmentMode bool
@@ -42,14 +41,14 @@ type UpdaterService struct {
 }
 
 // NewUpdaterService creates a new updater service.
-func NewUpdaterService(ctx context.Context, us store.UpdaterStore, rc release.Client,
+func NewUpdaterService(ctx context.Context, rg registry.Client, rc release.Client,
 	port string, developmentMode bool,
 ) *UpdaterService {
 	return &UpdaterService{
 		ctx:             ctx,
 		port:            port,
-		us:              us,
-		rc:              rc,
+		rg:              rg,
+		rl:              rc,
 		developmentMode: developmentMode,
 	}
 }
@@ -119,12 +118,12 @@ func (updater *UpdaterService) updateLatestRelease() error {
 
 	log.Info("updating latest release")
 
-	ref, err := updater.us.GetLatestReference()
+	ref, err := updater.rg.GetScannerNodeVersion()
 	if err != nil {
 		return fmt.Errorf("failed to get the latest release manifest ref: %v", err)
 	}
 	if ref != updater.latestReference {
-		rm, err := updater.rc.GetReleaseManifest(context.Background(), ref)
+		rm, err := updater.rl.GetReleaseManifest(context.Background(), ref)
 		if err != nil {
 			log.WithError(err).Error("error getting release manifest")
 			return fmt.Errorf("failed while downloading the release manifest: %v", err)
