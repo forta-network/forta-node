@@ -11,11 +11,13 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+
+	"github.com/forta-protocol/forta-core-go/contracts/contract_agent_registry"
+	"github.com/forta-protocol/forta-core-go/contracts/contract_dispatch"
+	"github.com/forta-protocol/forta-core-go/ethereum"
+	"github.com/forta-protocol/forta-core-go/utils"
 	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/contracts"
-	"github.com/forta-protocol/forta-node/ethereum"
 	"github.com/forta-protocol/forta-node/services/registry/regtypes"
-	"github.com/forta-protocol/forta-node/utils"
 )
 
 type RegistryStore interface {
@@ -158,14 +160,14 @@ func NewRegistryStore(ctx context.Context, cfg config.Config, ethClient ethereum
 	log.WithField("url", cfg.Registry.JsonRpc.Url).Info("initialized json-rpc url")
 	log.WithField("address", common.HexToAddress(agentRegAddress)).Info("initialized agent registry")
 
-	ar, err := contracts.NewAgentRegistryCaller(common.HexToAddress(agentRegAddress), client)
+	ar, err := contract_agent_registry.NewAgentRegistryCaller(common.HexToAddress(agentRegAddress), client)
 	if err != nil {
 		return nil, err
 	}
 
 	log.WithField("address", common.HexToAddress(cfg.Registry.ContractAddress)).Info("initialized dispatch contract")
 
-	d, err := contracts.NewDispatchCaller(common.HexToAddress(cfg.Registry.ContractAddress), client)
+	d, err := contract_dispatch.NewDispatchCaller(common.HexToAddress(cfg.Registry.ContractAddress), client)
 	if err != nil {
 		return nil, err
 	}

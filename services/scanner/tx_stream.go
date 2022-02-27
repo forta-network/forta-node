@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/forta-protocol/forta-node/clients/health"
+	"github.com/forta-protocol/forta-core-go/clients/health"
+	"github.com/forta-protocol/forta-core-go/domain"
+	"github.com/forta-protocol/forta-core-go/ethereum"
+	"github.com/forta-protocol/forta-core-go/feeds"
 	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/domain"
-	"github.com/forta-protocol/forta-node/ethereum"
-	"github.com/forta-protocol/forta-node/feeds"
 
 	log "github.com/sirupsen/logrus"
 )

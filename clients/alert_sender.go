@@ -7,9 +7,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
+	"github.com/forta-protocol/forta-core-go/protocol"
+	"github.com/forta-protocol/forta-core-go/security"
 	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/protocol"
-	"github.com/forta-protocol/forta-node/security"
 )
 
 // AgentRoundTrip contains

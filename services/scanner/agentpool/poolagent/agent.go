@@ -8,10 +8,10 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/forta-protocol/forta-node/metrics"
 
+	"github.com/forta-protocol/forta-core-go/protocol"
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/protocol"
 	"github.com/forta-protocol/forta-node/services/scanner"
 
 	log "github.com/sirupsen/logrus"

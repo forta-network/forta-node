@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/forta-protocol/forta-node/clients/health"
+	"github.com/forta-protocol/forta-core-go/clients/health"
 	"github.com/forta-protocol/forta-node/config"
 )
 

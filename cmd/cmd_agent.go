@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/forta-protocol/forta-node/ethereum"
+	"github.com/forta-protocol/forta-core-go/ethereum"
 	"github.com/forta-protocol/forta-node/store"
 	"github.com/goccy/go-json"
 

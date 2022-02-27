@@ -1,8 +1,8 @@
 package scanner
 
 import (
+	"github.com/forta-protocol/forta-core-go/protocol"
 	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/protocol"
 )
 
 // TxResult contains request and response data.

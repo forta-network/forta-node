@@ -3,9 +3,9 @@ package publisher_test
 import (
 	"time"
 
-	"github.com/forta-protocol/forta-node/protocol"
+	"github.com/forta-protocol/forta-core-go/protocol"
+	"github.com/forta-protocol/forta-core-go/utils"
 	"github.com/forta-protocol/forta-node/services/publisher"
-	"github.com/forta-protocol/forta-node/utils"
 	"github.com/stretchr/testify/assert"
 
 	"testing"

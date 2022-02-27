@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/forta-protocol/forta-node/ens"
+	"github.com/forta-protocol/forta-core-go/ens"
 	"github.com/goccy/go-json"
 	"io/ioutil"
 	"path"

@@ -9,10 +9,10 @@ import (
 	reflect "reflect"
 
 	types "github.com/docker/docker/api/types"
+	domain "github.com/forta-protocol/forta-core-go/domain"
+	protocol "github.com/forta-protocol/forta-core-go/protocol"
 	clients "github.com/forta-protocol/forta-node/clients"
 	config "github.com/forta-protocol/forta-node/config"
-	domain "github.com/forta-protocol/forta-node/domain"
-	protocol "github.com/forta-protocol/forta-node/protocol"
 	gomock "github.com/golang/mock/gomock"
 	proto "github.com/golang/protobuf/proto"
 	grpc "google.golang.org/grpc"

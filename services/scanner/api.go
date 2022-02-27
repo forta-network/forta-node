@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/forta-protocol/forta-node/feeds"
-	"github.com/forta-protocol/forta-node/utils"
+	"github.com/forta-protocol/forta-core-go/feeds"
+	"github.com/forta-protocol/forta-core-go/utils"
 	"github.com/goccy/go-json"
 
 	"github.com/gorilla/mux"

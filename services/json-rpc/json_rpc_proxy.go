@@ -14,14 +14,14 @@ import (
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/forta-protocol/forta-core-go/clients/health"
+	"github.com/forta-protocol/forta-core-go/ethereum"
+	"github.com/forta-protocol/forta-core-go/protocol"
+	"github.com/forta-protocol/forta-core-go/utils"
 	"github.com/forta-protocol/forta-node/clients"
-	"github.com/forta-protocol/forta-node/clients/health"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/ethereum"
 	"github.com/forta-protocol/forta-node/metrics"
-	"github.com/forta-protocol/forta-node/protocol"
-	"github.com/forta-protocol/forta-node/utils"
 )
 
 // JsonRpcProxy proxies requests from agents to json-rpc endpoint

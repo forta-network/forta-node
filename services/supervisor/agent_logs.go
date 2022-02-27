@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/forta-protocol/forta-core-go/clients/agentlogs"
+	"github.com/forta-protocol/forta-core-go/security"
 	"github.com/forta-protocol/forta-node/clients"
-	"github.com/forta-protocol/forta-node/clients/agentlogs"
-	"github.com/forta-protocol/forta-node/security"
 	log "github.com/sirupsen/logrus"
 )
 
