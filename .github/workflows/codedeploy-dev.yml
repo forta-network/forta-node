@@ -1,6 +1,7 @@
 name: CodeDeploy to Dev (All Scanners)
 
 on:
+  pull_request:
   workflow_dispatch:
     branches: [ master ]
 
