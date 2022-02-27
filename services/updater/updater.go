@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/forta-protocol/forta-core-go/registry"
 	"io/ioutil"
 	"net/http"
 	"path"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	"github.com/forta-protocol/forta-core-go/clients/health"
+	"github.com/forta-protocol/forta-core-go/registry"
 	"github.com/forta-protocol/forta-core-go/release"
 	"github.com/forta-protocol/forta-core-go/utils"
 

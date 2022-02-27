@@ -11,20 +11,13 @@ var (
 	Version    = ""
 )
 
-// ReleaseSummary contains concise release info.
-type ReleaseSummary struct {
-	Commit  string `json:"commit,omitempty"`
-	IPFS    string `json:"ipfs,omitempty"`
-	Version string `json:"version,omitempty"`
-}
-
 // GetBuildReleaseSummary returns the build summary from build vars.
-func GetBuildReleaseSummary() (*ReleaseSummary, bool) {
+func GetBuildReleaseSummary() (*release.ReleaseSummary, bool) {
 	if len(CommitHash) == 0 {
 		return nil, false
 	}
 
-	return &ReleaseSummary{
+	return &release.ReleaseSummary{
 		Commit:  CommitHash,
 		IPFS:    ReleaseCid,
 		Version: Version,
