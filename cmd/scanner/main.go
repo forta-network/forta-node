@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -237,7 +238,8 @@ func summarizeReports(reports health.Reports) *health.Report {
 	}
 
 	traceBlockErr, ok := reports.NameContains("trace-json-rpc-client.request.trace-block.error")
-	if ok && len(traceBlockErr.Details) > 0 {
+	isTraceBlockNotFoundErr := strings.Contains(traceBlockErr.Details, "not found")
+	if ok && len(traceBlockErr.Details) > 0 && !isTraceBlockNotFoundErr {
 		summary.Addf("trace api (trace_block) is failing with error '%s'.", traceBlockErr.Details)
 		summary.Status(health.StatusFailing)
 	}
