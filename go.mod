@@ -13,7 +13,7 @@ require (
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/ethereum/go-ethereum v1.10.16
 	github.com/fatih/color v1.12.0
-	github.com/forta-protocol/forta-core-go v0.0.0-20220227160203-0774261b1856
+	github.com/forta-protocol/forta-core-go v0.0.0-20220227221442-84371d68e012
 	github.com/go-playground/validator/v10 v10.9.0
 	github.com/goccy/go-json v0.9.4
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -35,7 +35,6 @@ require (
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.8.1
 	github.com/stretchr/testify v1.7.0
-	github.com/wealdtech/go-ens/v3 v3.5.2
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/grpc v1.44.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b

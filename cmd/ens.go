@@ -1,15 +1,11 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/forta-protocol/forta-core-go/ens"
 	"github.com/goccy/go-json"
 	"io/ioutil"
 	"path"
 	"time"
-
-	"github.com/fatih/color"
-	"github.com/forta-protocol/forta-node/store"
 )
 
 const (
@@ -56,7 +52,7 @@ func ensureLatestContractAddresses() error {
 
 	cache.Dispatch = contracts.Dispatch.Hex()
 	cache.Agents = contracts.AgentRegistry.Hex()
-	cache.ScannerVersion = contracts.ScannerRegistry.Hex()
+	cache.ScannerVersion = contracts.ScannerNodeVersion.Hex()
 	cache.ExpiresAt = time.Now().UTC().Add(contractAddressCacheExpiry)
 
 	b, err := json.MarshalIndent(&cache, "", "  ") // indent by two spaces
@@ -70,17 +66,6 @@ func ensureLatestContractAddresses() error {
 
 	setContractAddressesFromCache(cache)
 	return nil
-}
-
-func findContractAddress(ens store.ENS, input string) (string, error) {
-	addr, err := ens.Resolve(input)
-	if err != nil {
-		return "", err
-	}
-
-	fmt.Printf("%s: %s\n", input, color.New(color.FgYellow).Sprintf(addr.String()))
-
-	return addr.String(), nil
 }
 
 // sets only if not overridden

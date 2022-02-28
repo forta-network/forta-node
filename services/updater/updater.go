@@ -11,9 +11,11 @@ import (
 	"time"
 
 	"github.com/forta-protocol/forta-core-go/clients/health"
+	"github.com/forta-protocol/forta-core-go/registry"
+	"github.com/forta-protocol/forta-core-go/release"
 	"github.com/forta-protocol/forta-core-go/utils"
+
 	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/store"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -25,28 +27,28 @@ type UpdaterService struct {
 	port string
 
 	mu     sync.RWMutex
-	ipfs   store.IPFSClient
-	us     store.UpdaterStore
+	rl     release.Client
+	rg     registry.Client
 	server *http.Server
 
 	developmentMode bool
 
 	latestReference string
-	latestRelease   *config.ReleaseManifest
+	latestRelease   *release.ReleaseManifest
 
 	lastChecked health.TimeTracker
 	lastErr     health.ErrorTracker
 }
 
 // NewUpdaterService creates a new updater service.
-func NewUpdaterService(ctx context.Context, us store.UpdaterStore, ipfs store.IPFSClient,
+func NewUpdaterService(ctx context.Context, rg registry.Client, rc release.Client,
 	port string, developmentMode bool,
 ) *UpdaterService {
 	return &UpdaterService{
 		ctx:             ctx,
 		port:            port,
-		us:              us,
-		ipfs:            ipfs,
+		rg:              rg,
+		rl:              rc,
 		developmentMode: developmentMode,
 	}
 }
@@ -64,7 +66,7 @@ func (updater *UpdaterService) handleGetVersion(w http.ResponseWriter, r *http.R
 		"release": updater.latestReference,
 	}).Info("release response")
 
-	b, _ := json.Marshal(&config.ReleaseInfo{
+	b, _ := json.Marshal(&release.ReleaseInfo{
 		IPFS:     updater.latestReference,
 		Manifest: *updater.latestRelease,
 	})
@@ -116,12 +118,12 @@ func (updater *UpdaterService) updateLatestRelease() error {
 
 	log.Info("updating latest release")
 
-	ref, err := updater.us.GetLatestReference()
+	ref, err := updater.rg.GetScannerNodeVersion()
 	if err != nil {
 		return fmt.Errorf("failed to get the latest release manifest ref: %v", err)
 	}
 	if ref != updater.latestReference {
-		rm, err := updater.ipfs.GetReleaseManifest(ref)
+		rm, err := updater.rl.GetReleaseManifest(context.Background(), ref)
 		if err != nil {
 			log.WithError(err).Error("error getting release manifest")
 			return fmt.Errorf("failed while downloading the release manifest: %v", err)
@@ -147,7 +149,7 @@ func (updater *UpdaterService) readLocalReleaseManifest() error {
 		log.WithError(err).Info("could not read the test release manifest file - ignoring error")
 		return nil
 	}
-	var release config.ReleaseManifest
+	var release release.ReleaseManifest
 	if err := json.Unmarshal(b, &release); err != nil {
 		log.WithError(err).Info("could not unmarshal the test release manifest - ignoring error")
 		return nil

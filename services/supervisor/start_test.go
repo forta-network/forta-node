@@ -3,17 +3,18 @@ package supervisor
 import (
 	"context"
 	"fmt"
+	"github.com/forta-protocol/forta-core-go/release"
 	"os"
 	"testing"
 
 	"github.com/docker/docker/api/types"
 
+	mrelease "github.com/forta-protocol/forta-core-go/release/mocks"
+
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	mock_clients "github.com/forta-protocol/forta-node/clients/mocks"
 	"github.com/forta-protocol/forta-node/config"
-	mock_store "github.com/forta-protocol/forta-node/store/mocks"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -42,9 +43,9 @@ func TestSuite(t *testing.T) {
 type Suite struct {
 	r *require.Assertions
 
-	dockerClient *mock_clients.MockDockerClient
-	globalClient *mock_clients.MockDockerClient
-	ipfsClient   *mock_store.MockIPFSClient
+	dockerClient  *mock_clients.MockDockerClient
+	globalClient  *mock_clients.MockDockerClient
+	releaseClient *mrelease.MockClient
 
 	msgClient *mock_clients.MockMessageClient
 
@@ -78,20 +79,20 @@ func (s *Suite) SetupTest() {
 	os.Setenv(config.EnvHostFortaDir, "/tmp/forta")
 	s.dockerClient = mock_clients.NewMockDockerClient(gomock.NewController(s.T()))
 	s.globalClient = mock_clients.NewMockDockerClient(gomock.NewController(s.T()))
-	s.ipfsClient = mock_store.NewMockIPFSClient(gomock.NewController(s.T()))
+	s.releaseClient = mrelease.NewMockClient(gomock.NewController(s.T()))
 
 	s.msgClient = mock_clients.NewMockMessageClient(gomock.NewController(s.T()))
 	service := &SupervisorService{
-		ctx:          context.Background(),
-		client:       s.dockerClient,
-		globalClient: s.globalClient,
-		ipfsClient:   s.ipfsClient,
-		msgClient:    s.msgClient,
+		ctx:           context.Background(),
+		client:        s.dockerClient,
+		globalClient:  s.globalClient,
+		msgClient:     s.msgClient,
+		releaseClient: s.releaseClient,
 	}
 	service.config.Config.TelemetryConfig.Disable = true
 	service.config.Config.Log.Level = "debug"
 
-	s.ipfsClient.EXPECT().GetReleaseManifest(gomock.Any()).Return(&config.ReleaseManifest{}, nil).AnyTimes()
+	s.releaseClient.EXPECT().GetReleaseManifest(gomock.Any(), gomock.Any()).Return(&release.ReleaseManifest{}, nil).AnyTimes()
 
 	s.dockerClient.EXPECT().Nuke(service.ctx)
 	s.dockerClient.EXPECT().EnsureLocalImage(service.ctx, gomock.Any(), gomock.Any()) // needs to get nats once

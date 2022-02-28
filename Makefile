@@ -17,8 +17,6 @@ mocks:
 	mockgen -source clients/interfaces.go -destination clients/mocks/mock_clients.go
 	mockgen -source services/registry/registry.go -destination services/registry/mocks/mock_registry.go
 	mockgen -source store/registry.go -destination store/mocks/mock_registry.go
-	mockgen -source store/updater.go -destination store/mocks/mock_updater.go
-	mockgen -source store/ipfs.go -destination store/mocks/mock_ipfs.go
 
 test:
 	go test -v -count=1 ./...
