@@ -3,11 +3,13 @@ package publisher
 import (
 	"context"
 	"fmt"
-	"github.com/forta-protocol/forta-core-go/release"
 	"os"
+
+	"github.com/forta-protocol/forta-core-go/release"
 
 	"github.com/forta-protocol/forta-core-go/clients/health"
 	"github.com/forta-protocol/forta-node/clients/alertapi"
+	"github.com/forta-protocol/forta-node/healthutils"
 
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	log "github.com/sirupsen/logrus"
@@ -52,7 +54,10 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	}
 
 	return []services.Service{
-		health.NewService(ctx, health.CheckerFrom(summarizeReports, publisher)),
+		health.NewService(
+			ctx, "", healthutils.DefaultHealthServerErrHandler,
+			health.CheckerFrom(summarizeReports, publisher),
+		),
 		publisher,
 	}, nil
 }

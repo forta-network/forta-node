@@ -15,6 +15,7 @@ import (
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/alertapi"
 	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-protocol/forta-node/healthutils"
 	"github.com/forta-protocol/forta-node/store"
 	log "github.com/sirupsen/logrus"
 )
@@ -67,7 +68,7 @@ func (runner *Runner) Start() error {
 		return fmt.Errorf("failed to nuke leftover containers at start: %v", err)
 	}
 
-	health.StartServer(runner.ctx, runner.checkHealth)
+	health.StartServer(runner.ctx, "", healthutils.DefaultHealthServerErrHandler, runner.checkHealth)
 
 	if runner.cfg.AutoUpdate.Disable {
 		runner.startEmbeddedSupervisor()

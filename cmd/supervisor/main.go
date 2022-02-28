@@ -7,6 +7,7 @@ import (
 	"github.com/forta-protocol/forta-core-go/clients/health"
 	"github.com/forta-protocol/forta-core-go/security"
 	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-protocol/forta-node/healthutils"
 	"github.com/forta-protocol/forta-node/services"
 	"github.com/forta-protocol/forta-node/services/supervisor"
 )
@@ -33,7 +34,10 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 	return []services.Service{
-		health.NewService(ctx, health.CheckerFrom(summarizeReports, svc)),
+		health.NewService(
+			ctx, "", healthutils.DefaultHealthServerErrHandler,
+			health.CheckerFrom(summarizeReports, svc),
+		),
 		svc,
 	}, nil
 }
