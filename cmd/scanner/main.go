@@ -16,6 +16,7 @@ import (
 	"github.com/forta-protocol/forta-core-go/utils"
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/messaging"
+	"github.com/forta-protocol/forta-node/cmd/cmdutils"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/services"
 	"github.com/forta-protocol/forta-node/services/registry"
@@ -146,7 +147,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	}
 
 	svcs := []services.Service{
-		health.NewService(ctx, health.CheckerFrom(
+		health.NewService(ctx, "", cmdutils.DefaultHealthServerErrHandler, health.CheckerFrom(
 			summarizeReports,
 			ethClient, traceClient, blockFeed, txStream, txAnalyzer, blockAnalyzer, agentPool, registryService,
 		)),

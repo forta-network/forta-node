@@ -2,12 +2,14 @@ package updater
 
 import (
 	"context"
+	"time"
+
 	"github.com/forta-protocol/forta-core-go/registry"
 	"github.com/forta-protocol/forta-core-go/release"
-	"time"
 
 	"github.com/forta-protocol/forta-core-go/clients/health"
 	"github.com/forta-protocol/forta-core-go/utils"
+	"github.com/forta-protocol/forta-node/cmd/cmdutils"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/services"
 	"github.com/forta-protocol/forta-node/services/updater"
@@ -40,7 +42,10 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	)
 
 	return []services.Service{
-		health.NewService(ctx, health.CheckerFrom(summarizeReports, updaterService)),
+		health.NewService(
+			ctx, "", cmdutils.DefaultHealthServerErrHandler,
+			health.CheckerFrom(summarizeReports, updaterService),
+		),
 		updaterService,
 	}, nil
 }
