@@ -13,7 +13,7 @@ require (
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/ethereum/go-ethereum v1.10.16
 	github.com/fatih/color v1.12.0
-	github.com/forta-protocol/forta-core-go v0.0.0-20220228164050-6dffe5b4c667
+	github.com/forta-protocol/forta-core-go v0.0.0-20220301202140-81c7142792a3
 	github.com/go-playground/validator/v10 v10.9.0
 	github.com/goccy/go-json v0.9.4
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
