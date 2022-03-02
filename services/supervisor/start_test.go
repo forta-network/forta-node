@@ -132,7 +132,6 @@ func (s *Suite) SetupTest() {
 }
 
 func (s *Suite) initialContainerCheck() {
-	s.dockerClient.EXPECT().GetContainers(s.service.ctx)
 	for _, containerName := range []string{
 		config.DockerScannerContainerName,
 		config.DockerPublisherContainerName,
@@ -141,11 +140,30 @@ func (s *Suite) initialContainerCheck() {
 	} {
 		s.dockerClient.EXPECT().GetContainerByName(s.service.ctx, containerName).Return(&types.Container{ID: testGenericContainerID}, nil)
 	}
-	for i := 0; i < 4; i++ {
+
+	s.dockerClient.EXPECT().GetContainers(s.service.ctx).Return([]types.Container{
+		{
+			Names: []string{"/forta-agent-name"},
+			ID:    testGenericContainerID,
+			Labels: map[string]string{
+				clients.DockerLabelFortaSupervisorStrategyVersion: SupervisorStrategyVersion,
+			},
+		},
+		{
+			Names: []string{"/forta-agent-name"},
+			ID:    testGenericContainerID,
+			Labels: map[string]string{
+				clients.DockerLabelFortaSupervisorStrategyVersion: "old",
+			},
+		},
+	}, nil)
+
+	// 4 service containers + 1 old agent
+	for i := 0; i < 5; i++ {
 		s.dockerClient.EXPECT().RemoveContainer(s.service.ctx, testGenericContainerID).Return(nil)
 		s.dockerClient.EXPECT().WaitContainerPrune(s.service.ctx, testGenericContainerID).Return(nil)
 	}
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 5; i++ {
 		s.dockerClient.EXPECT().RemoveNetworkByName(s.service.ctx, gomock.Any()).Return(nil)
 	}
 }
