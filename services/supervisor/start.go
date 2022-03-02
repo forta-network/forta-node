@@ -3,13 +3,14 @@ package supervisor
 import (
 	"context"
 	"fmt"
-	"github.com/forta-protocol/forta-core-go/manifest"
-	"github.com/forta-protocol/forta-core-go/release"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/forta-protocol/forta-core-go/manifest"
+	"github.com/forta-protocol/forta-core-go/release"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ipfs/go-cid"
@@ -21,12 +22,7 @@ import (
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/config"
-<<<<<<< HEAD
-=======
-	"github.com/forta-protocol/forta-node/security"
 	"github.com/forta-protocol/forta-node/services"
-	"github.com/forta-protocol/forta-node/store"
->>>>>>> 001a951 (keep agent containers when we do graceful restarts)
 )
 
 const (
