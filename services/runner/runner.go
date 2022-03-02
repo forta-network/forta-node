@@ -134,7 +134,7 @@ func (runner *Runner) removeContainer(container *clients.DockerContainer) error 
 
 func (runner *Runner) removeContainerWithProps(name, id string) error {
 	logger := log.WithField("container", id).WithField("name", name)
-	if err := runner.dockerClient.InterruptContainer(context.Background(), id); err != nil {
+	if err := runner.dockerClient.TerminateContainer(context.Background(), id); err != nil {
 		logger.WithError(err).Error("error stopping container")
 	} else {
 		logger.Info("interrupted")

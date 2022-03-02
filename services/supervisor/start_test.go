@@ -3,9 +3,10 @@ package supervisor
 import (
 	"context"
 	"fmt"
-	"github.com/forta-protocol/forta-core-go/release"
 	"os"
 	"testing"
+
+	"github.com/forta-protocol/forta-core-go/release"
 
 	"github.com/docker/docker/api/types"
 
@@ -24,6 +25,7 @@ const (
 	testImageRef              = "some.docker.registry.io/foobar@sha256:cdd4ddccf5e9c740eb4144bcc68e3ea3a056789ec7453e94a6416dcfc80937a4"
 	testNodeNetworkID         = "node-network-id"
 	testNatsNetworkID         = "nats-network-id"
+	testGenericContainerID    = "test-generic-container-id"
 	testScannerContainerID    = "test-scanner-container-id"
 	testPublisherContainerID  = "test-publisher-container-id"
 	testProxyContainerID      = "test-proxy-container-id"
@@ -91,10 +93,11 @@ func (s *Suite) SetupTest() {
 	}
 	service.config.Config.TelemetryConfig.Disable = true
 	service.config.Config.Log.Level = "debug"
+	s.service = service
 
 	s.releaseClient.EXPECT().GetReleaseManifest(gomock.Any(), gomock.Any()).Return(&release.ReleaseManifest{}, nil).AnyTimes()
 
-	s.dockerClient.EXPECT().Nuke(service.ctx)
+	s.initialContainerCheck()
 	s.dockerClient.EXPECT().EnsureLocalImage(service.ctx, gomock.Any(), gomock.Any()) // needs to get nats once
 	s.dockerClient.EXPECT().CreatePublicNetwork(service.ctx, gomock.Any()).Return(testNodeNetworkID, nil)
 	s.dockerClient.EXPECT().CreateInternalNetwork(service.ctx, gomock.Any()).Return(testNatsNetworkID, nil) // for nats
@@ -126,7 +129,43 @@ func (s *Suite) SetupTest() {
 	s.msgClient.EXPECT().Subscribe(messaging.SubjectAgentsActionStop, gomock.Any())
 
 	s.r.NoError(service.start())
-	s.service = service
+}
+
+func (s *Suite) initialContainerCheck() {
+	for _, containerName := range []string{
+		config.DockerScannerContainerName,
+		config.DockerPublisherContainerName,
+		config.DockerJSONRPCProxyContainerName,
+		config.DockerNatsContainerName,
+	} {
+		s.dockerClient.EXPECT().GetContainerByName(s.service.ctx, containerName).Return(&types.Container{ID: testGenericContainerID}, nil)
+	}
+
+	s.dockerClient.EXPECT().GetContainers(s.service.ctx).Return([]types.Container{
+		{
+			Names: []string{"/forta-agent-name"},
+			ID:    testGenericContainerID,
+			Labels: map[string]string{
+				clients.DockerLabelFortaSupervisorStrategyVersion: SupervisorStrategyVersion,
+			},
+		},
+		{
+			Names: []string{"/forta-agent-name"},
+			ID:    testGenericContainerID,
+			Labels: map[string]string{
+				clients.DockerLabelFortaSupervisorStrategyVersion: "old",
+			},
+		},
+	}, nil)
+
+	// 4 service containers + 1 old agent
+	for i := 0; i < 5; i++ {
+		s.dockerClient.EXPECT().RemoveContainer(s.service.ctx, testGenericContainerID).Return(nil)
+		s.dockerClient.EXPECT().WaitContainerPrune(s.service.ctx, testGenericContainerID).Return(nil)
+	}
+	for i := 0; i < 5; i++ {
+		s.dockerClient.EXPECT().RemoveNetworkByName(s.service.ctx, gomock.Any()).Return(nil)
+	}
 }
 
 func testAgentData() (config.AgentConfig, messaging.AgentPayload) {

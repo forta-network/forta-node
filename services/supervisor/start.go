@@ -3,12 +3,14 @@ package supervisor
 import (
 	"context"
 	"fmt"
-	"github.com/forta-protocol/forta-core-go/manifest"
-	"github.com/forta-protocol/forta-core-go/release"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/forta-protocol/forta-core-go/manifest"
+	"github.com/forta-protocol/forta-core-go/release"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ipfs/go-cid"
@@ -20,6 +22,13 @@ import (
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-protocol/forta-node/services"
+)
+
+const (
+	// SupervisorStrategyVersion is for versioning the critical changes in supervisor's management strategy.
+	// It's effective in deciding if an agent container should be restarted or not.
+	SupervisorStrategyVersion = "1"
 )
 
 // SupervisorService manages the scanner node's service and agent containers.
@@ -108,7 +117,7 @@ func (sup *SupervisorService) start() error {
 	sup.maxLogSize = sup.config.Config.Log.MaxLogSize
 	sup.maxLogFiles = sup.config.Config.Log.MaxLogFiles
 
-	if err := sup.client.Nuke(sup.ctx); err != nil {
+	if err := sup.removeOldContainers(); err != nil {
 		return err
 	}
 
@@ -283,6 +292,88 @@ func (sup *SupervisorService) ensureNodeImages() error {
 	return nil
 }
 
+// removes old service containers and agents started with an old supervisor
+func (sup *SupervisorService) removeOldContainers() error {
+	type containerDefinition struct {
+		ID   string
+		Name string
+	}
+	var containersToRemove []*containerDefinition
+
+	// gather old service containers
+	for _, containerName := range []string{
+		config.DockerScannerContainerName,
+		config.DockerPublisherContainerName,
+		config.DockerJSONRPCProxyContainerName,
+		config.DockerNatsContainerName,
+	} {
+		container, err := sup.client.GetContainerByName(sup.ctx, containerName)
+		if err != nil {
+			log.WithError(err).WithField("containerName", containerName).Info("did not find old service container - ignoring")
+			continue
+		}
+		containersToRemove = append(containersToRemove, &containerDefinition{
+			ID:   container.ID,
+			Name: containerName,
+		})
+	}
+
+	// gather old agents
+	containers, err := sup.client.GetContainers(sup.ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get containers list: %v", err)
+	}
+	for _, container := range containers {
+		containerName := container.Names[0][1:]
+		logger := log.WithFields(log.Fields{
+			"containerName": containerName,
+			"containerId":   container.ID,
+		})
+		if !strings.Contains(containerName, "forta-agent-") {
+			continue
+		}
+		if container.Labels[clients.DockerLabelFortaSupervisorStrategyVersion] != SupervisorStrategyVersion {
+			logger.Info("agent container is old - need to remove")
+			containersToRemove = append(containersToRemove, &containerDefinition{
+				ID:   container.ID,
+				Name: containerName,
+			})
+		}
+	}
+
+	// remove all of the gathered containers
+	for _, container := range containersToRemove {
+		logger := log.WithFields(log.Fields{
+			"containerName": container.Name,
+			"containerId":   container.ID,
+		})
+		if err := sup.client.RemoveContainer(sup.ctx, container.ID); err != nil {
+			const msg = "failed to remove old container"
+			logger.WithError(err).Error(msg)
+			return fmt.Errorf("%s: %v", msg, err)
+		}
+		if err := sup.client.WaitContainerPrune(sup.ctx, container.ID); err != nil {
+			const msg = "failed while waiting removal of old container"
+			logger.WithError(err).Error(msg)
+			return fmt.Errorf("%s: %v", msg, err)
+		}
+	}
+	// after all gathered containers are removed, remove their networks
+	for _, container := range containersToRemove {
+		logger := log.WithFields(log.Fields{
+			"containerName": container.Name,
+			"containerId":   container.ID,
+		})
+		if err := sup.client.RemoveNetworkByName(sup.ctx, container.Name); err != nil {
+			const msg = "failed to remove old network"
+			logger.WithError(err).Warn(msg)
+			// ignore network removal errs
+		}
+	}
+
+	return nil
+}
+
 func (sup *SupervisorService) syncTelemetryData() {
 	time.After(time.Second * 15)          // rate limit crash loops
 	ticker := time.NewTicker(time.Minute) // slow down with auto-upgrade later
@@ -339,6 +430,9 @@ func (sup *SupervisorService) Stop() error {
 
 	ctx := context.Background()
 	for _, cnt := range sup.containers {
+		if services.IsGracefulShutdown() && cnt.IsAgent {
+			continue // keep container agents alive
+		}
 		if err := sup.client.StopContainer(ctx, cnt.DockerContainer.ID); err != nil {
 			log.Error(fmt.Sprintf("error stopping %s container", cnt.DockerContainer.ID), err)
 		} else {
