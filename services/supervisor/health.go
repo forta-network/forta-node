@@ -1,7 +1,10 @@
 package supervisor
 
 import (
+	"errors"
+
 	"github.com/forta-protocol/forta-core-go/utils"
+	"github.com/forta-protocol/forta-node/clients"
 
 	"fmt"
 	"time"
@@ -30,29 +33,19 @@ func (sup *SupervisorService) healthCheck() {
 }
 
 func (sup *SupervisorService) doHealthCheck() error {
-	containersList, err := sup.client.GetContainers(sup.ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get containers list: %v", err)
-	}
 	sup.mu.RLock()
 	defer sup.mu.RUnlock()
 	for _, knownContainer := range sup.containers {
 		var foundContainer *types.Container
-		var ok bool
 
 		// this has a threshold so that the healthcheck doesn't fail while a container is starting
 		err := utils.TryTimes(func(attempt int) error {
-			foundContainer, ok = containersList.FindByID(knownContainer.ID)
+			var err error
+			foundContainer, err = sup.client.GetContainerByID(sup.ctx, knownContainer.ID)
 			currAttempt := attempt + 1
-			if !ok {
-				notFoundErr := fmt.Errorf("healthcheck: container '%s' with id '%s' was not found (attempt=%d/%d)", knownContainer.Name, knownContainer.ID, currAttempt, maxAttempts)
-				log.Warnf(notFoundErr.Error())
-				// get containers again, so that we can get updated info
-				containersList, err = sup.client.GetContainers(sup.ctx)
-				if err != nil {
-					return fmt.Errorf("failed to get containers list: %v", err)
-				}
-				return notFoundErr
+			if err != nil && errors.Is(err, clients.ErrContainerNotFound) {
+				log.Warnf("healthcheck: container '%s' with id '%s' was not found (attempt=%d/%d)", knownContainer.Name, knownContainer.ID, currAttempt, maxAttempts)
+				return err
 			}
 			// If the container is found alive at later attempts, make it obvious.
 			if currAttempt > 1 {
