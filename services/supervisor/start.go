@@ -309,7 +309,7 @@ func (sup *SupervisorService) removeOldContainers() error {
 	} {
 		container, err := sup.client.GetContainerByName(sup.ctx, containerName)
 		if err != nil {
-			log.WithError(err).WithField("containerName", containerName).Info("did not found old service container - ignoring")
+			log.WithError(err).WithField("containerName", containerName).Info("did not find old service container - ignoring")
 			continue
 		}
 		containersToRemove = append(containersToRemove, &containerDefinition{
@@ -366,8 +366,8 @@ func (sup *SupervisorService) removeOldContainers() error {
 		})
 		if err := sup.client.RemoveNetworkByName(sup.ctx, container.Name); err != nil {
 			const msg = "failed to remove old network"
-			logger.WithError(err).Error(msg)
-			return fmt.Errorf("%s: %v", msg, err)
+			logger.WithError(err).Warn(msg)
+			// ignore network removal errs
 		}
 	}
 
