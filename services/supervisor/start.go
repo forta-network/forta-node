@@ -341,7 +341,7 @@ func (sup *SupervisorService) removeOldContainers() error {
 		}
 	}
 
-	// remove all of the gathered containers and their networks
+	// remove all of the gathered containers
 	for _, container := range containersToRemove {
 		logger := log.WithFields(log.Fields{
 			"containerName": container.Name,
@@ -357,12 +357,20 @@ func (sup *SupervisorService) removeOldContainers() error {
 			logger.WithError(err).Error(msg)
 			return fmt.Errorf("%s: %v", msg, err)
 		}
+	}
+	// after all gathered containers are removed, remove their networks
+	for _, container := range containersToRemove {
+		logger := log.WithFields(log.Fields{
+			"containerName": container.Name,
+			"containerId":   container.ID,
+		})
 		if err := sup.client.RemoveNetworkByName(sup.ctx, container.Name); err != nil {
 			const msg = "failed to remove old network"
 			logger.WithError(err).Error(msg)
 			return fmt.Errorf("%s: %v", msg, err)
 		}
 	}
+
 	return nil
 }
 
