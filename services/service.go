@@ -20,7 +20,7 @@ const (
 )
 
 const (
-	GracefulShutdownSignal = syscall.SIGINT
+	GracefulShutdownSignal = syscall.SIGTERM
 )
 
 // Service is a service abstraction.
