@@ -49,6 +49,9 @@ func (sup *SupervisorService) startAgent(agent config.AgentConfig) error {
 		MaxLogSize:  sup.maxLogSize,
 		CPUQuota:    limits.CPUQuota,
 		Memory:      limits.Memory,
+		Labels: map[string]string{
+			clients.DockerLabelFortaSupervisorStrategyVersion: SupervisorStrategyVersion,
+		},
 	})
 	if err != nil {
 		return err

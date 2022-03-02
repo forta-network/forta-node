@@ -63,6 +63,7 @@ type DockerContainerConfig struct {
 	Memory          int64
 	Cmd             []string
 	DialHost        bool
+	Labels          map[string]string
 }
 
 // DockerContainerList contains the full container data.
@@ -417,6 +418,10 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 		Image:  config.Image,
 		Env:    config.envVars(),
 		Labels: d.labels,
+	}
+	// add custom labels
+	for k, v := range config.Labels {
+		cntCfg.Labels[k] = v
 	}
 
 	if len(config.Cmd) > 0 {
