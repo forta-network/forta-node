@@ -21,6 +21,6 @@ runs:
   - name: Build
     shell: bash
     run: go build -v ./...
-  # - name: Test
-  #   shell: bash
-  #   run: make test
+  - name: Test
+    shell: bash
+    run: make test
