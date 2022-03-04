@@ -81,7 +81,7 @@ func (p *JsonRpcProxy) metricHandler(h http.Handler) http.Handler {
 		duration := time.Since(t)
 		agentConfig, ok := p.findAgentFromRemoteAddr(req.RemoteAddr)
 		if ok {
-			if p.rateLimiter.CheckLimit(agentConfig.ID) {
+			if shouldLimitAgent := p.rateLimiter.CheckLimit(agentConfig.ID); shouldLimitAgent {
 				w.WriteHeader(http.StatusTooManyRequests)
 				return
 			}
