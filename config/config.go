@@ -28,13 +28,13 @@ type TraceConfig struct {
 }
 
 type RateLimitConfig struct {
-	RequestCount    int `yaml:"requestCount" json:"requestCount" validate:"min=10"`      // 10 reqs
-	IntervalSeconds int `yaml:"intervalSeconds" json:"intervalSeconds" validate:"min=1"` // per second
+	Rate  int `yaml:"rate" json:"rate" validate:"min=1"`
+	Burst int `yaml:"burst" json:"burst" validate:"min=1"`
 }
 
 type JsonRpcProxyConfig struct {
 	JsonRpc         JsonRpcConfig   `yaml:"jsonRpc" json:"jsonRpc"`
-	RateLimitConfig RateLimitConfig `yaml:"rateLimit" json:"rateLimit" default:"{\"requestCount\":600,\"intervalSeconds\":60}"` // 600 reqs per 60 seconds
+	RateLimitConfig RateLimitConfig `yaml:"rateLimit" json:"rateLimit" default:"{\"rate\":50,\"burst\":50}"`
 }
 
 type LogConfig struct {

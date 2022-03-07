@@ -193,8 +193,8 @@ func NewJsonRpcProxy(ctx context.Context, cfg config.Config) (*JsonRpcProxy, err
 		dockerClient: globalClient,
 		msgClient:    msgClient,
 		rateLimiter: NewRateLimiter(
-			cfg.JsonRpcProxy.RateLimitConfig.RequestCount,
-			time.Duration(cfg.JsonRpcProxy.RateLimitConfig.IntervalSeconds)*time.Second,
+			cfg.JsonRpcProxy.RateLimitConfig.Rate,
+			cfg.JsonRpcProxy.RateLimitConfig.Burst,
 		),
 	}, nil
 }
