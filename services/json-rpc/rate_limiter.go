@@ -12,8 +12,13 @@ import (
 type RateLimiter struct {
 	rate           int
 	burst          int
-	clientLimiters map[string]*rate.Limiter
+	clientLimiters map[string]*clientLimiter
 	mu             sync.Mutex
+}
+
+type clientLimiter struct {
+	lastReservation time.Time
+	*rate.Limiter
 }
 
 // NewRateLimiter creates a new rate limiter.
@@ -24,7 +29,7 @@ func NewRateLimiter(rateN, burst int) *RateLimiter {
 	rl := &RateLimiter{
 		rate:           rateN,
 		burst:          burst,
-		clientLimiters: make(map[string]*rate.Limiter),
+		clientLimiters: make(map[string]*clientLimiter),
 	}
 	go rl.autoCleanup()
 	return rl
@@ -41,20 +46,20 @@ func (rl *RateLimiter) reserveClient(clientID string) *rate.Reservation {
 	defer rl.mu.Unlock()
 	limiter := rl.clientLimiters[clientID]
 	if limiter == nil {
-		limiter = rate.NewLimiter(rate.Limit(rl.rate), rl.burst)
+		limiter = &clientLimiter{Limiter: rate.NewLimiter(rate.Limit(rl.rate), rl.burst)}
 		rl.clientLimiters[clientID] = limiter
 	}
+	limiter.lastReservation = time.Now()
 	return limiter.Reserve()
 }
 
-// this keeps allocation under control with little effect to overall functionality
+// deallocate inactive limiters
 func (rl *RateLimiter) autoCleanup() {
 	ticker := time.NewTicker(time.Hour)
 	for range ticker.C {
 		rl.mu.Lock()
 		for clientID, limiter := range rl.clientLimiters {
-			// if it allows max burst now, then it makes sense to deallocate it
-			if isNotActive := limiter.AllowN(time.Now(), rl.burst); isNotActive {
+			if time.Since(limiter.lastReservation) > time.Minute*10 {
 				rl.clientLimiters[clientID] = nil
 			}
 		}
