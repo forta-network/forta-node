@@ -35,6 +35,8 @@ type JsonRpcProxy struct {
 	agentConfigs  []config.AgentConfig
 	agentConfigMu sync.RWMutex
 
+	rateLimiter *RateLimiter
+
 	lastErr health.ErrorTracker
 }
 
@@ -79,6 +81,10 @@ func (p *JsonRpcProxy) metricHandler(h http.Handler) http.Handler {
 		duration := time.Since(t)
 		agentConfig, ok := p.findAgentFromRemoteAddr(req.RemoteAddr)
 		if ok {
+			if shouldLimitAgent := p.rateLimiter.CheckLimit(agentConfig.ID); shouldLimitAgent {
+				w.WriteHeader(http.StatusTooManyRequests)
+				return
+			}
 			p.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{
 				Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, duration),
 			})
@@ -186,5 +192,9 @@ func NewJsonRpcProxy(ctx context.Context, cfg config.Config) (*JsonRpcProxy, err
 		cfg:          jCfg,
 		dockerClient: globalClient,
 		msgClient:    msgClient,
+		rateLimiter: NewRateLimiter(
+			cfg.JsonRpcProxy.RateLimitConfig.Rate,
+			cfg.JsonRpcProxy.RateLimitConfig.Burst,
+		),
 	}, nil
 }
