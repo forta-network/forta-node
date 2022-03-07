@@ -60,7 +60,7 @@ func (rl *RateLimiter) autoCleanup() {
 		rl.mu.Lock()
 		for clientID, limiter := range rl.clientLimiters {
 			if time.Since(limiter.lastReservation) > time.Minute*10 {
-				rl.clientLimiters[clientID] = nil
+				delete(rl.clientLimiters, clientID)
 			}
 		}
 		rl.mu.Unlock()
