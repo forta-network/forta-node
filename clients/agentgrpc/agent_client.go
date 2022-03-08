@@ -11,6 +11,8 @@ import (
 	"google.golang.org/grpc"
 )
 
+const defaultAgentResponseMaxByteCount = 50000 // 50K
+
 // Client allows us to communicate with an agent.
 type Client struct {
 	conn *grpc.ClientConn
@@ -29,7 +31,13 @@ func (client *Client) Dial(cfg config.AgentConfig) error {
 		err  error
 	)
 	for i := 0; i < 10; i++ {
-		conn, err = grpc.Dial(fmt.Sprintf("%s:%s", cfg.ContainerName(), cfg.GrpcPort()), grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(10*time.Second))
+		conn, err = grpc.Dial(
+			fmt.Sprintf("%s:%s", cfg.ContainerName(), cfg.GrpcPort()),
+			grpc.WithInsecure(),
+			grpc.WithBlock(),
+			grpc.WithTimeout(10*time.Second),
+			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(defaultAgentResponseMaxByteCount)),
+		)
 		if err == nil {
 			break
 		}
