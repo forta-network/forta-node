@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-const defaultAgentResponseMaxByteCount = 50000 // 50K
+const defaultAgentResponseMaxByteCount = 1000000 // 1M
 
 // Client allows us to communicate with an agent.
 type Client struct {
