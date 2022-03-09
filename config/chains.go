@@ -1,6 +1,6 @@
 package config
 
-const defaultBlockOffset = 2
+const defaultBlockOffset = 0
 
 // ChainSettings contains chain-specific settings.
 type ChainSettings struct {
