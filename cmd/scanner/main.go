@@ -50,7 +50,7 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 		Tracing:             cfg.Trace.Enabled,
 		RateLimit:           rateLimit,
 		SkipBlocksOlderThan: &maxAge,
-		Offset:              config.GetBlockConfirmationCount(cfg.ChainID),
+		Offset:              config.GetBlockOffset(cfg.ChainID),
 	})
 	if err != nil {
 		return nil, nil, err
