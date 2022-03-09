@@ -21,6 +21,7 @@ import (
 const (
 	DefaultBufferSize = 2000
 	AgentTimeout      = 30 * time.Second
+	MaxFindings       = 10
 )
 
 // Agent receives blocks and transactions, and produces results.
@@ -172,6 +173,13 @@ func (agent *Agent) processTransactions() {
 		resp, err := agent.client.EvaluateTx(ctx, request)
 		cancel()
 		if err == nil {
+			// truncate findings
+			if len(resp.Findings) > MaxFindings {
+				dropped := len(resp.Findings) - MaxFindings
+				droppedMetric := metrics.CreateAgentMetric(agent.config.ID, metrics.MetricFindingsDropped, float64(dropped))
+				agent.msgClient.PublishProto(messaging.SubjectMetricAgent, droppedMetric)
+				resp.Findings = resp.Findings[:MaxFindings]
+			}
 			var duration time.Duration
 			resp.Timestamp, resp.LatencyMs, duration = calculateResponseTime(&startTime)
 			lg.WithField("duration", duration).Debugf("request successful")
@@ -219,6 +227,13 @@ func (agent *Agent) processBlocks() {
 		resp, err := agent.client.EvaluateBlock(ctx, request)
 		cancel()
 		if err == nil {
+			// truncate findings
+			if len(resp.Findings) > MaxFindings {
+				dropped := len(resp.Findings) - MaxFindings
+				droppedMetric := metrics.CreateAgentMetric(agent.config.ID, metrics.MetricFindingsDropped, float64(dropped))
+				agent.msgClient.PublishProto(messaging.SubjectMetricAgent, droppedMetric)
+				resp.Findings = resp.Findings[:MaxFindings]
+			}
 			var duration time.Duration
 			resp.Timestamp, resp.LatencyMs, duration = calculateResponseTime(&startTime)
 			lg.WithField("duration", duration).Debugf("request successful")

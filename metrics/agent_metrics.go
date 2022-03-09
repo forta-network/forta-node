@@ -10,20 +10,21 @@ import (
 )
 
 const (
-	MetricFinding        = "finding"
-	MetricTxRequest      = "tx.request"
-	MetricTxLatency      = "tx.latency"
-	MetricTxError        = "tx.error"
-	MetricTxSuccess      = "tx.success"
-	MetricTxDrop         = "tx.drop"
-	MetricBlockRequest   = "block.request"
-	MetricBlockLatency   = "block.latency"
-	MetricBlockError     = "block.error"
-	MetricBlockSuccess   = "block.success"
-	MetricBlockDrop      = "block.drop"
-	MetricStop           = "agent.stop"
-	MetricJSONRPCRequest = "jsonrpc.request"
-	MetricJSONRPCLatency = "jsonrpc.latency"
+	MetricFinding         = "finding"
+	MetricTxRequest       = "tx.request"
+	MetricTxLatency       = "tx.latency"
+	MetricTxError         = "tx.error"
+	MetricTxSuccess       = "tx.success"
+	MetricTxDrop          = "tx.drop"
+	MetricBlockRequest    = "block.request"
+	MetricBlockLatency    = "block.latency"
+	MetricBlockError      = "block.error"
+	MetricBlockSuccess    = "block.success"
+	MetricBlockDrop       = "block.drop"
+	MetricStop            = "agent.stop"
+	MetricJSONRPCRequest  = "jsonrpc.request"
+	MetricJSONRPCLatency  = "jsonrpc.latency"
+	MetricFindingsDropped = "findings.dropped"
 )
 
 func SendAgentMetrics(client clients.MessageClient, ms []*protocol.AgentMetric) {
