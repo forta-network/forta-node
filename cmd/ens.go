@@ -1,11 +1,12 @@
 package cmd
 
 import (
-	"github.com/forta-protocol/forta-core-go/ens"
-	"github.com/goccy/go-json"
 	"io/ioutil"
 	"path"
 	"time"
+
+	"github.com/forta-protocol/forta-core-go/ens"
+	"github.com/goccy/go-json"
 )
 
 const (
@@ -53,6 +54,7 @@ func ensureLatestContractAddresses() error {
 	cache.Dispatch = contracts.Dispatch.Hex()
 	cache.Agents = contracts.AgentRegistry.Hex()
 	cache.ScannerVersion = contracts.ScannerNodeVersion.Hex()
+	cache.ScannerRegistry = contracts.ScannerRegistry.Hex()
 	cache.ExpiresAt = time.Now().UTC().Add(contractAddressCacheExpiry)
 
 	b, err := json.MarshalIndent(&cache, "", "  ") // indent by two spaces
@@ -74,13 +76,15 @@ func setContractAddressesFromCache(cache contractAddressCache) {
 		cfg.Registry.ContractAddress = cache.Dispatch
 	}
 	cfg.AgentRegistryContractAddress = cache.Agents
+	cfg.ScannerRegistryContractAddress = cache.ScannerRegistry
 }
 
 type contractAddressCache struct {
-	Dispatch       string    `json:"dispatch"`
-	Agents         string    `json:"agents"`
-	ScannerVersion string    `json:"scannerVersion"`
-	ExpiresAt      time.Time `json:"expiresAt"`
+	Dispatch        string    `json:"dispatch"`
+	Agents          string    `json:"agents"`
+	ScannerVersion  string    `json:"scannerVersion"`
+	ScannerRegistry string    `json:"scannerRegistry"`
+	ExpiresAt       time.Time `json:"expiresAt"`
 }
 
 func getContractAddressCache() (cache contractAddressCache, ok bool) {
