@@ -1,5 +1,4 @@
-![Go](https://github.com/forta-protocol/forta-node/actions/workflows/go.yml/badge.svg)
-![Deploy Dev](https://github.com/forta-protocol/forta-node/actions/workflows/deploy-dev.yml/badge.svg)
+![Build](https://github.com/forta-protocol/forta-node/actions/workflows/codedeploy-staging.yml/badge.svg)
 
 # forta-node
 
