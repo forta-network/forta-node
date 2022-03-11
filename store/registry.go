@@ -7,6 +7,7 @@ import (
 	"github.com/forta-protocol/forta-core-go/manifest"
 	"github.com/forta-protocol/forta-core-go/registry"
 	"sync"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -26,8 +27,9 @@ type registryStore struct {
 	rc  registry.Client
 	cfg config.Config
 
-	version string
-	mu      sync.Mutex
+	lastUpdate time.Time
+	version    string
+	mu         sync.Mutex
 }
 
 func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConfig, bool, error) {
@@ -39,7 +41,7 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 		return nil, false, err
 	}
 
-	if rs.version != hash.Hash {
+	if rs.version != hash.Hash || time.Since(rs.lastUpdate) > 1*time.Hour {
 		if err := rs.rc.PegLatestBlock(); err != nil {
 			return nil, false, err
 		}
@@ -69,6 +71,7 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 		}
 
 		rs.version = hash.Hash
+		rs.lastUpdate = time.Now()
 		return agts, true, nil
 	}
 	return nil, false, nil
