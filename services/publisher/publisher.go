@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/forta-protocol/forta-core-go/release"
 	"io"
 	"math/big"
 	"net"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/forta-protocol/forta-core-go/release"
 
 	"github.com/forta-protocol/forta-core-go/domain"
 	"github.com/forta-protocol/forta-node/clients"
@@ -497,6 +498,34 @@ func (pub *Publisher) prepareLatestBatch() {
 	pub.batchCh <- (*protocol.AlertBatch)(batch)
 }
 
+func (pub *Publisher) forwardPrivateAlerts() {
+	for notif := range pub.notifCh {
+		var buf bytes.Buffer
+		if err := json.NewEncoder(&buf).Encode(notif); err != nil {
+			log.WithError(err).Error("failed to encode private alert notif")
+			continue
+		}
+		req, err := http.NewRequestWithContext(pub.ctx, "POST", pub.cfg.Config.PrivateModeConfig.SendAlertsTo, &buf)
+		if err != nil {
+			log.WithError(err).Error("failed to create private alert notif request")
+			continue
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			log.WithError(err).Error("failed to forward private alert notif")
+			continue
+		}
+		if resp.StatusCode >= 400 {
+			b, _ := io.ReadAll(resp.Body)
+			log.WithFields(log.Fields{
+				"responseStatus": resp.StatusCode,
+				"body":           string(b),
+			}).Error("failed to forward private alert notif")
+		}
+		resp.Body.Close()
+	}
+}
+
 func (pub *Publisher) Start() error {
 	lis, err := net.Listen("tcp", "0.0.0.0:8770")
 	if err != nil {
@@ -504,12 +533,17 @@ func (pub *Publisher) Start() error {
 	}
 	pub.server = grpc.NewServer()
 	protocol.RegisterPublisherNodeServer(pub.server, pub)
+	utils.GoGrpcServe(pub.server, lis)
+
+	if pub.cfg.Config.PrivateModeConfig.Enable {
+		go pub.forwardPrivateAlerts()
+		return nil
+	}
 
 	go pub.prepareBatches()
 	go pub.publishBatches()
 	pub.registerMessageHandlers()
 
-	utils.GoGrpcServe(pub.server, lis)
 	return nil
 }
 

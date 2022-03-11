@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/forta-protocol/forta-core-go/manifest"
-	"github.com/forta-protocol/forta-core-go/registry"
 	"sync"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/forta-protocol/forta-core-go/manifest"
+	"github.com/forta-protocol/forta-core-go/registry"
 
 	log "github.com/sirupsen/logrus"
 
@@ -139,5 +142,45 @@ func NewRegistryStore(ctx context.Context, cfg config.Config, ethClient ethereum
 		cfg: cfg,
 		mc:  mc,
 		rc:  rc,
+	}, nil
+}
+
+type privateRegistryStore struct {
+	ctx     context.Context
+	cfg     config.Config
+	gotList bool
+	mu      sync.Mutex
+}
+
+func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConfig, bool, error) {
+	rs.mu.Lock()
+	defer rs.mu.Unlock()
+
+	var agentConfigs []*config.AgentConfig
+	for _, agentImage := range rs.cfg.PrivateModeConfig.AgentImages {
+		if len(agentImage) == 0 {
+			continue
+		}
+		agentConfigs = append(agentConfigs, rs.makePrivateModeAgentConfig(agentImage))
+	}
+	rs.gotList = true
+	return agentConfigs, rs.gotList, nil
+}
+
+func (rs *privateRegistryStore) FindAgentGlobally(agentID string) (*config.AgentConfig, error) {
+	return nil, errors.New("feature not available (private/local registry)")
+}
+
+func (rs *privateRegistryStore) makePrivateModeAgentConfig(image string) *config.AgentConfig {
+	return &config.AgentConfig{
+		ID:    hexutil.Encode(crypto.Keccak256([]byte(image))),
+		Image: image,
+	}
+}
+
+func NewPrivateRegistryStore(ctx context.Context, cfg config.Config) (*privateRegistryStore, error) {
+	return &privateRegistryStore{
+		ctx: ctx,
+		cfg: cfg,
 	}, nil
 }

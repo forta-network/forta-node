@@ -62,7 +62,15 @@ func New(cfg config.Config, scannerAddress common.Address, msgClient clients.Mes
 
 // Init only initializes the service.
 func (rs *RegistryService) Init() error {
-	regStr, err := store.NewRegistryStore(context.Background(), rs.cfg, rs.ethClient)
+	var (
+		regStr store.RegistryStore
+		err    error
+	)
+	if rs.cfg.PrivateModeConfig.Enable {
+		regStr, err = store.NewPrivateRegistryStore(context.Background(), rs.cfg)
+	} else {
+		regStr, err = store.NewRegistryStore(context.Background(), rs.cfg, rs.ethClient)
+	}
 	if err != nil {
 		return err
 	}

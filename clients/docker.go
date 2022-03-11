@@ -707,6 +707,9 @@ func NewDockerClient(name string) (*dockerClient, error) {
 
 // NewAuthDockerClient creates a new docker client with credentials
 func NewAuthDockerClient(name string, username, password string) (*dockerClient, error) {
+	if len(username) == 0 && len(password) == 0 {
+		return NewDockerClient(name)
+	}
 	cli, err := client.NewClientWithOpts()
 	if err != nil {
 		return nil, err
