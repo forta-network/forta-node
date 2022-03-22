@@ -46,26 +46,26 @@ func handleFortaBatchDecode(cmd *cobra.Command, args []string) error {
 
 	cmd.PrintErrln("Successfully downloaded the batch.")
 
-	var signedBatch protocol.SignedAlertBatch
+	var signedBatch protocol.SignedPayload
 	if err := json.NewDecoder(batchResp.Body).Decode(&signedBatch); err != nil {
 		return fmt.Errorf("failed to decode batch json: %v", err)
 	}
 
-	if err := security.VerifyBatchSignature(&signedBatch); err != nil {
+	if err := security.VerifySignedPayload(&signedBatch); err != nil {
 		yellowBold("Invalid batch signature: %v\n", err)
 	} else {
 		cmd.PrintErrf("Valid batch signature found - scanner: %s\n", signedBatch.Signature.Signer)
 	}
 	// continue decoding in any case
 
-	alertBatch, err := encoding.DecodeBatch(signedBatch.Encoded)
-	if err != nil {
+	var alertBatch protocol.AlertBatch
+	if err := encoding.DecodeGzippedProto(signedBatch.Encoded, &alertBatch); err != nil {
 		redBold("Invalid batch encoding!\n")
 		return fmt.Errorf("failed to decode: %v", err)
 	}
 
 	// indent by two spaces
-	b, _ := json.MarshalIndent(alertBatch, "", "  ")
+	b, _ := json.MarshalIndent(&alertBatch, "", "  ")
 
 	if printToStdout {
 		fmt.Println(string(b))
