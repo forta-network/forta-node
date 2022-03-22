@@ -3,11 +3,11 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/forta-protocol/forta-core-go/encoding"
 	"net/http"
 	"os"
 	"path"
 
+	"github.com/forta-protocol/forta-core-go/encoding"
 	"github.com/forta-protocol/forta-core-go/protocol"
 	"github.com/forta-protocol/forta-core-go/security"
 	"github.com/ipfs/go-cid"
