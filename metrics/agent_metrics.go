@@ -98,11 +98,11 @@ func GetJSONRPCMetrics(agt config.AgentConfig, at time.Time, success, throttled 
 	}
 	if success > 0 {
 		values[MetricJSONRPCSuccess] = float64(success)
-		values[MetricJSONRPCRequest]++
+		values[MetricJSONRPCRequest] += float64(success)
 	}
 	if throttled > 0 {
 		values[MetricJSONRPCThrottled] = float64(throttled)
-		values[MetricJSONRPCRequest]++
+		values[MetricJSONRPCRequest] += float64(throttled)
 	}
 	return createMetrics(agt.ID, at.Format(time.RFC3339), values)
 }
