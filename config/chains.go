@@ -9,48 +9,48 @@ var defaultRateLimiting = &RateLimitConfig{
 
 // ChainSettings contains chain-specific settings.
 type ChainSettings struct {
-	Name         string
-	ChainID      int
-	Offset       int
-	RateLimiting *RateLimitConfig
+	Name                string
+	ChainID             int
+	Offset              int
+	JsonRpcRateLimiting *RateLimitConfig
 }
 
 var allChainSettings = []ChainSettings{
 	{
-		Name:         "Ethereum Mainnet",
-		ChainID:      1,
-		Offset:       defaultBlockOffset,
-		RateLimiting: defaultRateLimiting,
+		Name:                "Ethereum Mainnet",
+		ChainID:             1,
+		Offset:              defaultBlockOffset,
+		JsonRpcRateLimiting: defaultRateLimiting,
 	},
 	{
-		Name:         "BSC",
-		ChainID:      56,
-		Offset:       defaultBlockOffset,
-		RateLimiting: defaultRateLimiting,
+		Name:                "BSC",
+		ChainID:             56,
+		Offset:              defaultBlockOffset,
+		JsonRpcRateLimiting: defaultRateLimiting,
 	},
 	{
-		Name:         "Polygon",
-		ChainID:      137,
-		Offset:       defaultBlockOffset,
-		RateLimiting: defaultRateLimiting,
+		Name:                "Polygon",
+		ChainID:             137,
+		Offset:              defaultBlockOffset,
+		JsonRpcRateLimiting: defaultRateLimiting,
 	},
 	{
-		Name:         "Avalanche",
-		ChainID:      43114,
-		Offset:       defaultBlockOffset,
-		RateLimiting: defaultRateLimiting,
+		Name:                "Avalanche",
+		ChainID:             43114,
+		Offset:              defaultBlockOffset,
+		JsonRpcRateLimiting: defaultRateLimiting,
 	},
 	{
-		Name:         "Arbitrum",
-		ChainID:      42161,
-		Offset:       defaultBlockOffset,
-		RateLimiting: defaultRateLimiting,
+		Name:                "Arbitrum",
+		ChainID:             42161,
+		Offset:              defaultBlockOffset,
+		JsonRpcRateLimiting: defaultRateLimiting,
 	},
 	{
-		Name:         "Optimism",
-		ChainID:      10,
-		Offset:       defaultBlockOffset,
-		RateLimiting: defaultRateLimiting,
+		Name:                "Optimism",
+		ChainID:             10,
+		Offset:              defaultBlockOffset,
+		JsonRpcRateLimiting: defaultRateLimiting,
 	},
 }
 
@@ -62,10 +62,10 @@ func GetChainSettings(chainID int) *ChainSettings {
 		}
 	}
 	return &ChainSettings{
-		Name:         "Unknown chain",
-		ChainID:      chainID,
-		Offset:       defaultBlockOffset,
-		RateLimiting: defaultRateLimiting,
+		Name:                "Unknown chain",
+		ChainID:             chainID,
+		Offset:              defaultBlockOffset,
+		JsonRpcRateLimiting: defaultRateLimiting,
 	}
 }
 

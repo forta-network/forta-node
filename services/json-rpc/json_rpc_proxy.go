@@ -190,7 +190,7 @@ func NewJsonRpcProxy(ctx context.Context, cfg config.Config) (*JsonRpcProxy, err
 
 	rateLimiting := cfg.JsonRpcProxy.RateLimitConfig
 	if rateLimiting == nil {
-		rateLimiting = config.GetChainSettings(cfg.ChainID).RateLimiting
+		rateLimiting = config.GetChainSettings(cfg.ChainID).JsonRpcRateLimiting
 	}
 
 	return &JsonRpcProxy{
