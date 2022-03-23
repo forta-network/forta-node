@@ -189,8 +189,8 @@ func NewJsonRpcProxy(ctx context.Context, cfg config.Config) (*JsonRpcProxy, err
 	msgClient := messaging.NewClient("json-rpc-proxy", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 
 	rateLimiting := cfg.JsonRpcProxy.RateLimitConfig
-	if chainSettings, ok := config.GetChainSettings(cfg.ChainID); ok {
-		rateLimiting = chainSettings.RateLimiting
+	if rateLimiting == nil {
+		rateLimiting = config.GetChainSettings(cfg.ChainID).RateLimiting
 	}
 
 	return &JsonRpcProxy{
