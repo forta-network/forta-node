@@ -83,10 +83,13 @@ func (p *JsonRpcProxy) metricHandler(h http.Handler) http.Handler {
 		if ok {
 			if shouldLimitAgent := p.rateLimiter.CheckLimit(agentConfig.ID); shouldLimitAgent {
 				w.WriteHeader(http.StatusTooManyRequests)
+				p.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{
+					Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, 0, 1, 0),
+				})
 				return
 			}
 			p.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{
-				Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, duration),
+				Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, 1, 0, duration),
 			})
 		}
 	})

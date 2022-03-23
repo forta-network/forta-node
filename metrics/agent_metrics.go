@@ -10,21 +10,22 @@ import (
 )
 
 const (
-	MetricFinding         = "finding"
-	MetricTxRequest       = "tx.request"
-	MetricTxLatency       = "tx.latency"
-	MetricTxError         = "tx.error"
-	MetricTxSuccess       = "tx.success"
-	MetricTxDrop          = "tx.drop"
-	MetricBlockRequest    = "block.request"
-	MetricBlockLatency    = "block.latency"
-	MetricBlockError      = "block.error"
-	MetricBlockSuccess    = "block.success"
-	MetricBlockDrop       = "block.drop"
-	MetricStop            = "agent.stop"
-	MetricJSONRPCRequest  = "jsonrpc.request"
-	MetricJSONRPCLatency  = "jsonrpc.latency"
-	MetricFindingsDropped = "findings.dropped"
+	MetricFinding          = "finding"
+	MetricTxRequest        = "tx.request"
+	MetricTxLatency        = "tx.latency"
+	MetricTxError          = "tx.error"
+	MetricTxSuccess        = "tx.success"
+	MetricTxDrop           = "tx.drop"
+	MetricBlockRequest     = "block.request"
+	MetricBlockLatency     = "block.latency"
+	MetricBlockError       = "block.error"
+	MetricBlockSuccess     = "block.success"
+	MetricBlockDrop        = "block.drop"
+	MetricStop             = "agent.stop"
+	MetricJSONRPCLatency   = "jsonrpc.latency"
+	MetricJSONRPCSuccess   = "jsonrpc.success"
+	MetricJSONRPCThrottled = "jsonrpc.throttled"
+	MetricFindingsDropped  = "findings.dropped"
 )
 
 func SendAgentMetrics(client clients.MessageClient, ms []*protocol.AgentMetric) {
@@ -89,9 +90,16 @@ func GetTxMetrics(agt config.AgentConfig, resp *protocol.EvaluateTxResponse) []*
 	return createMetrics(agt.ID, resp.Timestamp, metrics)
 }
 
-func GetJSONRPCMetrics(agt config.AgentConfig, at time.Time, latencyMs time.Duration) []*protocol.AgentMetric {
-	return createMetrics(agt.ID, at.Format(time.RFC3339), map[string]float64{
-		MetricJSONRPCRequest: 1,
-		MetricJSONRPCLatency: float64(latencyMs.Milliseconds()),
-	})
+func GetJSONRPCMetrics(agt config.AgentConfig, at time.Time, success, throttled int, latencyMs time.Duration) []*protocol.AgentMetric {
+	values := make(map[string]float64)
+	if latencyMs > 0 {
+		values[MetricJSONRPCLatency] = float64(latencyMs.Milliseconds())
+	}
+	if success > 0 {
+		values[MetricJSONRPCSuccess] = float64(success)
+	}
+	if throttled > 0 {
+		values[MetricJSONRPCThrottled] = float64(throttled)
+	}
+	return createMetrics(agt.ID, at.Format(time.RFC3339), values)
 }
