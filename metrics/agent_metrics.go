@@ -23,6 +23,7 @@ const (
 	MetricBlockDrop        = "block.drop"
 	MetricStop             = "agent.stop"
 	MetricJSONRPCLatency   = "jsonrpc.latency"
+	MetricJSONRPCRequest   = "jsonrpc.request"
 	MetricJSONRPCSuccess   = "jsonrpc.success"
 	MetricJSONRPCThrottled = "jsonrpc.throttled"
 	MetricFindingsDropped  = "findings.dropped"
@@ -97,9 +98,11 @@ func GetJSONRPCMetrics(agt config.AgentConfig, at time.Time, success, throttled 
 	}
 	if success > 0 {
 		values[MetricJSONRPCSuccess] = float64(success)
+		values[MetricJSONRPCRequest]++
 	}
 	if throttled > 0 {
 		values[MetricJSONRPCThrottled] = float64(throttled)
+		values[MetricJSONRPCRequest]++
 	}
 	return createMetrics(agt.ID, at.Format(time.RFC3339), values)
 }
