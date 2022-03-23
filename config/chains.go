@@ -4,9 +4,10 @@ const defaultBlockOffset = 0
 
 // ChainSettings contains chain-specific settings.
 type ChainSettings struct {
-	Name    string
-	ChainID int
-	Offset  int
+	Name         string
+	ChainID      int
+	Offset       int
+	RateLimiting *RateLimitConfig
 }
 
 var allChainSettings = []ChainSettings{
@@ -14,6 +15,10 @@ var allChainSettings = []ChainSettings{
 		Name:    "Ethereum Mainnet",
 		ChainID: 1,
 		Offset:  defaultBlockOffset,
+		RateLimiting: &RateLimitConfig{
+			Rate:  0.347, // 30k/day
+			Burst: 100,
+		},
 	},
 }
 

@@ -28,13 +28,13 @@ type TraceConfig struct {
 }
 
 type RateLimitConfig struct {
-	Rate  int `yaml:"rate" json:"rate" validate:"min=1"`
-	Burst int `yaml:"burst" json:"burst" validate:"min=1"`
+	Rate  float64 `yaml:"rate" json:"rate"`
+	Burst int     `yaml:"burst" json:"burst" validate:"min=1"`
 }
 
 type JsonRpcProxyConfig struct {
-	JsonRpc         JsonRpcConfig   `yaml:"jsonRpc" json:"jsonRpc"`
-	RateLimitConfig RateLimitConfig `yaml:"rateLimit" json:"rateLimit" default:"{\"rate\":50,\"burst\":50}"`
+	JsonRpc         JsonRpcConfig    `yaml:"jsonRpc" json:"jsonRpc"`
+	RateLimitConfig *RateLimitConfig `yaml:"rateLimit" json:"rateLimit"`
 }
 
 type LogConfig struct {

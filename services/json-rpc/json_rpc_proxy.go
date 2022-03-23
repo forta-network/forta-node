@@ -187,14 +187,20 @@ func NewJsonRpcProxy(ctx context.Context, cfg config.Config) (*JsonRpcProxy, err
 		return nil, fmt.Errorf("failed to create the global docker client: %v", err)
 	}
 	msgClient := messaging.NewClient("json-rpc-proxy", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
+
+	rateLimiting := cfg.JsonRpcProxy.RateLimitConfig
+	if chainSettings, ok := config.GetChainSettings(cfg.ChainID); ok {
+		rateLimiting = chainSettings.RateLimiting
+	}
+
 	return &JsonRpcProxy{
 		ctx:          ctx,
 		cfg:          jCfg,
 		dockerClient: globalClient,
 		msgClient:    msgClient,
 		rateLimiter: NewRateLimiter(
-			cfg.JsonRpcProxy.RateLimitConfig.Rate,
-			cfg.JsonRpcProxy.RateLimitConfig.Burst,
+			rateLimiting.Rate,
+			rateLimiting.Burst,
 		),
 	}, nil
 }

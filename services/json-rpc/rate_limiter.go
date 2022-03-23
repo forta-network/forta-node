@@ -10,7 +10,7 @@ import (
 
 // RateLimiter rate limits requests.
 type RateLimiter struct {
-	rate           int
+	rate           float64
 	burst          int
 	clientLimiters map[string]*clientLimiter
 	mu             sync.Mutex
@@ -22,7 +22,7 @@ type clientLimiter struct {
 }
 
 // NewRateLimiter creates a new rate limiter.
-func NewRateLimiter(rateN, burst int) *RateLimiter {
+func NewRateLimiter(rateN float64, burst int) *RateLimiter {
 	if rateN <= 0 || burst <= 0 {
 		log.Panic("non-positive rate limiter arg")
 	}
