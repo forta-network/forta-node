@@ -31,6 +31,8 @@ e2e-test:
 		-coverpkg $$(go list ./... | grep -v tests | tr "\n" ",") \
 		github.com/forta-protocol/forta-node/tests/e2e
 	tail -n +2 coverage.tmp >> tests/e2e/.forta/coverage.txt
+	cp tests/e2e/.forta/coverage.txt e2e-coverage.txt
+	go tool cover -func=e2e-coverage.txt > e2e-coverage.out
 
 run:
 	go build -o forta . && ./forta --passphrase 123

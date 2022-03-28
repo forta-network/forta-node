@@ -158,7 +158,7 @@ func TestE2E(t *testing.T) {
 	defer s.tearDownProcess(discoProcess)
 
 	// prepare container images: this approach is preferred to reuse existing scripts during testing
-	if os.Getenv("SKIP_CONTAINER_PUSH") != "1" {
+	if os.Getenv("SKIP_DOCKER_BUILD") != "1" {
 		s.runCmd("./container-images.sh")
 	}
 

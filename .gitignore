@@ -18,5 +18,4 @@ tests/e2e/.forta/*
 !tests/e2e/.forta/.keys
 !tests/e2e/.forta/config.yml
 
-coverage.tmp
-coverage.txt
+*coverage.*
