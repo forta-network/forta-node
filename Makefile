@@ -24,6 +24,14 @@ test:
 perf-test:
 	go test ./... -tags=perf_test
 
+e2e-test:
+	echo 'mode: atomic' > tests/e2e/.forta/coverage.txt
+	go test -v -count=1 -tags=e2e_test -race \
+		-covermode=atomic -coverprofile=coverage.tmp \
+		-coverpkg $$(go list ./... | grep -v tests | tr "\n" ",") \
+		github.com/forta-protocol/forta-node/tests/e2e
+	tail -n +2 coverage.tmp >> tests/e2e/.forta/coverage.txt
+
 run:
 	go build -o forta . && ./forta --passphrase 123
 

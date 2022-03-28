@@ -1,11 +1,13 @@
 package cmd
 
 import (
-	"github.com/forta-protocol/forta-core-go/ens"
-	"github.com/goccy/go-json"
 	"io/ioutil"
 	"path"
 	"time"
+
+	"github.com/forta-protocol/forta-core-go/ens"
+	"github.com/forta-protocol/forta-node/store"
+	"github.com/goccy/go-json"
 )
 
 const (
@@ -95,4 +97,18 @@ func getContractAddressCache() (cache contractAddressCache, ok bool) {
 
 	ok = true
 	return
+}
+
+func overrideEns() error {
+	ensStore, err := store.NewENSOverrideStore(cfg)
+	if err != nil {
+		return err
+	}
+	contracts, err := ensStore.ResolveRegistryContracts()
+	if err != nil {
+		return err
+	}
+	cfg.Registry.ContractAddress = contracts.Dispatch.Hex()
+	cfg.AgentRegistryContractAddress = contracts.AgentRegistry.Hex()
+	return nil
 }

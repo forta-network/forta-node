@@ -134,6 +134,11 @@ func InitMainContext() (context.Context, context.CancelFunc) {
 	return ctx, cancel
 }
 
+// InterruptMainContext interrupts by sending a fake interrup signal from within runtime.
+func InterruptMainContext() {
+	sigc <- syscall.SIGINT
+}
+
 // StartServices kicks off all services.
 func StartServices(ctx context.Context, cancelMainCtx context.CancelFunc, logger *log.Entry, services []Service) error {
 	// each service should be able to start successfully within reasonable time

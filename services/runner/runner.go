@@ -89,9 +89,6 @@ func (runner *Runner) Name() string {
 
 // Stop stops the service
 func (runner *Runner) Stop() error {
-	if err := runner.globalClient.Nuke(context.Background()); err != nil {
-		return fmt.Errorf("failed to nuke containers before exiting: %v", err)
-	}
 	return nil
 }
 
@@ -115,7 +112,7 @@ func (runner *Runner) doStartUpCheck() error {
 	}
 	// ensure that the batch api is available for publishing to
 	if err := alertapi.NewClient(runner.cfg.Publish.APIURL).
-		PostBatch(&domain.AlertBatch{Ref: "test"}, ""); err != nil {
+		PostBatch(&domain.AlertBatchRequest{Ref: "test"}, ""); err != nil {
 		return fmt.Errorf("batch api check failed: %v", err)
 	}
 	return nil

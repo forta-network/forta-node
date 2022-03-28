@@ -295,8 +295,14 @@ func withDevOnly(handler func(*cobra.Command, []string) error) func(*cobra.Comma
 
 func withContractAddresses(handler func(*cobra.Command, []string) error) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		if err := useEnsDefaults(); err != nil {
-			return err
+		if cfg.ENSConfig.Override {
+			if err := overrideEns(); err != nil {
+				return err
+			}
+		} else {
+			if err := useEnsDefaults(); err != nil {
+				return err
+			}
 		}
 		return handler(cmd, args)
 	}

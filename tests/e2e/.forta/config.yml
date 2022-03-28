@@ -1,0 +1,32 @@
+chainId: 1337
+
+registry:
+  ipfs:
+    gatewayUrl: http://localhost:8080
+  jsonRpc:
+    url: http://localhost:8545
+  containerRegistry: disco-dev.forta.network
+
+scan:
+  jsonRpc:
+    url: http://localhost:8545
+
+publish:
+  apiUrl: http://localhost:9090
+  batch:
+    skipEmpty: true
+
+trace:
+  enabled: false
+
+ens:
+  override: true
+
+telemetry:
+  disable: true
+
+agentLogs:
+  disable: true
+
+log:
+  level: trace
