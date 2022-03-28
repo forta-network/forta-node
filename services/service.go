@@ -30,7 +30,7 @@ type Service interface {
 	Name() string
 }
 
-var sigc chan os.Signal
+var sigc = make(chan os.Signal, 1)
 
 var execIDKey = struct{}{}
 
@@ -117,9 +117,6 @@ func IsGracefulShutdown() bool {
 func InitMainContext() (context.Context, context.CancelFunc) {
 	execIDCtx := initExecID(context.Background())
 	ctx, cancel := context.WithCancel(execIDCtx)
-	if sigc == nil {
-		sigc = make(chan os.Signal, 1)
-	}
 	signal.Notify(sigc,
 		syscall.SIGHUP,
 		syscall.SIGINT,
@@ -136,7 +133,10 @@ func InitMainContext() (context.Context, context.CancelFunc) {
 
 // InterruptMainContext interrupts by sending a fake interrup signal from within runtime.
 func InterruptMainContext() {
-	sigc <- syscall.SIGINT
+	select {
+	case sigc <- syscall.SIGINT:
+	default:
+	}
 }
 
 // StartServices kicks off all services.

@@ -47,7 +47,7 @@ type RegistryConfig struct {
 	JsonRpc           JsonRpcConfig `yaml:"jsonRpc" json:"jsonRpc" default:"{\"url\": \"https://polygon-rpc.com\"}"`
 	IPFS              IPFSConfig    `yaml:"ipfs" json:"ipfs"`
 	ContractAddress   string        `yaml:"contractAddress" json:"contractAddress" validate:"eth_addr"`
-	ContainerRegistry string        `yaml:"containerRegistry" json:"containerRegistry" validate:"hostname" default:"disco.forta.network" `
+	ContainerRegistry string        `yaml:"containerRegistry" json:"containerRegistry" validate:"hostname_port" default:"disco.forta.network" `
 	Username          string        `yaml:"username" json:"username"`
 	Password          string        `yaml:"password" json:"password"`
 	Disable           bool          `yaml:"disable" json:"disable"` // for testing situations
@@ -94,7 +94,7 @@ type ENSConfig struct {
 
 type TelemetryConfig struct {
 	URL     string `yaml:"url" json:"url" default:"https://alerts.forta.network/telemetry" validate:"url"`
-	Disable bool   `yaml:"disable" json:"disable" validate:"omitempty,boolean"`
+	Disable bool   `yaml:"disable" json:"disable"`
 }
 
 type AutoUpdateConfig struct {

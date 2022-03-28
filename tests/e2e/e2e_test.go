@@ -12,7 +12,9 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"strconv"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -33,7 +35,9 @@ import (
 	"github.com/forta-protocol/forta-core-go/manifest"
 	"github.com/forta-protocol/forta-core-go/release"
 	"github.com/forta-protocol/forta-core-go/utils"
+	"github.com/forta-protocol/forta-node/cmd"
 	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-protocol/forta-node/services"
 	"github.com/forta-protocol/forta-node/tests/e2e/ethaccounts"
 	"github.com/forta-protocol/forta-node/tests/e2e/misccontracts/contract_erc20"
 	"github.com/forta-protocol/forta-node/tests/e2e/misccontracts/contract_transparent_upgradeable_proxy"
@@ -444,6 +448,7 @@ func getAbiAndBin(metadata *bind.MetaData) (*abi.ABI, string) {
 func (s *Suite) readImageRef(name string) string {
 	imageRefB, err := ioutil.ReadFile(fmt.Sprintf(".imagerefs/%s", name))
 	s.r.NoError(err)
+	imageRefB = []byte(strings.TrimSpace(string(imageRefB)))
 	s.r.NotEmpty(imageRefB)
 	return string(imageRefB)
 }
@@ -468,6 +473,7 @@ func (s *Suite) ensureAvailability(name string, check func() error) {
 }
 
 func (s *Suite) TearDownTest() {
+	services.InterruptMainContext() // stops forta
 	s.tearDownProcess(s.gethProcess)
 	s.alertServer.Close()
 }
@@ -476,4 +482,18 @@ func (s *Suite) tearDownProcess(process *os.Process) {
 	process.Wait()
 }
 
-func (s *Suite) TestSomething() {}
+func (s *Suite) forta(args ...string) {
+	os.Args = append(os.Args, args...)
+	dir, err := os.Getwd()
+	s.r.NoError(err)
+	os.Setenv("FORTA_DIR", path.Join(dir, ".forta"))
+	os.Setenv("FORTA_PASSPHRASE", "0")
+	go func() {
+		s.r.NoError(cmd.Execute())
+	}()
+}
+
+func (s *Suite) TestSomething() {
+	s.forta("run")
+	time.Sleep(time.Second * 10)
+}

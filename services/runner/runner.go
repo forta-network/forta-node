@@ -89,6 +89,11 @@ func (runner *Runner) Name() string {
 
 // Stop stops the service
 func (runner *Runner) Stop() error {
+	runner.containerMu.RLock()
+	defer runner.containerMu.RUnlock()
+
+	runner.dockerClient.StopContainer(runner.ctx, runner.updaterContainer.ID)
+	runner.dockerClient.StopContainer(runner.ctx, runner.supervisorContainer.ID)
 	return nil
 }
 

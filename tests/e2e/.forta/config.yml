@@ -5,7 +5,7 @@ registry:
     gatewayUrl: http://localhost:8080
   jsonRpc:
     url: http://localhost:8545
-  containerRegistry: disco-dev.forta.network
+  containerRegistry: localhost:1970
 
 scan:
   jsonRpc:

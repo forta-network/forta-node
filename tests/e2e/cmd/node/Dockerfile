@@ -2,7 +2,10 @@
 
 FROM alpine AS base
 
-FROM golang:1.16.4 AS go-builder
+FROM golang:1.16.4-alpine AS go-builder
+
+RUN apk add --no-cache bash gcc g++
+
 WORKDIR /go/app
 COPY go.mod .
 COPY go.sum .
@@ -10,14 +13,19 @@ COPY go.sum .
 RUN --mount=type=cache,target=/root/.cache/go go mod download
 
 COPY . /go/app
-RUN go test -c -o main -race -covermode=atomic -coverprofile=coverage.tmp -coverpkg \
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go test -c -o main -race -covermode=atomic -coverprofile=coverage.tmp -coverpkg \
 	$(go list ./... | grep -v tests | tr "\n" ",") github.com/forta-protocol/forta-node/tests/e2e/cmd/node
 
 FROM base
-COPY --from=go-builder /go/app/main /main
+
+RUN apk add --no-cache bash gcc g++
+
+COPY --from=go-builder /go/app/main /usr/bin/forta-node
+COPY --from=go-builder /go/app/tests/e2e/cmd/node/run.sh /run.sh
 EXPOSE 8089 8090
 
 RUN mkdir -p /.forta
 
-# append coverage output to coverage.txt in mounted forta dir
-ENTRYPOINT ./main -test.coverprofile=coverage.tmp && tail -n +2 coverage.tmp >> /.forta/coverage.txt
+# receives '/forta-node <command>' from runner and supervisor
+# https://docs.docker.com/engine/reference/builder/#understand-how-cmd-and-entrypoint-interact
+ENTRYPOINT [ "/run.sh" ]
