@@ -18,4 +18,4 @@ FROM base
 COPY --from=go-builder /go/app/main /main
 EXPOSE 50051
 
-CMD [ "/main" ]
+ENTRYPOINT [ "/main" ]

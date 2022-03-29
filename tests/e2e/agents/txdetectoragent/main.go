@@ -1,15 +1,15 @@
-package txdetectoragent
+package main
 
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/forta-protocol/forta-core-go/protocol"
-	"github.com/forta-protocol/forta-core-go/utils"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/tests/e2e/ethaccounts"
 	"google.golang.org/grpc"
@@ -35,7 +35,8 @@ func main() {
 		ethClient: ethClient,
 	})
 
-	utils.GoGrpcServe(server, lis)
+	log.Println("Starting agent server...")
+	log.Println(server.Serve(lis))
 }
 
 type agentServer struct {

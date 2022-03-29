@@ -26,7 +26,7 @@ perf-test:
 
 e2e-test:
 	echo 'mode: atomic' > tests/e2e/.forta/coverage.txt
-	go test -v -count=1 -tags=e2e_test -race \
+	E2E_TEST=1 go test -v -count=1 -race \
 		-coverprofile=runner-coverage.tmp \
 		-covermode=atomic \
 		-coverpkg $$(go list ./... | grep -v tests | tr "\n" ",") \

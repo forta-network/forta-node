@@ -14,6 +14,9 @@ scan:
 
 publish:
   apiUrl: http://localhost:9090
+  ipfs:
+    gatewayUrl: http://localhost:8080
+    apiUrl: http://localhost:5001
   batch:
     skipEmpty: true
 

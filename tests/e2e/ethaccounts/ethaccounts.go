@@ -31,4 +31,7 @@ var (
 
 	ForwarderKey, _  = crypto.HexToECDSA("ec80d29573324a3ba1b4e9e9f8376282816bfb9876100af955bc098bf6c986c6")
 	ForwarderAddress = common.HexToAddress("0x2337608875c0D3eFDf5232aFf3343a43C73a900F")
+
+	ScannerOwnerKey, _  = crypto.HexToECDSA("51416b7884fb4ab925f1e259116ef4a7663e44e9b4705d26eed9267cbbbe38c2")
+	ScannerOwnerAddress = common.HexToAddress("0x3337CCbdcbb3edBcc5f438DEd0f91948e7Df6BE5")
 )
