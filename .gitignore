@@ -10,8 +10,13 @@ config-local.yml
 *.log
 
 tests/e2e/.ethereum
-tests/e2e/.ipfs
 tests/e2e/.imagerefs
+
+!tests/e2e/.ipfs
+tests/e2e/.ipfs/*
+!tests/e2e/.ipfs/config
+!tests/e2e/.ipfs/datastore_spec
+!tests/e2e/.ipfs/version
 
 !tests/e2e/.forta
 tests/e2e/.forta/*
@@ -19,3 +24,5 @@ tests/e2e/.forta/*
 !tests/e2e/.forta/config.yml
 
 *coverage.*
+!*coverage.sh
+coverage

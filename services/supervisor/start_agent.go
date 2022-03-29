@@ -128,7 +128,7 @@ func (sup *SupervisorService) handleAgentStop(payload messaging.AgentPayload) er
 			log.Warnf("container for agent '%s' was not found - skipping stop action", agentCfg.ContainerName())
 			continue
 		}
-		if err := sup.client.StopContainer(sup.ctx, container.ID); err != nil {
+		if err := sup.client.InterruptContainer(sup.ctx, container.ID); err != nil {
 			return fmt.Errorf("failed to stop container '%s': %v", container.ID, err)
 		}
 		log.Infof("successfully stopped the container: %v", agentCfg.ContainerName())

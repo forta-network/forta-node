@@ -3,6 +3,7 @@ chainId: 1337
 registry:
   ipfs:
     gatewayUrl: http://localhost:8080
+    apiUrl: http://localhost:5001
   jsonRpc:
     url: http://localhost:8545
   containerRegistry: localhost:1970

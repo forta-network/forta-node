@@ -1,12 +1,11 @@
 //+build e2e_test
 
-package e2e
+package main
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -124,16 +123,15 @@ func TestE2E(t *testing.T) {
 
 	// run ipfs
 	cmdIpfsRun := exec.Command("ipfs", "daemon", "--routing", "none")
+	cmdIpfsRun.Env = append(cmdIpfsInit.Env, fmt.Sprintf("IPFS_PATH=%s", ipfsDataDir))
+	attachCmdOutput(cmdIpfsRun)
 	s.r.NoError(cmdIpfsRun.Start()) // non-blocking
 	ipfsProcess := cmdIpfsRun.Process
 	s.ipfsClient = ipfsapi.NewShell(ipfsEndpoint)
 	s.ensureAvailability("ipfs", func() error {
-		version, _, err := s.ipfsClient.Version()
+		_, err := s.ipfsClient.FilesLs(s.ctx, "/")
 		if err != nil {
 			return err
-		}
-		if len(version) == 0 {
-			return errors.New("ipfs return empty version")
 		}
 		return nil
 	})
@@ -206,9 +204,10 @@ func (s *Suite) SetupTest() {
 		"--mine",
 
 		"--http",
+		"--http.vhosts", "*",
 		"--http.port", "8545",
 		"--http.addr", "0.0.0.0",
-		"--http.corsdomain", "'*'",
+		"--http.corsdomain", "*",
 		"--http.api", "personal,db,eth,net,web3,txpool,miner",
 	)
 	cmdRunGeth.Env = append(cmdRunGeth.Env, "GOMAXPROCS=1") // limit
@@ -364,7 +363,7 @@ func (s *Suite) SetupTest() {
 			},
 		},
 	}
-	s.releaseManifestCid = s.ipfsAdd(s.releaseManifest)
+	s.releaseManifestCid = s.ipfsFilesAdd("/release", s.releaseManifest)
 	config.ReleaseCid = s.releaseManifestCid
 	tx, err = s.scannerVersionContract.SetScannerNodeVersion(s.admin, s.releaseManifestCid)
 	s.r.NoError(err)
@@ -385,7 +384,7 @@ func (s *Suite) SetupTest() {
 			ChainIDs:       []int64{networkID},
 		},
 	}
-	s.agentManifestCid = s.ipfsAdd(s.agentManifest)
+	s.agentManifestCid = s.ipfsFilesAdd("/agent", s.agentManifest)
 
 	// start the fake alert server
 	s.alertServer = alertserver.New(s.ctx, 9090)
@@ -453,12 +452,15 @@ func (s *Suite) readImageRef(name string) string {
 	return string(imageRefB)
 }
 
-func (s *Suite) ipfsAdd(data interface{}) string {
+func (s *Suite) ipfsFilesAdd(path string, data interface{}) string {
 	b, err := json.Marshal(data)
 	s.r.NoError(err)
-	dataCid, err := s.ipfsClient.Add(bytes.NewBuffer(b))
+	s.ipfsClient.FilesRm(s.ctx, path, true)
+	err = s.ipfsClient.FilesWrite(s.ctx, path, bytes.NewBuffer(b), ipfsapi.FilesWrite.Create(true))
 	s.r.NoError(err)
-	return dataCid
+	stat, err := s.ipfsClient.FilesStat(s.ctx, path)
+	s.r.NoError(err)
+	return stat.Hash
 }
 
 func (s *Suite) ensureAvailability(name string, check func() error) {
@@ -469,11 +471,12 @@ func (s *Suite) ensureAvailability(name string, check func() error) {
 			return
 		}
 	}
-	s.FailNowf("failed to ensure '%s' start: %v", name, err)
+	s.FailNowf("", "failed to ensure '%s' start: %v", name, err)
 }
 
 func (s *Suite) TearDownTest() {
 	services.InterruptMainContext() // stops forta
+	time.Sleep(time.Second * 10)
 	s.tearDownProcess(s.gethProcess)
 	s.alertServer.Close()
 }
@@ -495,5 +498,5 @@ func (s *Suite) forta(args ...string) {
 
 func (s *Suite) TestSomething() {
 	s.forta("run")
-	time.Sleep(time.Second * 10)
+	time.Sleep(time.Minute)
 }

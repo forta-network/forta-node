@@ -89,7 +89,9 @@ func (sup *SupervisorService) start() error {
 	if !sup.config.Config.TelemetryConfig.Disable {
 		go sup.syncTelemetryData()
 	}
-	go sup.syncAgentLogs()
+	if !sup.config.Config.AgentLogsConfig.Disable {
+		go sup.syncAgentLogs()
+	}
 
 	sup.mu.Lock()
 	defer sup.mu.Unlock()
@@ -433,10 +435,20 @@ func (sup *SupervisorService) Stop() error {
 		if services.IsGracefulShutdown() && cnt.IsAgent {
 			continue // keep container agents alive
 		}
-		if err := sup.client.StopContainer(ctx, cnt.DockerContainer.ID); err != nil {
-			log.Error(fmt.Sprintf("error stopping %s container", cnt.DockerContainer.ID), err)
+		var err error
+		if cnt.IsAgent {
+			err = sup.client.StopContainer(ctx, cnt.DockerContainer.ID)
 		} else {
-			log.Infof("Container %s is stopped", cnt.DockerContainer.ID)
+			err = sup.client.InterruptContainer(ctx, cnt.DockerContainer.ID)
+		}
+		logger := log.WithFields(log.Fields{
+			"id":      cnt.ID,
+			"isAgent": cnt.IsAgent,
+		})
+		if err != nil {
+			logger.WithError(err).Error("error stopping container")
+		} else {
+			logger.Info("requested to stop container")
 		}
 	}
 	return nil

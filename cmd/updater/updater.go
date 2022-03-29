@@ -13,15 +13,20 @@ import (
 	"github.com/forta-protocol/forta-node/healthutils"
 	"github.com/forta-protocol/forta-node/services"
 	"github.com/forta-protocol/forta-node/services/updater"
+	"github.com/forta-protocol/forta-node/store"
 	log "github.com/sirupsen/logrus"
 )
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
+	cfg.Registry.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Registry.JsonRpc.Url)
+	cfg.Registry.IPFS.APIURL = utils.ConvertToDockerHostURL(cfg.Registry.IPFS.APIURL)
+	cfg.Registry.IPFS.GatewayURL = utils.ConvertToDockerHostURL(cfg.Registry.IPFS.GatewayURL)
+
 	rc, err := release.NewClient(cfg.Registry.IPFS.GatewayURL)
 	if err != nil {
 		return nil, err
 	}
-	rg, err := registry.NewClient(ctx, registry.ClientConfig{
+	rg, err := store.GetRegistryClient(ctx, cfg, registry.ClientConfig{
 		JsonRpcUrl: cfg.Registry.JsonRpc.Url,
 		ENSAddress: cfg.ENSConfig.ContractAddress,
 		Name:       "updater",

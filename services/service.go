@@ -30,7 +30,7 @@ type Service interface {
 	Name() string
 }
 
-var sigc = make(chan os.Signal, 1)
+var sigc = make(chan os.Signal)
 
 var execIDKey = struct{}{}
 
@@ -123,10 +123,11 @@ func InitMainContext() (context.Context, context.CancelFunc) {
 		syscall.SIGTERM,
 		syscall.SIGQUIT)
 	go func() {
-		sig := <-sigc
-		gracefulShutdown = sig == GracefulShutdownSignal
-		log.Infof("received signal: %s", sig.String())
-		cancel()
+		for sig := range sigc {
+			log.Infof("received signal: %s", sig.String())
+			gracefulShutdown = gracefulShutdown || sig == GracefulShutdownSignal
+			cancel()
+		}
 	}()
 	return ctx, cancel
 }

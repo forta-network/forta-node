@@ -92,8 +92,13 @@ func (runner *Runner) Stop() error {
 	runner.containerMu.RLock()
 	defer runner.containerMu.RUnlock()
 
-	runner.dockerClient.StopContainer(runner.ctx, runner.updaterContainer.ID)
-	runner.dockerClient.StopContainer(runner.ctx, runner.supervisorContainer.ID)
+	if runner.updaterContainer != nil {
+		runner.dockerClient.InterruptContainer(context.Background(), runner.updaterContainer.ID)
+
+	}
+	if runner.supervisorContainer != nil {
+		runner.dockerClient.InterruptContainer(context.Background(), runner.supervisorContainer.ID)
+	}
 	return nil
 }
 
@@ -193,6 +198,8 @@ func (runner *Runner) keepContainersUpToDate() {
 			} else {
 				runner.currentUpdaterImg = latestRefs.Updater
 			}
+		} else {
+			log.Debug("same image - not replacing updater")
 		}
 
 		if latestRefs.Supervisor != runner.currentSupervisorImg {
@@ -202,7 +209,7 @@ func (runner *Runner) keepContainersUpToDate() {
 				runner.currentSupervisorImg = latestRefs.Supervisor
 			}
 		} else {
-			logger.Info("skipping supervisor launch for now")
+			log.Debug("same image - not replacing supervisor")
 		}
 
 		runner.containerMu.Unlock()
@@ -270,6 +277,7 @@ func (runner *Runner) startUpdater(logger *log.Entry, latestRefs store.ImageRefs
 			config.DefaultContainerPort: config.DefaultContainerPort,
 			"":                          config.DefaultHealthPort, // random host port
 		},
+		DialHost:    true,
 		MaxLogSize:  runner.cfg.Log.MaxLogSize,
 		MaxLogFiles: runner.cfg.Log.MaxLogFiles,
 	})

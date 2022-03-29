@@ -135,24 +135,13 @@ func NewRegistryStore(ctx context.Context, cfg config.Config, ethClient ethereum
 		return nil, err
 	}
 
-	registryClientCfg := registry.ClientConfig{
+	rc, err := GetRegistryClient(ctx, cfg, registry.ClientConfig{
 		JsonRpcUrl: cfg.Registry.JsonRpc.Url,
 		ENSAddress: cfg.ENSConfig.ContractAddress,
 		Name:       "registry-store",
-	}
-
-	var rc registry.Client
-	if cfg.ENSConfig.Override {
-		ensStore, err := NewENSOverrideStore(cfg)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create ens override store: %v", err)
-		}
-		rc, err = registry.NewClientWithENSStore(ctx, registryClientCfg, ensStore)
-	} else {
-		rc, err = registry.NewClient(ctx, registryClientCfg)
-		if err != nil {
-			return nil, err
-		}
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return &registryStore{
@@ -161,4 +150,16 @@ func NewRegistryStore(ctx context.Context, cfg config.Config, ethClient ethereum
 		mc:  mc,
 		rc:  rc,
 	}, nil
+}
+
+// GetRegistryClient checks the config and returns the suitaable registry.
+func GetRegistryClient(ctx context.Context, cfg config.Config, registryClientCfg registry.ClientConfig) (registry.Client, error) {
+	if cfg.ENSConfig.Override {
+		ensStore, err := NewENSOverrideStore(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create ens override store: %v", err)
+		}
+		return registry.NewClientWithENSStore(ctx, registryClientCfg, ensStore)
+	}
+	return registry.NewClient(ctx, registryClientCfg)
 }
