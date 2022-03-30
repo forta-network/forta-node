@@ -89,8 +89,15 @@ func (runner *Runner) Name() string {
 
 // Stop stops the service
 func (runner *Runner) Stop() error {
-	if err := runner.globalClient.Nuke(context.Background()); err != nil {
-		return fmt.Errorf("failed to nuke containers before exiting: %v", err)
+	runner.containerMu.RLock()
+	defer runner.containerMu.RUnlock()
+
+	if runner.updaterContainer != nil {
+		runner.dockerClient.InterruptContainer(context.Background(), runner.updaterContainer.ID)
+
+	}
+	if runner.supervisorContainer != nil {
+		runner.dockerClient.InterruptContainer(context.Background(), runner.supervisorContainer.ID)
 	}
 	return nil
 }
@@ -115,7 +122,7 @@ func (runner *Runner) doStartUpCheck() error {
 	}
 	// ensure that the batch api is available for publishing to
 	if err := alertapi.NewClient(runner.cfg.Publish.APIURL).
-		PostBatch(&domain.AlertBatch{Ref: "test"}, ""); err != nil {
+		PostBatch(&domain.AlertBatchRequest{Ref: "test"}, ""); err != nil {
 		return fmt.Errorf("batch api check failed: %v", err)
 	}
 	return nil
@@ -191,6 +198,8 @@ func (runner *Runner) keepContainersUpToDate() {
 			} else {
 				runner.currentUpdaterImg = latestRefs.Updater
 			}
+		} else {
+			log.Debug("same image - not replacing updater")
 		}
 
 		if latestRefs.Supervisor != runner.currentSupervisorImg {
@@ -200,7 +209,7 @@ func (runner *Runner) keepContainersUpToDate() {
 				runner.currentSupervisorImg = latestRefs.Supervisor
 			}
 		} else {
-			logger.Info("skipping supervisor launch for now")
+			log.Debug("same image - not replacing supervisor")
 		}
 
 		runner.containerMu.Unlock()
@@ -268,6 +277,7 @@ func (runner *Runner) startUpdater(logger *log.Entry, latestRefs store.ImageRefs
 			config.DefaultContainerPort: config.DefaultContainerPort,
 			"":                          config.DefaultHealthPort, // random host port
 		},
+		DialHost:    true,
 		MaxLogSize:  runner.cfg.Log.MaxLogSize,
 		MaxLogFiles: runner.cfg.Log.MaxLogFiles,
 	})
