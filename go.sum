@@ -194,8 +194,8 @@ github.com/fatih/color v1.12.0/go.mod h1:ELkj/draVOlAH/xkhN6mQ50Qd0MPOk5AAr3maGE
 github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5 h1:FtmdgXiUlNeRsoNMFlKLDt+S+6hbjVMEW6RGQ7aUf7c=
 github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5/go.mod h1:VvhXpOYNQvB+uIk2RvXzuaQtkQJzzIx6lSBe1xv7hi0=
 github.com/fogleman/gg v1.2.1-0.20190220221249-0403632d5b90/go.mod h1:R/bRT+9gY/C5z7JzPU0zXsXHKM4/ayA+zqcVNZzPa1k=
-github.com/forta-protocol/forta-core-go v0.0.0-20220330123201-7f2d487015c2 h1:2FhqUbOpxyzmYdNwooUF5MPteG8dO1d5YUVli2Hixws=
-github.com/forta-protocol/forta-core-go v0.0.0-20220330123201-7f2d487015c2/go.mod h1:6O5/8YcW5nlO6IZNsb8ASA7HFvRFvjYeMX2asJ9/ufY=
+github.com/forta-protocol/forta-core-go v0.0.0-20220330193912-ed2c8b31edbe h1:houVqHdji0lT2wxVS0Yd5SHaBw6kAcULr3mgkqqTJnc=
+github.com/forta-protocol/forta-core-go v0.0.0-20220330193912-ed2c8b31edbe/go.mod h1:6O5/8YcW5nlO6IZNsb8ASA7HFvRFvjYeMX2asJ9/ufY=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/fsnotify/fsnotify v1.4.9 h1:hsms1Qyu0jgnwNXIxa+/V/PDsU6CfLf6CNO8H7IWoS4=
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
