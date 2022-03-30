@@ -40,6 +40,7 @@ func handleFortaRegister(cmd *cobra.Command, args []string) error {
 		JsonRpcUrl: cfg.Registry.JsonRpc.Url,
 		ENSAddress: cfg.ENSConfig.ContractAddress,
 		Name:       "registry-client",
+		PrivateKey: scannerPrivateKey,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create registry client: %v", err)
@@ -47,7 +48,7 @@ func handleFortaRegister(cmd *cobra.Command, args []string) error {
 
 	color.Yellow(fmt.Sprintf("Sending a transaction to register your scanner to chain %d...\n", cfg.ChainID))
 
-	txHash, err := registry.RegisterScanner(scannerPrivateKey, ownerAddressStr, int64(cfg.ChainID), "")
+	txHash, err := registry.RegisterScanner(ownerAddressStr, int64(cfg.ChainID), "")
 	if err != nil {
 		return fmt.Errorf("failed to send the transaction: %v", err)
 	}
