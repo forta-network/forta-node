@@ -65,7 +65,7 @@ func handleFortaBatchDecode(cmd *cobra.Command, args []string) error {
 	}
 
 	// indent by two spaces
-	b, _ := json.MarshalIndent(alertBatch, "", "  ")
+	b, _ := json.MarshalIndent(&alertBatch, "", "  ")
 
 	if printToStdout {
 		fmt.Println(string(b))

@@ -1,19 +1,17 @@
-name: Release & CodeDeploy to Staging
+name: Build & CodeDeploy to Prod
 
 on:
-#  push:
-#    branches: [master]
   workflow_dispatch:
     branches: [master]
 
 env:
-  DEFAULT_STAGING_VERSION: v0.5.0
+  DEFAULT_PROD_VERSION: v0.5.0
 
 jobs:
   go:
     name: Go
     runs-on: ubuntu-latest
-    environment: staging
+    environment: prod
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -25,7 +23,7 @@ jobs:
     name: Build and push containers
     needs: go
     runs-on: ubuntu-latest
-    environment: staging
+    environment: prod
     outputs:
       node-image-ref: ${{ steps.write-output.outputs.node-image-ref }}
       node-release-cid: ${{ steps.write-output.outputs.node-release-cid }}
@@ -49,7 +47,7 @@ jobs:
         with:
           registry: disco.forta.network
           name: ${{ matrix.image-name }}
-          version: ${{ env.DEFAULT_STAGING_VERSION }}
+          version: ${{ env.DEFAULT_PROD_VERSION }}
       - name: Write output values
         id: write-output
         run: |
@@ -60,7 +58,7 @@ jobs:
     name: Build and deploy
     needs: containers
     runs-on: ubuntu-latest
-    environment: staging
+    environment: prod
     steps:
       - name: Echo Image References
         run: |
@@ -80,7 +78,7 @@ jobs:
       - name: Create build for revision
         run: |
           ./scripts/build.sh ${{ needs.containers.outputs.node-image-ref }} \
-            'remote' ${{ needs.containers.outputs.node-release-cid }} ${{ github.sha }} ${{ env.DEFAULT_STAGING_VERSION }}
+            'remote' ${{ needs.containers.outputs.node-release-cid }} ${{ github.sha }} ${{ env.DEFAULT_PROD_VERSION }}
           chmod 755 forta
       - name: Prepare Distribution
         run: |
@@ -111,7 +109,7 @@ jobs:
           aws_secret_key: ${{ secrets.PROD_DEPLOY_AWS_SECRET_KEY }}
           aws_region: us-east-1
           codedeploy_name: prod-forta-node
-          codedeploy_group: prod-forta-staging-scanners-deploy-group
+          codedeploy_group: prod-forta-deploy-group
           s3_bucket: prod-forta-codedeploy
           s3_folder: prod
           directory: ./dist/

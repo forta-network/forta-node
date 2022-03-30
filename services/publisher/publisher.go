@@ -11,28 +11,24 @@ import (
 	"sync"
 	"time"
 
-	"github.com/forta-protocol/forta-core-go/release"
-
-	"github.com/forta-protocol/forta-core-go/domain"
-	"github.com/forta-protocol/forta-node/clients"
-	"github.com/forta-protocol/forta-node/store"
-
-	"github.com/forta-protocol/forta-core-go/clients/health"
-	"github.com/forta-protocol/forta-node/clients/messaging"
-	"github.com/goccy/go-json"
-
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/forta-protocol/forta-core-go/clients/health"
+	"github.com/forta-protocol/forta-core-go/domain"
+	"github.com/forta-protocol/forta-core-go/protocol"
+	"github.com/forta-protocol/forta-core-go/release"
+	"github.com/forta-protocol/forta-core-go/security"
+	"github.com/forta-protocol/forta-core-go/utils"
+	"github.com/forta-protocol/forta-node/clients"
+	"github.com/forta-protocol/forta-node/clients/messaging"
+	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-protocol/forta-node/services/publisher/testalerts"
+	"github.com/forta-protocol/forta-node/store"
+	"github.com/goccy/go-json"
 	ipfsapi "github.com/ipfs/go-ipfs-api"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-
-	"github.com/forta-protocol/forta-core-go/protocol"
-	"github.com/forta-protocol/forta-core-go/security"
-	"github.com/forta-protocol/forta-core-go/utils"
-	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/services/publisher/testalerts"
 )
 
 const (
