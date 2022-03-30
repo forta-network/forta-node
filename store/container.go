@@ -50,8 +50,13 @@ func NewFortaImageStore(ctx context.Context, updaterPort string, autoUpdate bool
 func (store *fortaImageStore) loop(ctx context.Context) {
 	store.check(ctx)
 	ticker := time.NewTicker(defaultImageCheckInterval)
-	for range ticker.C {
-		store.check(ctx)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			store.check(ctx)
+		}
 	}
 }
 
