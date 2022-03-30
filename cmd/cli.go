@@ -32,9 +32,8 @@ var (
 	cfg config.Config
 
 	parsedArgs struct {
-		Version  uint64
-		NoUpdate bool
-		NoCheck  bool
+		Version uint64
+		NoCheck bool
 	}
 
 	cmdForta = &cobra.Command{
@@ -185,7 +184,6 @@ func init() {
 	cmdFortaAgentAdd.Flags().Uint64Var(&parsedArgs.Version, "version", 0, "agent version")
 
 	// forta run
-	cmdFortaRun.Flags().BoolVar(&parsedArgs.NoUpdate, "no-update", false, "disable release check in updater")
 	cmdFortaRun.Flags().BoolVar(&parsedArgs.NoCheck, "no-check", false, "disable scanner registry check and just run")
 
 	// forta batch decode
