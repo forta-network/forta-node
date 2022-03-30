@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/forta-protocol/forta-core-go/manifest"
-	"github.com/forta-protocol/forta-core-go/registry"
 	"sync"
 	"time"
+
+	"github.com/forta-protocol/forta-core-go/manifest"
+	"github.com/forta-protocol/forta-core-go/registry"
 
 	log "github.com/sirupsen/logrus"
 
@@ -39,6 +40,15 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 	hash, err := rs.rc.GetAssignmentHash(scanner)
 	if err != nil {
 		return nil, false, err
+	}
+
+	// if the scan node is disabled, it must run no agents
+	isEnabledScanner, err := rs.rc.IsEnabledScanner(scanner)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to check if scanner is enabled: %v", err)
+	}
+	if !isEnabledScanner {
+		return []*config.AgentConfig{}, true, nil
 	}
 
 	if rs.version != hash.Hash || time.Since(rs.lastUpdate) > 1*time.Hour {
@@ -125,7 +135,7 @@ func NewRegistryStore(ctx context.Context, cfg config.Config, ethClient ethereum
 		return nil, err
 	}
 
-	rc, err := registry.NewClient(ctx, registry.ClientConfig{
+	rc, err := GetRegistryClient(ctx, cfg, registry.ClientConfig{
 		JsonRpcUrl: cfg.Registry.JsonRpc.Url,
 		ENSAddress: cfg.ENSConfig.ContractAddress,
 		Name:       "registry-store",
@@ -140,4 +150,16 @@ func NewRegistryStore(ctx context.Context, cfg config.Config, ethClient ethereum
 		mc:  mc,
 		rc:  rc,
 	}, nil
+}
+
+// GetRegistryClient checks the config and returns the suitaable registry.
+func GetRegistryClient(ctx context.Context, cfg config.Config, registryClientCfg registry.ClientConfig) (registry.Client, error) {
+	if cfg.ENSConfig.Override {
+		ensStore, err := NewENSOverrideStore(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create ens override store: %v", err)
+		}
+		return registry.NewClientWithENSStore(ctx, registryClientCfg, ensStore)
+	}
+	return registry.NewClient(ctx, registryClientCfg)
 }

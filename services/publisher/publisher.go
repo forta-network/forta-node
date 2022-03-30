@@ -188,7 +188,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		logger.WithError(err).Error("failed to sign cid")
 		return err
 	}
-	err = pub.alertClient.PostBatch(&domain.AlertBatch{
+	err = pub.alertClient.PostBatch(&domain.AlertBatchRequest{
 		Scanner:     pub.cfg.Key.Address.Hex(),
 		ChainID:     int64(batch.ChainId),
 		BlockStart:  int64(batch.BlockStart),

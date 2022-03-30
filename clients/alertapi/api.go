@@ -48,7 +48,7 @@ func (c *client) post(path string, body interface{}, headers map[string]string) 
 	return nil
 }
 
-func (c *client) PostBatch(batch *domain.AlertBatch, token string) error {
+func (c *client) PostBatch(batch *domain.AlertBatchRequest, token string) error {
 	path := fmt.Sprintf("/batch/%s", batch.Ref)
 	headers := map[string]string{
 		"content-type":  "application/json",
