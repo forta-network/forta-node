@@ -3,11 +3,13 @@ package publisher
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math/big"
 	"net"
 	"net/http"
+	"path"
 	"sync"
 	"time"
 
@@ -25,7 +27,6 @@ import (
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/services/publisher/testalerts"
 	"github.com/forta-protocol/forta-node/store"
-	"github.com/goccy/go-json"
 	ipfsapi "github.com/ipfs/go-ipfs-api"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -48,7 +49,8 @@ type Publisher struct {
 	metricsAggregator *AgentMetricsAggregator
 	messageClient     *messaging.Client
 	alertClient       clients.AlertAPIClient
-	batchRefStore     store.BatchRefStore
+	batchRefStore     store.StringStore
+	lastReceiptStore  store.StringStore
 
 	server *grpc.Server
 
@@ -121,7 +123,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 			Version: pub.cfg.ReleaseSummary.Version,
 		}
 	}
-	lastBatchRef, err := pub.batchRefStore.GetLast()
+	lastBatchRef, err := pub.batchRefStore.Get()
 	if err == nil {
 		batch.Parent = lastBatchRef
 	}
@@ -180,6 +182,28 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		},
 	)
 
+	var lastReceipt string
+	lr, err := pub.lastReceiptStore.Get()
+	if err == nil {
+		lastReceipt = lr
+	}
+
+	signedBatchSummary, err := security.SignBatchSummary(pub.cfg.Key, &protocol.BatchSummary{
+		Batch:            cid,
+		ChainId:          batch.ChainId,
+		BlockStart:       batch.BlockStart,
+		BlockEnd:         batch.BlockEnd,
+		AlertCount:       batch.AlertCount,
+		ScannerVersion:   batch.ScannerVersion,
+		PreviousReceipt:  lastReceipt,
+		LatestBlockInput: batch.LatestBlockInput,
+		Timestamp:        time.Now().UTC().Format(time.RFC3339),
+	})
+	if err != nil {
+		logger.WithError(err).Error("failed to sign batch summary")
+		return err
+	}
+
 	scannerJwt, err := security.CreateScannerJWT(pub.cfg.Key, map[string]interface{}{
 		"batch": cid,
 	})
@@ -188,20 +212,43 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		logger.WithError(err).Error("failed to sign cid")
 		return err
 	}
-	err = pub.alertClient.PostBatch(&domain.AlertBatch{
-		Scanner:     pub.cfg.Key.Address.Hex(),
-		ChainID:     int64(batch.ChainId),
-		BlockStart:  int64(batch.BlockStart),
-		BlockEnd:    int64(batch.BlockEnd),
-		AlertCount:  int64(batch.AlertCount),
-		MaxSeverity: int64(batch.MaxSeverity),
-		Ref:         cid,
-		SignedBatch: signedBatch,
+	resp, err := pub.alertClient.PostBatch(&domain.AlertBatchRequest{
+		Scanner:            pub.cfg.Key.Address.Hex(),
+		ChainID:            int64(batch.ChainId),
+		BlockStart:         int64(batch.BlockStart),
+		BlockEnd:           int64(batch.BlockEnd),
+		AlertCount:         int64(batch.AlertCount),
+		MaxSeverity:        int64(batch.MaxSeverity),
+		Ref:                cid,
+		SignedBatch:        signedBatch,
+		SignedBatchSummary: signedBatchSummary,
 	}, scannerJwt)
 
 	if err != nil {
 		logger.WithError(err).Error("alert while sending batch")
 		return fmt.Errorf("failed to send the alert tx: %v", err)
+	}
+
+	//TODO: after receipts are returned, make it non-optional
+	if resp.SignedReceipt != nil {
+		// store off receipt id
+		if err := pub.lastReceiptStore.Put(resp.ReceiptID); err != nil {
+			logger.WithError(err).Error("failed to marshal receipt")
+			return err
+		}
+		logger = logger.WithFields(log.Fields{
+			"receiptId": resp.ReceiptID,
+		})
+
+		// if for some reason receipt can't marshal, log and move on
+		b, err := json.Marshal(resp.SignedReceipt)
+		if err != nil {
+			logger.WithError(err).Error("failed to marshal receipt (not saving receipt)")
+			return nil
+		}
+		logger = logger.WithFields(log.Fields{
+			"receipt": string(b),
+		})
 	}
 
 	logger.Info("alert batch")
@@ -576,7 +623,8 @@ func NewPublisher(ctx context.Context, mc *messaging.Client, alertClient clients
 		metricsAggregator: NewMetricsAggregator(),
 		messageClient:     mc,
 		alertClient:       alertClient,
-		batchRefStore:     store.NewBatchRefStore(cfg.Config.FortaDir),
+		batchRefStore:     store.NewFileStringStore(path.Join(cfg.Config.FortaDir, ".last-batch")),
+		lastReceiptStore:  store.NewFileStringStore(path.Join(cfg.Config.FortaDir, ".last-receipt")),
 
 		skipEmpty:     cfg.PublisherConfig.Batch.SkipEmpty,
 		skipPublish:   cfg.PublisherConfig.SkipPublish,
