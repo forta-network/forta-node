@@ -41,6 +41,9 @@ func checkScannerState() error {
 		ENSAddress: cfg.ENSConfig.ContractAddress,
 		Name:       "registry-client",
 	})
+	if err != nil {
+		return fmt.Errorf("failed to create registry client: %v", err)
+	}
 	scanner, err := registry.GetScanner(scannerAddressStr)
 	if err != nil {
 		return fmt.Errorf("failed to check scanner state: %v", err)
