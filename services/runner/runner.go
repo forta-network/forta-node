@@ -9,11 +9,9 @@ import (
 	"time"
 
 	"github.com/forta-protocol/forta-core-go/clients/health"
-	"github.com/forta-protocol/forta-core-go/domain"
 	"github.com/forta-protocol/forta-core-go/ethereum"
 	"github.com/forta-protocol/forta-core-go/utils"
 	"github.com/forta-protocol/forta-node/clients"
-	"github.com/forta-protocol/forta-node/clients/alertapi"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/healthutils"
 	"github.com/forta-protocol/forta-node/store"
@@ -119,11 +117,6 @@ func (runner *Runner) doStartUpCheck() error {
 		if err != nil {
 			return fmt.Errorf("trace api check failed: %v", err)
 		}
-	}
-	// ensure that the batch api is available for publishing to
-	if err := alertapi.NewClient(runner.cfg.Publish.APIURL).
-		PostBatch(&domain.AlertBatchRequest{Ref: "test"}, ""); err != nil {
-		return fmt.Errorf("batch api check failed: %v", err)
 	}
 	return nil
 }
