@@ -31,7 +31,14 @@ const (
 	DockerLabelFortaSettingsAgentLogsEnable = "network.forta.settings.agent-logs.enable"
 )
 
-var defaultLabels = map[string]string{DockerLabelForta: "true"}
+type dockerLabel struct {
+	Name  string
+	Value string
+}
+
+var defaultLabels = []dockerLabel{
+	{Name: DockerLabelForta, Value: "true"},
+}
 
 // Client errors
 var (
@@ -96,7 +103,7 @@ type dockerClient struct {
 	workers  *workers.Group
 	username string
 	password string
-	labels   map[string]string
+	labels   []dockerLabel
 }
 
 func (cfg DockerContainerConfig) envVars() []string {
@@ -186,7 +193,7 @@ func (d *dockerClient) createNetwork(ctx context.Context, name string, internal 
 	}
 
 	resp, err := d.cli.NetworkCreate(ctx, name, types.NetworkCreate{
-		Labels:   d.labels,
+		Labels:   labelsToMap(d.labels),
 		Internal: internal,
 	})
 	if err != nil {
@@ -420,7 +427,7 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 	cntCfg := &container.Config{
 		Image:  config.Image,
 		Env:    config.envVars(),
-		Labels: d.labels,
+		Labels: labelsToMap(d.labels),
 	}
 	// add custom labels
 	for k, v := range config.Labels {
@@ -681,22 +688,29 @@ func (d *dockerClient) GetContainerLogs(ctx context.Context, containerID, tail s
 
 func (d *dockerClient) labelFilter() filters.Args {
 	filter := filters.NewArgs()
-	for k, v := range d.labels {
-		filter.Add("label", fmt.Sprintf("%s=%s", k, v))
+	for _, label := range d.labels {
+		filter.Add("label", fmt.Sprintf("%s=%s", label.Name, label.Value))
 	}
 	return filter
 }
 
-func initLabels(name string) map[string]string {
-	result := make(map[string]string)
-	for k, v := range defaultLabels {
-		result[k] = v
-	}
+func initLabels(name string) []dockerLabel {
 	if len(name) == 0 {
-		return result
+		return defaultLabels
 	}
-	result[DockerLabelFortaSupervisor] = name
-	return result
+
+	return append(defaultLabels, dockerLabel{
+		Name:  DockerLabelFortaSupervisor,
+		Value: name,
+	})
+}
+
+func labelsToMap(labels []dockerLabel) map[string]string {
+	m := make(map[string]string)
+	for _, label := range labels {
+		m[label.Name] = label.Value
+	}
+	return m
 }
 
 // NewDockerClient creates a new docker client
