@@ -107,16 +107,22 @@ type AgentLogsConfig struct {
 }
 
 type Config struct {
-	ChainID                       int            `yaml:"chainId" json:"chainId" default:"1" `
-	Development                   bool           `yaml:"-" json:"_development"`
-	FortaDir                      string         `yaml:"-" json:"_fortaDir"`
-	KeyDirPath                    string         `yaml:"-" json:"_keyDirPath"`
-	Passphrase                    string         `yaml:"-" json:"_passphrase"`
-	ExposeNats                    bool           `yaml:"-" json:"_exposeNats"`
-	LocalAgentsPath               string         `yaml:"-" json:"_localAgentsPath"`
-	LocalAgents                   []*AgentConfig `yaml:"-" json:"_localAgents"`
-	AgentRegistryContractAddress  string         `yaml:"-" json:"_agentRegistry"`
-	ScannerVersionContractAddress string         `yaml:"-" json:"_scannerVersion"`
+	// runtime values
+
+	Development                    bool           `yaml:"-" json:"_development"`
+	FortaDir                       string         `yaml:"-" json:"_fortaDir"`
+	KeyDirPath                     string         `yaml:"-" json:"_keyDirPath"`
+	Passphrase                     string         `yaml:"-" json:"_passphrase"`
+	ExposeNats                     bool           `yaml:"-" json:"_exposeNats"`
+	LocalAgentsPath                string         `yaml:"-" json:"_localAgentsPath"`
+	LocalAgents                    []*AgentConfig `yaml:"-" json:"_localAgents"`
+	AgentRegistryContractAddress   string         `yaml:"-" json:"_agentRegistryContractAddress"`
+	ScannerVersionContractAddress  string         `yaml:"-" json:"_scannerVersionContractAddress"`
+	ScannerRegistryContractAddress string         `yaml:"-" json:"_scannerRegistryContractAddress"`
+
+	// yaml config values
+
+	ChainID int `yaml:"chainId" json:"chainId" default:"1" `
 
 	Scan  ScannerConfig `yaml:"scan" json:"scan"`
 	Trace TraceConfig   `yaml:"trace" json:"trace"`

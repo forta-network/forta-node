@@ -32,8 +32,8 @@ var (
 	cfg config.Config
 
 	parsedArgs struct {
-		Version  uint64
-		NoUpdate bool
+		Version uint64
+		NoCheck bool
 	}
 
 	cmdForta = &cobra.Command{
@@ -125,6 +125,12 @@ publishes alerts about them`,
 		Short: "display statuses of node services",
 		RunE:  handleFortaStatus,
 	}
+
+	cmdFortaRegister = &cobra.Command{
+		Use:   "register",
+		Short: "register your scanner to enable it for scanning",
+		RunE:  withContractAddresses(withInitialized(withValidConfig(handleFortaRegister))),
+	}
 )
 
 // Execute executes the root command.
@@ -154,6 +160,8 @@ func init() {
 
 	cmdForta.AddCommand(cmdFortaStatus)
 
+	cmdForta.AddCommand(cmdFortaRegister)
+
 	// Global (persistent) flags
 
 	cmdForta.PersistentFlags().String("dir", "", "Forta dir (default is $HOME/.forta) (overrides $FORTA_DIR)")
@@ -176,7 +184,7 @@ func init() {
 	cmdFortaAgentAdd.Flags().Uint64Var(&parsedArgs.Version, "version", 0, "agent version")
 
 	// forta run
-	cmdFortaRun.Flags().BoolVar(&parsedArgs.NoUpdate, "no-update", false, "disable release check in updater")
+	cmdFortaRun.Flags().BoolVar(&parsedArgs.NoCheck, "no-check", false, "disable scanner registry check and just run")
 
 	// forta batch decode
 	cmdFortaBatchDecode.Flags().String("cid", "", "batch IPFS CID (content ID)")
@@ -188,6 +196,11 @@ func init() {
 	cmdFortaStatus.Flags().String("format", StatusFormatPretty, "output formatting/encoding: pretty (default), oneline, json, csv")
 	cmdFortaStatus.Flags().Bool("no-color", false, "disable colors")
 	cmdFortaStatus.Flags().String("show", StatusShowSummary, "filter statuses to show: summary (default), important, all")
+
+	// forta register
+	cmdFortaRegister.Flags().String("owner-address", "", "Ethereum wallet address of the scanner owner")
+	cmdFortaRegister.MarkFlagRequired("owner-address")
+	cmdFortaRegister.MarkFlagRequired("passphrase")
 }
 
 func initConfig() {
