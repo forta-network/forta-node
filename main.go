@@ -1,7 +1,13 @@
 package main
 
-import "github.com/forta-protocol/forta-node/cmd"
+import (
+	"log"
+
+	"github.com/forta-protocol/forta-node/cmd"
+)
 
 func main() {
-	cmd.Execute()
+	if err := cmd.Execute(); err != nil {
+		log.Fatal(err)
+	}
 }

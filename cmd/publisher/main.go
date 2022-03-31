@@ -8,6 +8,7 @@ import (
 	"github.com/forta-protocol/forta-core-go/release"
 
 	"github.com/forta-protocol/forta-core-go/clients/health"
+	"github.com/forta-protocol/forta-core-go/utils"
 	"github.com/forta-protocol/forta-node/clients/alertapi"
 	"github.com/forta-protocol/forta-node/healthutils"
 
@@ -47,6 +48,10 @@ func initPublisher(ctx context.Context, cfg config.Config) (*publisher.Publisher
 }
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
+	cfg.Publish.APIURL = utils.ConvertToDockerHostURL(cfg.Publish.APIURL)
+	cfg.Publish.IPFS.APIURL = utils.ConvertToDockerHostURL(cfg.Publish.IPFS.APIURL)
+	cfg.Publish.IPFS.GatewayURL = utils.ConvertToDockerHostURL(cfg.Publish.IPFS.GatewayURL)
+
 	publisher, err := initPublisher(ctx, cfg)
 	if err != nil {
 		log.Errorf("Error while initializing Listener: %s", err.Error())

@@ -323,7 +323,7 @@ func (d *dockerClient) nuke(ctx context.Context) error {
 		return fmt.Errorf("unexpected error while getting supervisor container: %v", err)
 	}
 
-	// step 1: stop all and wait until each exit
+	// step 2: stop all and wait until each exit
 	for _, container := range containers {
 		if err := d.StopContainer(ctx, container.ID); err != nil {
 			return fmt.Errorf("failed to stop: %v", err)
@@ -333,12 +333,12 @@ func (d *dockerClient) nuke(ctx context.Context) error {
 		}
 	}
 
-	// step 2: prune everything
+	// step 3: prune everything
 	if err := d.Prune(ctx); err != nil {
 		return fmt.Errorf("failed to prune: %v", err)
 	}
 
-	// step 3: ensure that the containers are really pruned
+	// step 4: ensure that the containers are really pruned
 	for _, container := range containers {
 		if err := d.WaitContainerPrune(ctx, container.ID); err != nil {
 			return err
@@ -353,7 +353,7 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 	log.WithFields(log.Fields{
 		"image": config.Image,
 		"name":  config.Name,
-	}).Info("starting container")
+	}).Info("StartContainer()")
 	containers, err := d.GetContainers(ctx)
 	if err != nil {
 		return nil, err
@@ -378,7 +378,10 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 		if err != nil {
 			return nil, err
 		}
-		log.Infof("Container %s (%s) is started", foundContainer.ID, config.Name)
+		log.WithFields(log.Fields{
+			"id":   foundContainer.ID,
+			"name": config.Name,
+		}).Info("container is starting")
 		return &DockerContainer{Name: config.Name, ID: foundContainer.ID, Config: config, ImageHash: inspection.Image}, nil
 	}
 
@@ -481,7 +484,10 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 		return nil, err
 	}
 
-	log.Infof("Container %s (%s) is started", cont.ID, config.Name)
+	log.WithFields(log.Fields{
+		"id":   cont.ID,
+		"name": config.Name,
+	}).Info("container is starting")
 	return &DockerContainer{Name: config.Name, ID: cont.ID, Config: config, ImageHash: inspection.Image}, nil
 }
 
@@ -575,6 +581,7 @@ func (d *dockerClient) WaitContainerStart(ctx context.Context, id string) error 
 		logger.Info("waiting for container start")
 		c, err := d.GetContainerByID(ctx, id)
 		if err == nil && c != nil && c.State == "running" {
+			logger.Info("container started")
 			return nil
 		}
 		if err != nil {

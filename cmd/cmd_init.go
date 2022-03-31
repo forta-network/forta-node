@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strings"
 	"text/template"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -46,7 +47,7 @@ func handleFortaInit(cmd *cobra.Command, args []string) error {
 
 	if !isKeyInitialized() {
 		if len(cfg.Passphrase) == 0 {
-			yellowBold("Please provide a passphrase to initialize and keep it.\n\n")
+			yellowBold("Please provide a passphrase and do not lose it.\n\n")
 			return cmd.Help()
 		}
 
@@ -59,6 +60,12 @@ func handleFortaInit(cmd *cobra.Command, args []string) error {
 	}
 
 	color.Green("\nSuccessfully initialized at %s\n", cfg.FortaDir)
+	whiteBold("\n%s\n", strings.Join([]string{
+		"- Please make sure that all of the values in config.yml are set correctly.",
+		"- Please fund your scanner address with some MATIC.",
+		"- Please enable it for the chain ID in your config by doing 'forta register --owner-address <your_owner_wallet_address>'.",
+		"- Please also ensure that your scanner address satisifies FORT token staking minimum requirement.",
+	}, "\n"))
 
 	return nil
 }

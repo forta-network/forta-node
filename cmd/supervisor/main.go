@@ -6,6 +6,7 @@ import (
 
 	"github.com/forta-protocol/forta-core-go/clients/health"
 	"github.com/forta-protocol/forta-core-go/security"
+	"github.com/forta-protocol/forta-core-go/utils"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/healthutils"
 	"github.com/forta-protocol/forta-node/services"
@@ -17,6 +18,10 @@ const (
 )
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
+	cfg.Registry.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Registry.JsonRpc.Url)
+	cfg.Registry.IPFS.APIURL = utils.ConvertToDockerHostURL(cfg.Registry.IPFS.APIURL)
+	cfg.Registry.IPFS.GatewayURL = utils.ConvertToDockerHostURL(cfg.Registry.IPFS.GatewayURL)
+
 	passphrase, err := security.ReadPassphrase()
 	if err != nil {
 		return nil, err

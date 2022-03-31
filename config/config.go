@@ -47,7 +47,7 @@ type RegistryConfig struct {
 	JsonRpc           JsonRpcConfig `yaml:"jsonRpc" json:"jsonRpc" default:"{\"url\": \"https://polygon-rpc.com\"}"`
 	IPFS              IPFSConfig    `yaml:"ipfs" json:"ipfs"`
 	ContractAddress   string        `yaml:"contractAddress" json:"contractAddress" validate:"eth_addr"`
-	ContainerRegistry string        `yaml:"containerRegistry" json:"containerRegistry" validate:"hostname" default:"disco.forta.network" `
+	ContainerRegistry string        `yaml:"containerRegistry" json:"containerRegistry" validate:"hostname_port" default:"disco.forta.network" `
 	Username          string        `yaml:"username" json:"username"`
 	Password          string        `yaml:"password" json:"password"`
 	Disable           bool          `yaml:"disable" json:"disable"` // for testing situations
@@ -89,32 +89,40 @@ type ENSConfig struct {
 	DefaultContract bool          `yaml:"defaultContract" json:"defaultContract" default:"false" `
 	ContractAddress string        `yaml:"contractAddress" json:"contractAddress" validate:"omitempty,eth_addr" default:"0x08f42fcc52a9C2F391bF507C4E8688D0b53e1bd7"`
 	JsonRpc         JsonRpcConfig `yaml:"jsonRpc" json:"jsonRpc" default:"{\"url\": \"https://polygon-rpc.com\"}" `
+	Override        bool          `yaml:"override" json:"override" default:"false"`
 }
 
 type TelemetryConfig struct {
 	URL     string `yaml:"url" json:"url" default:"https://alerts.forta.network/telemetry" validate:"url"`
-	Disable bool   `yaml:"disable" json:"disable" validate:"omitempty,boolean"`
+	Disable bool   `yaml:"disable" json:"disable"`
 }
 
 type AutoUpdateConfig struct {
-	Disable bool `yaml:"disable" json:"disable" validate:"omitempty"`
+	Disable bool `yaml:"disable" json:"disable"`
 }
 
 type AgentLogsConfig struct {
-	URL string `yaml:"url" json:"url" default:"https://alerts.forta.network/logs/agents" validate:"url"`
+	URL     string `yaml:"url" json:"url" default:"https://alerts.forta.network/logs/agents" validate:"url"`
+	Disable bool   `yaml:"disable" json:"disable"`
 }
 
 type Config struct {
-	ChainID                       int            `yaml:"chainId" json:"chainId" default:"1" `
-	Development                   bool           `yaml:"-" json:"_development"`
-	FortaDir                      string         `yaml:"-" json:"_fortaDir"`
-	KeyDirPath                    string         `yaml:"-" json:"_keyDirPath"`
-	Passphrase                    string         `yaml:"-" json:"_passphrase"`
-	ExposeNats                    bool           `yaml:"-" json:"_exposeNats"`
-	LocalAgentsPath               string         `yaml:"-" json:"_localAgentsPath"`
-	LocalAgents                   []*AgentConfig `yaml:"-" json:"_localAgents"`
-	AgentRegistryContractAddress  string         `yaml:"-" json:"_agentRegistry"`
-	ScannerVersionContractAddress string         `yaml:"-" json:"_scannerVersion"`
+	// runtime values
+
+	Development                    bool           `yaml:"-" json:"_development"`
+	FortaDir                       string         `yaml:"-" json:"_fortaDir"`
+	KeyDirPath                     string         `yaml:"-" json:"_keyDirPath"`
+	Passphrase                     string         `yaml:"-" json:"_passphrase"`
+	ExposeNats                     bool           `yaml:"-" json:"_exposeNats"`
+	LocalAgentsPath                string         `yaml:"-" json:"_localAgentsPath"`
+	LocalAgents                    []*AgentConfig `yaml:"-" json:"_localAgents"`
+	AgentRegistryContractAddress   string         `yaml:"-" json:"_agentRegistryContractAddress"`
+	ScannerVersionContractAddress  string         `yaml:"-" json:"_scannerVersionContractAddress"`
+	ScannerRegistryContractAddress string         `yaml:"-" json:"_scannerRegistryContractAddress"`
+
+	// yaml config values
+
+	ChainID int `yaml:"chainId" json:"chainId" default:"1" `
 
 	Scan  ScannerConfig `yaml:"scan" json:"scan"`
 	Trace TraceConfig   `yaml:"trace" json:"trace"`
