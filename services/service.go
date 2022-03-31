@@ -123,11 +123,10 @@ func InitMainContext() (context.Context, context.CancelFunc) {
 		syscall.SIGTERM,
 		syscall.SIGQUIT)
 	go func() {
-		for sig := range sigc {
-			log.Infof("received signal: %s", sig.String())
-			gracefulShutdown = gracefulShutdown || sig == GracefulShutdownSignal
-			cancel()
-		}
+		sig := <-sigc
+		log.Infof("received signal: %s", sig.String())
+		gracefulShutdown = sig == GracefulShutdownSignal
+		cancel()
 	}()
 	return ctx, cancel
 }

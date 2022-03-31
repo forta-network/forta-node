@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/big"
@@ -45,6 +46,11 @@ import (
 	ipfsapi "github.com/ipfs/go-ipfs-api"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+)
+
+const (
+	smallTimeout = time.Minute
+	largeTimeout = time.Minute * 5
 )
 
 var (
@@ -529,18 +535,58 @@ func (s *Suite) tearDownProcess(process *os.Process) {
 	process.Wait()
 }
 
-func (s *Suite) forta(args ...string) {
-	os.Args = append(os.Args, args...)
+type FortaMain struct {
+	ctx context.Context
+	ch  chan error
+}
+
+func (fm *FortaMain) ErrorAfter(after time.Duration) error {
+	<-time.After(after)
+	select {
+	case err, ok := <-fm.ch:
+		if !ok {
+			return nil
+		}
+		return err
+	default:
+		return nil
+	}
+}
+
+func (fm *FortaMain) ErrorNow() error {
+	return fm.ErrorAfter(0)
+}
+
+func (fm *FortaMain) Wait(timeout ...time.Duration) error {
+	if timeout == nil {
+		<-fm.ctx.Done()
+		return nil
+	}
+	select {
+	case <-time.After(timeout[0]):
+		return errors.New("Wait() timed out")
+	case <-fm.ctx.Done():
+		return nil
+	}
+}
+
+func (s *Suite) forta(args ...string) *FortaMain {
+	os.Args = append([]string{"forta"}, args...)
 	dir, err := os.Getwd()
 	s.r.NoError(err)
 	os.Setenv("FORTA_DIR", path.Join(dir, ".forta"))
 	os.Setenv("FORTA_PASSPHRASE", "0")
+
+	ctx, cancel := context.WithCancel(s.ctx)
+	fortaMain := &FortaMain{ctx: ctx, ch: make(chan error, 1)}
 	go func() {
-		s.r.NoError(cmd.Execute())
+		fortaMain.ch <- cmd.Execute()
+		cancel()
 	}()
+	return fortaMain
 }
 
-func (s *Suite) startForta(register ...bool) {
+func (s *Suite) startForta(register ...bool) *FortaMain {
 	if register != nil && register[0] {
 		tx, err := s.scannerRegContract.Register(
 			s.scanner, ethaccounts.ScannerOwnerAddress, big.NewInt(networkID), "",
@@ -548,21 +594,26 @@ func (s *Suite) startForta(register ...bool) {
 		s.r.NoError(err)
 		s.ensureTx("ScannerRegistry.register() scan node before 'forta run'", tx)
 	}
-	s.forta("run")
-	s.expectUpIn(time.Minute, serviceContainers...)
+	fortaMain := s.forta("run")
+	s.expectUpIn(largeTimeout, serviceContainers...)
+	s.r.NoError(fortaMain.ErrorAfter(time.Second * 5))
+	return fortaMain
 }
 
 func (s *Suite) stopForta() {
 	services.InterruptMainContext()
-	s.expectDownIn(time.Minute, serviceContainers...)
+	s.expectDownIn(largeTimeout, serviceContainers...)
 }
 
-func (s *Suite) expectIn(timeout time.Duration, f func() bool) {
+func (s *Suite) expectIn(timeout time.Duration, conditionFunc func() bool) {
 	start := time.Now()
 	ticker := time.NewTicker(time.Second)
 	for range ticker.C {
-		s.r.Less(time.Since(start), timeout)
-		if f() {
+		if time.Since(start) > timeout {
+			s.r.FailNow("expectIn() timed out")
+			return
+		}
+		if ok := conditionFunc(); ok {
 			return
 		}
 	}

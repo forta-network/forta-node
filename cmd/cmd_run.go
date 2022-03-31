@@ -12,6 +12,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// errors
+var (
+	ErrCannotRunScanner = errors.New("cannot run scanner")
+)
+
 func handleFortaRun(cmd *cobra.Command, args []string) error {
 	if err := checkScannerState(); err != nil {
 		return err
@@ -45,12 +50,12 @@ func checkScannerState() error {
 	if scanner == nil {
 		yellowBold("Scanner not registered - please make sure you register with 'forta register' first.\n")
 		toStderr("You can disable this behaviour with --no-check flag.\n")
-		return errors.New("cannot run scanner")
+		return ErrCannotRunScanner
 	}
 	if !scanner.Enabled {
 		yellowBold("Scanner not enabled - please ensure that you have registered with 'forta register' first and staked minimum required amount of FORT.\n")
 		toStderr("You can disable this behaviour with --no-check flag.\n")
-		return errors.New("cannot run scanner")
+		return ErrCannotRunScanner
 	}
 	return nil
 }
