@@ -16,7 +16,7 @@ type client struct {
 	apiUrl string
 }
 
-func (c *client) post(path string, body interface{}, headers map[string]string) error {
+func (c *client) post(path string, body interface{}, headers map[string]string, target interface{}) error {
 	jsonVal, err := json.Marshal(body)
 	if err != nil {
 		return err
@@ -35,8 +35,9 @@ func (c *client) post(path string, body interface{}, headers map[string]string) 
 	if err != nil {
 		return err
 	}
+	b, _ := io.ReadAll(resp.Body)
+	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		b, _ := io.ReadAll(resp.Body)
 		log.WithFields(log.Fields{
 			"apiUrl":   c.apiUrl,
 			"path":     path,
@@ -44,17 +45,22 @@ func (c *client) post(path string, body interface{}, headers map[string]string) 
 			"response": string(b),
 			"status":   resp.StatusCode,
 		}).Error("alert api error")
+		return fmt.Errorf("%d error: %s", resp.StatusCode, string(b))
 	}
-	return nil
+	return json.Unmarshal(b, target)
 }
 
-func (c *client) PostBatch(batch *domain.AlertBatchRequest, token string) error {
+func (c *client) PostBatch(batch *domain.AlertBatchRequest, token string) (*domain.AlertBatchResponse, error) {
 	path := fmt.Sprintf("/batch/%s", batch.Ref)
 	headers := map[string]string{
 		"content-type":  "application/json",
 		"Authorization": fmt.Sprintf("Bearer %s", token),
 	}
-	return c.post(path, batch, headers)
+	var resp domain.AlertBatchResponse
+	if err := c.post(path, batch, headers, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
 }
 
 func NewClient(apiUrl string) *client {
