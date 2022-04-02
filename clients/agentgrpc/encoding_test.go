@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"testing"
+	"time"
 
 	"github.com/forta-protocol/forta-core-go/protocol"
 	"github.com/forta-protocol/forta-node/clients/agentgrpc"
@@ -14,7 +15,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-var testMsg = &protocol.EvaluateTxRequest{
+var txMsg = &protocol.EvaluateTxRequest{
 	RequestId: "123",
 	Event: &protocol.TransactionEvent{
 		Type: protocol.TransactionEvent_BLOCK,
@@ -37,8 +38,8 @@ func (as *agentServer) Initialize(context.Context, *protocol.InitializeRequest) 
 }
 
 func (as *agentServer) EvaluateTx(ctx context.Context, txRequest *protocol.EvaluateTxRequest) (*protocol.EvaluateTxResponse, error) {
-	as.r.Equal(testMsg.RequestId, txRequest.RequestId)
-	as.r.Equal(testMsg.Event.Transaction.Hash, txRequest.Event.Transaction.Hash)
+	as.r.Equal(txMsg.RequestId, txRequest.RequestId)
+	as.r.Equal(txMsg.Event.Transaction.Hash, txRequest.Event.Transaction.Hash)
 	close(as.doneCh)
 	return &protocol.EvaluateTxResponse{
 		Status: protocol.ResponseStatus_SUCCESS,
@@ -54,7 +55,7 @@ func (as *agentServer) EvaluateBlock(context.Context, *protocol.EvaluateBlockReq
 func TestEncodeMessage(t *testing.T) {
 	r := require.New(t)
 
-	preparedMsg, err := agentgrpc.EncodeMessage(testMsg)
+	preparedMsg, err := agentgrpc.EncodeMessage(txMsg)
 	r.NoError(err)
 	log.Printf("%+v", preparedMsg)
 
@@ -75,4 +76,111 @@ func TestEncodeMessage(t *testing.T) {
 	var resp protocol.EvaluateTxResponse
 	r.NoError(agentClient.Invoke(context.Background(), agentgrpc.MethodEvaluateTx, preparedMsg, &resp))
 	<-as.doneCh
+}
+
+var benchBlockMsg = &protocol.EvaluateBlockRequest{
+	RequestId: "123",
+	Event: &protocol.BlockEvent{
+		BlockNumber: "0x123",
+		Block:       &protocol.BlockEvent_EthBlock{},
+	},
+}
+
+var preparedBlockMsg *grpc.PreparedMsg
+
+func init() {
+	for i := 0; i < 10000; i++ {
+		benchBlockMsg.Event.Block.Uncles = append(benchBlockMsg.Event.Block.Uncles, "0xf779d223db50593a463e4c73cdfc2b5aa4d780cfceb39288662027d8df061ab4")
+	}
+	preparedMsg, err := agentgrpc.EncodeMessage(benchBlockMsg)
+	if err != nil {
+		panic(err)
+	}
+	preparedBlockMsg = preparedMsg
+}
+
+const benchAgentReqCount = 25
+
+func BenchmarkEvaluateBlock(b *testing.B) {
+	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%s", config.AgentGrpcPort))
+	if err != nil {
+		panic(err)
+	}
+	defer lis.Close()
+
+	server := grpc.NewServer()
+	as := &agentServer{}
+	protocol.RegisterAgentServer(server, as)
+	go server.Serve(lis)
+
+	time.Sleep(time.Second * 10)
+
+	agentClient := agentgrpc.NewClient()
+	conn, err := grpc.Dial(fmt.Sprintf("localhost:%s", config.AgentGrpcPort), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	agentClient.WithConn(conn)
+
+	ch := make(chan struct{}, benchAgentReqCount)
+	for i := 0; i < benchAgentReqCount; i++ {
+		go func() {
+			for range ch {
+				out, err := agentClient.EvaluateBlock(context.Background(), benchBlockMsg)
+				if err != nil {
+					panic(err)
+				}
+				_ = out
+			}
+		}()
+	}
+
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < benchAgentReqCount; j++ {
+			ch <- struct{}{}
+		}
+	}
+	close(ch)
+}
+
+func BenchmarkEvaluateBlockWithPreparedMessage(b *testing.B) {
+	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%s", config.AgentGrpcPort))
+	if err != nil {
+		panic(err)
+	}
+	defer lis.Close()
+
+	server := grpc.NewServer()
+	as := &agentServer{}
+	protocol.RegisterAgentServer(server, as)
+	go server.Serve(lis)
+
+	time.Sleep(time.Second * 10)
+
+	agentClient := agentgrpc.NewClient()
+	conn, err := grpc.Dial(fmt.Sprintf("localhost:%s", config.AgentGrpcPort), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	agentClient.WithConn(conn)
+
+	ch := make(chan struct{}, benchAgentReqCount)
+	for i := 0; i < benchAgentReqCount; i++ {
+		go func() {
+			for range ch {
+				var resp protocol.EvaluateBlockResponse
+				err := agentClient.Invoke(context.Background(), agentgrpc.MethodEvaluateBlock, preparedBlockMsg, &resp)
+				if err != nil {
+					panic(err)
+				}
+			}
+		}()
+	}
+
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < benchAgentReqCount; j++ {
+			ch <- struct{}{}
+		}
+	}
+	close(ch)
 }
