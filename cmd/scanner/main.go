@@ -93,7 +93,7 @@ func initBlockAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertS
 }
 
 func initAlertSender(ctx context.Context, key *keystore.Key, pubClient clients.PublishClient) (clients.AlertSender, error) {
-	return clients.NewLocalAlertSender(ctx, pubClient, clients.AlertSenderConfig{
+	return clients.NewAlertSender(ctx, pubClient, clients.AlertSenderConfig{
 		Key:               key,
 		PublisherNodeAddr: config.DockerPublisherContainerName,
 	})
