@@ -227,9 +227,6 @@ func (sup *SupervisorService) start() error {
 	sup.addContainerUnsafe(sup.scannerContainer)
 
 	if !sup.config.Config.ExposeNats {
-		if err := sup.attachToNetwork(config.DockerPublisherContainerName, natsNetworkID); err != nil {
-			return err
-		}
 		if err := sup.attachToNetwork(config.DockerScannerContainerName, natsNetworkID); err != nil {
 			return err
 		}
