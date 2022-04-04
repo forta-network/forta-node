@@ -543,8 +543,8 @@ func (pub *Publisher) prepareLatestBatch() {
 
 func (pub *Publisher) Start() error {
 	go pub.prepareBatches()
+	go pub.publishBatches()
 	pub.registerMessageHandlers()
-	pub.publishBatches()
 	return nil
 }
 
