@@ -2,14 +2,11 @@ package clients
 
 import (
 	"context"
-	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
-
 	"github.com/forta-protocol/forta-core-go/protocol"
 	"github.com/forta-protocol/forta-core-go/security"
 	"github.com/forta-protocol/forta-node/config"
+	log "github.com/sirupsen/logrus"
 )
 
 // AgentRoundTrip contains
@@ -26,15 +23,19 @@ type AlertSender interface {
 	NotifyWithoutAlert(rt *AgentRoundTrip, chainID, blockNumber string) error
 }
 
+// PublishClient implements the interface for a notify
+type PublishClient interface {
+	Notify(ctx context.Context, req *protocol.NotifyRequest) (*protocol.NotifyResponse, error)
+}
+
 type alertSender struct {
 	ctx     context.Context
 	cfg     AlertSenderConfig
-	pClient protocol.PublisherNodeClient
+	pClient PublishClient
 }
 
 type AlertSenderConfig struct {
-	Key               *keystore.Key
-	PublisherNodeAddr string
+	Key *keystore.Key
 }
 
 func (a *alertSender) SignAlertAndNotify(rt *AgentRoundTrip, alert *protocol.Alert, chainID, blockNumber string) error {
@@ -70,16 +71,10 @@ func (a *alertSender) NotifyWithoutAlert(rt *AgentRoundTrip, chainID, blockNumbe
 	return err
 }
 
-func NewAlertSender(ctx context.Context, cfg AlertSenderConfig) (*alertSender, error) {
-	conn, err := grpc.Dial(fmt.Sprintf("%s:8770", cfg.PublisherNodeAddr), grpc.WithInsecure())
-	if err != nil {
-		log.WithError(err).Errorf("could not reach %s within timeout", cfg.PublisherNodeAddr)
-		return nil, err
-	}
-	pc := protocol.NewPublisherNodeClient(conn)
+func NewAlertSender(ctx context.Context, publisher PublishClient, cfg AlertSenderConfig) (*alertSender, error) {
 	return &alertSender{
 		ctx:     ctx,
 		cfg:     cfg,
-		pClient: pc,
+		pClient: publisher,
 	}, nil
 }

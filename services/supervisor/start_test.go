@@ -105,9 +105,6 @@ func (s *Suite) SetupTest() {
 		Name: config.DockerNatsContainerName,
 	})).Return(&clients.DockerContainer{}, nil)
 	s.dockerClient.EXPECT().StartContainer(service.ctx, (configMatcher)(clients.DockerContainerConfig{
-		Name: config.DockerPublisherContainerName,
-	})).Return(&clients.DockerContainer{}, nil)
-	s.dockerClient.EXPECT().StartContainer(service.ctx, (configMatcher)(clients.DockerContainerConfig{
 		Name: config.DockerJSONRPCProxyContainerName,
 	})).Return(&clients.DockerContainer{ID: testProxyContainerID}, nil)
 	s.dockerClient.EXPECT().StartContainer(service.ctx, (configMatcher)(clients.DockerContainerConfig{
@@ -119,8 +116,6 @@ func (s *Suite) SetupTest() {
 	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testSupervisorContainerID, testNatsNetworkID)
 	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerScannerContainerName).Return(&types.Container{ID: testScannerContainerID}, nil).AnyTimes()
 	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testScannerContainerID, testNatsNetworkID)
-	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerPublisherContainerName).Return(&types.Container{ID: testPublisherContainerID}, nil).AnyTimes()
-	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testPublisherContainerID, testNatsNetworkID)
 	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerJSONRPCProxyContainerName).Return(&types.Container{ID: testProxyContainerID}, nil).AnyTimes()
 	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testProxyContainerID, testNatsNetworkID)
 

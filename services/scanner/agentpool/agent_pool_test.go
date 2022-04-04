@@ -48,8 +48,8 @@ func (s *Suite) SetupTest() {
 	s.agentClient = mock_clients.NewMockAgentClient(gomock.NewController(s.T()))
 	s.ap = &AgentPool{
 		ctx:          context.Background(),
-		txResults:    make(chan *scanner.TxResult, DefaultBufferSize),
-		blockResults: make(chan *scanner.BlockResult, DefaultBufferSize),
+		txResults:    make(chan *scanner.TxResult),
+		blockResults: make(chan *scanner.BlockResult),
 		msgClient:    s.msgClient,
 		dialer: func(agentCfg config.AgentConfig) (clients.AgentClient, error) {
 			return s.agentClient, nil

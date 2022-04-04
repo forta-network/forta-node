@@ -5,10 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/forta-protocol/forta-node/clients/alertapi"
 	"io"
 	"math/big"
-	"net"
 	"net/http"
+	"os"
 	"path"
 	"sync"
 	"time"
@@ -290,9 +291,8 @@ func (pub *Publisher) publishBatches() {
 		pub.lastBatchPublishErr.Set(err)
 		if err != nil {
 			log.Errorf("failed to publish alert batch: %v", err)
-			time.Sleep(time.Second * 3)
 		}
-		time.Sleep(time.Millisecond * 200)
+		time.Sleep(time.Millisecond * 20)
 	}
 }
 
@@ -542,18 +542,9 @@ func (pub *Publisher) prepareLatestBatch() {
 }
 
 func (pub *Publisher) Start() error {
-	lis, err := net.Listen("tcp", "0.0.0.0:8770")
-	if err != nil {
-		return err
-	}
-	pub.server = grpc.NewServer()
-	protocol.RegisterPublisherNodeServer(pub.server, pub)
-
 	go pub.prepareBatches()
 	go pub.publishBatches()
 	pub.registerMessageHandlers()
-
-	utils.GoGrpcServe(pub.server, lis)
 	return nil
 }
 
@@ -584,7 +575,33 @@ func (pub *Publisher) Health() health.Reports {
 	}
 }
 
-func NewPublisher(ctx context.Context, mc *messaging.Client, alertClient clients.AlertAPIClient, cfg PublisherConfig) (*Publisher, error) {
+func NewPublisher(ctx context.Context, cfg config.Config) (*Publisher, error) {
+	mc := messaging.NewClient("metrics", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
+
+	key, err := security.LoadKey(config.DefaultContainerKeyDirPath)
+	if err != nil {
+		return nil, err
+	}
+
+	releaseInfoStr := os.Getenv(config.EnvReleaseInfo)
+	var releaseSummary *release.ReleaseSummary
+	if len(releaseInfoStr) > 0 {
+		releaseInfo := release.ReleaseInfoFromString(releaseInfoStr)
+		releaseSummary = release.MakeSummaryFromReleaseInfo(releaseInfo)
+	}
+
+	apiClient := alertapi.NewClient(cfg.Publish.APIURL)
+
+	return initPublisher(ctx, mc, apiClient, PublisherConfig{
+		ChainID:         cfg.ChainID,
+		Key:             key,
+		PublisherConfig: cfg.Publish,
+		ReleaseSummary:  releaseSummary,
+		Config:          cfg,
+	})
+}
+
+func initPublisher(ctx context.Context, mc *messaging.Client, alertClient clients.AlertAPIClient, cfg PublisherConfig) (*Publisher, error) {
 
 	var ipfsClient IPFS
 	switch {
