@@ -35,8 +35,7 @@ type alertSender struct {
 }
 
 type AlertSenderConfig struct {
-	Key               *keystore.Key
-	PublisherNodeAddr string
+	Key *keystore.Key
 }
 
 func (a *alertSender) SignAlertAndNotify(rt *AgentRoundTrip, alert *protocol.Alert, chainID, blockNumber string) error {
