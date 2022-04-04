@@ -7,9 +7,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/forta-protocol/forta-node/metrics"
+	"google.golang.org/grpc"
 
 	"github.com/forta-protocol/forta-core-go/protocol"
 	"github.com/forta-protocol/forta-node/clients"
+	"github.com/forta-protocol/forta-node/clients/agentgrpc"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/services/scanner"
@@ -29,9 +31,9 @@ type Agent struct {
 	ctx    context.Context
 	config config.AgentConfig
 
-	txRequests    chan *protocol.EvaluateTxRequest // never closed - deallocated when agent is discarded
+	txRequests    chan *TxRequest // never closed - deallocated when agent is discarded
 	txResults     chan<- *scanner.TxResult
-	blockRequests chan *protocol.EvaluateBlockRequest // never closed - deallocated when agent is discarded
+	blockRequests chan *BlockRequest // never closed - deallocated when agent is discarded
 	blockResults  chan<- *scanner.BlockResult
 
 	errCounter *errorCounter
@@ -44,14 +46,26 @@ type Agent struct {
 	closeOnce sync.Once
 }
 
+// TxRequest contains the original request data and the encoded message.
+type TxRequest struct {
+	Original *protocol.EvaluateTxRequest
+	Encoded  *grpc.PreparedMsg
+}
+
+// BlockRequest contains the original request data and the encoded message.
+type BlockRequest struct {
+	Original *protocol.EvaluateBlockRequest
+	Encoded  *grpc.PreparedMsg
+}
+
 // New creates a new agent.
 func New(ctx context.Context, agentCfg config.AgentConfig, msgClient clients.MessageClient, txResults chan<- *scanner.TxResult, blockResults chan<- *scanner.BlockResult) *Agent {
 	return &Agent{
 		ctx:           ctx,
 		config:        agentCfg,
-		txRequests:    make(chan *protocol.EvaluateTxRequest, DefaultBufferSize),
+		txRequests:    make(chan *TxRequest, DefaultBufferSize),
 		txResults:     txResults,
-		blockRequests: make(chan *protocol.EvaluateBlockRequest, DefaultBufferSize),
+		blockRequests: make(chan *BlockRequest, DefaultBufferSize),
 		blockResults:  blockResults,
 		errCounter:    NewErrorCounter(3, isCriticalErr),
 		msgClient:     msgClient,
@@ -89,12 +103,12 @@ func (agent *Agent) Config() config.AgentConfig {
 }
 
 // TxRequestCh returns the transaction request channel safely.
-func (agent *Agent) TxRequestCh() chan<- *protocol.EvaluateTxRequest {
+func (agent *Agent) TxRequestCh() chan<- *TxRequest {
 	return agent.txRequests
 }
 
 // BlockRequestCh returns the block request channel safely.
-func (agent *Agent) BlockRequestCh() chan<- *protocol.EvaluateBlockRequest {
+func (agent *Agent) BlockRequestCh() chan<- *BlockRequest {
 	return agent.blockRequests
 }
 
@@ -170,7 +184,8 @@ func (agent *Agent) processTransactions() {
 		}
 		ctx, cancel := context.WithTimeout(agent.ctx, AgentTimeout)
 		lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
-		resp, err := agent.client.EvaluateTx(ctx, request)
+		resp := new(protocol.EvaluateTxResponse)
+		err := agent.client.Invoke(ctx, agentgrpc.MethodEvaluateTx, request.Encoded, resp)
 		cancel()
 		if err == nil {
 			// truncate findings
@@ -191,7 +206,7 @@ func (agent *Agent) processTransactions() {
 
 			agent.txResults <- &scanner.TxResult{
 				AgentConfig: agent.config,
-				Request:     request,
+				Request:     request.Original,
 				Response:    resp,
 			}
 			lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
@@ -229,7 +244,8 @@ func (agent *Agent) processBlocks() {
 
 		ctx, cancel := context.WithTimeout(agent.ctx, AgentTimeout)
 		lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
-		resp, err := agent.client.EvaluateBlock(ctx, request)
+		resp := new(protocol.EvaluateBlockResponse)
+		err := agent.client.Invoke(ctx, agentgrpc.MethodEvaluateBlock, request.Encoded, resp)
 		cancel()
 		if err == nil {
 			// truncate findings
@@ -250,7 +266,7 @@ func (agent *Agent) processBlocks() {
 
 			agent.blockResults <- &scanner.BlockResult{
 				AgentConfig: agent.config,
-				Request:     request,
+				Request:     request.Original,
 				Response:    resp,
 			}
 			lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
