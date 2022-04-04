@@ -8,7 +8,6 @@ import (
 	"github.com/forta-protocol/forta-node/clients/alertapi"
 	"io"
 	"math/big"
-	"net"
 	"net/http"
 	"os"
 	"path"
@@ -544,18 +543,9 @@ func (pub *Publisher) prepareLatestBatch() {
 }
 
 func (pub *Publisher) Start() error {
-	lis, err := net.Listen("tcp", "0.0.0.0:8770")
-	if err != nil {
-		return err
-	}
-	pub.server = grpc.NewServer()
-	protocol.RegisterPublisherNodeServer(pub.server, pub)
-
 	go pub.prepareBatches()
-	go pub.publishBatches()
 	pub.registerMessageHandlers()
-
-	utils.GoGrpcServe(pub.server, lis)
+	pub.publishBatches()
 	return nil
 }
 
