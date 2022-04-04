@@ -291,9 +291,8 @@ func (pub *Publisher) publishBatches() {
 		pub.lastBatchPublishErr.Set(err)
 		if err != nil {
 			log.Errorf("failed to publish alert batch: %v", err)
-			time.Sleep(time.Second * 3)
 		}
-		time.Sleep(time.Millisecond * 200)
+		time.Sleep(time.Millisecond * 20)
 	}
 }
 
