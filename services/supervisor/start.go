@@ -181,32 +181,6 @@ func (sup *SupervisorService) start() error {
 	}
 	sup.registerMessageHandlers()
 
-	publisherContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
-		Name:  config.DockerPublisherContainerName,
-		Image: commonNodeImage,
-		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "publisher"},
-		Env: map[string]string{
-			config.EnvReleaseInfo: releaseInfo.String(),
-		},
-		Volumes: map[string]string{
-			hostFortaDir: config.DefaultContainerFortaDirPath,
-		},
-		Ports: map[string]string{
-			"": config.DefaultHealthPort, // random host port
-		},
-		Files: map[string][]byte{
-			"passphrase": []byte(sup.config.Passphrase),
-		},
-		DialHost:    true,
-		NetworkID:   nodeNetworkID,
-		MaxLogFiles: sup.maxLogFiles,
-		MaxLogSize:  sup.maxLogSize,
-	})
-	if err != nil {
-		return err
-	}
-	sup.addContainerUnsafe(publisherContainer)
-
 	sup.jsonRpcContainer, err = sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerJSONRPCProxyContainerName,
 		Image: commonNodeImage,
