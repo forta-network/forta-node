@@ -5,10 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/forta-protocol/forta-node/clients/alertapi"
 	"io"
 	"math/big"
 	"net"
 	"net/http"
+	"os"
 	"path"
 	"sync"
 	"time"
@@ -584,7 +586,33 @@ func (pub *Publisher) Health() health.Reports {
 	}
 }
 
-func NewPublisher(ctx context.Context, mc *messaging.Client, alertClient clients.AlertAPIClient, cfg PublisherConfig) (*Publisher, error) {
+func NewPublisher(ctx context.Context, cfg config.Config) (*Publisher, error) {
+	mc := messaging.NewClient("metrics", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
+
+	key, err := security.LoadKey(config.DefaultContainerKeyDirPath)
+	if err != nil {
+		return nil, err
+	}
+
+	releaseInfoStr := os.Getenv(config.EnvReleaseInfo)
+	var releaseSummary *release.ReleaseSummary
+	if len(releaseInfoStr) > 0 {
+		releaseInfo := release.ReleaseInfoFromString(releaseInfoStr)
+		releaseSummary = release.MakeSummaryFromReleaseInfo(releaseInfo)
+	}
+
+	apiClient := alertapi.NewClient(cfg.Publish.APIURL)
+
+	return initPublisher(ctx, mc, apiClient, PublisherConfig{
+		ChainID:         cfg.ChainID,
+		Key:             key,
+		PublisherConfig: cfg.Publish,
+		ReleaseSummary:  releaseSummary,
+		Config:          cfg,
+	})
+}
+
+func initPublisher(ctx context.Context, mc *messaging.Client, alertClient clients.AlertAPIClient, cfg PublisherConfig) (*Publisher, error) {
 
 	var ipfsClient IPFS
 	switch {

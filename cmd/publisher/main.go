@@ -2,57 +2,23 @@ package publisher
 
 import (
 	"context"
-	"fmt"
-	"os"
-
-	"github.com/forta-protocol/forta-core-go/release"
-
 	"github.com/forta-protocol/forta-core-go/clients/health"
 	"github.com/forta-protocol/forta-core-go/utils"
-	"github.com/forta-protocol/forta-node/clients/alertapi"
 	"github.com/forta-protocol/forta-node/healthutils"
 
-	"github.com/forta-protocol/forta-node/clients/messaging"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/forta-protocol/forta-core-go/security"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/services"
 	"github.com/forta-protocol/forta-node/services/publisher"
 )
-
-func initPublisher(ctx context.Context, cfg config.Config) (*publisher.Publisher, error) {
-	mc := messaging.NewClient("metrics", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
-
-	key, err := security.LoadKey(config.DefaultContainerKeyDirPath)
-	if err != nil {
-		return nil, err
-	}
-
-	releaseInfoStr := os.Getenv(config.EnvReleaseInfo)
-	var releaseSummary *release.ReleaseSummary
-	if len(releaseInfoStr) > 0 {
-		releaseInfo := release.ReleaseInfoFromString(releaseInfoStr)
-		releaseSummary = release.MakeSummaryFromReleaseInfo(releaseInfo)
-	}
-
-	apiClient := alertapi.NewClient(cfg.Publish.APIURL)
-
-	return publisher.NewPublisher(ctx, mc, apiClient, publisher.PublisherConfig{
-		ChainID:         cfg.ChainID,
-		Key:             key,
-		PublisherConfig: cfg.Publish,
-		ReleaseSummary:  releaseSummary,
-		Config:          cfg,
-	})
-}
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
 	cfg.Publish.APIURL = utils.ConvertToDockerHostURL(cfg.Publish.APIURL)
 	cfg.Publish.IPFS.APIURL = utils.ConvertToDockerHostURL(cfg.Publish.IPFS.APIURL)
 	cfg.Publish.IPFS.GatewayURL = utils.ConvertToDockerHostURL(cfg.Publish.IPFS.GatewayURL)
 
-	publisher, err := initPublisher(ctx, cfg)
+	p, err := publisher.NewPublisher(ctx, cfg)
 	if err != nil {
 		log.Errorf("Error while initializing Listener: %s", err.Error())
 		return nil, err
@@ -61,9 +27,9 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	return []services.Service{
 		health.NewService(
 			ctx, "", healthutils.DefaultHealthServerErrHandler,
-			health.CheckerFrom(summarizeReports, publisher),
+			health.CheckerFrom(summarizeReports, p),
 		),
-		publisher,
+		p,
 	}, nil
 }
 

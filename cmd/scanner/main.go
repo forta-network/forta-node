@@ -3,6 +3,7 @@ package scanner
 import (
 	"context"
 	"fmt"
+	"github.com/forta-protocol/forta-node/services/publisher"
 	"strconv"
 	"strings"
 	"time"
@@ -91,8 +92,8 @@ func initBlockAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertS
 	})
 }
 
-func initAlertSender(ctx context.Context, key *keystore.Key) (clients.AlertSender, error) {
-	return clients.NewAlertSender(ctx, clients.AlertSenderConfig{
+func initAlertSender(ctx context.Context, key *keystore.Key, pubClient clients.PublishClient) (clients.AlertSender, error) {
+	return clients.NewLocalAlertSender(ctx, pubClient, clients.AlertSenderConfig{
 		Key:               key,
 		PublisherNodeAddr: config.DockerPublisherContainerName,
 	})
@@ -115,7 +116,16 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 
-	as, err := initAlertSender(ctx, key)
+	cfg.Publish.APIURL = utils.ConvertToDockerHostURL(cfg.Publish.APIURL)
+	cfg.Publish.IPFS.APIURL = utils.ConvertToDockerHostURL(cfg.Publish.IPFS.APIURL)
+	cfg.Publish.IPFS.GatewayURL = utils.ConvertToDockerHostURL(cfg.Publish.IPFS.GatewayURL)
+
+	publisherSvc, err := publisher.NewPublisher(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	as, err := initAlertSender(ctx, key, publisherSvc)
 	if err != nil {
 		return nil, err
 	}
@@ -166,6 +176,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		blockAnalyzer,
 		scanner.NewScannerAPI(ctx, blockFeed),
 		scanner.NewTxLogger(ctx),
+		publisherSvc,
 	}
 
 	// for performance tests, this flag avoids using registry service

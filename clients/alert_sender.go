@@ -26,10 +26,24 @@ type AlertSender interface {
 	NotifyWithoutAlert(rt *AgentRoundTrip, chainID, blockNumber string) error
 }
 
+// PublishGrpcClient wraps the grpc client
+type PublishGrpcClient struct {
+	c protocol.PublisherNodeClient
+}
+
+func (pgc *PublishGrpcClient) Notify(ctx context.Context, req *protocol.NotifyRequest) (*protocol.NotifyResponse, error) {
+	return pgc.Notify(ctx, req)
+}
+
+// PublishClient implements the interface for a notify
+type PublishClient interface {
+	Notify(ctx context.Context, req *protocol.NotifyRequest) (*protocol.NotifyResponse, error)
+}
+
 type alertSender struct {
 	ctx     context.Context
 	cfg     AlertSenderConfig
-	pClient protocol.PublisherNodeClient
+	pClient PublishClient
 }
 
 type AlertSenderConfig struct {
@@ -70,7 +84,15 @@ func (a *alertSender) NotifyWithoutAlert(rt *AgentRoundTrip, chainID, blockNumbe
 	return err
 }
 
-func NewAlertSender(ctx context.Context, cfg AlertSenderConfig) (*alertSender, error) {
+func NewLocalAlertSender(ctx context.Context, publisher PublishClient, cfg AlertSenderConfig) (*alertSender, error) {
+	return &alertSender{
+		ctx:     ctx,
+		cfg:     cfg,
+		pClient: publisher,
+	}, nil
+}
+
+func NewGRPCAlertSender(ctx context.Context, cfg AlertSenderConfig) (*alertSender, error) {
 	conn, err := grpc.Dial(fmt.Sprintf("%s:8770", cfg.PublisherNodeAddr), grpc.WithInsecure())
 	if err != nil {
 		log.WithError(err).Errorf("could not reach %s within timeout", cfg.PublisherNodeAddr)
@@ -80,6 +102,6 @@ func NewAlertSender(ctx context.Context, cfg AlertSenderConfig) (*alertSender, e
 	return &alertSender{
 		ctx:     ctx,
 		cfg:     cfg,
-		pClient: pc,
+		pClient: &PublishGrpcClient{c: pc},
 	}, nil
 }
