@@ -3,8 +3,8 @@ package config
 const defaultBlockOffset = 0
 
 var defaultRateLimiting = &RateLimitConfig{
-	Rate:  0.347, // 30k/day
-	Burst: 100,
+	Rate:  50, // 0.347, // 30k/day
+	Burst: 50, // 100,
 }
 
 // ChainSettings contains chain-specific settings.
