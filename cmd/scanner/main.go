@@ -3,10 +3,11 @@ package scanner
 import (
 	"context"
 	"fmt"
-	"github.com/forta-protocol/forta-node/services/publisher"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/forta-protocol/forta-node/services/publisher"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	gethlog "github.com/ethereum/go-ethereum/log"
@@ -169,6 +170,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		health.NewService(ctx, "", healthutils.DefaultHealthServerErrHandler, health.CheckerFrom(
 			summarizeReports,
 			ethClient, traceClient, blockFeed, txStream, txAnalyzer, blockAnalyzer, agentPool, registryService,
+			publisherSvc,
 		)),
 		txStream,
 		txAnalyzer,
@@ -260,6 +262,13 @@ func summarizeReports(reports health.Reports) *health.Report {
 	isTraceBlockNotFoundErr := strings.Contains(traceBlockErr.Details, "not found")
 	if ok && len(traceBlockErr.Details) > 0 && !isTraceBlockNotFoundErr {
 		summary.Addf("trace api (trace_block) is failing with error '%s'.", traceBlockErr.Details)
+		summary.Status(health.StatusFailing)
+	}
+	summary.Punc(".")
+
+	batchPublishErr, ok := reports.NameContains("publisher.event.batch-publish.error")
+	if ok && len(batchPublishErr.Details) > 0 {
+		summary.Addf("failed to publish the last batch with error '%s'", batchPublishErr.Details)
 		summary.Status(health.StatusFailing)
 	}
 
