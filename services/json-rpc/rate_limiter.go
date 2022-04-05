@@ -10,7 +10,7 @@ import (
 
 // RateLimiter rate limits requests.
 type RateLimiter struct {
-	rate           int
+	rate           float64
 	burst          int
 	clientLimiters map[string]*clientLimiter
 	mu             sync.Mutex
@@ -22,8 +22,8 @@ type clientLimiter struct {
 }
 
 // NewRateLimiter creates a new rate limiter.
-func NewRateLimiter(rateN, burst int) *RateLimiter {
-	if rateN <= 0 || burst <= 0 {
+func NewRateLimiter(rateN float64, burst int) *RateLimiter {
+	if rateN <= 0 {
 		log.Panic("non-positive rate limiter arg")
 	}
 	rl := &RateLimiter{
@@ -35,13 +35,9 @@ func NewRateLimiter(rateN, burst int) *RateLimiter {
 	return rl
 }
 
-// CheckLimit tries adding a request to the limiting channel and returns boolean to signal
+// ExceedsLimit tries adding a request to the limiting channel and returns boolean to signal
 // if we hit the rate limit.
-func (rl *RateLimiter) CheckLimit(clientID string) bool {
-	return rl.reserveClient(clientID).Delay() > 0
-}
-
-func (rl *RateLimiter) reserveClient(clientID string) *rate.Reservation {
+func (rl *RateLimiter) ExceedsLimit(clientID string) bool {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 	limiter := rl.clientLimiters[clientID]
@@ -50,7 +46,7 @@ func (rl *RateLimiter) reserveClient(clientID string) *rate.Reservation {
 		rl.clientLimiters[clientID] = limiter
 	}
 	limiter.lastReservation = time.Now()
-	return limiter.Reserve()
+	return !limiter.Allow()
 }
 
 // deallocate inactive limiters
