@@ -207,6 +207,9 @@ func (sup *SupervisorService) start() error {
 		Name:  config.DockerScannerContainerName,
 		Image: commonNodeImage,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "scanner"},
+		Env: map[string]string{
+			config.EnvReleaseInfo: releaseInfo.String(),
+		},
 		Volumes: map[string]string{
 			hostFortaDir: config.DefaultContainerFortaDirPath,
 		},
