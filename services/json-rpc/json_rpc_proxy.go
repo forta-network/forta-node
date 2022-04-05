@@ -79,7 +79,7 @@ func (p *JsonRpcProxy) metricHandler(h http.Handler) http.Handler {
 		t := time.Now()
 		agentConfig, foundAgent := p.findAgentFromRemoteAddr(req.RemoteAddr)
 		if foundAgent && p.rateLimiter.ExceedsLimit(agentConfig.ID) {
-			w.WriteHeader(http.StatusTooManyRequests)
+			writeTooManyReqsErr(w, req)
 			p.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{
 				Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, 0, 1, 0),
 			})
