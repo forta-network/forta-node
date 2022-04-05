@@ -235,8 +235,10 @@ func summarizeReports(reports health.Reports) *health.Report {
 		summary.Addf("at block %s.", lastBlock.Details)
 	}
 
+	// report block request failures but ignore "not found"s because we hit them when we are
+	// asking for the latest block that is not just yet available
 	blockByNumberErr, ok := reports.NameContains("chain-json-rpc-client.request.block-by-number.error")
-	if ok && len(blockByNumberErr.Details) > 0 {
+	if ok && len(blockByNumberErr.Details) > 0 && !isNotFoundErr(blockByNumberErr.Details) {
 		summary.Addf("failing to get block with error '%s'", blockByNumberErr.Details)
 		summary.Status(health.StatusFailing)
 	}
@@ -259,8 +261,7 @@ func summarizeReports(reports health.Reports) *health.Report {
 	}
 
 	traceBlockErr, ok := reports.NameContains("trace-json-rpc-client.request.trace-block.error")
-	isTraceBlockNotFoundErr := strings.Contains(traceBlockErr.Details, "not found")
-	if ok && len(traceBlockErr.Details) > 0 && !isTraceBlockNotFoundErr {
+	if ok && len(traceBlockErr.Details) > 0 && !isNotFoundErr(traceBlockErr.Details) {
 		summary.Addf("trace api (trace_block) is failing with error '%s'.", traceBlockErr.Details)
 		summary.Status(health.StatusFailing)
 	}
@@ -273,6 +274,10 @@ func summarizeReports(reports health.Reports) *health.Report {
 	}
 
 	return summary.Finish()
+}
+
+func isNotFoundErr(errMsg string) bool {
+	return strings.Contains(errMsg, "not found") || strings.Contains(errMsg, "could not find")
 }
 
 func Run() {
