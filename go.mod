@@ -13,7 +13,7 @@ require (
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/ethereum/go-ethereum v1.10.16
 	github.com/fatih/color v1.12.0
-	github.com/forta-protocol/forta-core-go v0.0.0-20220331104601-eb8102289827
+	github.com/forta-protocol/forta-core-go v0.0.0-20220406141718-4dde1ed4b0fc
 	github.com/go-playground/validator/v10 v10.9.0
 	github.com/goccy/go-json v0.9.4
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -22,7 +22,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/ipfs/go-cid v0.1.0
-	github.com/ipfs/go-ipfs-api v0.2.0
+	github.com/ipfs/go-ipfs-api v0.3.0
 	github.com/klauspost/compress v1.13.1 // indirect
 	github.com/multiformats/go-multiaddr v0.3.2 // indirect
 	github.com/nats-io/nats-server/v2 v2.3.2 // indirect
