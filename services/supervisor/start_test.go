@@ -27,7 +27,6 @@ const (
 	testNatsNetworkID         = "nats-network-id"
 	testGenericContainerID    = "test-generic-container-id"
 	testScannerContainerID    = "test-scanner-container-id"
-	testPublisherContainerID  = "test-publisher-container-id"
 	testProxyContainerID      = "test-proxy-container-id"
 	testSupervisorContainerID = "test-supervisor-container-id"
 	testAgentID               = "test-agent"
