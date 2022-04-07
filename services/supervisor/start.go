@@ -439,7 +439,7 @@ func (sup *SupervisorService) Health() health.Reports {
 	defer sup.mu.RUnlock()
 
 	containersStatus := health.StatusOK
-	if len(sup.containers) < 4 {
+	if len(sup.containers) < 3 {
 		containersStatus = health.StatusFailing
 	}
 
