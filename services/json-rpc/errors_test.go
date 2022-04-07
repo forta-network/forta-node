@@ -11,12 +11,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const testRequestID = "123"
+const testRequestID = 123
 
 func TestTooManyReqsError(t *testing.T) {
 	r := require.New(t)
 
-	buf := bytes.NewBuffer([]byte(fmt.Sprintf(`{"id":"%s"}`, testRequestID)))
+	buf := bytes.NewBuffer([]byte(fmt.Sprintf(`{"id":%d}`, testRequestID)))
 	req, err := http.NewRequest("POST", "http://asdf.asdf", buf)
 	r.NoError(err)
 	recorder := httptest.NewRecorder()
