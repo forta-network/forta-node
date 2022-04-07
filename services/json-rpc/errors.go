@@ -8,12 +8,12 @@ import (
 )
 
 type requestPayload struct {
-	ID string `json:"id"`
+	ID int `json:"id"`
 }
 
 type errorResponse struct {
 	JSONRPC string       `json:"jsonrpc"`
-	ID      string       `json:"id"`
+	ID      int          `json:"id"`
 	Error   jsonRpcError `json:"error"`
 }
 
