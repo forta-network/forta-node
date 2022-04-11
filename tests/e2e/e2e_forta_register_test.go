@@ -10,23 +10,28 @@ import (
 // TestRegister_NoRegisterRun tests the cases when the node is ran without registering
 // and the check is ignored with the --no-check flag.
 func (s *Suite) TestRegister_NoRegisterRun() {
-	fortaMain := s.forta("run")
-	s.r.ErrorIs(fortaMain.ErrorAfter(time.Second*5), cmd.ErrCannotRunScanner)
-	s.T().Log("successfully got the error")
+	s.forta("run")
+	s.fortaProcess.Wait()
+	s.True(s.fortaProcess.HasOutput(cmd.ErrCannotRunScanner.Error()))
+	s.T().Log("as expected: could not scanner without registration")
 
-	fortaMain = s.forta("run", "--no-check")
+	s.T().Log("trying to run with --no-check")
+	s.forta("run", "--no-check")
 	defer s.stopForta()
-	s.T().Log("ran with --no-check")
-	s.r.NoError(fortaMain.ErrorAfter(time.Second * 5))
 	s.expectUpIn(time.Minute, serviceContainers...)
+	s.T().Log("--no-check works")
 }
 
 // TestRegister_RegisterRun tests a run after normal registering.
 func (s *Suite) TestRegister_RegisterRun() {
-	fortaMain := s.forta("register", "--owner-address", ethaccounts.ScannerOwnerAddress.Hex())
-	fortaMain.Wait()
-	s.r.NoError(fortaMain.ErrorAfter(time.Second * 5))
+	s.forta("register", "--owner-address", ethaccounts.ScannerOwnerAddress.Hex())
+	s.fortaProcess.Wait()
+	s.fortaProcess.HasOutput("polygonscan")
 
+	// should work without pre-registration (false) now
 	s.startForta(false)
+	s.expectIn(smallTimeout, func() bool {
+		return s.fortaProcess.HasOutput("container started")
+	})
 	s.stopForta()
 }

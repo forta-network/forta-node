@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math/big"
 	"net/http"
@@ -36,9 +36,7 @@ import (
 	"github.com/forta-protocol/forta-core-go/release"
 	"github.com/forta-protocol/forta-core-go/utils"
 	"github.com/forta-protocol/forta-node/clients"
-	"github.com/forta-protocol/forta-node/cmd"
 	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/services"
 	"github.com/forta-protocol/forta-node/tests/e2e/ethaccounts"
 	"github.com/forta-protocol/forta-node/tests/e2e/misccontracts/contract_erc20"
 	"github.com/forta-protocol/forta-node/tests/e2e/misccontracts/contract_transparent_upgradeable_proxy"
@@ -59,7 +57,7 @@ var (
 	genesisFile             = "genesis.json"
 	passwordFile            = "ethaccounts/password"
 	gethKeyFile             = "ethaccounts/gethkeyfile"
-	networkID               = int64(1337)
+	networkID               = int64(137)
 	gethNodeEndpoint        = "http://localhost:8545"
 	processStartWaitSeconds = 30
 	txWaitSeconds           = 5
@@ -78,7 +76,6 @@ var (
 		"forta-supervisor",
 		"forta-json-rpc",
 		"forta-scanner",
-		"forta-publisher",
 		"forta-nats",
 	}
 )
@@ -110,6 +107,8 @@ type Suite struct {
 
 	agentManifest    *manifest.SignedAgentManifest
 	agentManifestCid string
+
+	fortaProcess *Process
 
 	suite.Suite
 }
@@ -176,10 +175,12 @@ func TestE2E(t *testing.T) {
 	})
 	defer s.tearDownProcess(discoProcess)
 
-	// prepare container images: this approach is preferred to reuse existing scripts during testing
-	if os.Getenv("SKIP_DOCKER_BUILD") != "1" {
-		s.runCmd("./container-images.sh")
-	}
+	// prepare container images in a script
+	// this approach is preferred to reuse existing scripts during testing
+	cmdBuild := exec.Command("./build.sh")
+	cmdBuild.Env = append(cmdBuild.Env, fmt.Sprintf("SKIP_DOCKER_BUILD=%s", os.Getenv("SKIP_DOCKER_BUILD")))
+	attachCmdOutput(cmdBuild)
+	s.r.NoError(cmdBuild.Run())
 
 	suite.Run(t, s)
 }
@@ -527,6 +528,7 @@ func (s *Suite) ensureAvailability(name string, check func() error) {
 }
 
 func (s *Suite) TearDownTest() {
+	s.fortaProcess = nil
 	s.tearDownProcess(s.gethProcess)
 	s.alertServer.Close()
 }
@@ -535,58 +537,58 @@ func (s *Suite) tearDownProcess(process *os.Process) {
 	process.Wait()
 }
 
-type FortaMain struct {
-	ctx context.Context
-	ch  chan error
+type Process struct {
+	stderr *bytes.Buffer
+	stdout *bytes.Buffer
+	*os.Process
 }
 
-func (fm *FortaMain) ErrorAfter(after time.Duration) error {
-	<-time.After(after)
-	select {
-	case err, ok := <-fm.ch:
-		if !ok {
-			return nil
-		}
-		return err
-	default:
-		return nil
-	}
+type wrappedBuffer struct {
+	w   io.Writer
+	buf *bytes.Buffer
 }
 
-func (fm *FortaMain) ErrorNow() error {
-	return fm.ErrorAfter(0)
+func (wb *wrappedBuffer) Write(b []byte) (int, error) {
+	wb.buf.Write(b)
+	return wb.w.Write(b)
 }
 
-func (fm *FortaMain) Wait(timeout ...time.Duration) error {
-	if timeout == nil {
-		<-fm.ctx.Done()
-		return nil
-	}
-	select {
-	case <-time.After(timeout[0]):
-		return errors.New("Wait() timed out")
-	case <-fm.ctx.Done():
-		return nil
-	}
+func (process *Process) HasOutput(s string) bool {
+	return strings.Contains(process.stdout.String(), s) || strings.Contains(process.stderr.String(), s)
 }
 
-func (s *Suite) forta(args ...string) *FortaMain {
-	os.Args = append([]string{"forta"}, args...)
+func (s *Suite) forta(args ...string) {
 	dir, err := os.Getwd()
 	s.r.NoError(err)
-	os.Setenv("FORTA_DIR", path.Join(dir, ".forta"))
-	os.Setenv("FORTA_PASSPHRASE", "0")
 
-	ctx, cancel := context.WithCancel(s.ctx)
-	fortaMain := &FortaMain{ctx: ctx, ch: make(chan error, 1)}
-	go func() {
-		fortaMain.ch <- cmd.Execute()
-		cancel()
-	}()
-	return fortaMain
+	fortaDir := path.Join(dir, ".forta")
+	coveragePath := path.Join(fortaDir, "coverage", fmt.Sprintf("runner-coverage-%d.tmp", time.Now().Unix()))
+
+	args = append([]string{
+		"./forta-test",
+		fmt.Sprintf("-test.coverprofile=%s", coveragePath),
+	}, args...)
+	cmdForta := exec.Command(args[0], args[1:]...)
+	cmdForta.Env = append(cmdForta.Env,
+		fmt.Sprintf("FORTA_DIR=%s", fortaDir),
+		"FORTA_PASSPHRASE=0",
+	)
+	var (
+		stderrBuf bytes.Buffer
+		stdoutBuf bytes.Buffer
+	)
+	cmdForta.Stderr = &wrappedBuffer{w: os.Stderr, buf: &stderrBuf}
+	cmdForta.Stdout = &wrappedBuffer{w: os.Stdout, buf: &stdoutBuf}
+
+	s.r.NoError(cmdForta.Start())
+	s.fortaProcess = &Process{
+		stderr:  &stderrBuf,
+		stdout:  &stdoutBuf,
+		Process: cmdForta.Process,
+	}
 }
 
-func (s *Suite) startForta(register ...bool) *FortaMain {
+func (s *Suite) startForta(register ...bool) {
 	if register != nil && register[0] {
 		tx, err := s.scannerRegContract.Register(
 			s.scanner, ethaccounts.ScannerOwnerAddress, big.NewInt(networkID), "",
@@ -594,15 +596,16 @@ func (s *Suite) startForta(register ...bool) *FortaMain {
 		s.r.NoError(err)
 		s.ensureTx("ScannerRegistry.register() scan node before 'forta run'", tx)
 	}
-	fortaMain := s.forta("run")
+	s.forta("run")
 	s.expectUpIn(largeTimeout, serviceContainers...)
-	s.r.NoError(fortaMain.ErrorAfter(time.Second * 5))
-	return fortaMain
 }
 
 func (s *Suite) stopForta() {
-	services.InterruptMainContext()
+	s.r.NoError(s.fortaProcess.Signal(syscall.SIGINT))
 	s.expectDownIn(largeTimeout, serviceContainers...)
+	state, err := s.fortaProcess.Wait()
+	s.r.NoError(err)
+	s.r.Equal(0, state.ExitCode())
 }
 
 func (s *Suite) expectIn(timeout time.Duration, conditionFunc func() bool) {

@@ -25,15 +25,16 @@ perf-test:
 	go test ./... -tags=perf_test
 
 e2e-test:
-	echo 'mode: atomic' > tests/e2e/.forta/coverage.txt
-	E2E_TEST=1 go test -v -count=1 -race \
-		-coverprofile=runner-coverage.tmp \
-		-covermode=atomic \
-		-coverpkg $$(go list ./... | grep -v tests | tr "\n" ",") \
-		github.com/forta-protocol/forta-node/tests/e2e
+	rm -rf tests/e2e/.forta/coverage
+	mkdir -p tests/e2e/.forta/coverage
+
+	go test -c -o forta-test -race -covermode=atomic -coverpkg \
+		$$(go list ./... | grep -v tests | tr "\n" ",") \
+		./tests/e2e/cmd/cli
+	cp -f forta-test tests/e2e/
+	E2E_TEST=1 go test -v -count=1 ./tests/e2e
 
 	cp -r tests/e2e/.forta/coverage .
-	mv runner-coverage.tmp coverage/
 	./scripts/total-coverage.sh e2e
 
 run:

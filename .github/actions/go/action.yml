@@ -15,12 +15,29 @@ runs:
       key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
       restore-keys: |
         ${{ runner.os }}-go-
-  - name: Install mockgen
+  # - name: Install mockgen
+  #   shell: bash
+  #   run: go install github.com/golang/mock/mockgen@v1.5.0
+  # - name: Build
+  #   shell: bash
+  #   run: go build -v ./...
+  # - name: Run unit tests
+  #   shell: bash
+  #   run: make test
+  - name: Prepare E2E test dependencies
     shell: bash
-    run: go install github.com/golang/mock/mockgen@v1.5.0
-  - name: Build
+    run: |
+      wget https://dist-dev.forta.network/dev-dependencies/geth
+      chmod +x geth
+      cp geth /usr/bin/geth
+
+      wget https://dist-dev.forta.network/dev-dependencies/ipfs
+      chmod +x ipfs
+      cp ipfs /usr/bin/ipfs
+
+      wget https://dist-dev.forta.network/dev-dependencies/disco
+      chmod +x disco
+      cp disco /usr/bin/disco
+  - name: Run E2E tests
     shell: bash
-    run: go build -v ./...
-  - name: Test
-    shell: bash
-    run: make test
+    run: make e2e-test
