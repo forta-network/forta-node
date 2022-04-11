@@ -29,15 +29,15 @@ runs:
     run: |
       wget https://dist-dev.forta.network/dev-dependencies/geth
       chmod +x geth
-      cp geth /usr/bin/geth
+      sudo cp geth /usr/bin/geth
 
       wget https://dist-dev.forta.network/dev-dependencies/ipfs
       chmod +x ipfs
-      cp ipfs /usr/bin/ipfs
+      sudo cp ipfs /usr/bin/ipfs
 
       wget https://dist-dev.forta.network/dev-dependencies/disco
       chmod +x disco
-      cp disco /usr/bin/disco
+      sudo cp disco /usr/bin/disco
   - name: Run E2E tests
     shell: bash
     run: make e2e-test
