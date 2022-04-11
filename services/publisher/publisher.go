@@ -8,7 +8,6 @@ import (
 	"github.com/forta-protocol/forta-node/clients/alertapi"
 	"io"
 	"math/big"
-	"net/http"
 	"os"
 	"path"
 	"sync"
@@ -19,10 +18,10 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/forta-protocol/forta-core-go/clients/health"
 	"github.com/forta-protocol/forta-core-go/domain"
+	"github.com/forta-protocol/forta-core-go/ipfs"
 	"github.com/forta-protocol/forta-core-go/protocol"
 	"github.com/forta-protocol/forta-core-go/release"
 	"github.com/forta-protocol/forta-core-go/security"
-	"github.com/forta-protocol/forta-core-go/utils"
 	"github.com/forta-protocol/forta-node/clients"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	"github.com/forta-protocol/forta-node/config"
@@ -45,7 +44,7 @@ type Publisher struct {
 	ctx               context.Context
 	cfg               PublisherConfig
 	contract          AlertsContract
-	ipfs              IPFS
+	ipfs              ipfs.Client
 	testAlertLogger   TestAlertLogger
 	metricsAggregator *AgentMetricsAggregator
 	messageClient     *messaging.Client
@@ -164,7 +163,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		return nil
 	}
 
-	cid, err := pub.ipfs.Add(&buf, ipfsapi.OnlyHash(true))
+	cid, err := pub.ipfs.CalculateFileHash(buf.Bytes())
 	if err != nil {
 		return fmt.Errorf("failed to store alert data to ipfs: %v", err)
 	}
@@ -603,18 +602,9 @@ func NewPublisher(ctx context.Context, cfg config.Config) (*Publisher, error) {
 
 func initPublisher(ctx context.Context, mc *messaging.Client, alertClient clients.AlertAPIClient, cfg PublisherConfig) (*Publisher, error) {
 
-	var ipfsClient IPFS
-	switch {
-	case cfg.PublisherConfig.SkipPublish:
-		// use nil IPFS client
-
-	case len(cfg.PublisherConfig.IPFS.Username) > 0 && len(cfg.PublisherConfig.IPFS.Password) > 0:
-		ipfsClient = ipfsapi.NewShellWithClient(cfg.PublisherConfig.IPFS.APIURL, &http.Client{
-			Transport: utils.NewBasicAuthTransport(cfg.PublisherConfig.IPFS.Username, cfg.PublisherConfig.IPFS.Password),
-		})
-
-	default:
-		ipfsClient = ipfsapi.NewShellWithClient(cfg.PublisherConfig.IPFS.APIURL, http.DefaultClient)
+	ipfsClient, err := ipfs.NewClient(cfg.PublisherConfig.IPFS.APIURL)
+	if err != nil {
+		return nil, err
 	}
 
 	batchInterval := defaultInterval
