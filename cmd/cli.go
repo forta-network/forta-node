@@ -128,7 +128,7 @@ publishes alerts about them`,
 
 	cmdFortaRegister = &cobra.Command{
 		Use:   "register",
-		Short: "register your scanner to enable it for scanning",
+		Short: "register your scan node to enable it for scanning (requires MATIC in your scan node address)",
 		RunE:  withContractAddresses(withInitialized(withValidConfig(handleFortaRegister))),
 	}
 )
