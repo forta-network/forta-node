@@ -27,15 +27,17 @@ runs:
   - name: Prepare E2E test dependencies
     shell: bash
     run: |
-      wget https://dist-dev.forta.network/dev-dependencies/geth
+      set -e
+
+      wget --quiet https://dist-dev.forta.network/dev-dependencies/geth
       chmod +x geth
       sudo cp geth /usr/bin/geth
 
-      wget https://dist-dev.forta.network/dev-dependencies/ipfs
+      wget --quiet https://dist-dev.forta.network/dev-dependencies/ipfs
       chmod +x ipfs
       sudo cp ipfs /usr/bin/ipfs
 
-      wget https://dist-dev.forta.network/dev-dependencies/disco
+      wget --quiet https://dist-dev.forta.network/dev-dependencies/disco
       chmod +x disco
       sudo cp disco /usr/bin/disco
   - name: Run E2E tests
