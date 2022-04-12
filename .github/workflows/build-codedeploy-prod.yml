@@ -87,6 +87,8 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           expire-in: 7days
+      - name: Checkout
+        uses: actions/checkout@v2
       - name: Setup
         id: setup
         uses: ./.github/actions/setup
