@@ -55,5 +55,8 @@ func checkScannerState() error {
 		toStderr("You can disable this behaviour with --no-check flag.\n")
 		return ErrCannotRunScanner
 	}
+	if !scanner.Enabled {
+		yellowBold("Warning! Your node has not met with the minimum staking requirement yet and will not receive bots until this is done.\n")
+	}
 	return nil
 }
