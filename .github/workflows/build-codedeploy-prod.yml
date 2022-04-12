@@ -18,6 +18,8 @@ jobs:
       - name: Validate and test Go code
         id: go
         uses: ./.github/actions/go
+        with:
+          e2e: 'true'
 
   containers:
     name: Build and push containers
