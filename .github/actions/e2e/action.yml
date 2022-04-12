@@ -1,9 +1,5 @@
 name: E2E Test
 description: Validate and test Go code
-inputs:
-  e2e:
-    description: 'Run E2E tests'
-    required: false
 runs:
   using: composite
   steps:
@@ -24,7 +20,6 @@ runs:
         chmod +x disco
         sudo cp disco /usr/bin/disco
     - name: Run E2E tests
-      if: ${{ inputs.e2e == 'true' }}
       shell: bash
       run: |
         RUNNER_TRACKING_ID="" && ./tests/e2e/deps-start.sh & 
