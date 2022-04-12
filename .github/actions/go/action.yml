@@ -15,15 +15,12 @@ runs:
       key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
       restore-keys: |
         ${{ runner.os }}-go-
-  # - name: Install mockgen
-  #   shell: bash
-  #   run: go install github.com/golang/mock/mockgen@v1.5.0
-  # - name: Build
-  #   shell: bash
-  #   run: go build -v ./...
-  # - name: Run unit tests
-  #   shell: bash
-  #   run: make test
+  - name: Build
+    shell: bash
+    run: go build -v ./...
+  - name: Run unit tests
+    shell: bash
+    run: make test
   - name: Prepare E2E test dependencies
     shell: bash
     run: |
@@ -45,4 +42,4 @@ runs:
     run: |
       RUNNER_TRACKING_ID="" && ./tests/e2e/deps-start.sh & 
       RUNNER_TRACKING_ID="" && make e2e-test
-      ./tests/e2e/deps-clear.sh
+      ./tests/e2e/deps-stop.sh
