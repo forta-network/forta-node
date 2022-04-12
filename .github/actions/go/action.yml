@@ -1,9 +1,5 @@
 name: Go
 description: Validate and test Go code
-inputs:
-  e2e:
-    description: 'Run E2E tests'
-    required: false
 runs:
   using: composite
   steps:
@@ -25,27 +21,3 @@ runs:
   - name: Run unit tests
     shell: bash
     run: make test
-  - name: Prepare E2E test dependencies
-    if: ${{ inputs.e2e == 'true' }}
-    shell: bash
-    run: |
-      set -e
-
-      wget --quiet https://dist-dev.forta.network/dev-dependencies/geth
-      chmod +x geth
-      sudo cp geth /usr/bin/geth
-
-      wget --quiet https://dist-dev.forta.network/dev-dependencies/ipfs
-      chmod +x ipfs
-      sudo cp ipfs /usr/bin/ipfs
-
-      wget --quiet https://dist-dev.forta.network/dev-dependencies/disco
-      chmod +x disco
-      sudo cp disco /usr/bin/disco
-  - name: Run E2E tests
-    if: ${{ inputs.e2e == 'true' }}
-    shell: bash
-    run: |
-      RUNNER_TRACKING_ID="" && ./tests/e2e/deps-start.sh & 
-      RUNNER_TRACKING_ID="" && make e2e-test
-      ./tests/e2e/deps-stop.sh

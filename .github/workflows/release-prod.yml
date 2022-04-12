@@ -15,8 +15,9 @@ jobs:
       - name: Validate and test Go code
         id: go
         uses: ./.github/actions/go
-        with:
-          e2e: 'true'
+      - name: E2E Test
+        id: e2e
+        uses: ./.github/actions/e2e
 
   containers:
     name: Build and push containers
