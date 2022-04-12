@@ -19,8 +19,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var updateInterval = 1 * time.Minute
-
 // UpdaterService receives the release updates.
 type UpdaterService struct {
 	ctx  context.Context
@@ -36,13 +34,15 @@ type UpdaterService struct {
 	latestReference string
 	latestRelease   *release.ReleaseManifest
 
+	intervalSeconds int
+
 	lastChecked health.TimeTracker
 	lastErr     health.ErrorTracker
 }
 
 // NewUpdaterService creates a new updater service.
 func NewUpdaterService(ctx context.Context, rg registry.Client, rc release.Client,
-	port string, developmentMode bool,
+	port string, developmentMode bool, intervalSeconds int,
 ) *UpdaterService {
 	return &UpdaterService{
 		ctx:             ctx,
@@ -50,6 +50,7 @@ func NewUpdaterService(ctx context.Context, rg registry.Client, rc release.Clien
 		rg:              rg,
 		rl:              rc,
 		developmentMode: developmentMode,
+		intervalSeconds: intervalSeconds,
 	}
 }
 
@@ -88,7 +89,7 @@ func (updater *UpdaterService) Start() error {
 	utils.GoListenAndServe(updater.server)
 
 	go func() {
-		t := time.NewTicker(updateInterval)
+		t := time.NewTicker(time.Duration(updater.intervalSeconds) * time.Second)
 		for {
 			select {
 			case <-updater.ctx.Done():

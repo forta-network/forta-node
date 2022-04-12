@@ -2,8 +2,9 @@ package updater
 
 import (
 	"context"
-	"github.com/forta-protocol/forta-core-go/release"
 	"testing"
+
+	"github.com/forta-protocol/forta-core-go/release"
 
 	rm "github.com/forta-protocol/forta-core-go/registry/mocks"
 	im "github.com/forta-protocol/forta-core-go/release/mocks"
@@ -11,12 +12,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	testDefaultCheckIntervalSeconds = 60
+)
+
 func TestUpdaterService_UpdateLatestRelease(t *testing.T) {
 	c := gomock.NewController(t)
 
 	rg := rm.NewMockClient(c)
 	is := im.NewMockClient(c)
-	updater := NewUpdaterService(context.Background(), rg, is, "8080", false)
+	updater := NewUpdaterService(context.Background(), rg, is, "8080", false, testDefaultCheckIntervalSeconds)
 
 	rg.EXPECT().GetScannerNodeVersion().Return("reference", nil).Times(1)
 	is.EXPECT().GetReleaseManifest(gomock.Any(), "reference").Return(&release.ReleaseManifest{}, nil).Times(1)
@@ -28,7 +33,7 @@ func TestUpdaterService_UpdateLatestReleaseCached(t *testing.T) {
 	c := gomock.NewController(t)
 	rg := rm.NewMockClient(c)
 	is := im.NewMockClient(c)
-	updater := NewUpdaterService(context.Background(), rg, is, "8080", false)
+	updater := NewUpdaterService(context.Background(), rg, is, "8080", false, testDefaultCheckIntervalSeconds)
 
 	// update twice
 	rg.EXPECT().GetScannerNodeVersion().Return("reference", nil).Times(2)
@@ -43,7 +48,7 @@ func TestUpdaterService_UpdateLatestReleaseNotCached(t *testing.T) {
 	c := gomock.NewController(t)
 	rg := rm.NewMockClient(c)
 	is := im.NewMockClient(c)
-	updater := NewUpdaterService(context.Background(), rg, is, "8080", false)
+	updater := NewUpdaterService(context.Background(), rg, is, "8080", false, testDefaultCheckIntervalSeconds)
 
 	// update twice
 	rg.EXPECT().GetScannerNodeVersion().Return("reference1", nil).Times(1)

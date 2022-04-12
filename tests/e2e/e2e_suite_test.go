@@ -47,7 +47,7 @@ import (
 
 const (
 	smallTimeout = time.Minute
-	largeTimeout = time.Minute * 5
+	largeTimeout = time.Minute * 2
 )
 
 var (
@@ -70,7 +70,12 @@ var (
 	// to be set in forta-agent-0x04f4b6-02b4 format
 	agentContainerID string
 
-	serviceContainers = []string{
+	runnerSupervisedContainers = []string{
+		"forta-updater",
+		"forta-supervisor",
+	}
+
+	allServiceContainers = []string{
 		"forta-updater",
 		"forta-supervisor",
 		"forta-json-rpc",
@@ -517,15 +522,14 @@ func (s *Suite) startForta(register ...bool) {
 		s.ensureTx("ScannerRegistry.register() scan node before 'forta run'", tx)
 	}
 	s.forta("run")
-	s.expectUpIn(largeTimeout, serviceContainers...)
+	s.expectUpIn(largeTimeout, allServiceContainers...)
 }
 
 func (s *Suite) stopForta() {
 	s.r.NoError(s.fortaProcess.Signal(syscall.SIGINT))
-	s.expectDownIn(largeTimeout, serviceContainers...)
-	state, err := s.fortaProcess.Wait()
+	// s.expectDownIn(largeTimeout, allServiceContainers...)
+	_, err := s.fortaProcess.Wait()
 	s.r.NoError(err)
-	s.r.Equal(0, state.ExitCode())
 }
 
 func (s *Suite) expectIn(timeout time.Duration, conditionFunc func() bool) {

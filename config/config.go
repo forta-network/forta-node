@@ -44,13 +44,14 @@ type LogConfig struct {
 }
 
 type RegistryConfig struct {
-	JsonRpc           JsonRpcConfig `yaml:"jsonRpc" json:"jsonRpc" default:"{\"url\": \"https://polygon-rpc.com\"}"`
-	IPFS              IPFSConfig    `yaml:"ipfs" json:"ipfs"`
-	ContractAddress   string        `yaml:"contractAddress" json:"contractAddress" validate:"eth_addr"`
-	ContainerRegistry string        `yaml:"containerRegistry" json:"containerRegistry" validate:"hostname|hostname_port" default:"disco.forta.network" `
-	Username          string        `yaml:"username" json:"username"`
-	Password          string        `yaml:"password" json:"password"`
-	Disable           bool          `yaml:"disable" json:"disable"` // for testing situations
+	JsonRpc              JsonRpcConfig `yaml:"jsonRpc" json:"jsonRpc" default:"{\"url\": \"https://polygon-rpc.com\"}"`
+	IPFS                 IPFSConfig    `yaml:"ipfs" json:"ipfs"`
+	ContractAddress      string        `yaml:"contractAddress" json:"contractAddress" validate:"eth_addr"`
+	ContainerRegistry    string        `yaml:"containerRegistry" json:"containerRegistry" validate:"hostname|hostname_port" default:"disco.forta.network" `
+	Username             string        `yaml:"username" json:"username"`
+	Password             string        `yaml:"password" json:"password"`
+	Disable              bool          `yaml:"disable" json:"disable"` // for testing situations
+	CheckIntervalSeconds int           `yaml:"checkIntervalSeconds" json:"checkIntervalSeconds" default:"15"`
 }
 
 type IPFSConfig struct {
@@ -98,7 +99,8 @@ type TelemetryConfig struct {
 }
 
 type AutoUpdateConfig struct {
-	Disable bool `yaml:"disable" json:"disable"`
+	Disable              bool `yaml:"disable" json:"disable"`
+	CheckIntervalSeconds int  `yaml:"checkIntervalSeconds" json:"checkIntervalSeconds" default:"60"`
 }
 
 type AgentLogsConfig struct {
