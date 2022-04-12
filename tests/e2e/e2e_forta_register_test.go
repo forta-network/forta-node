@@ -1,8 +1,6 @@
 package e2e_test
 
 import (
-	"time"
-
 	"github.com/forta-protocol/forta-node/cmd"
 	"github.com/forta-protocol/forta-node/tests/e2e/ethaccounts"
 )
@@ -18,7 +16,7 @@ func (s *Suite) TestRegister_NoRegisterRun() {
 	s.T().Log("trying to run with --no-check")
 	s.forta("run", "--no-check")
 	defer s.stopForta()
-	s.expectUpIn(time.Minute, serviceContainers...)
+	s.expectUpIn(largeTimeout, runnerSupervisedContainers...)
 	s.T().Log("--no-check works")
 }
 
