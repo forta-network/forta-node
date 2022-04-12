@@ -156,13 +156,6 @@ func TestE2E(t *testing.T) {
 		return err
 	})
 
-	// prepare container images in a script
-	// this approach is preferred to reuse existing scripts during testing
-	cmdBuild := exec.Command("./build.sh")
-	cmdBuild.Env = append(cmdBuild.Env, fmt.Sprintf("SKIP_DOCKER_BUILD=%s", os.Getenv("SKIP_DOCKER_BUILD")))
-	attachCmdOutput(cmdBuild)
-	s.r.NoError(cmdBuild.Run())
-
 	suite.Run(t, s)
 }
 
