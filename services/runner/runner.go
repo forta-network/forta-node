@@ -216,7 +216,7 @@ func (runner *Runner) ensureImage(logger *log.Entry, name string, imageRef strin
 	if !runner.cfg.Development {
 		fixedRef, err := utils.ValidateDiscoImageRef(runner.cfg.Registry.ContainerRegistry, imageRef)
 		if err != nil {
-			logger.WithError(err).Warn("not a disco ref - skipping pull")
+			logger.WithError(err).WithField("imageRef", imageRef).Warn("not a disco ref")
 		} else {
 			imageRef = fixedRef // important
 		}

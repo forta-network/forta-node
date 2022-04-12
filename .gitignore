@@ -26,3 +26,5 @@ tests/e2e/.forta/*
 *coverage.*
 !*coverage.sh
 coverage
+
+forta-test
