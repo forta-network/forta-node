@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -86,7 +85,6 @@ type Suite struct {
 	ctx context.Context
 	r   *require.Assertions
 
-	gethProcess *os.Process
 	alertServer *alertserver.AlertServer
 
 	ipfsClient   *ipfsapi.Shell
@@ -129,25 +127,6 @@ func TestE2E(t *testing.T) {
 	s.r.NoError(err)
 	s.dockerClient = dockerClient
 
-	// check installed test dependencies
-	s.runCmd("which", "docker", "ipfs", "disco", "geth")
-
-	// initialize ipfs
-	cmdIpfsInit := exec.Command("ipfs", "init")
-	cmdIpfsInit.Env = append(cmdIpfsInit.Env, fmt.Sprintf("IPFS_PATH=%s", ipfsDataDir))
-	// ignore error here since it might be failing due to reusing ipfs dir from previous run.
-	// this is useful for making container push faster in local development.
-	cmdIpfsInit.Run()
-
-	// run ipfs
-	cmdIpfsRun := exec.Command("ipfs", "daemon", "--routing", "none")
-	cmdIpfsRun.Env = append(cmdIpfsInit.Env,
-		envEmptyRunnerTrackingID,
-		fmt.Sprintf("IPFS_PATH=%s", ipfsDataDir),
-	)
-	attachCmdOutput(cmdIpfsRun)
-	s.r.NoError(cmdIpfsRun.Start()) // non-blocking
-	ipfsProcess := cmdIpfsRun.Process
 	s.ipfsClient = ipfsapi.NewShell(ipfsEndpoint)
 	s.ensureAvailability("ipfs", func() error {
 		_, err := s.ipfsClient.FilesLs(s.ctx, "/")
@@ -156,18 +135,7 @@ func TestE2E(t *testing.T) {
 		}
 		return nil
 	})
-	defer s.tearDownProcess(ipfsProcess)
 
-	// run disco
-	cmdDisco := exec.Command("disco")
-	cmdDisco.Env = append(cmdDisco.Env,
-		envEmptyRunnerTrackingID,
-		fmt.Sprintf("REGISTRY_CONFIGURATION_PATH=%s", discoConfigFile),
-		fmt.Sprintf("IPFS_URL=%s", ipfsEndpoint),
-		fmt.Sprintf("DISCO_PORT=%s", discoPort),
-	)
-	s.r.NoError(cmdDisco.Start()) // non-blocking
-	discoProcess := cmdDisco.Process
 	s.ensureAvailability("disco", func() error {
 		resp, err := http.Get(fmt.Sprintf("http://localhost:%s/v2/", discoPort))
 		if err != nil {
@@ -179,7 +147,14 @@ func TestE2E(t *testing.T) {
 		}
 		return fmt.Errorf("disco responded with status '%d'", resp.StatusCode)
 	})
-	defer s.tearDownProcess(discoProcess)
+
+	ethClient, err := ethclient.Dial(gethNodeEndpoint)
+	s.r.NoError(err)
+	s.ethClient = ethClient
+	s.ensureAvailability("geth", func() error {
+		_, err := ethClient.BlockNumber(s.ctx)
+		return err
+	})
 
 	// prepare container images in a script
 	// this approach is preferred to reuse existing scripts during testing
@@ -194,62 +169,6 @@ func TestE2E(t *testing.T) {
 func (s *Suite) SetupTest() {
 	s.ctx = context.Background()
 	s.r = require.New(s.T())
-
-	// remove old ethereum data
-	os.RemoveAll(ethereumDataDir)
-
-	// init geth private key
-	s.runCmd(
-		"geth", "account", "import",
-		"--datadir", ethereumDataDir,
-		"--password", passwordFile,
-		gethKeyFile,
-	)
-
-	// init geth genesis
-	s.runCmd(
-		"geth", "init",
-		"--datadir", ethereumDataDir,
-		genesisFile,
-	)
-
-	// run geth
-	cmdRunGeth := exec.Command(
-		"geth",
-		"--nodiscover",
-		"--rpc.allow-unprotected-txs",
-		"--rpc.gascap", "0", // infinite
-		"--networkid", strconv.FormatInt(networkID, 10),
-		"--datadir", ethereumDataDir,
-
-		"--allow-insecure-unlock",
-		"--unlock", ethaccounts.GethNodeAddress.Hex(),
-		"--password", passwordFile,
-		"--mine",
-
-		"--http",
-		"--http.vhosts", "*",
-		"--http.port", "8545",
-		"--http.addr", "0.0.0.0",
-		"--http.corsdomain", "*",
-		"--http.api", "personal,db,eth,net,web3,txpool,miner",
-	)
-	cmdRunGeth.Env = append(cmdRunGeth.Env,
-		envEmptyRunnerTrackingID,
-		"GOMAXPROCS=1",
-	) // limit
-	attachCmdOutput(cmdRunGeth)
-	s.r.NoError(cmdRunGeth.Start()) // non-blocking
-	s.gethProcess = cmdRunGeth.Process
-
-	// dial geth and check availability
-	ethClient, err := ethclient.Dial(gethNodeEndpoint)
-	s.r.NoError(err)
-	s.ethClient = ethClient
-	s.ensureAvailability("geth", func() error {
-		_, err := ethClient.BlockNumber(s.ctx)
-		return err
-	})
 
 	s.deployer = bind.NewKeyedTransactor(ethaccounts.DeployerKey)
 	s.admin = bind.NewKeyedTransactor(ethaccounts.AccessAdminKey)
@@ -318,7 +237,7 @@ func (s *Suite) SetupTest() {
 	s.r.NoError(err)
 	s.ensureTx("Router.initialize()", tx)
 
-	tokenAddr, tx, tokenContract, err := contract_erc20.DeployERC20(s.deployer, ethClient, "FORT", "FORT")
+	tokenAddr, tx, tokenContract, err := contract_erc20.DeployERC20(s.deployer, s.ethClient, "FORT", "FORT")
 	s.r.NoError(err)
 	s.ensureTx("ERC20 (FORT) deployment", tx)
 	s.tokenContract = tokenContract
@@ -470,14 +389,14 @@ func (s *Suite) runCmdSilent(name string, arg ...string) {
 }
 
 func (s *Suite) ensureTx(name string, tx *types.Transaction) {
-	for i := 0; i < txWaitSeconds; i++ {
+	for i := 0; i < txWaitSeconds*5; i++ {
 		receipt, err := s.ethClient.TransactionReceipt(s.ctx, tx.Hash())
 		if err == nil {
 			s.r.Equal(tx.Hash().Hex(), receipt.TxHash.Hex())
 			s.T().Logf("%s - mined: %s", name, tx.Hash())
 			return
 		}
-		time.Sleep(time.Second)
+		time.Sleep(time.Millisecond * 200)
 	}
 	s.r.FailNowf("failed to mine tx", "%s: %s", name, tx.Hash())
 }
@@ -533,12 +452,11 @@ func (s *Suite) ensureAvailability(name string, check func() error) {
 			return
 		}
 	}
-	s.FailNowf("", "failed to ensure '%s' start: %v", name, err)
+	s.r.FailNowf("", "failed to ensure '%s' start: %v", name, err)
 }
 
 func (s *Suite) TearDownTest() {
 	s.fortaProcess = nil
-	s.tearDownProcess(s.gethProcess)
 	s.alertServer.Close()
 }
 func (s *Suite) tearDownProcess(process *os.Process) {

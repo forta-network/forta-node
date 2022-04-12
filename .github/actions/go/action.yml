@@ -40,4 +40,7 @@ runs:
       sudo cp disco /usr/bin/disco
   - name: Run E2E tests
     shell: bash
-    run: RUNNER_TRACKING_ID="" && make e2e-test
+    run: |
+      RUNNER_TRACKING_ID="" && ./tests/e2e/deps-start.sh & 
+      RUNNER_TRACKING_ID="" && make e2e-test
+      ./tests/e2e/deps-clear.sh

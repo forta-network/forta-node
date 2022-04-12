@@ -24,6 +24,9 @@ test:
 perf-test:
 	go test ./... -tags=perf_test
 
+e2e-test-deps:
+	./tests/e2e/deps-start
+
 e2e-test:
 	rm -rf tests/e2e/.forta/coverage
 	mkdir -p tests/e2e/.forta/coverage
@@ -32,7 +35,8 @@ e2e-test:
 		$$(go list ./... | grep -v tests | tr "\n" ",") \
 		./tests/e2e/cmd/cli
 	cp -f forta-test tests/e2e/
-	RUNNER_TRACKING_ID="" && E2E_TEST=1 go test -v -count=1 ./tests/e2e
+
+	E2E_TEST=1 go test -v -count=1 ./tests/e2e
 
 	cp -r tests/e2e/.forta/coverage .
 	./scripts/total-coverage.sh e2e
