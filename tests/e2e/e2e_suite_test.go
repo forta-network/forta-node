@@ -78,6 +78,8 @@ var (
 		"forta-scanner",
 		"forta-nats",
 	}
+
+	envEmptyRunnerTrackingID = "RUNNER_TRACKING_ID="
 )
 
 type Suite struct {
@@ -139,7 +141,10 @@ func TestE2E(t *testing.T) {
 
 	// run ipfs
 	cmdIpfsRun := exec.Command("ipfs", "daemon", "--routing", "none")
-	cmdIpfsRun.Env = append(cmdIpfsInit.Env, fmt.Sprintf("IPFS_PATH=%s", ipfsDataDir))
+	cmdIpfsRun.Env = append(cmdIpfsInit.Env,
+		envEmptyRunnerTrackingID,
+		fmt.Sprintf("IPFS_PATH=%s", ipfsDataDir),
+	)
 	attachCmdOutput(cmdIpfsRun)
 	s.r.NoError(cmdIpfsRun.Start()) // non-blocking
 	ipfsProcess := cmdIpfsRun.Process
@@ -156,6 +161,7 @@ func TestE2E(t *testing.T) {
 	// run disco
 	cmdDisco := exec.Command("disco")
 	cmdDisco.Env = append(cmdDisco.Env,
+		envEmptyRunnerTrackingID,
 		fmt.Sprintf("REGISTRY_CONFIGURATION_PATH=%s", discoConfigFile),
 		fmt.Sprintf("IPFS_URL=%s", ipfsEndpoint),
 		fmt.Sprintf("DISCO_PORT=%s", discoPort),
@@ -228,7 +234,10 @@ func (s *Suite) SetupTest() {
 		"--http.corsdomain", "*",
 		"--http.api", "personal,db,eth,net,web3,txpool,miner",
 	)
-	cmdRunGeth.Env = append(cmdRunGeth.Env, "GOMAXPROCS=1") // limit
+	cmdRunGeth.Env = append(cmdRunGeth.Env,
+		envEmptyRunnerTrackingID,
+		"GOMAXPROCS=1",
+	) // limit
 	attachCmdOutput(cmdRunGeth)
 	s.r.NoError(cmdRunGeth.Start()) // non-blocking
 	s.gethProcess = cmdRunGeth.Process

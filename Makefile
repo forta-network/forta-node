@@ -32,7 +32,7 @@ e2e-test:
 		$$(go list ./... | grep -v tests | tr "\n" ",") \
 		./tests/e2e/cmd/cli
 	cp -f forta-test tests/e2e/
-	E2E_TEST=1 go test -v -count=1 ./tests/e2e
+	RUNNER_TRACKING_ID="" && E2E_TEST=1 go test -v -count=1 ./tests/e2e
 
 	cp -r tests/e2e/.forta/coverage .
 	./scripts/total-coverage.sh e2e

@@ -40,4 +40,4 @@ runs:
       sudo cp disco /usr/bin/disco
   - name: Run E2E tests
     shell: bash
-    run: make e2e-test
+    run: RUNNER_TRACKING_ID="" && make e2e-test
