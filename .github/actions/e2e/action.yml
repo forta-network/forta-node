@@ -1,0 +1,27 @@
+name: E2E Test
+description: Validate and test Go code
+runs:
+  using: composite
+  steps:
+    - name: Prepare E2E test dependencies
+      shell: bash
+      run: |
+        set -e
+        
+        wget --quiet https://dist-dev.forta.network/dev-dependencies/geth
+        chmod +x geth
+        sudo cp geth /usr/bin/geth
+        
+        wget --quiet https://dist-dev.forta.network/dev-dependencies/ipfs
+        chmod +x ipfs
+        sudo cp ipfs /usr/bin/ipfs
+        
+        wget --quiet https://dist-dev.forta.network/dev-dependencies/disco
+        chmod +x disco
+        sudo cp disco /usr/bin/disco
+    - name: Run E2E tests
+      shell: bash
+      run: |
+        RUNNER_TRACKING_ID="" && ./tests/e2e/deps-start.sh & 
+        RUNNER_TRACKING_ID="" && make e2e-test
+        ./tests/e2e/deps-stop.sh
