@@ -55,10 +55,5 @@ func checkScannerState() error {
 		toStderr("You can disable this behaviour with --no-check flag.\n")
 		return ErrCannotRunScanner
 	}
-	if !scanner.Enabled {
-		yellowBold("Scanner not enabled - please ensure that you have registered with 'forta register' first and staked minimum required amount of FORT.\n")
-		toStderr("You can disable this behaviour with --no-check flag.\n")
-		return ErrCannotRunScanner
-	}
 	return nil
 }
