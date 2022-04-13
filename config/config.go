@@ -116,7 +116,7 @@ type ContainerRegistryConfig struct {
 type PrivateModeConfig struct {
 	Enable            bool                     `yaml:"enable" json:"enable" validate:"omitempty,boolean"`
 	AgentImages       []string                 `yaml:"agentImages" json:"agentImages" validate:"required_if=Enable true"`
-	SendAlertsTo      string                   `yaml:"sendAlertsTo" json:"sendAlertsTo" validate:"required_if=Enable true,url"`
+	SendAlertsTo      string                   `yaml:"sendAlertsTo" json:"sendAlertsTo" validate:"required_if=Enable true"`
 	ContainerRegistry *ContainerRegistryConfig `yaml:"containerRegistry" json:"containerRegistry"`
 }
 
