@@ -1,6 +1,7 @@
 package agentgrpc
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -12,6 +13,16 @@ import (
 )
 
 const defaultAgentResponseMaxByteCount = 1000000 // 1M
+
+// Method is gRPC method type.
+type Method string
+
+// Agent gRPC methods
+const (
+	MethodInitialize    Method = "/network.forta.Agent/Initialize"
+	MethodEvaluateTx    Method = "/network.forta.Agent/EvaluateTx"
+	MethodEvaluateBlock Method = "/network.forta.Agent/EvaluateBlock"
+)
 
 // Client allows us to communicate with an agent.
 type Client struct {
@@ -49,10 +60,20 @@ func (client *Client) Dial(cfg config.AgentConfig) error {
 		log.Error(err)
 		return err
 	}
-	client.conn = conn
-	client.AgentClient = protocol.NewAgentClient(conn)
+	client.WithConn(conn)
 	log.Debugf("connected to agent: %s", cfg.ContainerName())
 	return nil
+}
+
+// WithConn sets the client conn.
+func (client *Client) WithConn(conn *grpc.ClientConn) {
+	client.conn = conn
+	client.AgentClient = protocol.NewAgentClient(conn)
+}
+
+// Invoke is a generalization of client methods.
+func (client *Client) Invoke(ctx context.Context, method Method, in, out interface{}, opts ...grpc.CallOption) error {
+	return client.conn.Invoke(ctx, string(method), in, out, opts...)
 }
 
 // Close implements io.Closer.

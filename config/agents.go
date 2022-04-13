@@ -2,8 +2,13 @@ package config
 
 import (
 	"fmt"
+
 	"github.com/forta-protocol/forta-core-go/protocol"
 	"github.com/forta-protocol/forta-core-go/utils"
+)
+
+const (
+	AgentGrpcPort = "50051"
 )
 
 type AgentConfig struct {
@@ -37,5 +42,5 @@ func (ac AgentConfig) ContainerName() string {
 }
 
 func (ac AgentConfig) GrpcPort() string {
-	return "50051"
+	return AgentGrpcPort
 }

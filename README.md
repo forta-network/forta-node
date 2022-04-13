@@ -1,4 +1,4 @@
-![Build](https://github.com/forta-protocol/forta-node/actions/workflows/codedeploy-staging.yml/badge.svg)
+![Build](https://github.com/forta-protocol/forta-node/actions/workflows/release-codedeploy-dev.yml/badge.svg)
 
 # forta-node
 

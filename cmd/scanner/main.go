@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/forta-protocol/forta-node/services/publisher"
+
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	gethlog "github.com/ethereum/go-ethereum/log"
 
@@ -26,6 +28,11 @@ import (
 )
 
 func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, cfg config.Config) (*scanner.TxStreamService, feeds.BlockFeed, error) {
+	cfg.Scan.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Scan.JsonRpc.Url)
+	cfg.Registry.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Registry.JsonRpc.Url)
+	cfg.Registry.IPFS.APIURL = utils.ConvertToDockerHostURL(cfg.Registry.IPFS.APIURL)
+	cfg.Registry.IPFS.GatewayURL = utils.ConvertToDockerHostURL(cfg.Registry.IPFS.GatewayURL)
+
 	url := cfg.Scan.JsonRpc.Url
 	chainID := config.ParseBigInt(cfg.ChainID)
 
@@ -86,10 +93,9 @@ func initBlockAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertS
 	})
 }
 
-func initAlertSender(ctx context.Context, key *keystore.Key) (clients.AlertSender, error) {
-	return clients.NewAlertSender(ctx, clients.AlertSenderConfig{
-		Key:               key,
-		PublisherNodeAddr: config.DockerPublisherContainerName,
+func initAlertSender(ctx context.Context, key *keystore.Key, pubClient clients.PublishClient) (clients.AlertSender, error) {
+	return clients.NewAlertSender(ctx, pubClient, clients.AlertSenderConfig{
+		Key: key,
 	})
 }
 
@@ -99,6 +105,9 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	// can't dial localhost - need to dial host gateway from container
 	cfg.Scan.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Scan.JsonRpc.Url)
 	cfg.Trace.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Trace.JsonRpc.Url)
+	cfg.Registry.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Registry.JsonRpc.Url)
+	cfg.Registry.IPFS.APIURL = utils.ConvertToDockerHostURL(cfg.Registry.IPFS.APIURL)
+	cfg.Registry.IPFS.GatewayURL = utils.ConvertToDockerHostURL(cfg.Registry.IPFS.GatewayURL)
 
 	msgClient := messaging.NewClient("scanner", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 
@@ -107,7 +116,16 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 
-	as, err := initAlertSender(ctx, key)
+	cfg.Publish.APIURL = utils.ConvertToDockerHostURL(cfg.Publish.APIURL)
+	cfg.Publish.IPFS.APIURL = utils.ConvertToDockerHostURL(cfg.Publish.IPFS.APIURL)
+	cfg.Publish.IPFS.GatewayURL = utils.ConvertToDockerHostURL(cfg.Publish.IPFS.GatewayURL)
+
+	publisherSvc, err := publisher.NewPublisher(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	as, err := initAlertSender(ctx, key, publisherSvc)
 	if err != nil {
 		return nil, err
 	}
@@ -152,12 +170,14 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		health.NewService(ctx, "", healthutils.DefaultHealthServerErrHandler, health.CheckerFrom(
 			summarizeReports,
 			ethClient, traceClient, blockFeed, txStream, txAnalyzer, blockAnalyzer, agentPool, registryService,
+			publisherSvc,
 		)),
 		txStream,
 		txAnalyzer,
 		blockAnalyzer,
 		scanner.NewScannerAPI(ctx, blockFeed),
 		scanner.NewTxLogger(ctx),
+		publisherSvc,
 	}
 
 	// for performance tests, this flag avoids using registry service
@@ -215,8 +235,10 @@ func summarizeReports(reports health.Reports) *health.Report {
 		summary.Addf("at block %s.", lastBlock.Details)
 	}
 
+	// report block request failures but ignore "not found"s because we hit them when we are
+	// asking for the latest block that is not just yet available
 	blockByNumberErr, ok := reports.NameContains("chain-json-rpc-client.request.block-by-number.error")
-	if ok && len(blockByNumberErr.Details) > 0 {
+	if ok && len(blockByNumberErr.Details) > 0 && !isNotFoundErr(blockByNumberErr.Details) {
 		summary.Addf("failing to get block with error '%s'", blockByNumberErr.Details)
 		summary.Status(health.StatusFailing)
 	}
@@ -239,13 +261,23 @@ func summarizeReports(reports health.Reports) *health.Report {
 	}
 
 	traceBlockErr, ok := reports.NameContains("trace-json-rpc-client.request.trace-block.error")
-	isTraceBlockNotFoundErr := strings.Contains(traceBlockErr.Details, "not found")
-	if ok && len(traceBlockErr.Details) > 0 && !isTraceBlockNotFoundErr {
+	if ok && len(traceBlockErr.Details) > 0 && !isNotFoundErr(traceBlockErr.Details) {
 		summary.Addf("trace api (trace_block) is failing with error '%s'.", traceBlockErr.Details)
+		summary.Status(health.StatusFailing)
+	}
+	summary.Punc(".")
+
+	batchPublishErr, ok := reports.NameContains("publisher.event.batch-publish.error")
+	if ok && len(batchPublishErr.Details) > 0 {
+		summary.Addf("failed to publish the last batch with error '%s'", batchPublishErr.Details)
 		summary.Status(health.StatusFailing)
 	}
 
 	return summary.Finish()
+}
+
+func isNotFoundErr(errMsg string) bool {
+	return strings.Contains(errMsg, "not found") || strings.Contains(errMsg, "could not find")
 }
 
 func Run() {

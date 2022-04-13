@@ -44,6 +44,15 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 		return nil, false, err
 	}
 
+	// if the scan node is disabled, it must run no agents
+	isEnabledScanner, err := rs.rc.IsEnabledScanner(scanner)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to check if scanner is enabled: %v", err)
+	}
+	if !isEnabledScanner {
+		return []*config.AgentConfig{}, true, nil
+	}
+
 	if rs.version != hash.Hash || time.Since(rs.lastUpdate) > 1*time.Hour {
 		if err := rs.rc.PegLatestBlock(); err != nil {
 			return nil, false, err
@@ -128,7 +137,7 @@ func NewRegistryStore(ctx context.Context, cfg config.Config, ethClient ethereum
 		return nil, err
 	}
 
-	rc, err := registry.NewClient(ctx, registry.ClientConfig{
+	rc, err := GetRegistryClient(ctx, cfg, registry.ClientConfig{
 		JsonRpcUrl: cfg.Registry.JsonRpc.Url,
 		ENSAddress: cfg.ENSConfig.ContractAddress,
 		Name:       "registry-store",
@@ -183,4 +192,16 @@ func NewPrivateRegistryStore(ctx context.Context, cfg config.Config) (*privateRe
 		ctx: ctx,
 		cfg: cfg,
 	}, nil
+}
+
+// GetRegistryClient checks the config and returns the suitaable registry.
+func GetRegistryClient(ctx context.Context, cfg config.Config, registryClientCfg registry.ClientConfig) (registry.Client, error) {
+	if cfg.ENSConfig.Override {
+		ensStore, err := NewENSOverrideStore(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create ens override store: %v", err)
+		}
+		return registry.NewClientWithENSStore(ctx, registryClientCfg, ensStore)
+	}
+	return registry.NewClient(ctx, registryClientCfg)
 }

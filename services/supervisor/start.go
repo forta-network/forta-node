@@ -89,10 +89,15 @@ func (sup *SupervisorService) Start() error {
 }
 
 func (sup *SupervisorService) start() error {
-	if !sup.config.Config.TelemetryConfig.Disable && !sup.config.Config.PrivateModeConfig.Enable {
+	// in addition to the feature disable flags, check private mode flags to disable agent logging and telemetry
+
+	shouldDisableTelemetry := sup.config.Config.TelemetryConfig.Disable || sup.config.Config.PrivateModeConfig.Enable
+	if !shouldDisableTelemetry {
 		go sup.syncTelemetryData()
 	}
-	if !sup.config.Config.PrivateModeConfig.Enable {
+
+	shouldDisableAgentLogs := sup.config.Config.AgentLogsConfig.Disable || sup.config.Config.PrivateModeConfig.Enable
+	if !shouldDisableAgentLogs {
 		go sup.syncAgentLogs()
 	}
 
@@ -184,31 +189,6 @@ func (sup *SupervisorService) start() error {
 	}
 	sup.registerMessageHandlers()
 
-	publisherContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
-		Name:  config.DockerPublisherContainerName,
-		Image: commonNodeImage,
-		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "publisher"},
-		Env: map[string]string{
-			config.EnvReleaseInfo: releaseInfo.String(),
-		},
-		Volumes: map[string]string{
-			hostFortaDir: config.DefaultContainerFortaDirPath,
-		},
-		Ports: map[string]string{
-			"": config.DefaultHealthPort, // random host port
-		},
-		Files: map[string][]byte{
-			"passphrase": []byte(sup.config.Passphrase),
-		},
-		NetworkID:   nodeNetworkID,
-		MaxLogFiles: sup.maxLogFiles,
-		MaxLogSize:  sup.maxLogSize,
-	})
-	if err != nil {
-		return err
-	}
-	sup.addContainerUnsafe(publisherContainer)
-
 	sup.jsonRpcContainer, err = sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerJSONRPCProxyContainerName,
 		Image: commonNodeImage,
@@ -235,6 +215,9 @@ func (sup *SupervisorService) start() error {
 		Name:  config.DockerScannerContainerName,
 		Image: commonNodeImage,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "scanner"},
+		Env: map[string]string{
+			config.EnvReleaseInfo: releaseInfo.String(),
+		},
 		Volumes: map[string]string{
 			hostFortaDir: config.DefaultContainerFortaDirPath,
 		},
@@ -255,9 +238,6 @@ func (sup *SupervisorService) start() error {
 	sup.addContainerUnsafe(sup.scannerContainer)
 
 	if !sup.config.Config.ExposeNats {
-		if err := sup.attachToNetwork(config.DockerPublisherContainerName, natsNetworkID); err != nil {
-			return err
-		}
 		if err := sup.attachToNetwork(config.DockerScannerContainerName, natsNetworkID); err != nil {
 			return err
 		}
@@ -438,10 +418,20 @@ func (sup *SupervisorService) Stop() error {
 		if services.IsGracefulShutdown() && cnt.IsAgent {
 			continue // keep container agents alive
 		}
-		if err := sup.client.StopContainer(ctx, cnt.DockerContainer.ID); err != nil {
-			log.Error(fmt.Sprintf("error stopping %s container", cnt.DockerContainer.ID), err)
+		var err error
+		if cnt.IsAgent {
+			err = sup.client.StopContainer(ctx, cnt.DockerContainer.ID)
 		} else {
-			log.Infof("Container %s is stopped", cnt.DockerContainer.ID)
+			err = sup.client.InterruptContainer(ctx, cnt.DockerContainer.ID)
+		}
+		logger := log.WithFields(log.Fields{
+			"id":      cnt.ID,
+			"isAgent": cnt.IsAgent,
+		})
+		if err != nil {
+			logger.WithError(err).Error("error stopping container")
+		} else {
+			logger.Info("requested to stop container")
 		}
 	}
 	return nil
@@ -457,7 +447,7 @@ func (sup *SupervisorService) Health() health.Reports {
 	defer sup.mu.RUnlock()
 
 	containersStatus := health.StatusOK
-	if len(sup.containers) < 4 {
+	if len(sup.containers) < 3 {
 		containersStatus = health.StatusFailing
 	}
 

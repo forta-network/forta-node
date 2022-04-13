@@ -77,16 +77,21 @@ func (p *JsonRpcProxy) Start() error {
 func (p *JsonRpcProxy) metricHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		t := time.Now()
-		h.ServeHTTP(w, req)
-		duration := time.Since(t)
-		agentConfig, ok := p.findAgentFromRemoteAddr(req.RemoteAddr)
-		if ok {
-			if shouldLimitAgent := p.rateLimiter.CheckLimit(agentConfig.ID); shouldLimitAgent {
-				w.WriteHeader(http.StatusTooManyRequests)
-				return
-			}
+		agentConfig, foundAgent := p.findAgentFromRemoteAddr(req.RemoteAddr)
+		if foundAgent && p.rateLimiter.ExceedsLimit(agentConfig.ID) {
+			writeTooManyReqsErr(w, req)
 			p.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{
-				Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, duration),
+				Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, 0, 1, 0),
+			})
+			return
+		}
+
+		h.ServeHTTP(w, req)
+
+		if foundAgent {
+			duration := time.Since(t)
+			p.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{
+				Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, 1, 0, duration),
 			})
 		}
 	})
@@ -187,14 +192,20 @@ func NewJsonRpcProxy(ctx context.Context, cfg config.Config) (*JsonRpcProxy, err
 		return nil, fmt.Errorf("failed to create the global docker client: %v", err)
 	}
 	msgClient := messaging.NewClient("json-rpc-proxy", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
+
+	rateLimiting := cfg.JsonRpcProxy.RateLimitConfig
+	if rateLimiting == nil {
+		rateLimiting = config.GetChainSettings(cfg.ChainID).JsonRpcRateLimiting
+	}
+
 	return &JsonRpcProxy{
 		ctx:          ctx,
 		cfg:          jCfg,
 		dockerClient: globalClient,
 		msgClient:    msgClient,
 		rateLimiter: NewRateLimiter(
-			cfg.JsonRpcProxy.RateLimitConfig.Rate,
-			cfg.JsonRpcProxy.RateLimitConfig.Burst,
+			rateLimiting.Rate,
+			rateLimiting.Burst,
 		),
 	}, nil
 }

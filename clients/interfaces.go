@@ -5,11 +5,13 @@ import (
 	"io"
 
 	"github.com/forta-protocol/forta-core-go/domain"
+	"google.golang.org/grpc"
 
 	"github.com/docker/docker/api/types"
 	"github.com/golang/protobuf/proto"
 
 	"github.com/forta-protocol/forta-core-go/protocol"
+	"github.com/forta-protocol/forta-node/clients/agentgrpc"
 	"github.com/forta-protocol/forta-node/config"
 )
 
@@ -49,11 +51,12 @@ type MessageClient interface {
 // AgentClient makes the gRPC requests to evaluate block and txs and receive results.
 type AgentClient interface {
 	Dial(config.AgentConfig) error
+	Invoke(ctx context.Context, method agentgrpc.Method, in, out interface{}, opts ...grpc.CallOption) error
 	protocol.AgentClient
 	io.Closer
 }
 
 // AlertAPIClient calls an http api on the analyzer to store alerts
 type AlertAPIClient interface {
-	PostBatch(batch *domain.AlertBatch, token string) error
+	PostBatch(batch *domain.AlertBatchRequest, token string) (*domain.AlertBatchResponse, error)
 }

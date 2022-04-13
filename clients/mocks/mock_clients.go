@@ -12,6 +12,7 @@ import (
 	domain "github.com/forta-protocol/forta-core-go/domain"
 	protocol "github.com/forta-protocol/forta-core-go/protocol"
 	clients "github.com/forta-protocol/forta-node/clients"
+	agentgrpc "github.com/forta-protocol/forta-node/clients/agentgrpc"
 	config "github.com/forta-protocol/forta-node/config"
 	gomock "github.com/golang/mock/gomock"
 	proto "github.com/golang/protobuf/proto"
@@ -527,6 +528,25 @@ func (mr *MockAgentClientMockRecorder) Initialize(ctx, in interface{}, opts ...i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Initialize", reflect.TypeOf((*MockAgentClient)(nil).Initialize), varargs...)
 }
 
+// Invoke mocks base method.
+func (m *MockAgentClient) Invoke(ctx context.Context, method agentgrpc.Method, in, out interface{}, opts ...grpc.CallOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, method, in, out}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Invoke", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Invoke indicates an expected call of Invoke.
+func (mr *MockAgentClientMockRecorder) Invoke(ctx, method, in, out interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, method, in, out}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Invoke", reflect.TypeOf((*MockAgentClient)(nil).Invoke), varargs...)
+}
+
 // MockAlertAPIClient is a mock of AlertAPIClient interface.
 type MockAlertAPIClient struct {
 	ctrl     *gomock.Controller
@@ -551,11 +571,12 @@ func (m *MockAlertAPIClient) EXPECT() *MockAlertAPIClientMockRecorder {
 }
 
 // PostBatch mocks base method.
-func (m *MockAlertAPIClient) PostBatch(batch *domain.AlertBatch, token string) error {
+func (m *MockAlertAPIClient) PostBatch(batch *domain.AlertBatchRequest, token string) (*domain.AlertBatchResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PostBatch", batch, token)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*domain.AlertBatchResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // PostBatch indicates an expected call of PostBatch.

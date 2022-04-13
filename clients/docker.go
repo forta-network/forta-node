@@ -31,7 +31,14 @@ const (
 	DockerLabelFortaSettingsAgentLogsEnable = "network.forta.settings.agent-logs.enable"
 )
 
-var defaultLabels = map[string]string{DockerLabelForta: "true"}
+type dockerLabel struct {
+	Name  string
+	Value string
+}
+
+var defaultLabels = []dockerLabel{
+	{Name: DockerLabelForta, Value: "true"},
+}
 
 // Client errors
 var (
@@ -96,7 +103,7 @@ type dockerClient struct {
 	workers  *workers.Group
 	username string
 	password string
-	labels   map[string]string
+	labels   []dockerLabel
 }
 
 func (cfg DockerContainerConfig) envVars() []string {
@@ -186,7 +193,7 @@ func (d *dockerClient) createNetwork(ctx context.Context, name string, internal 
 	}
 
 	resp, err := d.cli.NetworkCreate(ctx, name, types.NetworkCreate{
-		Labels:   d.labels,
+		Labels:   labelsToMap(d.labels),
 		Internal: internal,
 	})
 	if err != nil {
@@ -323,7 +330,7 @@ func (d *dockerClient) nuke(ctx context.Context) error {
 		return fmt.Errorf("unexpected error while getting supervisor container: %v", err)
 	}
 
-	// step 1: stop all and wait until each exit
+	// step 2: stop all and wait until each exit
 	for _, container := range containers {
 		if err := d.StopContainer(ctx, container.ID); err != nil {
 			return fmt.Errorf("failed to stop: %v", err)
@@ -333,12 +340,12 @@ func (d *dockerClient) nuke(ctx context.Context) error {
 		}
 	}
 
-	// step 2: prune everything
+	// step 3: prune everything
 	if err := d.Prune(ctx); err != nil {
 		return fmt.Errorf("failed to prune: %v", err)
 	}
 
-	// step 3: ensure that the containers are really pruned
+	// step 4: ensure that the containers are really pruned
 	for _, container := range containers {
 		if err := d.WaitContainerPrune(ctx, container.ID); err != nil {
 			return err
@@ -353,7 +360,7 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 	log.WithFields(log.Fields{
 		"image": config.Image,
 		"name":  config.Name,
-	}).Info("starting container")
+	}).Info("StartContainer()")
 	containers, err := d.GetContainers(ctx)
 	if err != nil {
 		return nil, err
@@ -378,7 +385,10 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 		if err != nil {
 			return nil, err
 		}
-		log.Infof("Container %s (%s) is started", foundContainer.ID, config.Name)
+		log.WithFields(log.Fields{
+			"id":   foundContainer.ID,
+			"name": config.Name,
+		}).Info("container is starting")
 		return &DockerContainer{Name: config.Name, ID: foundContainer.ID, Config: config, ImageHash: inspection.Image}, nil
 	}
 
@@ -417,7 +427,7 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 	cntCfg := &container.Config{
 		Image:  config.Image,
 		Env:    config.envVars(),
-		Labels: d.labels,
+		Labels: labelsToMap(d.labels),
 	}
 	// add custom labels
 	for k, v := range config.Labels {
@@ -481,7 +491,10 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 		return nil, err
 	}
 
-	log.Infof("Container %s (%s) is started", cont.ID, config.Name)
+	log.WithFields(log.Fields{
+		"id":   cont.ID,
+		"name": config.Name,
+	}).Info("container is starting")
 	return &DockerContainer{Name: config.Name, ID: cont.ID, Config: config, ImageHash: inspection.Image}, nil
 }
 
@@ -575,6 +588,7 @@ func (d *dockerClient) WaitContainerStart(ctx context.Context, id string) error 
 		logger.Info("waiting for container start")
 		c, err := d.GetContainerByID(ctx, id)
 		if err == nil && c != nil && c.State == "running" {
+			logger.Info("container started")
 			return nil
 		}
 		if err != nil {
@@ -674,22 +688,29 @@ func (d *dockerClient) GetContainerLogs(ctx context.Context, containerID, tail s
 
 func (d *dockerClient) labelFilter() filters.Args {
 	filter := filters.NewArgs()
-	for k, v := range d.labels {
-		filter.Add("label", fmt.Sprintf("%s=%s", k, v))
+	for _, label := range d.labels {
+		filter.Add("label", fmt.Sprintf("%s=%s", label.Name, label.Value))
 	}
 	return filter
 }
 
-func initLabels(name string) map[string]string {
-	result := make(map[string]string)
-	for k, v := range defaultLabels {
-		result[k] = v
-	}
+func initLabels(name string) []dockerLabel {
 	if len(name) == 0 {
-		return result
+		return defaultLabels
 	}
-	result[DockerLabelFortaSupervisor] = name
-	return result
+
+	return append(defaultLabels, dockerLabel{
+		Name:  DockerLabelFortaSupervisor,
+		Value: name,
+	})
+}
+
+func labelsToMap(labels []dockerLabel) map[string]string {
+	m := make(map[string]string)
+	for _, label := range labels {
+		m[label.Name] = label.Value
+	}
+	return m
 }
 
 // NewDockerClient creates a new docker client

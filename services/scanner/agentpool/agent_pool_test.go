@@ -6,10 +6,12 @@ import (
 
 	"github.com/forta-protocol/forta-core-go/protocol"
 	"github.com/forta-protocol/forta-node/clients"
+	"github.com/forta-protocol/forta-node/clients/agentgrpc"
 	"github.com/forta-protocol/forta-node/clients/messaging"
 	mock_clients "github.com/forta-protocol/forta-node/clients/mocks"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/services/scanner"
+	"google.golang.org/grpc"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -46,8 +48,8 @@ func (s *Suite) SetupTest() {
 	s.agentClient = mock_clients.NewMockAgentClient(gomock.NewController(s.T()))
 	s.ap = &AgentPool{
 		ctx:          context.Background(),
-		txResults:    make(chan *scanner.TxResult, DefaultBufferSize),
-		blockResults: make(chan *scanner.BlockResult, DefaultBufferSize),
+		txResults:    make(chan *scanner.TxResult),
+		blockResults: make(chan *scanner.BlockResult),
 		msgClient:    s.msgClient,
 		dialer: func(agentCfg config.AgentConfig) (clients.AgentClient, error) {
 			return s.agentClient, nil
@@ -84,17 +86,35 @@ func (s *Suite) TestStartProcessStop() {
 	// When an evaluate requests are received
 	// Then the agent should process them
 
-	txReq := &protocol.EvaluateTxRequest{Event: &protocol.TransactionEvent{Block: &protocol.TransactionEvent_EthBlock{BlockNumber: "123123"}, Transaction: &protocol.TransactionEvent_EthTransaction{Hash: "0x0"}}}
-	txResp := &protocol.EvaluateTxResponse{Metadata: map[string]string{}}
+	txReq := &protocol.EvaluateTxRequest{
+		Event: &protocol.TransactionEvent{
+			Block: &protocol.TransactionEvent_EthBlock{BlockNumber: "123123"},
+			Transaction: &protocol.TransactionEvent_EthTransaction{
+				Hash: "0x0",
+			},
+		},
+	}
+	txResp := &protocol.EvaluateTxResponse{Metadata: map[string]string{"imageHash": ""}}
 	blockReq := &protocol.EvaluateBlockRequest{Event: &protocol.BlockEvent{BlockNumber: "123123"}}
-	blockResp := &protocol.EvaluateBlockResponse{Metadata: map[string]string{}}
-	s.agentClient.EXPECT().EvaluateTx(gomock.Any(), txReq).Return(txResp, nil)
-	s.agentClient.EXPECT().EvaluateBlock(gomock.Any(), blockReq).Return(blockResp, nil)
-	s.msgClient.EXPECT().Publish(messaging.SubjectScannerBlock, gomock.Any())
+	blockResp := &protocol.EvaluateBlockResponse{Metadata: map[string]string{"imageHash": ""}}
+
+	s.agentClient.EXPECT().Invoke(
+		gomock.Any(), agentgrpc.MethodEvaluateTx,
+		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateTxResponse{}),
+	).Return(nil)
 	s.ap.SendEvaluateTxRequest(txReq)
-	s.ap.SendEvaluateBlockRequest(blockReq)
 	txResult := <-s.ap.TxResults()
+	txResp.Timestamp = txResult.Response.Timestamp // bypass - hard to match
+
+	s.agentClient.EXPECT().Invoke(
+		gomock.Any(), agentgrpc.MethodEvaluateBlock,
+		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateBlockResponse{}),
+	).Return(nil)
+	s.msgClient.EXPECT().Publish(messaging.SubjectScannerBlock, gomock.Any())
+	s.ap.SendEvaluateBlockRequest(blockReq)
 	blockResult := <-s.ap.BlockResults()
+	blockResp.Timestamp = blockResult.Response.Timestamp // bypass - hard to match
+
 	s.r.Equal(txReq, txResult.Request)
 	s.r.Equal(txResp, txResult.Response)
 	s.r.Equal(blockReq, blockResult.Request)

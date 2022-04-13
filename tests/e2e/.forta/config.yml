@@ -1,0 +1,40 @@
+chainId: 137
+
+registry:
+  ipfs:
+    gatewayUrl: http://localhost:8080
+    apiUrl: http://localhost:5001
+  jsonRpc:
+    url: http://localhost:8545
+  containerRegistry: localhost:1970
+  checkIntervalSeconds: 1
+
+scan:
+  jsonRpc:
+    url: http://localhost:8545
+
+publish:
+  apiUrl: http://localhost:9090
+  ipfs:
+    gatewayUrl: http://localhost:8080
+    apiUrl: http://localhost:5001
+  batch:
+    skipEmpty: true
+
+autoUpdate:
+  checkIntervalSeconds: 1
+
+trace:
+  enabled: false
+
+ens:
+  override: true
+
+telemetry:
+  disable: true
+
+agentLogs:
+  disable: true
+
+log:
+  level: trace

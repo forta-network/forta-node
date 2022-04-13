@@ -9,11 +9,9 @@ import (
 	"time"
 
 	"github.com/forta-protocol/forta-core-go/clients/health"
-	"github.com/forta-protocol/forta-core-go/domain"
 	"github.com/forta-protocol/forta-core-go/ethereum"
 	"github.com/forta-protocol/forta-core-go/utils"
 	"github.com/forta-protocol/forta-node/clients"
-	"github.com/forta-protocol/forta-node/clients/alertapi"
 	"github.com/forta-protocol/forta-node/config"
 	"github.com/forta-protocol/forta-node/healthutils"
 	"github.com/forta-protocol/forta-node/store"
@@ -89,8 +87,15 @@ func (runner *Runner) Name() string {
 
 // Stop stops the service
 func (runner *Runner) Stop() error {
-	if err := runner.globalClient.Nuke(context.Background()); err != nil {
-		return fmt.Errorf("failed to nuke containers before exiting: %v", err)
+	runner.containerMu.RLock()
+	defer runner.containerMu.RUnlock()
+
+	if runner.updaterContainer != nil {
+		runner.dockerClient.InterruptContainer(context.Background(), runner.updaterContainer.ID)
+
+	}
+	if runner.supervisorContainer != nil {
+		runner.dockerClient.InterruptContainer(context.Background(), runner.supervisorContainer.ID)
 	}
 	return nil
 }
@@ -112,11 +117,6 @@ func (runner *Runner) doStartUpCheck() error {
 		if err != nil {
 			return fmt.Errorf("trace api check failed: %v", err)
 		}
-	}
-	// ensure that the batch api is available for publishing to
-	if err := alertapi.NewClient(runner.cfg.Publish.APIURL).
-		PostBatch(&domain.AlertBatch{Ref: "test"}, ""); err != nil {
-		return fmt.Errorf("batch api check failed: %v", err)
 	}
 	return nil
 }
@@ -191,6 +191,8 @@ func (runner *Runner) keepContainersUpToDate() {
 			} else {
 				runner.currentUpdaterImg = latestRefs.Updater
 			}
+		} else {
+			log.Debug("same image - not replacing updater")
 		}
 
 		if latestRefs.Supervisor != runner.currentSupervisorImg {
@@ -200,7 +202,7 @@ func (runner *Runner) keepContainersUpToDate() {
 				runner.currentSupervisorImg = latestRefs.Supervisor
 			}
 		} else {
-			logger.Info("skipping supervisor launch for now")
+			log.Debug("same image - not replacing supervisor")
 		}
 
 		runner.containerMu.Unlock()
@@ -214,7 +216,7 @@ func (runner *Runner) ensureImage(logger *log.Entry, name string, imageRef strin
 	if !runner.cfg.Development {
 		fixedRef, err := utils.ValidateDiscoImageRef(runner.cfg.Registry.ContainerRegistry, imageRef)
 		if err != nil {
-			logger.WithError(err).Warn("not a disco ref - skipping pull")
+			logger.WithError(err).WithField("imageRef", imageRef).Warn("not a disco ref")
 		} else {
 			imageRef = fixedRef // important
 		}
@@ -268,6 +270,7 @@ func (runner *Runner) startUpdater(logger *log.Entry, latestRefs store.ImageRefs
 			config.DefaultContainerPort: config.DefaultContainerPort,
 			"":                          config.DefaultHealthPort, // random host port
 		},
+		DialHost:    true,
 		MaxLogSize:  runner.cfg.Log.MaxLogSize,
 		MaxLogFiles: runner.cfg.Log.MaxLogFiles,
 	})

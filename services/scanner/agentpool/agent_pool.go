@@ -20,11 +20,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Constants
-const (
-	DefaultBufferSize = 100 * poolagent.DefaultBufferSize // i.e. assuming 100 agents
-)
-
 // AgentPool maintains the pool of agents that the scanner should
 // interact with.
 type AgentPool struct {
@@ -41,8 +36,8 @@ type AgentPool struct {
 func NewAgentPool(ctx context.Context, cfg config.ScannerConfig, msgClient clients.MessageClient) *AgentPool {
 	agentPool := &AgentPool{
 		ctx:          ctx,
-		txResults:    make(chan *scanner.TxResult, DefaultBufferSize),
-		blockResults: make(chan *scanner.BlockResult, DefaultBufferSize),
+		txResults:    make(chan *scanner.TxResult),
+		blockResults: make(chan *scanner.BlockResult),
 		msgClient:    msgClient,
 		dialer: func(ac config.AgentConfig) (clients.AgentClient, error) {
 			client := agentgrpc.NewClient()
@@ -123,6 +118,12 @@ func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 	agents := ap.agents
 	ap.mu.RUnlock()
 
+	encoded, err := agentgrpc.EncodeMessage(req)
+	if err != nil {
+		lg.WithError(err).Error("failed to encode message")
+		return
+	}
+
 	for _, agent := range agents {
 		if !agent.IsReady() || !agent.ShouldProcessBlock(req.Event.Block.BlockNumber) {
 			continue
@@ -136,7 +137,10 @@ func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 		select {
 		case <-agent.Closed():
 			ap.discardAgent(agent)
-		case agent.TxRequestCh() <- req:
+		case agent.TxRequestCh() <- &poolagent.TxRequest{
+			Original: req,
+			Encoded:  encoded,
+		}:
 		default: // do not try to send if the buffer is full
 			lg.WithField("agent", agent.Config().ID).Debug("agent tx request buffer is full - skipping")
 		}
@@ -168,6 +172,12 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 	agents := ap.agents
 	ap.mu.RUnlock()
 
+	encoded, err := agentgrpc.EncodeMessage(req)
+	if err != nil {
+		lg.WithError(err).Error("failed to encode message")
+		return
+	}
+
 	var metricsList []*protocol.AgentMetric
 	for _, agent := range agents {
 		if !agent.IsReady() || !agent.ShouldProcessBlock(req.Event.BlockNumber) {
@@ -183,7 +193,10 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 		select {
 		case <-agent.Closed():
 			ap.discardAgent(agent)
-		case agent.BlockRequestCh() <- req:
+		case agent.BlockRequestCh() <- &poolagent.BlockRequest{
+			Original: req,
+			Encoded:  encoded,
+		}:
 		default: // do not try to send if the buffer is full
 			lg.WithField("agent", agent.Config().ID).Warn("agent block request buffer is full - skipping")
 			metricsList = append(metricsList, metrics.CreateAgentMetric(agent.Config().ID, metrics.MetricBlockDrop, 1))

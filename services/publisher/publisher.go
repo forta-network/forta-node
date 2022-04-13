@@ -3,36 +3,34 @@ package publisher
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math/big"
-	"net"
 	"net/http"
+	"os"
+	"path"
 	"sync"
 	"time"
-
-	"github.com/forta-protocol/forta-core-go/release"
-
-	"github.com/forta-protocol/forta-core-go/domain"
-	"github.com/forta-protocol/forta-node/clients"
-	"github.com/forta-protocol/forta-node/store"
-
-	"github.com/forta-protocol/forta-core-go/clients/health"
-	"github.com/forta-protocol/forta-node/clients/messaging"
-	"github.com/goccy/go-json"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/forta-protocol/forta-core-go/clients/health"
+	"github.com/forta-protocol/forta-core-go/domain"
+	"github.com/forta-protocol/forta-core-go/ipfs"
+	"github.com/forta-protocol/forta-core-go/protocol"
+	"github.com/forta-protocol/forta-core-go/release"
+	"github.com/forta-protocol/forta-core-go/security"
+	"github.com/forta-protocol/forta-node/clients"
+	"github.com/forta-protocol/forta-node/clients/alertapi"
+	"github.com/forta-protocol/forta-node/clients/messaging"
+	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-protocol/forta-node/services/publisher/testalerts"
+	"github.com/forta-protocol/forta-node/store"
 	ipfsapi "github.com/ipfs/go-ipfs-api"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-
-	"github.com/forta-protocol/forta-core-go/protocol"
-	"github.com/forta-protocol/forta-core-go/security"
-	"github.com/forta-protocol/forta-core-go/utils"
-	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/services/publisher/testalerts"
 )
 
 const (
@@ -47,12 +45,13 @@ type Publisher struct {
 	ctx               context.Context
 	cfg               PublisherConfig
 	contract          AlertsContract
-	ipfs              IPFS
+	ipfs              ipfs.Client
 	testAlertLogger   TestAlertLogger
 	metricsAggregator *AgentMetricsAggregator
 	messageClient     *messaging.Client
 	alertClient       clients.AlertAPIClient
-	batchRefStore     store.BatchRefStore
+	batchRefStore     store.StringStore
+	lastReceiptStore  store.StringStore
 
 	server *grpc.Server
 
@@ -125,7 +124,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 			Version: pub.cfg.ReleaseSummary.Version,
 		}
 	}
-	lastBatchRef, err := pub.batchRefStore.GetLast()
+	lastBatchRef, err := pub.batchRefStore.Get()
 	if err == nil {
 		batch.Parent = lastBatchRef
 	}
@@ -165,7 +164,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		return nil
 	}
 
-	cid, err := pub.ipfs.Add(&buf, ipfsapi.OnlyHash(true))
+	cid, err := pub.ipfs.CalculateFileHash(buf.Bytes())
 	if err != nil {
 		return fmt.Errorf("failed to store alert data to ipfs: %v", err)
 	}
@@ -184,6 +183,28 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		},
 	)
 
+	var lastReceipt string
+	lr, err := pub.lastReceiptStore.Get()
+	if err == nil {
+		lastReceipt = lr
+	}
+
+	signedBatchSummary, err := security.SignBatchSummary(pub.cfg.Key, &protocol.BatchSummary{
+		Batch:            cid,
+		ChainId:          batch.ChainId,
+		BlockStart:       batch.BlockStart,
+		BlockEnd:         batch.BlockEnd,
+		AlertCount:       batch.AlertCount,
+		ScannerVersion:   batch.ScannerVersion,
+		PreviousReceipt:  lastReceipt,
+		LatestBlockInput: batch.LatestBlockInput,
+		Timestamp:        time.Now().UTC().Format(time.RFC3339),
+	})
+	if err != nil {
+		logger.WithError(err).Error("failed to sign batch summary")
+		return err
+	}
+
 	scannerJwt, err := security.CreateScannerJWT(pub.cfg.Key, map[string]interface{}{
 		"batch": cid,
 	})
@@ -192,20 +213,43 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		logger.WithError(err).Error("failed to sign cid")
 		return err
 	}
-	err = pub.alertClient.PostBatch(&domain.AlertBatch{
-		Scanner:     pub.cfg.Key.Address.Hex(),
-		ChainID:     int64(batch.ChainId),
-		BlockStart:  int64(batch.BlockStart),
-		BlockEnd:    int64(batch.BlockEnd),
-		AlertCount:  int64(batch.AlertCount),
-		MaxSeverity: int64(batch.MaxSeverity),
-		Ref:         cid,
-		SignedBatch: signedBatch,
+	resp, err := pub.alertClient.PostBatch(&domain.AlertBatchRequest{
+		Scanner:            pub.cfg.Key.Address.Hex(),
+		ChainID:            int64(batch.ChainId),
+		BlockStart:         int64(batch.BlockStart),
+		BlockEnd:           int64(batch.BlockEnd),
+		AlertCount:         int64(batch.AlertCount),
+		MaxSeverity:        int64(batch.MaxSeverity),
+		Ref:                cid,
+		SignedBatch:        signedBatch,
+		SignedBatchSummary: signedBatchSummary,
 	}, scannerJwt)
 
 	if err != nil {
 		logger.WithError(err).Error("alert while sending batch")
 		return fmt.Errorf("failed to send the alert tx: %v", err)
+	}
+
+	//TODO: after receipts are returned, make it non-optional
+	if resp.SignedReceipt != nil {
+		// store off receipt id
+		if err := pub.lastReceiptStore.Put(resp.ReceiptID); err != nil {
+			logger.WithError(err).Error("failed to marshal receipt")
+			return err
+		}
+		logger = logger.WithFields(log.Fields{
+			"receiptId": resp.ReceiptID,
+		})
+
+		// if for some reason receipt can't marshal, log and move on
+		b, err := json.Marshal(resp.SignedReceipt)
+		if err != nil {
+			logger.WithError(err).Error("failed to marshal receipt (not saving receipt)")
+			return nil
+		}
+		logger = logger.WithFields(log.Fields{
+			"receipt": string(b),
+		})
 	}
 
 	logger.Info("alert batch")
@@ -247,9 +291,8 @@ func (pub *Publisher) publishBatches() {
 		pub.lastBatchPublishErr.Set(err)
 		if err != nil {
 			log.Errorf("failed to publish alert batch: %v", err)
-			time.Sleep(time.Second * 3)
 		}
-		time.Sleep(time.Millisecond * 200)
+		time.Sleep(time.Millisecond * 20)
 	}
 }
 
@@ -527,23 +570,9 @@ func (pub *Publisher) forwardPrivateAlerts() {
 }
 
 func (pub *Publisher) Start() error {
-	lis, err := net.Listen("tcp", "0.0.0.0:8770")
-	if err != nil {
-		return err
-	}
-	pub.server = grpc.NewServer()
-	protocol.RegisterPublisherNodeServer(pub.server, pub)
-	utils.GoGrpcServe(pub.server, lis)
-
-	if pub.cfg.Config.PrivateModeConfig.Enable {
-		go pub.forwardPrivateAlerts()
-		return nil
-	}
-
 	go pub.prepareBatches()
 	go pub.publishBatches()
 	pub.registerMessageHandlers()
-
 	return nil
 }
 
@@ -574,20 +603,37 @@ func (pub *Publisher) Health() health.Reports {
 	}
 }
 
-func NewPublisher(ctx context.Context, mc *messaging.Client, alertClient clients.AlertAPIClient, cfg PublisherConfig) (*Publisher, error) {
+func NewPublisher(ctx context.Context, cfg config.Config) (*Publisher, error) {
+	mc := messaging.NewClient("metrics", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 
-	var ipfsClient IPFS
-	switch {
-	case cfg.PublisherConfig.SkipPublish:
-		// use nil IPFS client
+	key, err := security.LoadKey(config.DefaultContainerKeyDirPath)
+	if err != nil {
+		return nil, err
+	}
 
-	case len(cfg.PublisherConfig.IPFS.Username) > 0 && len(cfg.PublisherConfig.IPFS.Password) > 0:
-		ipfsClient = ipfsapi.NewShellWithClient(cfg.PublisherConfig.IPFS.APIURL, &http.Client{
-			Transport: utils.NewBasicAuthTransport(cfg.PublisherConfig.IPFS.Username, cfg.PublisherConfig.IPFS.Password),
-		})
+	releaseInfoStr := os.Getenv(config.EnvReleaseInfo)
+	var releaseSummary *release.ReleaseSummary
+	if len(releaseInfoStr) > 0 {
+		releaseInfo := release.ReleaseInfoFromString(releaseInfoStr)
+		releaseSummary = release.MakeSummaryFromReleaseInfo(releaseInfo)
+	}
 
-	default:
-		ipfsClient = ipfsapi.NewShellWithClient(cfg.PublisherConfig.IPFS.APIURL, http.DefaultClient)
+	apiClient := alertapi.NewClient(cfg.Publish.APIURL)
+
+	return initPublisher(ctx, mc, apiClient, PublisherConfig{
+		ChainID:         cfg.ChainID,
+		Key:             key,
+		PublisherConfig: cfg.Publish,
+		ReleaseSummary:  releaseSummary,
+		Config:          cfg,
+	})
+}
+
+func initPublisher(ctx context.Context, mc *messaging.Client, alertClient clients.AlertAPIClient, cfg PublisherConfig) (*Publisher, error) {
+
+	ipfsClient, err := ipfs.NewClient(cfg.PublisherConfig.IPFS.APIURL)
+	if err != nil {
+		return nil, err
 	}
 
 	batchInterval := defaultInterval
@@ -613,7 +659,8 @@ func NewPublisher(ctx context.Context, mc *messaging.Client, alertClient clients
 		metricsAggregator: NewMetricsAggregator(),
 		messageClient:     mc,
 		alertClient:       alertClient,
-		batchRefStore:     store.NewBatchRefStore(cfg.Config.FortaDir),
+		batchRefStore:     store.NewFileStringStore(path.Join(cfg.Config.FortaDir, ".last-batch")),
+		lastReceiptStore:  store.NewFileStringStore(path.Join(cfg.Config.FortaDir, ".last-receipt")),
 
 		skipEmpty:     cfg.PublisherConfig.Batch.SkipEmpty,
 		skipPublish:   cfg.PublisherConfig.SkipPublish,

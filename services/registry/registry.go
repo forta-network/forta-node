@@ -90,8 +90,7 @@ func (rs *RegistryService) Start() error {
 
 func (rs *RegistryService) start() error {
 	go func() {
-		//TODO: possibly make this configurable, but 15s per block is normal
-		ticker := time.NewTicker(15 * time.Second)
+		ticker := time.NewTicker(time.Duration(rs.cfg.Registry.CheckIntervalSeconds) * time.Second)
 		for {
 			err := rs.publishLatestAgents()
 			rs.lastErr.Set(err)
