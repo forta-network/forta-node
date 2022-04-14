@@ -174,38 +174,48 @@ func (runner *Runner) startEmbeddedSupervisor() {
 }
 
 func (runner *Runner) keepContainersUpToDate() {
+	defer func() {
+		if r := recover(); r != nil {
+			runner.Stop()
+			panic(r)
+		}
+	}()
+
 	for latestRefs := range runner.imgStore.Latest() {
-		runner.containerMu.Lock()
+		runner.updateContainers(latestRefs)
+	}
+}
 
-		logger := log.WithField("supervisor", latestRefs.Supervisor).WithField("updater", latestRefs.Updater)
-		if latestRefs.ReleaseInfo != nil {
-			logger = logger.WithFields(log.Fields{
-				"commit":      latestRefs.ReleaseInfo.Manifest.Release.Commit,
-				"releaseInfo": latestRefs.ReleaseInfo.String(),
-			})
-		}
-		logger.Info("detected new images")
-		if latestRefs.Updater != runner.currentUpdaterImg {
-			if err := runner.replaceUpdater(logger, latestRefs); err != nil {
-				logger.WithError(err).Panic("error replacing updater")
-			} else {
-				runner.currentUpdaterImg = latestRefs.Updater
-			}
+func (runner *Runner) updateContainers(latestRefs store.ImageRefs) {
+	runner.containerMu.Lock()
+	defer runner.containerMu.Unlock()
+
+	logger := log.WithField("supervisor", latestRefs.Supervisor).WithField("updater", latestRefs.Updater)
+	if latestRefs.ReleaseInfo != nil {
+		logger = logger.WithFields(log.Fields{
+			"commit":      latestRefs.ReleaseInfo.Manifest.Release.Commit,
+			"releaseInfo": latestRefs.ReleaseInfo.String(),
+		})
+	}
+	logger.Info("detected new images")
+	if latestRefs.Updater != runner.currentUpdaterImg {
+		if err := runner.replaceUpdater(logger, latestRefs); err != nil {
+			logger.WithError(err).Panic("error replacing updater")
 		} else {
-			log.Debug("same image - not replacing updater")
+			runner.currentUpdaterImg = latestRefs.Updater
 		}
+	} else {
+		log.Debug("same image - not replacing updater")
+	}
 
-		if latestRefs.Supervisor != runner.currentSupervisorImg {
-			if err := runner.replaceSupervisor(logger, latestRefs); err != nil {
-				logger.WithError(err).Panic("error replacing supervisor")
-			} else {
-				runner.currentSupervisorImg = latestRefs.Supervisor
-			}
+	if latestRefs.Supervisor != runner.currentSupervisorImg {
+		if err := runner.replaceSupervisor(logger, latestRefs); err != nil {
+			logger.WithError(err).Panic("error replacing supervisor")
 		} else {
-			log.Debug("same image - not replacing supervisor")
+			runner.currentSupervisorImg = latestRefs.Supervisor
 		}
-
-		runner.containerMu.Unlock()
+	} else {
+		log.Debug("same image - not replacing supervisor")
 	}
 }
 
