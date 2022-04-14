@@ -13,10 +13,6 @@ import (
 	"github.com/forta-protocol/forta-node/services/supervisor"
 )
 
-const (
-	expectedContainersCount = 4
-)
-
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
 	cfg.Registry.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Registry.JsonRpc.Url)
 	cfg.Registry.IPFS.APIURL = utils.ConvertToDockerHostURL(cfg.Registry.IPFS.APIURL)
@@ -53,11 +49,11 @@ func summarizeReports(reports health.Reports) *health.Report {
 	containersManager, ok := reports.NameContains("containers.managed")
 	if ok {
 		count, _ := strconv.Atoi(containersManager.Details)
-		if count < expectedContainersCount {
-			summary.Addf("missing %d containers.", expectedContainersCount-count)
+		if count < config.DockerSupervisorManagedContainers {
+			summary.Addf("missing %d containers.", config.DockerSupervisorManagedContainers-count)
 			summary.Status(health.StatusFailing)
 		} else {
-			summary.Addf("all %d service containers are running.", expectedContainersCount)
+			summary.Addf("all %d service containers are running.", config.DockerSupervisorManagedContainers)
 		}
 	}
 
