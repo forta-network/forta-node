@@ -13,12 +13,12 @@ var (
 	DockerUpdaterImage    = "forta-protocol/forta-node:latest"
 	UseDockerImages       = "local"
 
-	DockerUpdaterContainerName      = fmt.Sprintf("%s-updater", ContainerNamePrefix)
-	DockerSupervisorContainerName   = fmt.Sprintf("%s-supervisor", ContainerNamePrefix)
-	DockerNatsContainerName         = fmt.Sprintf("%s-nats", ContainerNamePrefix)
-	DockerScannerContainerName      = fmt.Sprintf("%s-scanner", ContainerNamePrefix)
-	DockerJSONRPCProxyContainerName = fmt.Sprintf("%s-json-rpc", ContainerNamePrefix)
-	DockerPublisherContainerName    = fmt.Sprintf("%s-publisher", ContainerNamePrefix)
+	DockerSupervisorManagedContainers = 3
+	DockerUpdaterContainerName        = fmt.Sprintf("%s-updater", ContainerNamePrefix)
+	DockerSupervisorContainerName     = fmt.Sprintf("%s-supervisor", ContainerNamePrefix)
+	DockerNatsContainerName           = fmt.Sprintf("%s-nats", ContainerNamePrefix)
+	DockerScannerContainerName        = fmt.Sprintf("%s-scanner", ContainerNamePrefix)
+	DockerJSONRPCProxyContainerName   = fmt.Sprintf("%s-json-rpc", ContainerNamePrefix)
 
 	DockerNetworkName = DockerScannerContainerName
 

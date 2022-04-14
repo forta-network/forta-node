@@ -280,7 +280,6 @@ func (sup *SupervisorService) removeOldContainers() error {
 	// gather old service containers
 	for _, containerName := range []string{
 		config.DockerScannerContainerName,
-		config.DockerPublisherContainerName,
 		config.DockerJSONRPCProxyContainerName,
 		config.DockerNatsContainerName,
 	} {
@@ -439,7 +438,7 @@ func (sup *SupervisorService) Health() health.Reports {
 	defer sup.mu.RUnlock()
 
 	containersStatus := health.StatusOK
-	if len(sup.containers) < 3 {
+	if len(sup.containers) < config.DockerSupervisorManagedContainers {
 		containersStatus = health.StatusFailing
 	}
 

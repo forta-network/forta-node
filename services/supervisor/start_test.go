@@ -128,7 +128,6 @@ func (s *Suite) SetupTest() {
 func (s *Suite) initialContainerCheck() {
 	for _, containerName := range []string{
 		config.DockerScannerContainerName,
-		config.DockerPublisherContainerName,
 		config.DockerJSONRPCProxyContainerName,
 		config.DockerNatsContainerName,
 	} {
