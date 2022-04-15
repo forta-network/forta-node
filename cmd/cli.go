@@ -131,6 +131,18 @@ publishes alerts about them`,
 		Short: "register your scan node to enable it for scanning (requires MATIC in your scan node address)",
 		RunE:  withContractAddresses(withInitialized(withValidConfig(handleFortaRegister))),
 	}
+
+	cmdFortaEnable = &cobra.Command{
+		Use:   "enable",
+		Short: "enable your scan node (requires MATIC in your scan node address)",
+		RunE:  withContractAddresses(withInitialized(withValidConfig(handleFortaEnable))),
+	}
+
+	cmdFortaDisable = &cobra.Command{
+		Use:   "disable",
+		Short: "disable your scan node (requires MATIC in your scan node address)",
+		RunE:  withContractAddresses(withInitialized(withValidConfig(handleFortaDisable))),
+	}
 )
 
 // Execute executes the root command.
@@ -161,6 +173,8 @@ func init() {
 	cmdForta.AddCommand(cmdFortaStatus)
 
 	cmdForta.AddCommand(cmdFortaRegister)
+	cmdForta.AddCommand(cmdFortaEnable)
+	cmdForta.AddCommand(cmdFortaDisable)
 
 	// Global (persistent) flags
 
@@ -201,6 +215,12 @@ func init() {
 	cmdFortaRegister.Flags().String("owner-address", "", "Ethereum wallet address of the scanner owner")
 	cmdFortaRegister.MarkFlagRequired("owner-address")
 	cmdFortaRegister.MarkFlagRequired("passphrase")
+
+	// forta enable
+	cmdFortaEnable.MarkFlagRequired("passphrase")
+
+	// forta disable
+	cmdFortaDisable.MarkFlagRequired("passphrase")
 }
 
 func initConfig() {
