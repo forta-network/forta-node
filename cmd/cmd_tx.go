@@ -70,13 +70,11 @@ func handleFortaEnable(cmd *cobra.Command, args []string) error {
 	scannerPrivateKey := scannerKey.PrivateKey
 	scannerAddressStr := scannerKey.Address.Hex()
 
-	permission := registry.ScannerPermissionSelf
-	registry, err := store.GetRegistryClient(context.Background(), cfg, registry.ClientConfig{
-		JsonRpcUrl:        cfg.Registry.JsonRpc.Url,
-		ENSAddress:        cfg.ENSConfig.ContractAddress,
-		Name:              "registry-client",
-		PrivateKey:        scannerPrivateKey,
-		ScannerPermission: &permission,
+	reg, err := store.GetRegistryClient(context.Background(), cfg, registry.ClientConfig{
+		JsonRpcUrl: cfg.Registry.JsonRpc.Url,
+		ENSAddress: cfg.ENSConfig.ContractAddress,
+		Name:       "registry-client",
+		PrivateKey: scannerPrivateKey,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create registry client: %v", err)
@@ -84,7 +82,7 @@ func handleFortaEnable(cmd *cobra.Command, args []string) error {
 
 	color.Yellow("Sending a transaction to enable your scan node...\n")
 
-	txHash, err := registry.EnableScanner(scannerAddressStr)
+	txHash, err := reg.EnableScanner(registry.ScannerPermissionSelf, scannerAddressStr)
 	if err != nil && strings.Contains(err.Error(), "insufficient funds") {
 		yellowBold("This action requires Polygon (Mainnet) MATIC. Have you funded your address %s yet?\n", scannerAddressStr)
 	}
@@ -106,13 +104,11 @@ func handleFortaDisable(cmd *cobra.Command, args []string) error {
 	scannerPrivateKey := scannerKey.PrivateKey
 	scannerAddressStr := scannerKey.Address.Hex()
 
-	permission := registry.ScannerPermissionSelf
-	registry, err := store.GetRegistryClient(context.Background(), cfg, registry.ClientConfig{
-		JsonRpcUrl:        cfg.Registry.JsonRpc.Url,
-		ENSAddress:        cfg.ENSConfig.ContractAddress,
-		Name:              "registry-client",
-		PrivateKey:        scannerPrivateKey,
-		ScannerPermission: &permission,
+	reg, err := store.GetRegistryClient(context.Background(), cfg, registry.ClientConfig{
+		JsonRpcUrl: cfg.Registry.JsonRpc.Url,
+		ENSAddress: cfg.ENSConfig.ContractAddress,
+		Name:       "registry-client",
+		PrivateKey: scannerPrivateKey,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create registry client: %v", err)
@@ -120,7 +116,7 @@ func handleFortaDisable(cmd *cobra.Command, args []string) error {
 
 	color.Yellow("Sending a transaction to disable your scan node...\n")
 
-	txHash, err := registry.DisableScanner(scannerAddressStr)
+	txHash, err := reg.DisableScanner(registry.ScannerPermissionSelf, scannerAddressStr)
 	if err != nil && strings.Contains(err.Error(), "insufficient funds") {
 		yellowBold("This action requires Polygon (Mainnet) MATIC. Have you funded your address %s yet?\n", scannerAddressStr)
 	}
