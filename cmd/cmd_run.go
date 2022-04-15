@@ -56,7 +56,7 @@ func checkScannerState() error {
 		return ErrCannotRunScanner
 	}
 	if !scanner.Enabled {
-		yellowBold("Warning! Your node has not met with the minimum staking requirement yet and will not receive bots until this is done.\n")
+		yellowBold("Warning! Your scan node is either disabled or does not meet with the minimum staking requirement. It will not receive any detection bots yet.\n")
 	}
 	return nil
 }
