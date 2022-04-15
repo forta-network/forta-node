@@ -14,8 +14,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const registryPermissionSelf uint8 = 1
-
 func handleFortaRegister(cmd *cobra.Command, args []string) error {
 	ownerAddressStr, err := cmd.Flags().GetString("owner-address")
 	if err != nil {
