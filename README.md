@@ -2,7 +2,7 @@
 
 # forta-node
 
-Forta node CLI is a Docker container supervisor that runs and manages multiple services and detector bots (agents) to scan a blockchain network and produce alerts.
+Forta node CLI is a Docker container supervisor that runs and manages multiple services and detection bots (agents) to scan a blockchain network and produce alerts.
 
 # Running a Node
 
