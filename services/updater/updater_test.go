@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/forta-protocol/forta-core-go/release"
+	"github.com/forta-network/forta-core-go/release"
 
-	rm "github.com/forta-protocol/forta-core-go/registry/mocks"
-	im "github.com/forta-protocol/forta-core-go/release/mocks"
+	rm "github.com/forta-network/forta-core-go/registry/mocks"
+	im "github.com/forta-network/forta-core-go/release/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )

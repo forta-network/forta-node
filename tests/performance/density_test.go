@@ -17,10 +17,10 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/forta-protocol/forta-node/clients"
-	"github.com/forta-protocol/forta-node/clients/messaging"
-	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/services/publisher"
+	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/clients/messaging"
+	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/services/publisher"
 )
 
 func agentId(index int) string {

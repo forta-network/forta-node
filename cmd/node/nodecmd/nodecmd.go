@@ -1,11 +1,11 @@
 package nodecmd
 
 import (
-	json_rpc "github.com/forta-protocol/forta-node/cmd/json-rpc"
-	"github.com/forta-protocol/forta-node/cmd/publisher"
-	"github.com/forta-protocol/forta-node/cmd/scanner"
-	"github.com/forta-protocol/forta-node/cmd/supervisor"
-	"github.com/forta-protocol/forta-node/cmd/updater"
+	json_rpc "github.com/forta-network/forta-node/cmd/json-rpc"
+	"github.com/forta-network/forta-node/cmd/publisher"
+	"github.com/forta-network/forta-node/cmd/scanner"
+	"github.com/forta-network/forta-node/cmd/supervisor"
+	"github.com/forta-network/forta-node/cmd/updater"
 	"github.com/spf13/cobra"
 )
 

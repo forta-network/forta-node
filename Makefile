@@ -1,9 +1,9 @@
 containers:
-	docker build -t forta-protocol/forta-node -f Dockerfile.node .
+	docker build -t forta-network/forta-node -f Dockerfile.node .
 	docker pull nats:2.3.2
 
 containers-dev:
-	DOCKER_BUILDKIT=1 docker build -t forta-protocol/forta-node -f Dockerfile.buildkit.node .
+	DOCKER_BUILDKIT=1 docker build -t forta-network/forta-node -f Dockerfile.buildkit.node .
 	docker pull nats:2.3.2
 
 main:

@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/forta-protocol/forta-core-go/clients/health"
-	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-network/forta-core-go/clients/health"
+	"github.com/forta-network/forta-node/config"
 	"github.com/spf13/cobra"
 )
 

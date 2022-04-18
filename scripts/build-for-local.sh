@@ -3,7 +3,7 @@
 set -e
 set -o pipefail
 
-NODE_IMAGE='forta-protocol/forta-node:latest'
+NODE_IMAGE='forta-network/forta-node:latest'
 
 docker build -t "$NODE_IMAGE" -f Dockerfile.node .
 

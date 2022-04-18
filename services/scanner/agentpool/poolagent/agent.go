@@ -6,15 +6,15 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/forta-protocol/forta-node/metrics"
+	"github.com/forta-network/forta-node/metrics"
 	"google.golang.org/grpc"
 
-	"github.com/forta-protocol/forta-core-go/protocol"
-	"github.com/forta-protocol/forta-node/clients"
-	"github.com/forta-protocol/forta-node/clients/agentgrpc"
-	"github.com/forta-protocol/forta-node/clients/messaging"
-	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/services/scanner"
+	"github.com/forta-network/forta-core-go/protocol"
+	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/clients/agentgrpc"
+	"github.com/forta-network/forta-node/clients/messaging"
+	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/services/scanner"
 
 	log "github.com/sirupsen/logrus"
 )

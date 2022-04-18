@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/forta-protocol/forta-node/clients"
-	"github.com/forta-protocol/forta-node/clients/messaging"
-	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/clients/messaging"
+	"github.com/forta-network/forta-node/config"
 
 	log "github.com/sirupsen/logrus"
 )

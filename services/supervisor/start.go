@@ -9,20 +9,20 @@ import (
 	"sync"
 	"time"
 
-	"github.com/forta-protocol/forta-core-go/manifest"
-	"github.com/forta-protocol/forta-core-go/release"
+	"github.com/forta-network/forta-core-go/manifest"
+	"github.com/forta-network/forta-core-go/release"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ipfs/go-cid"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/forta-protocol/forta-core-go/clients/agentlogs"
-	"github.com/forta-protocol/forta-core-go/clients/health"
-	"github.com/forta-protocol/forta-core-go/security"
-	"github.com/forta-protocol/forta-node/clients"
-	"github.com/forta-protocol/forta-node/clients/messaging"
-	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/services"
+	"github.com/forta-network/forta-core-go/clients/agentlogs"
+	"github.com/forta-network/forta-core-go/clients/health"
+	"github.com/forta-network/forta-core-go/security"
+	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/clients/messaging"
+	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/services"
 )
 
 const (
@@ -288,7 +288,6 @@ func (sup *SupervisorService) removeOldContainers() error {
 	// gather old service containers
 	for _, containerName := range []string{
 		config.DockerScannerContainerName,
-		config.DockerPublisherContainerName,
 		config.DockerJSONRPCProxyContainerName,
 		config.DockerNatsContainerName,
 	} {
@@ -447,7 +446,7 @@ func (sup *SupervisorService) Health() health.Reports {
 	defer sup.mu.RUnlock()
 
 	containersStatus := health.StatusOK
-	if len(sup.containers) < 3 {
+	if len(sup.containers) < config.DockerSupervisorManagedContainers {
 		containersStatus = health.StatusFailing
 	}
 

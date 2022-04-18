@@ -3,9 +3,9 @@ package clients
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/forta-protocol/forta-core-go/protocol"
-	"github.com/forta-protocol/forta-core-go/security"
-	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-network/forta-core-go/protocol"
+	"github.com/forta-network/forta-core-go/security"
+	"github.com/forta-network/forta-node/config"
 	log "github.com/sirupsen/logrus"
 )
 

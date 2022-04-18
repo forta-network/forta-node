@@ -4,17 +4,13 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/forta-protocol/forta-core-go/clients/health"
-	"github.com/forta-protocol/forta-core-go/security"
-	"github.com/forta-protocol/forta-core-go/utils"
-	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/healthutils"
-	"github.com/forta-protocol/forta-node/services"
-	"github.com/forta-protocol/forta-node/services/supervisor"
-)
-
-const (
-	expectedContainersCount = 4
+	"github.com/forta-network/forta-core-go/clients/health"
+	"github.com/forta-network/forta-core-go/security"
+	"github.com/forta-network/forta-core-go/utils"
+	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/healthutils"
+	"github.com/forta-network/forta-node/services"
+	"github.com/forta-network/forta-node/services/supervisor"
 )
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
@@ -53,11 +49,11 @@ func summarizeReports(reports health.Reports) *health.Report {
 	containersManager, ok := reports.NameContains("containers.managed")
 	if ok {
 		count, _ := strconv.Atoi(containersManager.Details)
-		if count < expectedContainersCount {
-			summary.Addf("missing %d containers.", expectedContainersCount-count)
+		if count < config.DockerSupervisorManagedContainers {
+			summary.Addf("missing %d containers.", config.DockerSupervisorManagedContainers-count)
 			summary.Status(health.StatusFailing)
 		} else {
-			summary.Addf("all %d service containers are running.", expectedContainersCount)
+			summary.Addf("all %d service containers are running.", config.DockerSupervisorManagedContainers)
 		}
 	}
 

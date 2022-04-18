@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: root <>
 Build-Depends: debhelper-compat (= 12)
 Standards-Version: 4.5.0
-Homepage: https://github.com/forta-protocol/forta-node
+Homepage: https://github.com/forta-network/forta-node
 
 Package: forta
 Architecture: any

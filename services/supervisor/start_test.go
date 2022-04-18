@@ -6,16 +6,16 @@ import (
 	"os"
 	"testing"
 
-	"github.com/forta-protocol/forta-core-go/release"
+	"github.com/forta-network/forta-core-go/release"
 
 	"github.com/docker/docker/api/types"
 
-	mrelease "github.com/forta-protocol/forta-core-go/release/mocks"
+	mrelease "github.com/forta-network/forta-core-go/release/mocks"
 
-	"github.com/forta-protocol/forta-node/clients"
-	"github.com/forta-protocol/forta-node/clients/messaging"
-	mock_clients "github.com/forta-protocol/forta-node/clients/mocks"
-	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/clients/messaging"
+	mock_clients "github.com/forta-network/forta-node/clients/mocks"
+	"github.com/forta-network/forta-node/config"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -131,7 +131,6 @@ func (s *Suite) SetupTest() {
 func (s *Suite) initialContainerCheck() {
 	for _, containerName := range []string{
 		config.DockerScannerContainerName,
-		config.DockerPublisherContainerName,
 		config.DockerJSONRPCProxyContainerName,
 		config.DockerNatsContainerName,
 	} {
@@ -155,12 +154,12 @@ func (s *Suite) initialContainerCheck() {
 		},
 	}, nil)
 
-	// 4 service containers + 1 old agent
-	for i := 0; i < 5; i++ {
+	// service containers + 1 old agent
+	for i := 0; i < config.DockerSupervisorManagedContainers+1; i++ {
 		s.dockerClient.EXPECT().RemoveContainer(s.service.ctx, testGenericContainerID).Return(nil)
 		s.dockerClient.EXPECT().WaitContainerPrune(s.service.ctx, testGenericContainerID).Return(nil)
 	}
-	for i := 0; i < 5; i++ {
+	for i := 0; i < config.DockerSupervisorManagedContainers+1; i++ {
 		s.dockerClient.EXPECT().RemoveNetworkByName(s.service.ctx, gomock.Any()).Return(nil)
 	}
 }

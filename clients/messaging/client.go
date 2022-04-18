@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/forta-protocol/forta-core-go/protocol"
+	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/goccy/go-json"
 	"github.com/golang/protobuf/proto"
 	"github.com/nats-io/nats.go"
