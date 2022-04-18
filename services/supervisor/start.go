@@ -193,7 +193,7 @@ func (sup *SupervisorService) start() error {
 		Ports: map[string]string{
 			"": config.DefaultHealthPort, // random host port
 		},
-		DialHost:    true,
+		DialHost:    false,
 		NetworkID:   nodeNetworkID,
 		MaxLogFiles: sup.maxLogFiles,
 		MaxLogSize:  sup.maxLogSize,
@@ -219,7 +219,7 @@ func (sup *SupervisorService) start() error {
 		Files: map[string][]byte{
 			"passphrase": []byte(sup.config.Passphrase),
 		},
-		DialHost:    true,
+		DialHost:    false,
 		NetworkID:   nodeNetworkID,
 		MaxLogFiles: sup.maxLogFiles,
 		MaxLogSize:  sup.maxLogSize,
