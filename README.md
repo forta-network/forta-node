@@ -5,6 +5,12 @@
 Forta node CLI is a Docker container supervisor that runs and manages multiple services and
 agents to scan a blockchain network and produce alerts.
 
+# Running a Node
+
+For information about running a node, see the [Scan Node Quickstart Documentation](https://docs.forta.network/en/latest/scanner-quickstart/)
+
+# Scan Node Development
+
 ## Dependencies
 
 1. [Install Docker](https://docs.docker.com/get-docker/) and start Docker service
@@ -87,13 +93,4 @@ $ docker logs -f <container_id>
 
 ```
 CTRL-C
-```
-
-### See local alerts
-
-Use the port in config (`query.port`) to access the local alerts API:
-
-
-```shell
-$ curl -s http://localhost:8778/alerts
 ```
