@@ -1,8 +1,8 @@
 package e2e_test
 
 import (
-	"github.com/forta-protocol/forta-node/cmd"
-	"github.com/forta-protocol/forta-node/tests/e2e/ethaccounts"
+	"github.com/forta-network/forta-node/cmd"
+	"github.com/forta-network/forta-node/tests/e2e/ethaccounts"
 )
 
 // TestRegister_NoRegisterRun tests the cases when the node is ran without registering

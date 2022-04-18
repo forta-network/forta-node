@@ -13,7 +13,7 @@ import (
 
 	"github.com/creasty/defaults"
 
-	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-network/forta-node/config"
 	"gopkg.in/yaml.v3"
 
 	"github.com/go-playground/validator/v10"

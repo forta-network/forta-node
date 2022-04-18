@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/forta-protocol/forta-core-go/clients/health"
-	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-network/forta-core-go/clients/health"
+	"github.com/forta-network/forta-node/config"
 )
 
 func (runner *Runner) checkHealth() (allReports health.Reports) {

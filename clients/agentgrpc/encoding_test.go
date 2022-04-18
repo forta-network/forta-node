@@ -7,9 +7,9 @@ import (
 	"net"
 	"testing"
 
-	"github.com/forta-protocol/forta-core-go/protocol"
-	"github.com/forta-protocol/forta-node/clients/agentgrpc"
-	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-network/forta-core-go/protocol"
+	"github.com/forta-network/forta-node/clients/agentgrpc"
+	"github.com/forta-network/forta-node/config"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 )

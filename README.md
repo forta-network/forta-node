@@ -1,4 +1,4 @@
-![Build](https://github.com/forta-protocol/forta-node/actions/workflows/release-codedeploy-dev.yml/badge.svg)
+![Build](https://github.com/forta-network/forta-node/actions/workflows/release-codedeploy-dev.yml/badge.svg)
 
 # forta-node
 
@@ -38,7 +38,7 @@ $ go install github.com/golang/mock/mockgen@v1.5.0
 $ make install
 ```
 
-For a faster iteration in local development, it is sufficient to build the common service container only if it has changed. The CLI requires `forta-protocol/forta-node:latest` containers to be available by default and uses the local ones if other Docker image references were not specified at the compile time.
+For a faster iteration in local development, it is sufficient to build the common service container only if it has changed. The CLI requires `forta-network/forta-node:latest` containers to be available by default and uses the local ones if other Docker image references were not specified at the compile time.
 
 ### CLI-only build using the local version of Go
 

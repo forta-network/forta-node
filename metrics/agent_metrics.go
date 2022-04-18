@@ -3,10 +3,10 @@ package metrics
 import (
 	"time"
 
-	"github.com/forta-protocol/forta-core-go/protocol"
-	"github.com/forta-protocol/forta-node/clients"
-	"github.com/forta-protocol/forta-node/clients/messaging"
-	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-network/forta-core-go/protocol"
+	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/clients/messaging"
+	"github.com/forta-network/forta-node/config"
 )
 
 const (

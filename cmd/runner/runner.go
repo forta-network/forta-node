@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/forta-protocol/forta-node/clients"
-	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/services"
-	"github.com/forta-protocol/forta-node/services/runner"
-	"github.com/forta-protocol/forta-node/store"
+	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/services"
+	"github.com/forta-network/forta-node/services/runner"
+	"github.com/forta-network/forta-node/store"
 	log "github.com/sirupsen/logrus"
 )
 

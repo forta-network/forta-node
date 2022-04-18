@@ -7,12 +7,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/forta-protocol/forta-core-go/ens"
+	"github.com/forta-network/forta-core-go/ens"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-network/forta-node/config"
 )
 
 const (

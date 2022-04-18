@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	json_rpc "github.com/forta-protocol/forta-node/services/json-rpc"
+	json_rpc "github.com/forta-network/forta-node/services/json-rpc"
 	"github.com/stretchr/testify/require"
 )
 

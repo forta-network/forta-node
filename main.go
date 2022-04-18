@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/forta-protocol/forta-node/cmd"
+	"github.com/forta-network/forta-node/cmd"
 )
 
 func main() {

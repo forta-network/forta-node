@@ -7,7 +7,7 @@ package mock_store
 import (
 	reflect "reflect"
 
-	config "github.com/forta-protocol/forta-node/config"
+	config "github.com/forta-network/forta-node/config"
 	gomock "github.com/golang/mock/gomock"
 )
 

@@ -9,9 +9,9 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/forta-protocol/forta-core-go/protocol"
-	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/tests/e2e/ethaccounts"
+	"github.com/forta-network/forta-core-go/protocol"
+	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/tests/e2e/ethaccounts"
 	"google.golang.org/grpc"
 )
 

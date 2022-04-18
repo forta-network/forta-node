@@ -9,8 +9,8 @@ const ContainerNamePrefix = "forta"
 
 // Docker container names
 var (
-	DockerSupervisorImage = "forta-protocol/forta-node:latest"
-	DockerUpdaterImage    = "forta-protocol/forta-node:latest"
+	DockerSupervisorImage = "forta-network/forta-node:latest"
+	DockerUpdaterImage    = "forta-network/forta-node:latest"
 	UseDockerImages       = "local"
 
 	DockerSupervisorManagedContainers = 3

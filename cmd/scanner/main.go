@@ -7,24 +7,24 @@ import (
 	"strings"
 	"time"
 
-	"github.com/forta-protocol/forta-node/services/publisher"
+	"github.com/forta-network/forta-node/services/publisher"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	gethlog "github.com/ethereum/go-ethereum/log"
 
-	"github.com/forta-protocol/forta-core-go/clients/health"
-	"github.com/forta-protocol/forta-core-go/ethereum"
-	"github.com/forta-protocol/forta-core-go/feeds"
-	"github.com/forta-protocol/forta-core-go/security"
-	"github.com/forta-protocol/forta-core-go/utils"
-	"github.com/forta-protocol/forta-node/clients"
-	"github.com/forta-protocol/forta-node/clients/messaging"
-	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/healthutils"
-	"github.com/forta-protocol/forta-node/services"
-	"github.com/forta-protocol/forta-node/services/registry"
-	"github.com/forta-protocol/forta-node/services/scanner"
-	"github.com/forta-protocol/forta-node/services/scanner/agentpool"
+	"github.com/forta-network/forta-core-go/clients/health"
+	"github.com/forta-network/forta-core-go/ethereum"
+	"github.com/forta-network/forta-core-go/feeds"
+	"github.com/forta-network/forta-core-go/security"
+	"github.com/forta-network/forta-core-go/utils"
+	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/clients/messaging"
+	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/healthutils"
+	"github.com/forta-network/forta-node/services"
+	"github.com/forta-network/forta-node/services/registry"
+	"github.com/forta-network/forta-node/services/scanner"
+	"github.com/forta-network/forta-node/services/scanner/agentpool"
 )
 
 func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, cfg config.Config) (*scanner.TxStreamService, feeds.BlockFeed, error) {

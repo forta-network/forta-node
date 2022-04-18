@@ -3,8 +3,8 @@ package supervisor
 import (
 	"errors"
 
-	"github.com/forta-protocol/forta-core-go/utils"
-	"github.com/forta-protocol/forta-node/clients"
+	"github.com/forta-network/forta-core-go/utils"
+	"github.com/forta-network/forta-node/clients"
 
 	"fmt"
 	"time"

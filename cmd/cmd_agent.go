@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/forta-protocol/forta-core-go/ethereum"
-	"github.com/forta-protocol/forta-node/store"
+	"github.com/forta-network/forta-core-go/ethereum"
+	"github.com/forta-network/forta-node/store"
 	"github.com/goccy/go-json"
 
 	"github.com/fatih/color"
-	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-network/forta-node/config"
 	"github.com/spf13/cobra"
 )
 
