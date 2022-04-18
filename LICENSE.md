@@ -7,7 +7,7 @@
 
 **Change License:** GNU General Public License 3.0 or later
 
-**Licensed Work:** `forta-node` located at https://github.com/forta-protocol/forta-node. The Licensed Work is Copyright (c) 2022 Forta Foundation
+**Licensed Work:** `forta-node` located at https://github.com/forta-network/forta-node. The Licensed Work is Copyright (c) 2022 Forta Foundation
 
 **Licensor:**  Forta Foundation     
 

@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/forta-protocol/forta-core-go/release"
+	"github.com/forta-network/forta-core-go/release"
 	"github.com/goccy/go-json"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-network/forta-node/config"
 )
 
 const defaultImageCheckInterval = time.Second * 5

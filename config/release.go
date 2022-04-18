@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/forta-protocol/forta-core-go/release"
+	"github.com/forta-network/forta-core-go/release"
 )
 
 // Release vars - injected by the compiler

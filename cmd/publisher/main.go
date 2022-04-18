@@ -2,15 +2,15 @@ package publisher
 
 import (
 	"context"
-	"github.com/forta-protocol/forta-core-go/clients/health"
-	"github.com/forta-protocol/forta-core-go/utils"
-	"github.com/forta-protocol/forta-node/healthutils"
+	"github.com/forta-network/forta-core-go/clients/health"
+	"github.com/forta-network/forta-core-go/utils"
+	"github.com/forta-network/forta-node/healthutils"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/services"
-	"github.com/forta-protocol/forta-node/services/publisher"
+	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/services"
+	"github.com/forta-network/forta-node/services/publisher"
 )
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {

@@ -7,14 +7,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/forta-protocol/forta-core-go/manifest"
-	"github.com/forta-protocol/forta-core-go/registry"
+	"github.com/forta-network/forta-core-go/manifest"
+	"github.com/forta-network/forta-core-go/registry"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/forta-protocol/forta-core-go/ethereum"
-	"github.com/forta-protocol/forta-core-go/utils"
-	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-network/forta-core-go/ethereum"
+	"github.com/forta-network/forta-core-go/utils"
+	"github.com/forta-network/forta-node/config"
 )
 
 type RegistryStore interface {

@@ -3,7 +3,7 @@ package cmd
 import (
 	"encoding/json"
 
-	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-network/forta-node/config"
 	"github.com/spf13/cobra"
 )
 

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/forta-protocol/forta-core-go/domain"
+	"github.com/forta-network/forta-core-go/domain"
 	"github.com/goccy/go-json"
 	log "github.com/sirupsen/logrus"
 )

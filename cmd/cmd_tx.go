@@ -8,9 +8,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/fatih/color"
-	"github.com/forta-protocol/forta-core-go/registry"
-	"github.com/forta-protocol/forta-core-go/security"
-	"github.com/forta-protocol/forta-node/store"
+	"github.com/forta-network/forta-core-go/registry"
+	"github.com/forta-network/forta-core-go/security"
+	"github.com/forta-network/forta-node/store"
 	"github.com/spf13/cobra"
 )
 

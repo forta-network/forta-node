@@ -10,12 +10,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/forta-protocol/forta-core-go/clients/health"
-	"github.com/forta-protocol/forta-core-go/registry"
-	"github.com/forta-protocol/forta-core-go/release"
-	"github.com/forta-protocol/forta-core-go/utils"
+	"github.com/forta-network/forta-core-go/clients/health"
+	"github.com/forta-network/forta-core-go/registry"
+	"github.com/forta-network/forta-core-go/release"
+	"github.com/forta-network/forta-core-go/utils"
 
-	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-network/forta-node/config"
 	log "github.com/sirupsen/logrus"
 )
 

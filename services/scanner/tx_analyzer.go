@@ -6,15 +6,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/forta-protocol/forta-core-go/clients/health"
-	"github.com/forta-protocol/forta-node/clients/messaging"
-	"github.com/forta-protocol/forta-node/metrics"
+	"github.com/forta-network/forta-core-go/clients/health"
+	"github.com/forta-network/forta-node/clients/messaging"
+	"github.com/forta-network/forta-node/metrics"
 
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/forta-protocol/forta-core-go/domain"
-	"github.com/forta-protocol/forta-core-go/protocol"
-	"github.com/forta-protocol/forta-core-go/utils"
-	"github.com/forta-protocol/forta-node/clients"
+	"github.com/forta-network/forta-core-go/domain"
+	"github.com/forta-network/forta-core-go/protocol"
+	"github.com/forta-network/forta-core-go/utils"
+	"github.com/forta-network/forta-node/clients"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"

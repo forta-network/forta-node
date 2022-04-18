@@ -4,15 +4,15 @@ import (
 	"context"
 	"io"
 
-	"github.com/forta-protocol/forta-core-go/domain"
+	"github.com/forta-network/forta-core-go/domain"
 	"google.golang.org/grpc"
 
 	"github.com/docker/docker/api/types"
 	"github.com/golang/protobuf/proto"
 
-	"github.com/forta-protocol/forta-core-go/protocol"
-	"github.com/forta-protocol/forta-node/clients/agentgrpc"
-	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-network/forta-core-go/protocol"
+	"github.com/forta-network/forta-node/clients/agentgrpc"
+	"github.com/forta-network/forta-node/config"
 )
 
 // DockerClient is a client interface for interacting with docker

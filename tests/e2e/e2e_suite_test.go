@@ -23,23 +23,23 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/forta-protocol/forta-core-go/contracts/contract_access_manager"
-	"github.com/forta-protocol/forta-core-go/contracts/contract_agent_registry"
-	"github.com/forta-protocol/forta-core-go/contracts/contract_dispatch"
-	"github.com/forta-protocol/forta-core-go/contracts/contract_forta_staking"
-	"github.com/forta-protocol/forta-core-go/contracts/contract_router"
-	"github.com/forta-protocol/forta-core-go/contracts/contract_scanner_node_version"
-	"github.com/forta-protocol/forta-core-go/contracts/contract_scanner_registry"
-	"github.com/forta-protocol/forta-core-go/ens"
-	"github.com/forta-protocol/forta-core-go/manifest"
-	"github.com/forta-protocol/forta-core-go/release"
-	"github.com/forta-protocol/forta-core-go/utils"
-	"github.com/forta-protocol/forta-node/clients"
-	"github.com/forta-protocol/forta-node/config"
-	"github.com/forta-protocol/forta-node/tests/e2e/ethaccounts"
-	"github.com/forta-protocol/forta-node/tests/e2e/misccontracts/contract_erc20"
-	"github.com/forta-protocol/forta-node/tests/e2e/misccontracts/contract_transparent_upgradeable_proxy"
-	"github.com/forta-protocol/forta-node/testutils/alertserver"
+	"github.com/forta-network/forta-core-go/contracts/contract_access_manager"
+	"github.com/forta-network/forta-core-go/contracts/contract_agent_registry"
+	"github.com/forta-network/forta-core-go/contracts/contract_dispatch"
+	"github.com/forta-network/forta-core-go/contracts/contract_forta_staking"
+	"github.com/forta-network/forta-core-go/contracts/contract_router"
+	"github.com/forta-network/forta-core-go/contracts/contract_scanner_node_version"
+	"github.com/forta-network/forta-core-go/contracts/contract_scanner_registry"
+	"github.com/forta-network/forta-core-go/ens"
+	"github.com/forta-network/forta-core-go/manifest"
+	"github.com/forta-network/forta-core-go/release"
+	"github.com/forta-network/forta-core-go/utils"
+	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/tests/e2e/ethaccounts"
+	"github.com/forta-network/forta-node/tests/e2e/misccontracts/contract_erc20"
+	"github.com/forta-network/forta-node/tests/e2e/misccontracts/contract_transparent_upgradeable_proxy"
+	"github.com/forta-network/forta-node/testutils/alertserver"
 	ipfsapi "github.com/ipfs/go-ipfs-api"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -321,7 +321,7 @@ func (s *Suite) SetupTest() {
 	s.releaseManifest = &release.ReleaseManifest{
 		Release: release.Release{
 			Timestamp:  time.Now().String(),
-			Repository: "https://github.com/forta-protocol/forta-node",
+			Repository: "https://github.com/forta-network/forta-node",
 			Version:    config.Version,
 			Commit:     "57f35d25384ddf3f35731c636515204b1757c6ba",
 			Services: release.ReleaseServices{
@@ -347,7 +347,7 @@ func (s *Suite) SetupTest() {
 			Version:        utils.StringPtr("0.0.1"),
 			Timestamp:      utils.StringPtr(time.Now().String()),
 			ImageReference: utils.StringPtr(agentImageRef),
-			Repository:     utils.StringPtr("https://github.com/forta-protocol/forta-node/tree/master/tests/e2e/agents/txdetectoragent"),
+			Repository:     utils.StringPtr("https://github.com/forta-network/forta-node/tree/master/tests/e2e/agents/txdetectoragent"),
 			ChainIDs:       []int64{networkID},
 		},
 	}

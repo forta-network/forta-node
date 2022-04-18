@@ -5,8 +5,8 @@ import (
 	"path"
 	"time"
 
-	"github.com/forta-protocol/forta-core-go/ens"
-	"github.com/forta-protocol/forta-node/store"
+	"github.com/forta-network/forta-core-go/ens"
+	"github.com/forta-network/forta-node/store"
 	"github.com/goccy/go-json"
 )
 

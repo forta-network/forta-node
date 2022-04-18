@@ -14,7 +14,7 @@ RUN --mount=type=cache,target=/root/.cache/go go mod download
 
 COPY . /go/app
 RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go test -c -o main -race -covermode=atomic -coverpkg \
-	$(go list ./... | grep -v tests | tr "\n" ",") github.com/forta-protocol/forta-node/tests/e2e/cmd/node
+	$(go list ./... | grep -v tests | tr "\n" ",") github.com/forta-network/forta-node/tests/e2e/cmd/node
 
 FROM base
 

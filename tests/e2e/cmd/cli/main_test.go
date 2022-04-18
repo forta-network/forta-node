@@ -4,7 +4,7 @@ import (
 	"log"
 	"testing"
 
-	"github.com/forta-protocol/forta-node/cmd"
+	"github.com/forta-network/forta-node/cmd"
 )
 
 func TestCLI(t *testing.T) {

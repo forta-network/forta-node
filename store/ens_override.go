@@ -5,9 +5,9 @@ import (
 	"path"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/forta-protocol/forta-core-go/domain/registry"
-	"github.com/forta-protocol/forta-core-go/ens"
-	"github.com/forta-protocol/forta-node/config"
+	"github.com/forta-network/forta-core-go/domain/registry"
+	"github.com/forta-network/forta-core-go/ens"
+	"github.com/forta-network/forta-node/config"
 	"github.com/goccy/go-json"
 )
 
