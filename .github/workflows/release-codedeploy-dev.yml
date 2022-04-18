@@ -5,6 +5,7 @@ on:
     branches: [master]
   workflow_dispatch:
     branches: [master]
+  pull_request:
 
 env:
   DEFAULT_DEV_VERSION: v0.4.0
@@ -38,7 +39,7 @@ jobs:
 
   containers:
     name: Build and push containers
-    needs: [go, e2e]
+    needs: [go]
     runs-on: ubuntu-latest
     environment: dev
     outputs:
