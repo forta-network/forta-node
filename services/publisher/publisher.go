@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"sync"
@@ -17,9 +17,12 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/forta-network/forta-core-go/clients/health"
+	"github.com/forta-network/forta-core-go/clients/webhook"
+	"github.com/forta-network/forta-core-go/clients/webhook/operations"
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/ipfs"
 	"github.com/forta-network/forta-core-go/protocol"
+	"github.com/forta-network/forta-core-go/protocol/transform"
 	"github.com/forta-network/forta-core-go/release"
 	"github.com/forta-network/forta-core-go/security"
 	"github.com/forta-network/forta-node/clients"
@@ -50,8 +53,10 @@ type Publisher struct {
 	metricsAggregator *AgentMetricsAggregator
 	messageClient     *messaging.Client
 	alertClient       clients.AlertAPIClient
-	batchRefStore     store.StringStore
-	lastReceiptStore  store.StringStore
+	webhookClient     WebhookClient
+
+	batchRefStore    store.StringStore
+	lastReceiptStore store.StringStore
 
 	server *grpc.Server
 
@@ -92,6 +97,11 @@ type AlertsContract interface {
 // IPFS interacts with an IPFS node/gateway.
 type IPFS interface {
 	Add(r io.Reader, options ...ipfsapi.AddOpts) (string, error)
+}
+
+// WebhookClient makes webhook requests.
+type WebhookClient interface {
+	SendAlerts(params *operations.SendAlertsParams, opts ...operations.ClientOption) (*operations.SendAlertsOK, error)
 }
 
 type PublisherConfig struct {
@@ -162,6 +172,17 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		pub.lastBatchSkip.Set()
 		pub.lastBatchSkipReason.Set(reason)
 		return nil
+	}
+
+	if pub.cfg.Config.PrivateModeConfig.Enable {
+		alertList := transform.ToWebhookAlertList(batch)
+		_, err := pub.webhookClient.SendAlerts(&operations.SendAlertsParams{
+			AlertList: alertList,
+		})
+		if err != nil {
+			log.WithError(err).Error("failed to send private alerts")
+		}
+		return err
 	}
 
 	cid, err := pub.ipfs.CalculateFileHash(buf.Bytes())
@@ -258,8 +279,18 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 }
 
 func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, bool) {
-	return "because there are no alerts and skipEmpty is enabled",
-		pub.skipEmpty && batch.AlertCount == uint32(0)
+	if batch.AlertCount > 0 {
+		return "", false
+	}
+	const defaultReason = "because there are no alerts"
+	if pub.cfg.Config.PrivateModeConfig.Enable {
+		return defaultReason + " and private mode is enabled", true
+	}
+	if pub.skipEmpty {
+		return defaultReason + " and skipEmpty is enabled", true
+	}
+	// should not skip: there must be a combining reason along with the zero count
+	return "", false
 }
 
 func (pub *Publisher) registerMessageHandlers() {
@@ -541,34 +572,6 @@ func (pub *Publisher) prepareLatestBatch() {
 	pub.batchCh <- (*protocol.AlertBatch)(batch)
 }
 
-func (pub *Publisher) forwardPrivateAlerts() {
-	for notif := range pub.notifCh {
-		var buf bytes.Buffer
-		if err := json.NewEncoder(&buf).Encode(notif); err != nil {
-			log.WithError(err).Error("failed to encode private alert notif")
-			continue
-		}
-		req, err := http.NewRequestWithContext(pub.ctx, "POST", pub.cfg.Config.PrivateModeConfig.SendAlertsTo, &buf)
-		if err != nil {
-			log.WithError(err).Error("failed to create private alert notif request")
-			continue
-		}
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			log.WithError(err).Error("failed to forward private alert notif")
-			continue
-		}
-		if resp.StatusCode >= 400 {
-			b, _ := io.ReadAll(resp.Body)
-			log.WithFields(log.Fields{
-				"responseStatus": resp.StatusCode,
-				"body":           string(b),
-			}).Error("failed to forward private alert notif")
-		}
-		resp.Body.Close()
-	}
-}
-
 func (pub *Publisher) Start() error {
 	go pub.prepareBatches()
 	go pub.publishBatches()
@@ -651,6 +654,21 @@ func initPublisher(ctx context.Context, mc *messaging.Client, alertClient client
 		testAlertLogger = testalerts.NewLogger(cfg.PublisherConfig.TestAlerts.WebhookURL)
 	}
 
+	var webhookClient WebhookClient
+	if cfg.Config.PrivateModeConfig.Enable {
+		endpoint := cfg.Config.PrivateModeConfig.SendAlertsTo
+		webhookURL, err := url.Parse(endpoint)
+		if err != nil {
+			return nil, fmt.Errorf("invalid private alert webhook url: %s", endpoint)
+		}
+		// parses <scheme>://<host> from forta config and sends to <scheme>://<host>/forta/v1/alerts
+		webhookClient = webhook.NewHTTPClientWithConfig(nil, &webhook.TransportConfig{
+			Host:     webhookURL.Host,
+			BasePath: webhook.DefaultBasePath,
+			Schemes:  []string{webhookURL.Scheme},
+		}).Operations
+	}
+
 	return &Publisher{
 		ctx:               ctx,
 		cfg:               cfg,
@@ -659,6 +677,7 @@ func initPublisher(ctx context.Context, mc *messaging.Client, alertClient client
 		metricsAggregator: NewMetricsAggregator(),
 		messageClient:     mc,
 		alertClient:       alertClient,
+		webhookClient:     webhookClient,
 		batchRefStore:     store.NewFileStringStore(path.Join(cfg.Config.FortaDir, ".last-batch")),
 		lastReceiptStore:  store.NewFileStringStore(path.Join(cfg.Config.FortaDir, ".last-receipt")),
 
