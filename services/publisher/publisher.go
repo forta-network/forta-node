@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"net/url"
 	"os"
 	"path"
 	"sync"
@@ -18,7 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/clients/webhook"
-	"github.com/forta-network/forta-core-go/clients/webhook/operations"
+	"github.com/forta-network/forta-core-go/clients/webhook/client/operations"
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/ipfs"
 	"github.com/forta-network/forta-core-go/protocol"
@@ -53,7 +52,7 @@ type Publisher struct {
 	metricsAggregator *AgentMetricsAggregator
 	messageClient     *messaging.Client
 	alertClient       clients.AlertAPIClient
-	webhookClient     WebhookClient
+	webhookClient     webhook.AlertWebhookClient
 
 	batchRefStore    store.StringStore
 	lastReceiptStore store.StringStore
@@ -97,11 +96,6 @@ type AlertsContract interface {
 // IPFS interacts with an IPFS node/gateway.
 type IPFS interface {
 	Add(r io.Reader, options ...ipfsapi.AddOpts) (string, error)
-}
-
-// WebhookClient makes webhook requests.
-type WebhookClient interface {
-	SendAlerts(params *operations.SendAlertsParams, opts ...operations.ClientOption) (*operations.SendAlertsOK, error)
 }
 
 type PublisherConfig struct {
@@ -654,19 +648,13 @@ func initPublisher(ctx context.Context, mc *messaging.Client, alertClient client
 		testAlertLogger = testalerts.NewLogger(cfg.PublisherConfig.TestAlerts.WebhookURL)
 	}
 
-	var webhookClient WebhookClient
+	var webhookClient webhook.AlertWebhookClient
 	if cfg.Config.PrivateModeConfig.Enable {
-		endpoint := cfg.Config.PrivateModeConfig.SendAlertsTo
-		webhookURL, err := url.Parse(endpoint)
+		dest := cfg.Config.PrivateModeConfig.SendAlertsTo
+		webhookClient, err = webhook.NewAlertWebhookClient(dest)
 		if err != nil {
-			return nil, fmt.Errorf("invalid private alert webhook url: %s", endpoint)
+			return nil, fmt.Errorf("invalid private alert webhook url: %s", dest)
 		}
-		// parses <scheme>://<host> from forta config and sends to <scheme>://<host>/forta/v1/alerts
-		webhookClient = webhook.NewHTTPClientWithConfig(nil, &webhook.TransportConfig{
-			Host:     webhookURL.Host,
-			BasePath: webhook.DefaultBasePath,
-			Schemes:  []string{webhookURL.Scheme},
-		}).Operations
 	}
 
 	return &Publisher{
