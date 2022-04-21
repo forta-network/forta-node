@@ -49,7 +49,8 @@ func (t *BlockAnalyzerService) calculateAlertID(result *BlockResult, f *protocol
 		f.Type.String(),
 		f.Severity.String(),
 		result.AgentConfig.Image,
-		result.AgentConfig.ID}, "")
+		result.AgentConfig.ID,
+		strings.Join(f.Addresses, "")}, "")
 	return crypto.Keccak256Hash([]byte(idStr)).Hex()
 }
 
