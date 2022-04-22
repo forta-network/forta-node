@@ -5,24 +5,20 @@ import (
 	"github.com/forta-network/forta-node/tests/e2e/ethaccounts"
 )
 
-// TestRegister_NoRegisterRun tests the cases when the node is ran without registering
-// and the check is ignored with the --no-check flag.
-func (s *Suite) TestRegister_NoRegisterRun() {
-	s.forta("run")
+// TestRegister tests what happens when registering with or without registration.
+func (s *Suite) TestRegister() {
+	s.forta("", "run")
 	s.fortaProcess.Wait()
 	s.True(s.fortaProcess.HasOutput(cmd.ErrCannotRunScanner.Error()))
-	s.T().Log("as expected: could not scanner without registration")
+	s.T().Log("as expected: could not run scan node without registration")
 
 	s.T().Log("trying to run with --no-check")
-	s.forta("run", "--no-check")
-	defer s.stopForta()
+	s.forta("", "run", "--no-check")
 	s.expectUpIn(largeTimeout, runnerSupervisedContainers...)
 	s.T().Log("--no-check works")
-}
+	s.stopForta()
 
-// TestRegister_RegisterRun tests a run after normal registering.
-func (s *Suite) TestRegister_RegisterRun() {
-	s.forta("register", "--owner-address", ethaccounts.ScannerOwnerAddress.Hex())
+	s.forta("", "register", "--owner-address", ethaccounts.ScannerOwnerAddress.Hex())
 	s.fortaProcess.Wait()
 	s.fortaProcess.HasOutput("polygonscan")
 

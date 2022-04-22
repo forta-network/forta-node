@@ -98,6 +98,16 @@ func (dcl DockerContainerList) FindByName(name string) (*types.Container, bool) 
 	return nil, false
 }
 
+// ContainsAny checks is any of the containers contain this name and returns the first one.
+func (dcl DockerContainerList) ContainsAny(name string) (*types.Container, bool) {
+	for _, c := range dcl {
+		if strings.Contains(c.Names[0], name) {
+			return &c, true
+		}
+	}
+	return nil, false
+}
+
 type dockerClient struct {
 	cli      *client.Client
 	workers  *workers.Group
@@ -728,6 +738,9 @@ func NewDockerClient(name string) (*dockerClient, error) {
 
 // NewAuthDockerClient creates a new docker client with credentials
 func NewAuthDockerClient(name string, username, password string) (*dockerClient, error) {
+	if len(username) == 0 && len(password) == 0 {
+		return NewDockerClient(name)
+	}
 	cli, err := client.NewClientWithOpts()
 	if err != nil {
 		return nil, err

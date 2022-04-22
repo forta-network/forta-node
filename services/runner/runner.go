@@ -68,7 +68,7 @@ func (runner *Runner) Start() error {
 
 	health.StartServer(runner.ctx, "", healthutils.DefaultHealthServerErrHandler, runner.checkHealth)
 
-	if runner.cfg.AutoUpdate.Disable {
+	if runner.cfg.AutoUpdate.Disable || runner.cfg.PrivateModeConfig.Enable {
 		runner.startEmbeddedSupervisor()
 	} else {
 		runner.startEmbeddedUpdater()

@@ -13,12 +13,14 @@ SCRIPTS_DIR="$TEST_DIR/../../scripts"
 
 REGISTRY="localhost:1970"
 NODE_IMAGE_FULL_NAME="$REGISTRY/forta-node"
-AGENT_IMAGE_FULL_NAME="$REGISTRY/forta-e2e-test-agent"
+AGENT_IMAGE_SHORT_NAME="forta-e2e-test-agent"
+AGENT_IMAGE_FULL_NAME="$REGISTRY/$AGENT_IMAGE_SHORT_NAME"
 
 # build a node image that creates coverage output
 DOCKER_BUILDKIT=1 docker build -t "$NODE_IMAGE_FULL_NAME" -f "$TEST_DIR/cmd/node/Dockerfile" .
 # build test agent image
 DOCKER_BUILDKIT=1 docker build -t "$AGENT_IMAGE_FULL_NAME" -f "$TEST_DIR/agents/txdetectoragent/Dockerfile" .
+docker tag "$AGENT_IMAGE_FULL_NAME" "$AGENT_IMAGE_SHORT_NAME"
 
 NODE_IMAGE_REF=$("$SCRIPTS_DIR/docker-push.sh" "$REGISTRY" "$NODE_IMAGE_FULL_NAME")
 AGENT_IMAGE_REF=$("$SCRIPTS_DIR/docker-push.sh" "$REGISTRY" "$AGENT_IMAGE_FULL_NAME")

@@ -84,6 +84,8 @@ var (
 	}
 
 	envEmptyRunnerTrackingID = "RUNNER_TRACKING_ID="
+
+	testAgentLocalImageName = "forta-e2e-test-agent"
 )
 
 type Suite struct {
@@ -311,6 +313,7 @@ func (s *Suite) SetupTest() {
 	}
 	b, _ := json.MarshalIndent(ensOverrides, "", "  ")
 	s.r.NoError(ioutil.WriteFile(".forta/ens-override.json", b, 0644))
+	s.r.NoError(ioutil.WriteFile(".forta-private/ens-override.json", b, 0644))
 
 	// set runtime vars and put release to ipfs and to the scanner version contract
 	nodeImageRef := s.readImageRef("node")
@@ -482,11 +485,14 @@ func (process *Process) HasOutput(s string) bool {
 	return strings.Contains(process.stdout.String(), s) || strings.Contains(process.stderr.String(), s)
 }
 
-func (s *Suite) forta(args ...string) {
+func (s *Suite) forta(fortaDir string, args ...string) {
 	dir, err := os.Getwd()
 	s.r.NoError(err)
 
-	fortaDir := path.Join(dir, ".forta")
+	if fortaDir == "" {
+		fortaDir = ".forta"
+	}
+	fullFortaDir := path.Join(dir, fortaDir)
 	coveragePath := path.Join(fortaDir, "coverage", fmt.Sprintf("runner-coverage-%d.tmp", time.Now().Unix()))
 
 	args = append([]string{
@@ -495,7 +501,7 @@ func (s *Suite) forta(args ...string) {
 	}, args...)
 	cmdForta := exec.Command(args[0], args[1:]...)
 	cmdForta.Env = append(cmdForta.Env,
-		fmt.Sprintf("FORTA_DIR=%s", fortaDir),
+		fmt.Sprintf("FORTA_DIR=%s", fullFortaDir),
 		"FORTA_PASSPHRASE=0",
 	)
 	var (
@@ -506,6 +512,7 @@ func (s *Suite) forta(args ...string) {
 	cmdForta.Stdout = &wrappedBuffer{w: os.Stdout, buf: &stdoutBuf}
 
 	s.r.NoError(cmdForta.Start())
+	s.T().Log("forta cmd started")
 	s.fortaProcess = &Process{
 		stderr:  &stderrBuf,
 		stdout:  &stdoutBuf,
@@ -515,14 +522,18 @@ func (s *Suite) forta(args ...string) {
 
 func (s *Suite) startForta(register ...bool) {
 	if register != nil && register[0] {
-		tx, err := s.scannerRegContract.Register(
-			s.scanner, ethaccounts.ScannerOwnerAddress, big.NewInt(networkID), "",
-		)
-		s.r.NoError(err)
-		s.ensureTx("ScannerRegistry.register() scan node before 'forta run'", tx)
+		s.registerNode()
 	}
-	s.forta("run")
+	s.forta("", "run")
 	s.expectUpIn(largeTimeout, allServiceContainers...)
+}
+
+func (s *Suite) registerNode() {
+	tx, err := s.scannerRegContract.Register(
+		s.scanner, ethaccounts.ScannerOwnerAddress, big.NewInt(networkID), "",
+	)
+	s.r.NoError(err)
+	s.ensureTx("ScannerRegistry.register() scan node before 'forta run'", tx)
 }
 
 func (s *Suite) stopForta() {
@@ -551,7 +562,7 @@ func (s *Suite) expectUpIn(timeout time.Duration, containerNames ...string) {
 		containers, err := s.dockerClient.GetContainers(s.ctx)
 		s.r.NoError(err)
 		for _, containerName := range containerNames {
-			container, ok := containers.FindByName(containerName)
+			container, ok := containers.ContainsAny(containerName)
 			if !ok {
 				return false
 			}
@@ -578,4 +589,23 @@ func (s *Suite) expectDownIn(timeout time.Duration, containerNames ...string) {
 		}
 		return true
 	})
+}
+
+func (s *Suite) sendExploiterTx() {
+	gasPrice, err := s.ethClient.SuggestGasPrice(s.ctx)
+	s.r.NoError(err)
+	nonce, err := s.ethClient.PendingNonceAt(s.ctx, ethaccounts.ExploiterAddress)
+	s.r.NoError(err)
+	txData := &types.LegacyTx{
+		Nonce:    nonce,
+		To:       &ethaccounts.ExploiterAddress,
+		Value:    big.NewInt(1),
+		GasPrice: gasPrice,
+		Gas:      100000, // 100k
+	}
+	tx, err := types.SignNewTx(ethaccounts.ExploiterKey, types.HomesteadSigner{}, txData)
+	s.r.NoError(err)
+
+	s.r.NoError(s.ethClient.SendTransaction(s.ctx, tx))
+	s.ensureTx("Exploiter account sending 1 Wei to itself", tx)
 }

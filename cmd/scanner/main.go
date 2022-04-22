@@ -108,6 +108,10 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	cfg.Registry.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Registry.JsonRpc.Url)
 	cfg.Registry.IPFS.APIURL = utils.ConvertToDockerHostURL(cfg.Registry.IPFS.APIURL)
 	cfg.Registry.IPFS.GatewayURL = utils.ConvertToDockerHostURL(cfg.Registry.IPFS.GatewayURL)
+	cfg.Publish.APIURL = utils.ConvertToDockerHostURL(cfg.Publish.APIURL)
+	cfg.Publish.IPFS.APIURL = utils.ConvertToDockerHostURL(cfg.Publish.IPFS.APIURL)
+	cfg.Publish.IPFS.GatewayURL = utils.ConvertToDockerHostURL(cfg.Publish.IPFS.GatewayURL)
+	cfg.PrivateModeConfig.WebhookURL = utils.ConvertToDockerHostURL(cfg.PrivateModeConfig.WebhookURL)
 
 	msgClient := messaging.NewClient("scanner", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 
@@ -115,10 +119,6 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	if err != nil {
 		return nil, err
 	}
-
-	cfg.Publish.APIURL = utils.ConvertToDockerHostURL(cfg.Publish.APIURL)
-	cfg.Publish.IPFS.APIURL = utils.ConvertToDockerHostURL(cfg.Publish.IPFS.APIURL)
-	cfg.Publish.IPFS.GatewayURL = utils.ConvertToDockerHostURL(cfg.Publish.IPFS.GatewayURL)
 
 	publisherSvc, err := publisher.NewPublisher(ctx, cfg)
 	if err != nil {

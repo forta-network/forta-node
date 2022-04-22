@@ -25,7 +25,7 @@ perf-test:
 	go test ./... -tags=perf_test
 
 e2e-test-deps:
-	./tests/e2e/deps-start
+	./tests/e2e/deps-start.sh
 
 e2e-test:
 	rm -rf tests/e2e/.forta/coverage
@@ -33,10 +33,11 @@ e2e-test:
 
 	./tests/e2e/build.sh
 
-	E2E_TEST=1 go test -v -count=1 ./tests/e2e
+	cd tests/e2e && E2E_TEST=1 go test -v -count=1 .
 
 	rm -rf coverage
 	cp -r tests/e2e/.forta/coverage .
+	cp -r tests/e2e/.forta-private/coverage/* coverage/
 	./scripts/total-coverage.sh e2e
 
 run:

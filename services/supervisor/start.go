@@ -33,9 +33,12 @@ const (
 
 // SupervisorService manages the scanner node's service and agent containers.
 type SupervisorService struct {
-	ctx            context.Context
-	client         clients.DockerClient
-	globalClient   clients.DockerClient
+	ctx context.Context
+
+	client           clients.DockerClient
+	globalClient     clients.DockerClient
+	agentImageClient clients.DockerClient
+
 	manifestClient manifest.Client
 	releaseClient  release.Client
 
@@ -86,10 +89,15 @@ func (sup *SupervisorService) Start() error {
 }
 
 func (sup *SupervisorService) start() error {
-	if !sup.config.Config.TelemetryConfig.Disable {
+	// in addition to the feature disable flags, check private mode flags to disable agent logging and telemetry
+
+	shouldDisableTelemetry := sup.config.Config.TelemetryConfig.Disable || sup.config.Config.PrivateModeConfig.Enable
+	if !shouldDisableTelemetry {
 		go sup.syncTelemetryData()
 	}
-	if !sup.config.Config.AgentLogsConfig.Disable {
+
+	shouldDisableAgentLogs := sup.config.Config.AgentLogsConfig.Disable || sup.config.Config.PrivateModeConfig.Enable
+	if !shouldDisableAgentLogs {
 		go sup.syncAgentLogs()
 	}
 
@@ -480,13 +488,29 @@ func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*Su
 		return nil, fmt.Errorf("failed to create the release client: %v", err)
 	}
 
+	// agent image client is helpful for loading private mode agents from a restricted container registry
+	var agentImageClient clients.DockerClient
+	if cfg.Config.PrivateModeConfig.Enable && cfg.Config.PrivateModeConfig.ContainerRegistry != nil {
+		agentImageClient, err = clients.NewAuthDockerClient(
+			"",
+			cfg.Config.PrivateModeConfig.ContainerRegistry.Username,
+			cfg.Config.PrivateModeConfig.ContainerRegistry.Password,
+		)
+	} else {
+		agentImageClient, err = clients.NewDockerClient("")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to create the private docker client: %v", err)
+	}
+
 	return &SupervisorService{
-		ctx:             ctx,
-		client:          dockerClient,
-		globalClient:    globalClient,
-		releaseClient:   releaseClient,
-		config:          cfg,
-		healthClient:    health.NewClient(),
-		agentLogsClient: agentlogs.NewClient(cfg.Config.AgentLogsConfig.URL),
+		ctx:              ctx,
+		client:           dockerClient,
+		globalClient:     globalClient,
+		agentImageClient: agentImageClient,
+		releaseClient:    releaseClient,
+		config:           cfg,
+		healthClient:     health.NewClient(),
+		agentLogsClient:  agentlogs.NewClient(cfg.Config.AgentLogsConfig.URL),
 	}, nil
 }

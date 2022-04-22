@@ -108,6 +108,18 @@ type AgentLogsConfig struct {
 	Disable bool   `yaml:"disable" json:"disable"`
 }
 
+type ContainerRegistryConfig struct {
+	Username string `yaml:"username" json:"username"`
+	Password string `yaml:"password" json:"password"`
+}
+
+type PrivateModeConfig struct {
+	Enable            bool                     `yaml:"enable" json:"enable"`
+	AgentImages       []string                 `yaml:"agentImages" json:"agentImages" validate:"required_if=Enable true"`
+	WebhookURL        string                   `yaml:"webhookUrl" json:"webhookUrl" validate:"required_if=Enable true"`
+	ContainerRegistry *ContainerRegistryConfig `yaml:"containerRegistry" json:"containerRegistry"`
+}
+
 type Config struct {
 	// runtime values
 
@@ -129,15 +141,16 @@ type Config struct {
 	Scan  ScannerConfig `yaml:"scan" json:"scan"`
 	Trace TraceConfig   `yaml:"trace" json:"trace"`
 
-	Registry        RegistryConfig     `yaml:"registry" json:"registry"`
-	Publish         PublisherConfig    `yaml:"publish" json:"publish"`
-	JsonRpcProxy    JsonRpcProxyConfig `yaml:"jsonRpcProxy" json:"jsonRpcProxy"`
-	Log             LogConfig          `yaml:"log" json:"log"`
-	ResourcesConfig ResourcesConfig    `yaml:"resources" json:"resources"`
-	ENSConfig       ENSConfig          `yaml:"ens" json:"ens"`
-	TelemetryConfig TelemetryConfig    `yaml:"telemetry" json:"telemetry"`
-	AutoUpdate      AutoUpdateConfig   `yaml:"autoUpdate" json:"autoUpdate"`
-	AgentLogsConfig AgentLogsConfig    `yaml:"agentLogs" json:"agentLogs"`
+	Registry          RegistryConfig     `yaml:"registry" json:"registry"`
+	Publish           PublisherConfig    `yaml:"publish" json:"publish"`
+	JsonRpcProxy      JsonRpcProxyConfig `yaml:"jsonRpcProxy" json:"jsonRpcProxy"`
+	Log               LogConfig          `yaml:"log" json:"log"`
+	ResourcesConfig   ResourcesConfig    `yaml:"resources" json:"resources"`
+	ENSConfig         ENSConfig          `yaml:"ens" json:"ens"`
+	TelemetryConfig   TelemetryConfig    `yaml:"telemetry" json:"telemetry"`
+	AutoUpdate        AutoUpdateConfig   `yaml:"autoUpdate" json:"autoUpdate"`
+	AgentLogsConfig   AgentLogsConfig    `yaml:"agentLogs" json:"agentLogs"`
+	PrivateModeConfig PrivateModeConfig  `yaml:"privateMode" json:"privateMode"`
 }
 
 func (cfg *Config) ConfigFilePath() string {

@@ -18,10 +18,10 @@ tests/e2e/.ipfs/*
 !tests/e2e/.ipfs/datastore_spec
 !tests/e2e/.ipfs/version
 
-!tests/e2e/.forta
-tests/e2e/.forta/*
-!tests/e2e/.forta/.keys
-!tests/e2e/.forta/config.yml
+!tests/e2e/.forta*
+tests/e2e/.forta*/*
+!tests/e2e/.forta*/.keys
+!tests/e2e/.forta*/config.yml
 
 *coverage.*
 !*coverage.sh

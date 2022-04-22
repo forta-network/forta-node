@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/forta-network/forta-node/clients/alertapi"
 	"io"
 	"math/big"
 	"os"
@@ -17,12 +16,16 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/forta-network/forta-core-go/clients/health"
+	"github.com/forta-network/forta-core-go/clients/webhook"
+	"github.com/forta-network/forta-core-go/clients/webhook/client/operations"
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/ipfs"
 	"github.com/forta-network/forta-core-go/protocol"
+	"github.com/forta-network/forta-core-go/protocol/transform"
 	"github.com/forta-network/forta-core-go/release"
 	"github.com/forta-network/forta-core-go/security"
 	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/clients/alertapi"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/services/publisher/testalerts"
@@ -49,8 +52,10 @@ type Publisher struct {
 	metricsAggregator *AgentMetricsAggregator
 	messageClient     *messaging.Client
 	alertClient       clients.AlertAPIClient
-	batchRefStore     store.StringStore
-	lastReceiptStore  store.StringStore
+	webhookClient     webhook.AlertWebhookClient
+
+	batchRefStore    store.StringStore
+	lastReceiptStore store.StringStore
 
 	server *grpc.Server
 
@@ -163,6 +168,18 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		return nil
 	}
 
+	if pub.cfg.Config.PrivateModeConfig.Enable {
+		alertList := transform.ToWebhookAlertList(batch)
+		_, err := pub.webhookClient.SendAlerts(&operations.SendAlertsParams{
+			Context:   pub.ctx,
+			AlertList: alertList,
+		})
+		if err != nil {
+			log.WithError(err).Error("failed to send private alerts")
+		}
+		return err
+	}
+
 	cid, err := pub.ipfs.CalculateFileHash(buf.Bytes())
 	if err != nil {
 		return fmt.Errorf("failed to store alert data to ipfs: %v", err)
@@ -257,8 +274,18 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 }
 
 func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, bool) {
-	return "because there are no alerts and skipEmpty is enabled",
-		pub.skipEmpty && batch.AlertCount == uint32(0)
+	if batch.AlertCount > 0 {
+		return "", false
+	}
+	const defaultReason = "because there are no alerts"
+	if pub.cfg.Config.PrivateModeConfig.Enable {
+		return defaultReason + " and private mode is enabled", true
+	}
+	if pub.skipEmpty {
+		return defaultReason + " and skipEmpty is enabled", true
+	}
+	// should not skip: there must be a combining reason along with the zero count
+	return "", false
 }
 
 func (pub *Publisher) registerMessageHandlers() {
@@ -622,6 +649,15 @@ func initPublisher(ctx context.Context, mc *messaging.Client, alertClient client
 		testAlertLogger = testalerts.NewLogger(cfg.PublisherConfig.TestAlerts.WebhookURL)
 	}
 
+	var webhookClient webhook.AlertWebhookClient
+	if cfg.Config.PrivateModeConfig.Enable {
+		dest := cfg.Config.PrivateModeConfig.WebhookURL
+		webhookClient, err = webhook.NewAlertWebhookClient(dest)
+		if err != nil {
+			return nil, fmt.Errorf("invalid private alert webhook url: %s", dest)
+		}
+	}
+
 	return &Publisher{
 		ctx:               ctx,
 		cfg:               cfg,
@@ -630,6 +666,7 @@ func initPublisher(ctx context.Context, mc *messaging.Client, alertClient client
 		metricsAggregator: NewMetricsAggregator(),
 		messageClient:     mc,
 		alertClient:       alertClient,
+		webhookClient:     webhookClient,
 		batchRefStore:     store.NewFileStringStore(path.Join(cfg.Config.FortaDir, ".last-batch")),
 		lastReceiptStore:  store.NewFileStringStore(path.Join(cfg.Config.FortaDir, ".last-receipt")),
 
