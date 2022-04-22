@@ -2,6 +2,7 @@ package publisher
 
 import (
 	"context"
+
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/healthutils"
@@ -17,6 +18,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	cfg.Publish.APIURL = utils.ConvertToDockerHostURL(cfg.Publish.APIURL)
 	cfg.Publish.IPFS.APIURL = utils.ConvertToDockerHostURL(cfg.Publish.IPFS.APIURL)
 	cfg.Publish.IPFS.GatewayURL = utils.ConvertToDockerHostURL(cfg.Publish.IPFS.GatewayURL)
+	cfg.PrivateModeConfig.WebhookURL = utils.ConvertToDockerHostURL(cfg.PrivateModeConfig.WebhookURL)
 
 	p, err := publisher.NewPublisher(ctx, cfg)
 	if err != nil {

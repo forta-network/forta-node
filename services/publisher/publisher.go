@@ -171,6 +171,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 	if pub.cfg.Config.PrivateModeConfig.Enable {
 		alertList := transform.ToWebhookAlertList(batch)
 		_, err := pub.webhookClient.SendAlerts(&operations.SendAlertsParams{
+			Context:   pub.ctx,
 			AlertList: alertList,
 		})
 		if err != nil {
@@ -650,7 +651,7 @@ func initPublisher(ctx context.Context, mc *messaging.Client, alertClient client
 
 	var webhookClient webhook.AlertWebhookClient
 	if cfg.Config.PrivateModeConfig.Enable {
-		dest := cfg.Config.PrivateModeConfig.SendAlertsTo
+		dest := cfg.Config.PrivateModeConfig.WebhookURL
 		webhookClient, err = webhook.NewAlertWebhookClient(dest)
 		if err != nil {
 			return nil, fmt.Errorf("invalid private alert webhook url: %s", dest)

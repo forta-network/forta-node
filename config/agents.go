@@ -26,7 +26,6 @@ func (ac AgentConfig) ToAgentInfo() *protocol.AgentInfo {
 		Id:        ac.ID,
 		Image:     ac.Image,
 		ImageHash: ac.ImageHash(),
-		IsTest:    ac.IsLocal,
 		Manifest:  ac.Manifest,
 	}
 }
@@ -38,6 +37,9 @@ func (ac AgentConfig) ImageHash() string {
 
 func (ac AgentConfig) ContainerName() string {
 	_, digest := utils.SplitImageRef(ac.Image)
+	if ac.IsLocal {
+		return fmt.Sprintf("%s-agent-%s", ContainerNamePrefix, utils.ShortenString(ac.ID, 8))
+	}
 	return fmt.Sprintf("%s-agent-%s-%s", ContainerNamePrefix, utils.ShortenString(ac.ID, 8), utils.ShortenString(digest, 4))
 }
 

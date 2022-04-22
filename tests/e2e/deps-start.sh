@@ -25,9 +25,9 @@ set +e
 # ignore error from 'ipfs init' here since it might be failing due to reusing ipfs dir from previous run.
 # this is useful for making container-related steps faster in local development.
 ipfs init
-ipfs daemon --routing none &
+ipfs daemon --routing none > /dev/null 2>&1 &
 
-disco &
+disco > /dev/null 2>&1 &
 
 rm -rf "$ETHEREUM_DIR"
 geth account import --datadir "$ETHEREUM_DIR" --password "$ETHEREUM_PASSWORD_FILE" "$ETHEREUM_KEY_FILE"
@@ -49,4 +49,4 @@ geth \
 	--http.addr '0.0.0.0' \
 	--http.corsdomain '*' \
 	--http.api personal,eth,net,web3,txpool,miner \
-	&
+	> /dev/null 2>&1 &

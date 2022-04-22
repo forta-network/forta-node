@@ -2,3 +2,4 @@ tests/e2e/*
 !tests/e2e/agents/*
 !tests/e2e/ethaccounts/*
 !tests/e2e/cmd/*
+Makefile

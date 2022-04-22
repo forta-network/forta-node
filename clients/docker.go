@@ -98,6 +98,16 @@ func (dcl DockerContainerList) FindByName(name string) (*types.Container, bool) 
 	return nil, false
 }
 
+// ContainsAny checks is any of the containers contain this name and returns the first one.
+func (dcl DockerContainerList) ContainsAny(name string) (*types.Container, bool) {
+	for _, c := range dcl {
+		if strings.Contains(c.Names[0], name) {
+			return &c, true
+		}
+	}
+	return nil, false
+}
+
 type dockerClient struct {
 	cli      *client.Client
 	workers  *workers.Group
