@@ -125,7 +125,7 @@ trace:
 ## Register Scan Node
 You need to fund your scan node address with some Polygon (Mainnet) MATIC to be able to send this transaction. You can find out your scan node address with forta account address. ( Just 0.1 Matic)
 ```
-forta register --owner-address your metamask address --passphrase your passphrase
+$ forta register --owner-address your metamask address --passphrase your passphrase
 ```
 Run Scan Node
 ```
