@@ -127,7 +127,40 @@ You need to fund your scan node address with some Polygon (Mainnet) MATIC to be 
 ```
 $ forta register --owner-address your metamask address --passphrase your passphrase
 ```
-Run Scan Node
+## Run Scan Node
+### Start Forta via systemd
+Create the service file:
+```
+sudo tee /etc/systemd/system/fortad.service > /dev/null <<EOF
+[Unit]
+Description=Forta Node
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/
+ExecStart=$(which forta) run --passphrase=YOUR PASSWORD
+Restart=on-failure
+RestartSec=3
+LimitNOFILE=10000
+
+[Install]
+WantedBy=multi-user.target
+EOF
+```
+Start Forta :
+```
+systemctl daemon-reload
+systemctl enable fortad
+systemctl restart fortad
+```
+Check Logs :
+```
+journalctl -n 100 -f -u fortad -o cat
+```
+
+### Start Forta manually
 ```
 $ forta run --passphrase <your_passphrase>
 ```
