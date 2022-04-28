@@ -1,5 +1,5 @@
 
-# Running a Scan Node ( Polygon )
+# Running a Scan Node ( Polygon ) Phase 1
 
 For information about running a node, see the [Scan Node Quickstart Documentation](https://docs.forta.network/en/latest/scanner-quickstart/)
 
