@@ -136,7 +136,7 @@ you can check your node :
 $ forta status
 $ docker ps -a
 $ dockker logs -f docker ID
-
+```
 ## Note
 You can scan another chain, just change Chain ID and RPC
 Welocome to Forta
