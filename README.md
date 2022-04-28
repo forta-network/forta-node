@@ -140,7 +140,7 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=/root/
-ExecStart=$(which forta) run --passphrase=YOUR PASSWORD
+ExecStart=$(which forta) run --passphrase=YOUR PASSPHRASE
 Restart=on-failure
 RestartSec=3
 LimitNOFILE=10000
