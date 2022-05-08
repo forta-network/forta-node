@@ -104,6 +104,9 @@ func (s *Suite) SetupTest() {
 	s.dockerClient.EXPECT().CreatePublicNetwork(service.ctx, gomock.Any()).Return(testNodeNetworkID, nil)
 	s.dockerClient.EXPECT().CreateInternalNetwork(service.ctx, gomock.Any()).Return(testNatsNetworkID, nil) // for nats
 	s.dockerClient.EXPECT().StartContainer(service.ctx, (configMatcher)(clients.DockerContainerConfig{
+		Name: config.DockerIpfsContainerName,
+	})).Return(&clients.DockerContainer{}, nil)
+	s.dockerClient.EXPECT().StartContainer(service.ctx, (configMatcher)(clients.DockerContainerConfig{
 		Name: config.DockerNatsContainerName,
 	})).Return(&clients.DockerContainer{}, nil)
 	s.dockerClient.EXPECT().StartContainer(service.ctx, (configMatcher)(clients.DockerContainerConfig{
@@ -116,6 +119,7 @@ func (s *Suite) SetupTest() {
 	s.globalClient.EXPECT().GetContainerByName(service.ctx, config.DockerSupervisorContainerName).Return(&types.Container{ID: testSupervisorContainerID}, nil).AnyTimes()
 	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testSupervisorContainerID, testNodeNetworkID)
 	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testSupervisorContainerID, testNatsNetworkID)
+	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerScannerContainerName).Return(&types.Container{ID: testScannerContainerID}, nil).AnyTimes()
 	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerScannerContainerName).Return(&types.Container{ID: testScannerContainerID}, nil).AnyTimes()
 	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testScannerContainerID, testNatsNetworkID)
 	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerJSONRPCProxyContainerName).Return(&types.Container{ID: testProxyContainerID}, nil).AnyTimes()
@@ -133,6 +137,7 @@ func (s *Suite) initialContainerCheck() {
 		config.DockerScannerContainerName,
 		config.DockerJSONRPCProxyContainerName,
 		config.DockerNatsContainerName,
+		config.DockerIpfsContainerName,
 	} {
 		s.dockerClient.EXPECT().GetContainerByName(s.service.ctx, containerName).Return(&types.Container{ID: testGenericContainerID}, nil)
 	}

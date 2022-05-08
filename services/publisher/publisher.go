@@ -628,8 +628,7 @@ func NewPublisher(ctx context.Context, cfg config.Config) (*Publisher, error) {
 }
 
 func initPublisher(ctx context.Context, mc *messaging.Client, alertClient clients.AlertAPIClient, cfg PublisherConfig) (*Publisher, error) {
-
-	ipfsClient, err := ipfs.NewClient(cfg.PublisherConfig.IPFS.APIURL)
+	ipfsClient, err := ipfs.NewClient(fmt.Sprintf("http://%s:5001", config.DockerIpfsContainerName))
 	if err != nil {
 		return nil, err
 	}
