@@ -43,7 +43,7 @@ runs:
       id: ipfs
       with:
         path: ./manifest.json
-        host: ipfs.forta.network
+        host: ipfs-dev.forta.network
         port: 443
         protocol: https
         verbose: true
