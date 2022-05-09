@@ -284,6 +284,10 @@ func (sup *SupervisorService) ensureNodeImages() error {
 			Name: "nats",
 			Ref:  "nats:2.3.2",
 		},
+		{
+			Name: "ipfs/go-ipfs",
+			Ref:  "ipfs/go-ipfs:v0.12.2",
+		},
 	} {
 		if err := sup.client.EnsureLocalImage(sup.ctx, image.Name, image.Ref); err != nil {
 			return err
