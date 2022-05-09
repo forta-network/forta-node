@@ -2,6 +2,7 @@ package updater
 
 import (
 	"context"
+	"math/rand"
 	"time"
 
 	"github.com/forta-network/forta-core-go/registry"
@@ -16,6 +17,14 @@ import (
 	"github.com/forta-network/forta-node/store"
 	log "github.com/sirupsen/logrus"
 )
+
+const intervalRangeMin = 1 * 60      // 1 min
+const intervalRangeMax = 6 * 60 * 60 // 6 hours
+
+func generateRandomInterval() int {
+	rand.Seed(time.Now().UnixNano())
+	return rand.Intn(intervalRangeMax-intervalRangeMin+1) + intervalRangeMin
+}
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
 	cfg.Registry.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Registry.JsonRpc.Url)
@@ -41,9 +50,14 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		"developmentMode": developmentMode,
 	}).Info("updater modes")
 
+	interval := generateRandomInterval()
+	if cfg.AutoUpdate.CheckIntervalSeconds != nil {
+		interval = *cfg.AutoUpdate.CheckIntervalSeconds
+	}
+
 	updaterService := updater.NewUpdaterService(
 		ctx, rg, rc, config.DefaultContainerPort,
-		developmentMode, cfg.AutoUpdate.CheckIntervalSeconds,
+		developmentMode, interval,
 	)
 
 	return []services.Service{
