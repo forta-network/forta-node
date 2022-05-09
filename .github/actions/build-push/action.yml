@@ -38,12 +38,4 @@ runs:
         IMAGE_REF=$(./scripts/docker-build-push.sh "$REGISTRY" "$IMAGE_NAME" "$COMMIT_SHA")
         echo "::set-output name=image-reference::$IMAGE_REF"
         ./scripts/build-manifest.sh ./scripts/manifest-template.json manifest.json "$GITHUB_SHA" "$IMAGE_REF" "$VERSION"
-    - name: Push Manifest
-      uses: aquiladev/ipfs-action@master
-      id: ipfs
-      with:
-        path: ./manifest.json
-        host: ipfs-dev.forta.network
-        port: 443
-        protocol: https
-        verbose: true
+        ./scripts/ipfs-add.sh ./manifest.json
