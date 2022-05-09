@@ -13,7 +13,7 @@ inputs:
 outputs:
   release-cid:
     description: 'IPFS CID of the release manifest'
-    value: ${{ steps.ipfs.outputs.hash }}
+    value: ${{ steps.build-and-push.outputs.release-cid }}
   image-reference:
     description: 'Reference of the built and pushed image'
     value: ${{ steps.build-and-push.outputs.image-reference }}
@@ -38,5 +38,5 @@ runs:
         IMAGE_REF=$(./scripts/docker-build-push.sh "$REGISTRY" "$IMAGE_NAME" "$COMMIT_SHA")
         echo "::set-output name=image-reference::$IMAGE_REF"
         ./scripts/build-manifest.sh ./scripts/manifest-template.json manifest.json "$GITHUB_SHA" "$IMAGE_REF" "$VERSION"
-        MANIFEST_REF=$(./scripts/ipfs-add.sh ./manifest.json)
+        MANIFEST_REF=$(./scripts/ipfs-add.sh "./manifest.json")
         echo "::set-output name=release-cid::$MANIFEST_REF"
