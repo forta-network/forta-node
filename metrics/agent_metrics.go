@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"github.com/forta-network/forta-core-go/domain"
 	"time"
 
 	"github.com/forta-network/forta-core-go/protocol"
@@ -16,6 +17,10 @@ const (
 	MetricTxError          = "tx.error"
 	MetricTxSuccess        = "tx.success"
 	MetricTxDrop           = "tx.drop"
+	MetricTxBlockAge       = "tx.block.age"
+	MetricTxEventAge       = "tx.event.age"
+	MetricBlockBlockAge    = "block.block.age"
+	MetricBlockEventAge    = "block.event.age"
 	MetricBlockRequest     = "block.request"
 	MetricBlockLatency     = "block.latency"
 	MetricBlockError       = "block.error"
@@ -59,12 +64,18 @@ func createMetrics(agentID, timestamp string, metricMap map[string]float64) []*p
 	return res
 }
 
-func GetBlockMetrics(agt config.AgentConfig, resp *protocol.EvaluateBlockResponse) []*protocol.AgentMetric {
+func durationMs(from time.Time, to time.Time) float64 {
+	return float64(to.Sub(from).Milliseconds())
+}
+
+func GetBlockMetrics(agt config.AgentConfig, resp *protocol.EvaluateBlockResponse, times *domain.TrackingTimestamps) []*protocol.AgentMetric {
 	metrics := make(map[string]float64)
 
 	metrics[MetricBlockRequest] = 1
 	metrics[MetricFinding] = float64(len(resp.Findings))
 	metrics[MetricBlockLatency] = float64(resp.LatencyMs)
+	metrics[MetricBlockBlockAge] = durationMs(times.Block, times.BotRequest)
+	metrics[MetricBlockEventAge] = durationMs(times.Feed, times.BotRequest)
 
 	if resp.Status == protocol.ResponseStatus_ERROR {
 		metrics[MetricBlockError] = 1
@@ -75,12 +86,14 @@ func GetBlockMetrics(agt config.AgentConfig, resp *protocol.EvaluateBlockRespons
 	return createMetrics(agt.ID, resp.Timestamp, metrics)
 }
 
-func GetTxMetrics(agt config.AgentConfig, resp *protocol.EvaluateTxResponse) []*protocol.AgentMetric {
+func GetTxMetrics(agt config.AgentConfig, resp *protocol.EvaluateTxResponse, times *domain.TrackingTimestamps) []*protocol.AgentMetric {
 	metrics := make(map[string]float64)
 
 	metrics[MetricTxRequest] = 1
 	metrics[MetricFinding] = float64(len(resp.Findings))
 	metrics[MetricTxLatency] = float64(resp.LatencyMs)
+	metrics[MetricTxBlockAge] = durationMs(times.Block, times.BotRequest)
+	metrics[MetricTxEventAge] = durationMs(times.Feed, times.BotRequest)
 
 	if resp.Status == protocol.ResponseStatus_ERROR {
 		metrics[MetricTxError] = 1

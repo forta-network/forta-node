@@ -2,6 +2,7 @@ package poolagent
 
 import (
 	"context"
+	"github.com/forta-network/forta-core-go/domain"
 	"sync"
 	"time"
 
@@ -185,7 +186,10 @@ func (agent *Agent) processTransactions() {
 		ctx, cancel := context.WithTimeout(agent.ctx, AgentTimeout)
 		lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
 		resp := new(protocol.EvaluateTxResponse)
+
+		requestTime := time.Now().UTC()
 		err := agent.client.Invoke(ctx, agentgrpc.MethodEvaluateTx, request.Encoded, resp)
+		responseTime := time.Now().UTC()
 		cancel()
 		if err == nil {
 			// truncate findings
@@ -204,10 +208,15 @@ func (agent *Agent) processTransactions() {
 			}
 			resp.Metadata["imageHash"] = agent.config.ImageHash()
 
+			ts := domain.TrackingTimestampsFromMessage(request.Original.Event.Timestamps)
+			ts.BotRequest = requestTime
+			ts.BotResponse = responseTime
+
 			agent.txResults <- &scanner.TxResult{
 				AgentConfig: agent.config,
 				Request:     request.Original,
 				Response:    resp,
+				Timestamps:  ts,
 			}
 			lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
 			continue
@@ -245,7 +254,9 @@ func (agent *Agent) processBlocks() {
 		ctx, cancel := context.WithTimeout(agent.ctx, AgentTimeout)
 		lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
 		resp := new(protocol.EvaluateBlockResponse)
+		requestTime := time.Now().UTC()
 		err := agent.client.Invoke(ctx, agentgrpc.MethodEvaluateBlock, request.Encoded, resp)
+		responseTime := time.Now().UTC()
 		cancel()
 		if err == nil {
 			// truncate findings
@@ -264,10 +275,15 @@ func (agent *Agent) processBlocks() {
 			}
 			resp.Metadata["imageHash"] = agent.config.ImageHash()
 
+			ts := domain.TrackingTimestampsFromMessage(request.Original.Event.Timestamps)
+			ts.BotRequest = requestTime
+			ts.BotResponse = responseTime
+
 			agent.blockResults <- &scanner.BlockResult{
 				AgentConfig: agent.config,
 				Request:     request.Original,
 				Response:    resp,
+				Timestamps:  ts,
 			}
 			lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
 			continue

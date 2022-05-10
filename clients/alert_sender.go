@@ -3,6 +3,7 @@ package clients
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-core-go/security"
 	"github.com/forta-network/forta-node/config"
@@ -19,8 +20,8 @@ type AgentRoundTrip struct {
 }
 
 type AlertSender interface {
-	SignAlertAndNotify(rt *AgentRoundTrip, alert *protocol.Alert, chainID, blockNumber string) error
-	NotifyWithoutAlert(rt *AgentRoundTrip, chainID, blockNumber string) error
+	SignAlertAndNotify(rt *AgentRoundTrip, alert *protocol.Alert, chainID, blockNumber string, ts *domain.TrackingTimestamps) error
+	NotifyWithoutAlert(rt *AgentRoundTrip, ts *domain.TrackingTimestamps) error
 }
 
 // PublishClient implements the interface for a notify
@@ -38,7 +39,7 @@ type AlertSenderConfig struct {
 	Key *keystore.Key
 }
 
-func (a *alertSender) SignAlertAndNotify(rt *AgentRoundTrip, alert *protocol.Alert, chainID, blockNumber string) error {
+func (a *alertSender) SignAlertAndNotify(rt *AgentRoundTrip, alert *protocol.Alert, chainID, blockNumber string, ts *domain.TrackingTimestamps) error {
 	alert.Scanner = &protocol.ScannerInfo{
 		Address: a.cfg.Key.Address.Hex(),
 	}
@@ -56,17 +57,19 @@ func (a *alertSender) SignAlertAndNotify(rt *AgentRoundTrip, alert *protocol.Ale
 		EvalTxRequest:     rt.EvalTxRequest,
 		EvalTxResponse:    rt.EvalTxResponse,
 		AgentInfo:         rt.AgentConfig.ToAgentInfo(),
+		Timestamps:        ts.ToMessage(),
 	})
 	return err
 }
 
-func (a *alertSender) NotifyWithoutAlert(rt *AgentRoundTrip, chainID, blockNumber string) error {
+func (a *alertSender) NotifyWithoutAlert(rt *AgentRoundTrip, ts *domain.TrackingTimestamps) error {
 	_, err := a.pClient.Notify(a.ctx, &protocol.NotifyRequest{
 		EvalBlockRequest:  rt.EvalBlockRequest,
 		EvalBlockResponse: rt.EvalBlockResponse,
 		EvalTxRequest:     rt.EvalTxRequest,
 		EvalTxResponse:    rt.EvalTxResponse,
 		AgentInfo:         rt.AgentConfig.ToAgentInfo(),
+		Timestamps:        ts.ToMessage(),
 	})
 	return err
 }
