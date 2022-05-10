@@ -123,7 +123,7 @@ func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 		lg.WithError(err).Error("failed to encode message")
 		return
 	}
-
+	var metricsList []*protocol.AgentMetric
 	for _, agent := range agents {
 		if !agent.IsReady() || !agent.ShouldProcessBlock(req.Event.Block.BlockNumber) {
 			continue
@@ -134,6 +134,7 @@ func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 		}).Debug("sending tx request to evalTxCh")
 
 		// unblock req send and discard agent if agent is closed
+
 		select {
 		case <-agent.Closed():
 			ap.discardAgent(agent)
@@ -143,12 +144,15 @@ func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 		}:
 		default: // do not try to send if the buffer is full
 			lg.WithField("agent", agent.Config().ID).Debug("agent tx request buffer is full - skipping")
+			metricsList = append(metricsList, metrics.CreateAgentMetric(agent.Config().ID, metrics.MetricTxDrop, 1))
 		}
 		lg.WithFields(log.Fields{
 			"agent":    agent.Config().ID,
 			"duration": time.Since(startTime),
 		}).Debug("sent tx request to evalTxCh")
 	}
+	metrics.SendAgentMetrics(ap.msgClient, metricsList)
+
 	lg.WithFields(log.Fields{
 		"duration": time.Since(startTime),
 	}).Debug("Finished SendEvaluateTxRequest")
