@@ -658,10 +658,22 @@ func (d *dockerClient) EnsureLocalImage(ctx context.Context, name, ref string) e
 		log.Infof("found local image for '%s': %s", name, ref)
 		return nil
 	}
-	err := d.PullImage(ctx, ref)
-	if err != nil {
-		return fmt.Errorf("failed to pull image (%s, %s): %v", name, ref, err)
+
+	ticker := time.NewTicker(time.Minute)
+
+	for {
+		err := d.PullImage(ctx, ref)
+		if err == nil {
+			break
+		}
+		log.WithFields(log.Fields{
+			"name":  name,
+			"ref":   ref,
+			"error": err,
+		}).Error("failed to pull image - retrying")
+		<-ticker.C
 	}
+
 	log.Infof("pulled image for '%s': %s", name, ref)
 	return nil
 }
