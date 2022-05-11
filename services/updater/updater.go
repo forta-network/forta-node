@@ -88,10 +88,8 @@ func (updater *UpdaterService) Start() error {
 
 	utils.GoListenAndServe(updater.server)
 
-	retryTicker := time.NewTicker(time.Minute)
-
 	go func() {
-		t := time.NewTicker(time.Duration(updater.intervalSeconds) * time.Second)
+		t := time.NewTicker(time.Minute)
 		for {
 			select {
 			case <-updater.ctx.Done():
@@ -99,23 +97,11 @@ func (updater *UpdaterService) Start() error {
 				updater.stopServer()
 				return
 			case <-t.C:
-				err := updater.updateLatestRelease()
+				err := updater.updateLatestReleaseWithDelay(time.Duration(updater.intervalSeconds) * time.Second)
 				updater.lastErr.Set(err)
 				updater.lastChecked.Set()
 				if err != nil {
 					log.WithError(err).Error("error getting release")
-					// continue, wait ticker
-					for range retryTicker.C {
-						err := updater.updateLatestRelease()
-						if err != nil {
-							log.WithError(err).Error("error getting release (on retry)")
-						}
-						updater.lastErr.Set(err)
-						updater.lastChecked.Set()
-						if err == nil {
-							break
-						}
-					}
 				}
 			}
 		}
@@ -126,6 +112,10 @@ func (updater *UpdaterService) Start() error {
 }
 
 func (updater *UpdaterService) updateLatestRelease() error {
+	return updater.updateLatestReleaseWithDelay(0)
+}
+
+func (updater *UpdaterService) updateLatestReleaseWithDelay(delay time.Duration) error {
 	if updater.developmentMode {
 		return updater.readLocalReleaseManifest()
 	}
@@ -142,6 +132,15 @@ func (updater *UpdaterService) updateLatestRelease() error {
 			log.WithError(err).Error("error getting release manifest")
 			return fmt.Errorf("failed while downloading the release manifest: %v", err)
 		}
+
+		// so that all scanners don't update simultaneously, this waits a period of time
+		if delay > 0*time.Second {
+			log.WithFields(log.Fields{
+				"release": ref, "delay": delay,
+			}).Info("delaying update")
+			time.Sleep(delay)
+		}
+
 		updater.mu.Lock()
 		defer updater.mu.Unlock()
 		updater.latestRelease = rm
