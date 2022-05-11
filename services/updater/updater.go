@@ -34,7 +34,7 @@ type UpdaterService struct {
 	latestReference string
 	latestRelease   *release.ReleaseManifest
 
-	intervalSeconds int
+	delaySeconds int
 
 	lastChecked health.TimeTracker
 	lastErr     health.ErrorTracker
@@ -42,7 +42,7 @@ type UpdaterService struct {
 
 // NewUpdaterService creates a new updater service.
 func NewUpdaterService(ctx context.Context, rg registry.Client, rc release.Client,
-	port string, developmentMode bool, intervalSeconds int,
+	port string, developmentMode bool, delaySeconds int,
 ) *UpdaterService {
 	return &UpdaterService{
 		ctx:             ctx,
@@ -50,7 +50,7 @@ func NewUpdaterService(ctx context.Context, rg registry.Client, rc release.Clien
 		rg:              rg,
 		rl:              rc,
 		developmentMode: developmentMode,
-		intervalSeconds: intervalSeconds,
+		delaySeconds:    delaySeconds,
 	}
 }
 
@@ -89,7 +89,7 @@ func (updater *UpdaterService) Start() error {
 	utils.GoListenAndServe(updater.server)
 
 	go func() {
-		t := time.NewTicker(time.Duration(updater.intervalSeconds) * time.Second)
+		t := time.NewTicker(time.Minute)
 		for {
 			select {
 			case <-updater.ctx.Done():
@@ -97,12 +97,11 @@ func (updater *UpdaterService) Start() error {
 				updater.stopServer()
 				return
 			case <-t.C:
-				err := updater.updateLatestRelease()
+				err := updater.updateLatestReleaseWithDelay(time.Duration(updater.delaySeconds) * time.Second)
 				updater.lastErr.Set(err)
 				updater.lastChecked.Set()
 				if err != nil {
 					log.WithError(err).Error("error getting release")
-					// continue, wait ticker
 				}
 			}
 		}
@@ -113,6 +112,10 @@ func (updater *UpdaterService) Start() error {
 }
 
 func (updater *UpdaterService) updateLatestRelease() error {
+	return updater.updateLatestReleaseWithDelay(0)
+}
+
+func (updater *UpdaterService) updateLatestReleaseWithDelay(delay time.Duration) error {
 	if updater.developmentMode {
 		return updater.readLocalReleaseManifest()
 	}
@@ -129,6 +132,15 @@ func (updater *UpdaterService) updateLatestRelease() error {
 			log.WithError(err).Error("error getting release manifest")
 			return fmt.Errorf("failed while downloading the release manifest: %v", err)
 		}
+
+		// so that all scanners don't update simultaneously, this waits a period of time
+		if delay > 0 {
+			log.WithFields(log.Fields{
+				"release": ref, "delay": delay,
+			}).Info("delaying update")
+			time.Sleep(delay)
+		}
+
 		updater.mu.Lock()
 		defer updater.mu.Unlock()
 		updater.latestRelease = rm

@@ -2,6 +2,9 @@ package updater
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/forta-network/forta-core-go/security"
+	"math/big"
 	"time"
 
 	"github.com/forta-network/forta-core-go/registry"
@@ -16,6 +19,15 @@ import (
 	"github.com/forta-network/forta-node/store"
 	log "github.com/sirupsen/logrus"
 )
+
+const minUpdateInterval = 1 * time.Minute
+const maxUpdateInterval = 1 * time.Hour
+
+func generateIntervalMs(addr common.Address) int64 {
+	interval := big.NewInt(0)
+	interval.Mod(utils.ScannerIDHexToBigInt(addr.Hex()), big.NewInt((maxUpdateInterval).Milliseconds()))
+	return interval.Int64() + minUpdateInterval.Milliseconds()
+}
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
 	cfg.Registry.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Registry.JsonRpc.Url)
@@ -41,9 +53,20 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		"developmentMode": developmentMode,
 	}).Info("updater modes")
 
+	key, err := security.LoadKey(config.DefaultContainerKeyDirPath)
+	if err != nil {
+		return nil, err
+	}
+
+	intervalMs := generateIntervalMs(key.Address)
+	updateDelay := int(intervalMs / 1000)
+	if cfg.AutoUpdate.UpdateDelay != nil {
+		updateDelay = *cfg.AutoUpdate.UpdateDelay
+	}
+
 	updaterService := updater.NewUpdaterService(
 		ctx, rg, rc, config.DefaultContainerPort,
-		developmentMode, cfg.AutoUpdate.CheckIntervalSeconds,
+		developmentMode, updateDelay,
 	)
 
 	return []services.Service{
