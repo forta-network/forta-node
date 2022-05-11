@@ -22,7 +22,7 @@ publish:
     skipEmpty: true
 
 autoUpdate:
-  checkIntervalSeconds: 1
+  updateDelay: 1
 
 trace:
   enabled: false
