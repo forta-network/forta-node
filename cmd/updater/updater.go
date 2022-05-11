@@ -2,9 +2,12 @@ package updater
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/forta-network/forta-core-go/security"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
 	"math/big"
+	"path"
 	"time"
 
 	"github.com/forta-network/forta-core-go/registry"
@@ -23,10 +26,37 @@ import (
 const minUpdateInterval = 1 * time.Minute
 const maxUpdateInterval = 1 * time.Hour
 
-func generateIntervalMs(addr common.Address) int64 {
+func generateIntervalMs(addr string) int64 {
 	interval := big.NewInt(0)
-	interval.Mod(utils.ScannerIDHexToBigInt(addr.Hex()), big.NewInt((maxUpdateInterval).Milliseconds()))
+	interval.Mod(utils.ScannerIDHexToBigInt(addr), big.NewInt((maxUpdateInterval).Milliseconds()))
 	return interval.Int64() + minUpdateInterval.Milliseconds()
+}
+
+type keyAddress struct {
+	Address string `json:"address"`
+}
+
+func loadAddressFromKeyFile() (string, error) {
+	files, err := ioutil.ReadDir(config.DefaultContainerKeyDirPath)
+	if err != nil {
+		return "", err
+	}
+
+	if len(files) != 1 {
+		return "", errors.New("there must be only one key in key directory")
+	}
+
+	b, err := ioutil.ReadFile(path.Join(config.DefaultContainerKeyDirPath, files[0].Name()))
+	if err != nil {
+		return "", err
+	}
+
+	var addr keyAddress
+	if err := json.Unmarshal(b, &addr); err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("0x%s", addr.Address), nil
 }
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
@@ -53,12 +83,12 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		"developmentMode": developmentMode,
 	}).Info("updater modes")
 
-	key, err := security.LoadKey(config.DefaultContainerKeyDirPath)
+	address, err := loadAddressFromKeyFile()
 	if err != nil {
 		return nil, err
 	}
 
-	intervalMs := generateIntervalMs(key.Address)
+	intervalMs := generateIntervalMs(address)
 	updateDelay := int(intervalMs / 1000)
 	if cfg.AutoUpdate.UpdateDelay != nil {
 		updateDelay = *cfg.AutoUpdate.UpdateDelay
