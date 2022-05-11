@@ -100,7 +100,7 @@ type TelemetryConfig struct {
 
 type AutoUpdateConfig struct {
 	Disable              bool `yaml:"disable" json:"disable"`
-	CheckIntervalSeconds *int `yaml:"checkIntervalSeconds" json:"checkIntervalSeconds" default:"60"`
+	CheckIntervalSeconds *int `yaml:"checkIntervalSeconds" json:"checkIntervalSeconds"`
 }
 
 type AgentLogsConfig struct {
