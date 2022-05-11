@@ -134,7 +134,7 @@ func (updater *UpdaterService) updateLatestReleaseWithDelay(delay time.Duration)
 		}
 
 		// so that all scanners don't update simultaneously, this waits a period of time
-		if delay > 0*time.Second {
+		if delay > 0 {
 			log.WithFields(log.Fields{
 				"release": ref, "delay": delay,
 			}).Info("delaying update")
