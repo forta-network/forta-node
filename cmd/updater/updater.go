@@ -59,14 +59,14 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	}
 
 	intervalMs := generateIntervalMs(key.Address)
-	interval := int(intervalMs / 1000)
-	if cfg.AutoUpdate.CheckIntervalSeconds != nil {
-		interval = *cfg.AutoUpdate.CheckIntervalSeconds
+	updateDelay := int(intervalMs / 1000)
+	if cfg.AutoUpdate.UpdateDelay != nil {
+		updateDelay = *cfg.AutoUpdate.UpdateDelay
 	}
 
 	updaterService := updater.NewUpdaterService(
 		ctx, rg, rc, config.DefaultContainerPort,
-		developmentMode, interval,
+		developmentMode, updateDelay,
 	)
 
 	return []services.Service{

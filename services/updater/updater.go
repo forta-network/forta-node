@@ -34,7 +34,7 @@ type UpdaterService struct {
 	latestReference string
 	latestRelease   *release.ReleaseManifest
 
-	intervalSeconds int
+	delaySeconds int
 
 	lastChecked health.TimeTracker
 	lastErr     health.ErrorTracker
@@ -42,7 +42,7 @@ type UpdaterService struct {
 
 // NewUpdaterService creates a new updater service.
 func NewUpdaterService(ctx context.Context, rg registry.Client, rc release.Client,
-	port string, developmentMode bool, intervalSeconds int,
+	port string, developmentMode bool, delaySeconds int,
 ) *UpdaterService {
 	return &UpdaterService{
 		ctx:             ctx,
@@ -50,7 +50,7 @@ func NewUpdaterService(ctx context.Context, rg registry.Client, rc release.Clien
 		rg:              rg,
 		rl:              rc,
 		developmentMode: developmentMode,
-		intervalSeconds: intervalSeconds,
+		delaySeconds:    delaySeconds,
 	}
 }
 
@@ -97,7 +97,7 @@ func (updater *UpdaterService) Start() error {
 				updater.stopServer()
 				return
 			case <-t.C:
-				err := updater.updateLatestReleaseWithDelay(time.Duration(updater.intervalSeconds) * time.Second)
+				err := updater.updateLatestReleaseWithDelay(time.Duration(updater.delaySeconds) * time.Second)
 				updater.lastErr.Set(err)
 				updater.lastChecked.Set()
 				if err != nil {
