@@ -57,7 +57,7 @@ func (t *TxAnalyzerService) calculateAlertID(result *TxResult, f *protocol.Findi
 }
 
 func (t *TxAnalyzerService) publishMetrics(result *TxResult) {
-	m := metrics.GetTxMetrics(result.AgentConfig, result.Response)
+	m := metrics.GetTxMetrics(result.AgentConfig, result.Response, result.Timestamps)
 	t.cfg.MsgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: m})
 }
 
@@ -87,12 +87,13 @@ func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *pr
 	}
 
 	return &protocol.Alert{
-		Id:        alertID,
-		Finding:   f,
-		Timestamp: ts.Format(utils.AlertTimeFormat),
-		Type:      alertType,
-		Agent:     result.AgentConfig.ToAgentInfo(),
-		Tags:      tags,
+		Id:         alertID,
+		Finding:    f,
+		Timestamp:  ts.Format(utils.AlertTimeFormat),
+		Type:       alertType,
+		Agent:      result.AgentConfig.ToAgentInfo(),
+		Tags:       tags,
+		Timestamps: result.Timestamps.ToMessage(),
 	}, nil
 }
 
@@ -111,7 +112,7 @@ func (t *TxAnalyzerService) Start() error {
 
 			if len(result.Response.Findings) == 0 {
 				if err := t.cfg.AlertSender.NotifyWithoutAlert(
-					rt, result.Request.Event.Network.ChainId, result.Request.Event.Block.BlockNumber,
+					rt, result.Timestamps,
 				); err != nil {
 					log.WithError(err).Panic("failed to notify without alert")
 				}
@@ -125,7 +126,7 @@ func (t *TxAnalyzerService) Start() error {
 					continue
 				}
 				if err := t.cfg.AlertSender.SignAlertAndNotify(
-					rt, alert, result.Request.Event.Network.ChainId, result.Request.Event.Block.BlockNumber,
+					rt, alert, result.Request.Event.Network.ChainId, result.Request.Event.Block.BlockNumber, result.Timestamps,
 				); err != nil {
 					log.WithError(err).Panic("failed to sign alert and notify")
 				}
