@@ -2,7 +2,9 @@ package updater
 
 import (
 	"context"
-	"math/rand"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/forta-network/forta-core-go/security"
+	"math/big"
 	"time"
 
 	"github.com/forta-network/forta-core-go/registry"
@@ -18,12 +20,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const intervalRangeMin = 1 * 60      // 1 min
-const intervalRangeMax = 6 * 60 * 60 // 6 hours
+const minUpdateInterval = 1 * time.Minute
+const maxUpdateInterval = 1 * time.Hour
 
-func generateRandomInterval() int {
-	rand.Seed(time.Now().UnixNano())
-	return rand.Intn(intervalRangeMax-intervalRangeMin+1) + intervalRangeMin
+func generateIntervalMs(addr common.Address) int64 {
+	interval := big.NewInt(0)
+	interval.Mod(utils.ScannerIDHexToBigInt(addr.Hex()), big.NewInt((maxUpdateInterval).Milliseconds()))
+	return interval.Int64() + minUpdateInterval.Milliseconds()
 }
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
@@ -50,7 +53,13 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		"developmentMode": developmentMode,
 	}).Info("updater modes")
 
-	interval := generateRandomInterval()
+	key, err := security.LoadKey(config.DefaultContainerKeyDirPath)
+	if err != nil {
+		return nil, err
+	}
+
+	intervalMs := generateIntervalMs(key.Address)
+	interval := int(intervalMs / 1000)
 	if cfg.AutoUpdate.CheckIntervalSeconds != nil {
 		interval = *cfg.AutoUpdate.CheckIntervalSeconds
 	}

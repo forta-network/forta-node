@@ -88,6 +88,8 @@ func (updater *UpdaterService) Start() error {
 
 	utils.GoListenAndServe(updater.server)
 
+	retryTicker := time.NewTicker(time.Minute)
+
 	go func() {
 		t := time.NewTicker(time.Duration(updater.intervalSeconds) * time.Second)
 		for {
@@ -103,6 +105,17 @@ func (updater *UpdaterService) Start() error {
 				if err != nil {
 					log.WithError(err).Error("error getting release")
 					// continue, wait ticker
+					for range retryTicker.C {
+						err := updater.updateLatestRelease()
+						if err != nil {
+							log.WithError(err).Error("error getting release (on retry)")
+						}
+						updater.lastErr.Set(err)
+						updater.lastChecked.Set()
+						if err == nil {
+							break
+						}
+					}
 				}
 			}
 		}
