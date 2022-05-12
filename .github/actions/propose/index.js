@@ -3,9 +3,7 @@ const core = require('@actions/core');
 
 async function proposeUpgrade(apiKey, apiSecret, versionContract, network, multisig, version, cid) {
     const client = new AdminClient({apiKey, apiSecret});
-
-    console.log({apiKey, apiSecret, versionContract, network, multisig, version, cid})
-
+    
     const params = {
         contract: { address: versionContract, network: network },
         title: `Forta Node Release ${version}`,
