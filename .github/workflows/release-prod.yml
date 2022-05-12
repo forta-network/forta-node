@@ -128,7 +128,7 @@ jobs:
 
   release:
     name: Release to prod
-    needs: build
+    needs: [build, propose]
     runs-on: ubuntu-18.04
     environment: prod
     steps:
