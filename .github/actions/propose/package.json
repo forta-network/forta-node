@@ -1,0 +1,15 @@
+{
+  "name": "proposal-action",
+  "version": "1.0.0",
+  "description": "proposes releases for forta node",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Steven Landers (steven.landers@gmail.com)",
+  "license": "ISC",
+  "dependencies": {
+    "@actions/core": "^1.8.0",
+    "defender-admin-client": "^1.21.3"
+  }
+}

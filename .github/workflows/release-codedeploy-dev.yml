@@ -71,6 +71,25 @@ jobs:
           echo "::set-output name=${{ matrix.image-name }}-release-cid::${{ steps.build-and-push.outputs.release-cid }}"
           echo "::set-output name=${{ matrix.image-name }}-image-ref::${{ steps.build-and-push.outputs.image-reference }}"
 
+  propose:
+    name: Propose Upgrade
+    needs: containers
+    runs-on: ubuntu-latest
+    steps:
+      - name: Propose Upgrade
+        id: propose
+        uses: ./.github/actions/propose
+        with:
+          api-key: ${{ secrets.DEFENDER_PROPOSAL_API_KEY }}
+          api-secret: ${{ secrets.DEFENDER_PROPOSAL_API_SECRET }}
+          scanner-version-contract: "0xBeDC289BdE5BA0395CF84927CB3f82b1d2423283"
+          network: "mumbai"
+          multisig: "0x19AD705930B6695812c921f08b16F7DfAF59A536"
+          version: env.DEFAULT_DEV_VERSION
+          release-cid: needs.containers.outputs.node-release-cid
+      - name: Proposal Url
+        run: echo "Proposal ${{ steps.propose.outputs.proposal-url }}"
+
   publish-hash:
     name: Publish Hash to Contract
     needs: containers

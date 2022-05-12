@@ -66,20 +66,24 @@ jobs:
           echo "::set-output name=${{ matrix.image-name }}-release-cid::${{ steps.build-and-push.outputs.release-cid }}"
           echo "::set-output name=${{ matrix.image-name }}-image-ref::${{ steps.build-and-push.outputs.image-reference }}"
 
-  publish-hash:
-    name: Publish Hash to Contract
+  propose:
+    name: Propose Upgrade
     needs: containers
     runs-on: ubuntu-latest
-    environment: prod
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Echo Hash
-        run: |
-          echo "release-cid=${{ needs.containers.outputs.node-release-cid }}"
-      - name: Publish Hash
-        run: |
-          ./scripts/publish-release.sh ${{ needs.containers.outputs.node-release-cid }} ${{ secrets.PROD_PUBLISH_AUTOTASK_KEY }} ${{ secrets.PROD_PUBLISH_AUTOTASK_URL }}
+      - name: Propose Upgrade
+        id: propose
+        uses: ./.github/actions/propose
+        with:
+          api-key: ${{ secrets.DEFENDER_PROPOSAL_API_KEY }}
+          api-secret: ${{ secrets.DEFENDER_PROPOSAL_API_SECRET }}
+          scanner-version-contract: "0x4720c872425876B6f4b4E9130CDef667aDE553b2"
+          network: "matic"
+          multisig: "0xd1d4FaFd400fCD643132bb7eAF7682eE97E09C3e"
+          version: env.DEFAULT_DEV_VERSION
+          release-cid: needs.containers.outputs.node-release-cid
+      - name: Proposal Url
+        run: echo "Proposal ${{ steps.propose.outputs.proposal-url }}"
 
   build:
     name: Build

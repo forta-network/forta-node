@@ -28,3 +28,4 @@ tests/e2e/.forta*/*
 coverage
 
 forta-test
+node_modules

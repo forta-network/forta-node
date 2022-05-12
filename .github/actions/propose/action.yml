@@ -1,0 +1,31 @@
+name: 'Propose Release'
+description: 'Propose Release'
+inputs:
+  version:
+    description: 'Semver tag'
+    required: true
+  release-cid:
+    description: 'CID of Release'
+    required: true
+  multisig:
+    description: 'Address of multisig account'
+    required: true
+  network:
+    description: 'Network for version contract'
+    required: true
+  scanner-version-contract:
+    description: 'Address of scanner version contract'
+    required: true
+  api-key:
+    description: 'API Key for Defender'
+    required: true
+  api-secret:
+    description: 'API Secret for Defender'
+    required: true
+outputs:
+  proposal-url:
+    description: "URL of proposal"
+
+runs:
+  using: 'node16'
+  main: 'index.js'
