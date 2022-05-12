@@ -82,8 +82,8 @@ jobs:
           scanner-version-contract: "0x4720c872425876B6f4b4E9130CDef667aDE553b2"
           network: "matic"
           multisig: "0xd1d4FaFd400fCD643132bb7eAF7682eE97E09C3e"
-          version: env.DEFAULT_DEV_VERSION
-          release-cid: needs.containers.outputs.node-release-cid
+          version: ${{ github.ref_name }}
+          release-cid: ${{ needs.containers.outputs.node-release-cid }}
       - name: Proposal Url
         run: echo "Proposal ${{ steps.propose.outputs.proposal-url }}"
 
