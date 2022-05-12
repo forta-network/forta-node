@@ -89,7 +89,7 @@ jobs:
 
   build:
     name: Build
-    needs: containers
+    needs: [containers, propose]
     runs-on: ubuntu-latest
     environment: prod
     steps:
@@ -128,7 +128,7 @@ jobs:
 
   release:
     name: Release to prod
-    needs: [build, propose]
+    needs: [build]
     runs-on: ubuntu-18.04
     environment: prod
     steps:
