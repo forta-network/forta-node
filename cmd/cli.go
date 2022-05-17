@@ -74,9 +74,10 @@ publishes alerts about them`,
 	}
 
 	cmdFortaAccountImport = &cobra.Command{
-		Use:   "import",
-		Short: "import new scanner account (removes the old one)",
-		RunE:  withInitialized(handleFortaAccountImport),
+		Use:    "import",
+		Short:  "import new scanner account (removes the old one)",
+		RunE:   withInitialized(handleFortaAccountImport),
+		Hidden: true,
 	}
 
 	cmdFortaAgent = &cobra.Command{
