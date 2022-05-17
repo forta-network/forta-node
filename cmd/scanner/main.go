@@ -277,7 +277,8 @@ func summarizeReports(reports health.Reports) *health.Report {
 }
 
 func isNotFoundErr(errMsg string) bool {
-	return strings.Contains(errMsg, "not found") || strings.Contains(errMsg, "could not find")
+	return strings.Contains(errMsg, "not found") || strings.Contains(errMsg, "could not find") ||
+		strings.Contains(errMsg, "cannot query unfinalized data")
 }
 
 func Run() {
