@@ -28,18 +28,36 @@ func (sup *SupervisorService) startAgent(agent config.AgentConfig) error {
 		return errAgentAlreadyRunning
 	}
 
-	nwID, err := sup.client.CreatePublicNetwork(sup.ctx, agent.ContainerName())
+	// run the bot admin first
+	adminContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
+		Name:  agent.AdminContainerName(),
+		Image: agent.Image,
+		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "bot-admin"},
+		Env: map[string]string{
+			config.EnvContainerName: agent.AdminContainerName(), // consumed by server in the container
+		},
+		LinkNetworkIDs: []string{sup.serviceNetworkID, sup.botNetworkID}, // this ensures that the container is up
+		MaxLogFiles:    sup.maxLogFiles,
+		MaxLogSize:     sup.maxLogSize,
+		Labels: map[string]string{
+			clients.DockerLabelFortaSupervisorStrategyVersion: SupervisorStrategyVersion,
+		},
+	})
 	if err != nil {
+		return err
+	}
+
+	// send rules request to the server
+	if err := sup.botManager.SetBotAdminRules(agent.AdminContainerName()); err != nil {
 		return err
 	}
 
 	limits := config.GetAgentResourceLimits(sup.config.Config.ResourcesConfig)
 
 	agentContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
-		Name:           agent.ContainerName(),
-		Image:          agent.Image,
-		NetworkID:      nwID,
-		LinkNetworkIDs: []string{},
+		Name:      agent.ContainerName(),
+		Image:     agent.Image,
+		NetworkID: fmt.Sprintf("container:%s", agent.AdminContainerName()), // share network interfaces (and rules)
 		Env: map[string]string{
 			config.EnvJsonRpcHost:   config.DockerJSONRPCProxyContainerName,
 			config.EnvJsonRpcPort:   "8545",
@@ -56,15 +74,8 @@ func (sup *SupervisorService) startAgent(agent config.AgentConfig) error {
 	if err != nil {
 		return err
 	}
-	// Attach the scanner and the JSON-RPC proxy to the agent's network.
-	for _, containerID := range []string{sup.scannerContainer.ID, sup.jsonRpcContainer.ID} {
-		err := sup.client.AttachNetwork(sup.ctx, containerID, nwID)
-		if err != nil {
-			return err
-		}
-	}
-
-	sup.addContainerUnsafe(agentContainer, &agent)
+	sup.addContainerUnsafe(adminContainer, true)
+	sup.addContainerUnsafe(agentContainer, false, &agent)
 
 	return nil
 }
@@ -78,7 +89,14 @@ func (sup *SupervisorService) getContainerUnsafe(name string) (*Container, bool)
 	return nil, false
 }
 
-func (sup *SupervisorService) addContainerUnsafe(container *clients.DockerContainer, agentConfig ...*config.AgentConfig) {
+func (sup *SupervisorService) addContainerUnsafe(container *clients.DockerContainer, isAgentAdmin bool, agentConfig ...*config.AgentConfig) {
+	if isAgentAdmin {
+		sup.containers = append(sup.containers, &Container{
+			DockerContainer: *container,
+			IsAgentAdmin:    true,
+		})
+		return
+	}
 	if agentConfig != nil {
 		sup.containers = append(sup.containers, &Container{
 			DockerContainer: *container,

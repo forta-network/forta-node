@@ -1,7 +1,7 @@
 package config
 
 import (
-	"fmt"
+	"strings"
 
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-core-go/utils"
@@ -36,11 +36,20 @@ func (ac AgentConfig) ImageHash() string {
 }
 
 func (ac AgentConfig) ContainerName() string {
+	return ac.containerName("agent")
+}
+
+func (ac AgentConfig) AdminContainerName() string {
+	return ac.containerName("agent-admin")
+}
+
+func (ac AgentConfig) containerName(name string) string {
 	_, digest := utils.SplitImageRef(ac.Image)
-	if ac.IsLocal {
-		return fmt.Sprintf("%s-agent-%s", ContainerNamePrefix, utils.ShortenString(ac.ID, 8))
+	parts := []string{ContainerNamePrefix, name, utils.ShortenString(ac.ID, 8)}
+	if !ac.IsLocal {
+		parts = append(parts, utils.ShortenString(digest, 4))
 	}
-	return fmt.Sprintf("%s-agent-%s-%s", ContainerNamePrefix, utils.ShortenString(ac.ID, 8), utils.ShortenString(digest, 4))
+	return strings.Join(parts, "-")
 }
 
 func (ac AgentConfig) GrpcPort() string {

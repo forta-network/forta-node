@@ -183,14 +183,18 @@ func (d *dockerClient) Prune(ctx context.Context) error {
 }
 
 func (d *dockerClient) CreatePublicNetwork(ctx context.Context, name string) (string, error) {
-	return d.createNetwork(ctx, name, false)
+	return d.createNetwork(ctx, name, false, nil)
 }
 
 func (d *dockerClient) CreateInternalNetwork(ctx context.Context, name string) (string, error) {
-	return d.createNetwork(ctx, name, true)
+	return d.createNetwork(ctx, name, true, nil)
 }
 
-func (d *dockerClient) createNetwork(ctx context.Context, name string, internal bool) (string, error) {
+func (d *dockerClient) CreateNetwork(ctx context.Context, name string, opts *types.NetworkCreate) (string, error) {
+	return d.createNetwork(ctx, name, false, opts)
+}
+
+func (d *dockerClient) createNetwork(ctx context.Context, name string, internal bool, opts *types.NetworkCreate) (string, error) {
 	// Reuse if network exists.
 	networks, err := d.cli.NetworkList(ctx, types.NetworkListOptions{})
 	if err != nil {
@@ -202,14 +206,25 @@ func (d *dockerClient) createNetwork(ctx context.Context, name string, internal 
 		}
 	}
 
-	resp, err := d.cli.NetworkCreate(ctx, name, types.NetworkCreate{
-		Labels:   labelsToMap(d.labels),
-		Internal: internal,
-	})
+	var networkOpts types.NetworkCreate
+	if opts != nil {
+		networkOpts = *opts
+	} else {
+		networkOpts = types.NetworkCreate{
+			Internal: internal,
+		}
+	}
+	networkOpts.Labels = labelsToMap(d.labels)
+
+	resp, err := d.cli.NetworkCreate(ctx, name, networkOpts)
 	if err != nil {
 		return "", err
 	}
 	return resp.ID, nil
+}
+
+func (d *dockerClient) GetNetworkByID(ctx context.Context, id string) (types.NetworkResource, error) {
+	return d.cli.NetworkInspect(ctx, id, types.NetworkInspectOptions{})
 }
 
 func (d *dockerClient) RemoveNetworkByName(ctx context.Context, networkName string) error {
@@ -486,6 +501,9 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 	}
 
 	if err := d.cli.ContainerStart(ctx, cont.ID, types.ContainerStartOptions{}); err != nil {
+		return nil, err
+	}
+	if err := d.WaitContainerStart(ctx, cont.ID); err != nil {
 		return nil, err
 	}
 

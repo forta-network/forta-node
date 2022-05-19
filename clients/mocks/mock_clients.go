@@ -71,6 +71,21 @@ func (mr *MockDockerClientMockRecorder) CreateInternalNetwork(ctx, name interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInternalNetwork", reflect.TypeOf((*MockDockerClient)(nil).CreateInternalNetwork), ctx, name)
 }
 
+// CreateNetwork mocks base method.
+func (m *MockDockerClient) CreateNetwork(ctx context.Context, name string, opts *types.NetworkCreate) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateNetwork", ctx, name, opts)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateNetwork indicates an expected call of CreateNetwork.
+func (mr *MockDockerClientMockRecorder) CreateNetwork(ctx, name, opts interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNetwork", reflect.TypeOf((*MockDockerClient)(nil).CreateNetwork), ctx, name, opts)
+}
+
 // CreatePublicNetwork mocks base method.
 func (m *MockDockerClient) CreatePublicNetwork(ctx context.Context, name string) (string, error) {
 	m.ctrl.T.Helper()
@@ -173,6 +188,21 @@ func (m *MockDockerClient) GetFortaServiceContainers(ctx context.Context) (clien
 func (mr *MockDockerClientMockRecorder) GetFortaServiceContainers(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFortaServiceContainers", reflect.TypeOf((*MockDockerClient)(nil).GetFortaServiceContainers), ctx)
+}
+
+// GetNetworkByID mocks base method.
+func (m *MockDockerClient) GetNetworkByID(ctx context.Context, id string) (types.NetworkResource, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNetworkByID", ctx, id)
+	ret0, _ := ret[0].(types.NetworkResource)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNetworkByID indicates an expected call of GetNetworkByID.
+func (mr *MockDockerClientMockRecorder) GetNetworkByID(ctx, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNetworkByID", reflect.TypeOf((*MockDockerClient)(nil).GetNetworkByID), ctx, id)
 }
 
 // HasLocalImage mocks base method.
