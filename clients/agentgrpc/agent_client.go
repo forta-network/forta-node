@@ -43,7 +43,7 @@ func (client *Client) Dial(cfg config.AgentConfig) error {
 	)
 	for i := 0; i < 10; i++ {
 		conn, err = grpc.Dial(
-			fmt.Sprintf("%s:%s", cfg.ContainerName(), cfg.GrpcPort()),
+			fmt.Sprintf("%s:%s", cfg.AdminContainerName(), cfg.GrpcPort()),
 			grpc.WithInsecure(),
 			grpc.WithBlock(),
 			grpc.WithTimeout(10*time.Second),

@@ -28,7 +28,7 @@ type DockerClient interface {
 	GetFortaServiceContainers(ctx context.Context) (fortaContainers DockerContainerList, err error)
 	GetContainerByName(ctx context.Context, name string) (*types.Container, error)
 	GetContainerByID(ctx context.Context, id string) (*types.Container, error)
-	StartContainer(ctx context.Context, config DockerContainerConfig) (*DockerContainer, error)
+	StartContainer(ctx context.Context, config DockerContainerConfig, waitStart ...bool) (*DockerContainer, error)
 	StopContainer(ctx context.Context, id string) error
 	InterruptContainer(ctx context.Context, id string) error
 	TerminateContainer(ctx context.Context, id string) error
@@ -41,6 +41,7 @@ type DockerClient interface {
 	HasLocalImage(ctx context.Context, ref string) bool
 	EnsureLocalImage(ctx context.Context, name, ref string) error
 	GetContainerLogs(ctx context.Context, containerID, tail string, truncate int) (string, error)
+	GetContainerIPAddress(ctx context.Context, containerName string, netName ...string) (string, error)
 }
 
 // MessageClient receives and publishes messages.

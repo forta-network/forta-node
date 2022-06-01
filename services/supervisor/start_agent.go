@@ -3,6 +3,7 @@ package supervisor
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/messaging"
@@ -31,26 +32,40 @@ func (sup *SupervisorService) startAgent(agent config.AgentConfig) error {
 	// run the bot admin first
 	adminContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
 		Name:  agent.AdminContainerName(),
-		Image: agent.Image,
+		Image: sup.commonNodeImage,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "bot-admin"},
 		Env: map[string]string{
 			config.EnvContainerName: agent.AdminContainerName(), // consumed by server in the container
 		},
-		LinkNetworkIDs: []string{sup.serviceNetworkID, sup.botNetworkID}, // this ensures that the container is up
-		MaxLogFiles:    sup.maxLogFiles,
-		MaxLogSize:     sup.maxLogSize,
+		Volumes: map[string]string{
+			sup.hostFortaDir: config.DefaultContainerFortaDirPath,
+		},
+		NetworkID:   sup.botNetworkID, // linking ensures that the container is up
+		MaxLogFiles: sup.maxLogFiles,
+		MaxLogSize:  sup.maxLogSize,
 		Labels: map[string]string{
 			clients.DockerLabelFortaSupervisorStrategyVersion: SupervisorStrategyVersion,
 		},
-	})
+		Capabilities: []string{clients.DockerCapabilityNetAdmin}, // should be able to run iptables
+	}, true)
 	if err != nil {
 		return err
 	}
 
 	// send rules request to the server
-	if err := sup.botManager.SetBotAdminRules(agent.AdminContainerName()); err != nil {
+	log.WithField("container", agent.AdminContainerName()).Info("setting admin rules")
+	for i := 0; i < 10; i++ {
+		err = sup.botManager.SetBotAdminRules(agent.AdminContainerName())
+		if err == nil {
+			break
+		}
+		time.Sleep(time.Second * 3)
+	}
+	if err != nil {
+		log.WithField("container", agent.AdminContainerName()).WithError(err).Info("failed to set admin rules")
 		return err
 	}
+	log.WithField("container", agent.AdminContainerName()).Info("successfully set admin rules")
 
 	limits := config.GetAgentResourceLimits(sup.config.Config.ResourcesConfig)
 
@@ -74,6 +89,7 @@ func (sup *SupervisorService) startAgent(agent config.AgentConfig) error {
 	if err != nil {
 		return err
 	}
+
 	sup.addContainerUnsafe(adminContainer, true)
 	sup.addContainerUnsafe(agentContainer, false, &agent)
 

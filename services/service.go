@@ -69,7 +69,15 @@ func setContracts(cfg *config.Config) error {
 	return nil
 }
 
-func ContainerMain(name string, getServices func(ctx context.Context, cfg config.Config) ([]Service, error)) {
+// ContainerMainOpts contains some options.
+type ContainerMainOpts struct {
+	SkipENS bool
+}
+
+func ContainerMain(
+	name string, getServices func(ctx context.Context, cfg config.Config) ([]Service, error),
+	opts ContainerMainOpts,
+) {
 	logger := log.WithField("container", name)
 
 	cfg, err := config.GetConfigForContainer()
@@ -78,9 +86,11 @@ func ContainerMain(name string, getServices func(ctx context.Context, cfg config
 		return
 	}
 
-	if err := setContracts(&cfg); err != nil {
-		logger.WithError(err).Error("could not initialize contract addresses using config")
-		return
+	if !opts.SkipENS {
+		if err := setContracts(&cfg); err != nil {
+			logger.WithError(err).Error("could not initialize contract addresses using config")
+			return
+		}
 	}
 
 	lvl, err := log.ParseLevel(cfg.Log.Level)

@@ -3,8 +3,10 @@ package supervisor
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"net"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -52,6 +54,7 @@ type SupervisorService struct {
 	maxLogSize  string
 	maxLogFiles int
 
+	hostFortaDir    string
 	commonNodeImage string
 
 	botNetworkID     string
@@ -122,8 +125,8 @@ func (sup *SupervisorService) start() error {
 		return err
 	}
 
-	hostFortaDir := os.Getenv(config.EnvHostFortaDir)
-	if len(hostFortaDir) == 0 {
+	sup.hostFortaDir = os.Getenv(config.EnvHostFortaDir)
+	if len(sup.hostFortaDir) == 0 {
 		return fmt.Errorf("supervisor needs to know $%s to mount to the other containers it runs", config.EnvHostFortaDir)
 	}
 	releaseInfo := release.ReleaseInfoFromString(os.Getenv(config.EnvReleaseInfo))
@@ -153,12 +156,13 @@ func (sup *SupervisorService) start() error {
 	sup.commonNodeImage = supervisorContainer.Image
 
 	// we run an ephemeral container to detect host networking information
+	sup.client.RemoveContainer(sup.ctx, config.DockerHostNetContainerName) // remove again to avoid any problems
 	hostNetContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
 		Name:      config.DockerHostNetContainerName,
 		Image:     sup.commonNodeImage,
 		Cmd:       []string{config.DefaultFortaNodeBinaryPath, "detect-host-networking"},
 		NetworkID: "host", // attach to host networking so we can detect it
-	})
+	}, false) // do not wait - causes a bug
 	if err != nil {
 		return err
 	}
@@ -166,13 +170,18 @@ func (sup *SupervisorService) start() error {
 	if err != nil {
 		return fmt.Errorf("failed to get host networking info: %v", err)
 	}
+	log.WithFields(log.Fields{
+		"iface":   defaultInterface,
+		"subnet":  defaultSubnet,
+		"gateway": defaultGateway,
+	}).Info("detected host networking successfully")
 
 	// select x.x.x.128-x.x.x.255 as the ip range
 	subnetParts := strings.Split(defaultSubnet, "/")
 	ipAddr := subnetParts[0]
 	ipAddrParts := strings.Split(ipAddr, ".")
 	ipAddrParts[3] = "128"
-	ipRange := strings.Join([]string{strings.Join(ipAddrParts, "."), subnetParts[1]}, "/")
+	ipRange := strings.Join([]string{strings.Join(ipAddrParts, "."), "25"}, "/")
 
 	// create an ipvlan network that uses host interface as parent so we can provide internet access
 	// to bots with easy isolation
@@ -200,6 +209,7 @@ func (sup *SupervisorService) start() error {
 	}
 	botNetworkConfig := botNetwork.IPAM.Config[0]
 
+	// create a bridge network which connects service containers and the host
 	serviceNetworkID, err := sup.client.CreatePublicNetwork(sup.ctx, config.DockerServiceNetworkName)
 	if err != nil {
 		return fmt.Errorf("failed to create the service network: %v", err)
@@ -212,6 +222,7 @@ func (sup *SupervisorService) start() error {
 		return fmt.Errorf("failed to get service network id: %v", err)
 	}
 	serviceNetworkConfig := serviceNetwork.IPAM.Config[0]
+	serviceHostGatewayOpt := fmt.Sprintf("host.docker.internal:%s", serviceNetworkConfig.Gateway)
 
 	// create the network manager for the bots
 	defaultGwIPAddr := net.ParseIP(defaultGateway)
@@ -225,11 +236,8 @@ func (sup *SupervisorService) start() error {
 	sup.serviceNetworkID = serviceNetworkID
 
 	ipfsContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
-		Name:  config.DockerIpfsContainerName,
-		Image: "ipfs/go-ipfs:v0.12.2",
-		Ports: map[string]string{
-			"5001": "5001",
-		},
+		Name:        config.DockerIpfsContainerName,
+		Image:       "ipfs/go-ipfs:v0.12.2",
 		NetworkID:   serviceNetworkID,
 		MaxLogFiles: sup.maxLogFiles,
 		MaxLogSize:  sup.maxLogSize,
@@ -240,15 +248,9 @@ func (sup *SupervisorService) start() error {
 	sup.addContainerUnsafe(ipfsContainer, false)
 
 	// start nats, wait for it and connect from the supervisor
-	// TODO: Check if NATS is exposed after these changes. Try not to expose it if that's the case.
 	natsContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
-		Name:  config.DockerNatsContainerName,
-		Image: "nats:2.3.2",
-		Ports: map[string]string{
-			"4222": "4222",
-			"6222": "6222",
-			"8222": "8222",
-		},
+		Name:        config.DockerNatsContainerName,
+		Image:       "nats:2.3.2",
 		NetworkID:   serviceNetworkID,
 		MaxLogFiles: sup.maxLogFiles,
 		MaxLogSize:  sup.maxLogSize,
@@ -267,6 +269,9 @@ func (sup *SupervisorService) start() error {
 	}
 	sup.registerMessageHandlers()
 
+	// attach these service containers to the default bridge network by default
+	// then attach to the services network for convenience and bots network to make connected
+
 	sup.jsonRpcContainer, err = sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerJSONRPCProxyContainerName,
 		Image: sup.commonNodeImage,
@@ -274,15 +279,15 @@ func (sup *SupervisorService) start() error {
 		Volumes: map[string]string{
 			// give access to host docker
 			"/var/run/docker.sock": "/var/run/docker.sock",
-			hostFortaDir:           config.DefaultContainerFortaDirPath,
+			sup.hostFortaDir:       config.DefaultContainerFortaDirPath,
 		},
 		Ports: map[string]string{
 			"": config.DefaultHealthPort, // random host port
 		},
-		DialHost:    true,
-		NetworkID:   serviceNetworkID,
-		MaxLogFiles: sup.maxLogFiles,
-		MaxLogSize:  sup.maxLogSize,
+		AddHosts:       []string{serviceHostGatewayOpt},
+		LinkNetworkIDs: []string{serviceNetworkID, botNetworkID},
+		MaxLogFiles:    sup.maxLogFiles,
+		MaxLogSize:     sup.maxLogSize,
 	})
 	if err != nil {
 		return err
@@ -297,7 +302,7 @@ func (sup *SupervisorService) start() error {
 			config.EnvReleaseInfo: releaseInfo.String(),
 		},
 		Volumes: map[string]string{
-			hostFortaDir: config.DefaultContainerFortaDirPath,
+			sup.hostFortaDir: config.DefaultContainerFortaDirPath,
 		},
 		Ports: map[string]string{
 			"": config.DefaultHealthPort, // random host port
@@ -305,10 +310,10 @@ func (sup *SupervisorService) start() error {
 		Files: map[string][]byte{
 			"passphrase": []byte(sup.config.Passphrase),
 		},
-		DialHost:    true,
-		NetworkID:   serviceNetworkID,
-		MaxLogFiles: sup.maxLogFiles,
-		MaxLogSize:  sup.maxLogSize,
+		AddHosts:       []string{serviceHostGatewayOpt},
+		LinkNetworkIDs: []string{serviceNetworkID, botNetworkID},
+		MaxLogFiles:    sup.maxLogFiles,
+		MaxLogSize:     sup.maxLogSize,
 	})
 	if err != nil {
 		return err
@@ -342,7 +347,7 @@ func (sup *SupervisorService) getHostNetworkingInfo(container *clients.DockerCon
 				return "", "", "", err
 			}
 			parts := strings.Split(output, " ")
-			return parts[0], parts[1], parts[2], nil
+			return parts[1], parts[2], parts[3], nil // skip parts[0] - that's a timestamp
 		}
 	}
 }
@@ -379,8 +384,32 @@ func (sup *SupervisorService) ensureNodeImages() error {
 	return nil
 }
 
-// removes old service containers and agents started with an old supervisor
+// removes old service containers and agents started with an old supervisor, cleans up socket files
 func (sup *SupervisorService) removeOldContainers() error {
+	// keep the amount of socket files under control
+	containers, err := sup.client.GetContainers(sup.ctx)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(netmgmt.BotAdminSockDir(), 0777); err != nil {
+		return fmt.Errorf("failed to create the botadmin socket dir: %v", err)
+	}
+	filepath.WalkDir(netmgmt.BotAdminSockDir(), func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() {
+			return nil
+		}
+		parts := strings.Split(path, "/")
+		fileName := parts[len(parts)-1]
+		_, ok := containers.FindByName(fileName)
+		if !ok {
+			log.WithField("container", fileName).Info("removing unused socket file")
+			os.Remove(path)
+		} else {
+			os.Chmod(path, 0777) // make sure it has the right permissions
+		}
+		return nil
+	})
+
 	type containerDefinition struct {
 		ID   string
 		Name string
@@ -405,11 +434,7 @@ func (sup *SupervisorService) removeOldContainers() error {
 		})
 	}
 
-	// gather old agents
-	containers, err := sup.client.GetContainers(sup.ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get containers list: %v", err)
-	}
+	// gather old agents and admins
 	for _, container := range containers {
 		containerName := container.Names[0][1:]
 		logger := log.WithFields(log.Fields{
@@ -445,7 +470,7 @@ func (sup *SupervisorService) removeOldContainers() error {
 			return fmt.Errorf("%s: %v", msg, err)
 		}
 	}
-	// WARNING: removing legacy networks only
+	// WARNING: removing legacy networks - keep this logic
 	for _, container := range containersToRemove {
 		logger := log.WithFields(log.Fields{
 			"containerName": container.Name,
@@ -457,7 +482,14 @@ func (sup *SupervisorService) removeOldContainers() error {
 			// ignore network removal errs
 		}
 	}
-	// TODO: Regard supervisor strategy on service and bot networks, remove them here if old so we replace.
+	// but in any case, just try removing the networks - they won't be removed anyways if in use
+	for _, networkName := range []string{config.DockerBotNetworkName, config.DockerServiceNetworkName} {
+		if err := sup.client.RemoveNetworkByName(sup.ctx, networkName); err != nil {
+			const msg = "failed to remove old network (safe to ignore)"
+			log.WithField("network", networkName).WithError(err).Warn(msg)
+			// ignore network removal errs
+		}
+	}
 
 	return nil
 }
@@ -515,6 +547,10 @@ func (sup *SupervisorService) getFullReleaseInfo(releaseInfo *release.ReleaseInf
 func (sup *SupervisorService) Stop() error {
 	sup.mu.RLock()
 	defer sup.mu.RUnlock()
+
+	if services.IsGracefulShutdown() {
+		log.Warn("graceful shutdown detected - not stopping agents")
+	}
 
 	ctx := context.Background()
 	for _, cnt := range sup.containers {

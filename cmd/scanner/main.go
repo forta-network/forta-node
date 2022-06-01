@@ -283,5 +283,5 @@ func isNotFoundErr(errMsg string) bool {
 
 func Run() {
 	gethlog.Root().SetHandler(gethlog.StdoutHandler)
-	services.ContainerMain("scanner", initServices)
+	services.ContainerMain("scanner", initServices, services.ContainerMainOpts{})
 }

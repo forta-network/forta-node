@@ -8,8 +8,6 @@ import (
 
 // Defaults
 const (
-	IPTablesPath = "/sbin/iptables"
-
 	DefaultTable = "filter"
 	DefaultChain = "BOTADMIN"
 	OutputChain  = "OUTPUT"
@@ -36,13 +34,10 @@ func (ba *botAdmin) IPTables(ruleCmds [][]string) error {
 
 func run(args ...string) error {
 	var stderr bytes.Buffer
-	cmd := exec.Cmd{
-		Path:   IPTablesPath,
-		Args:   args,
-		Stderr: &stderr,
-	}
+	cmd := exec.Command("iptables", args...)
+	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("command '%+v' failed: %v", args, err)
+		return fmt.Errorf("command '%+v' failed: %v: %s", args, err, stderr.String())
 	}
 	return nil
 }

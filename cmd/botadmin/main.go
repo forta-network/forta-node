@@ -21,5 +21,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 }
 
 func Run() {
-	services.ContainerMain("bot-admin", initServices)
+	services.ContainerMain("bot-admin", initServices, services.ContainerMainOpts{
+		SkipENS: true,
+	})
 }

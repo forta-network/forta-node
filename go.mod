@@ -27,6 +27,7 @@ require (
 	github.com/nats-io/nats.go v1.11.1-0.20210623165838-4b75fc59ae30
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
+	github.com/peterbourgon/unixtransport v0.0.1
 	github.com/rs/cors v1.7.0
 	github.com/shopspring/decimal v1.2.0
 	github.com/sirupsen/logrus v1.8.1
