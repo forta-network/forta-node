@@ -1,8 +1,6 @@
 package hostnet
 
 import (
-	"fmt"
-
 	"github.com/forta-network/forta-node/services/network"
 )
 
@@ -11,8 +9,5 @@ func Run() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf(
-		"%s %s %s",
-		host.DefaultInterface.Name, host.DefaultSubnet, host.DefaultGateway,
-	)
+	network.OutputHostNetworking(host)
 }

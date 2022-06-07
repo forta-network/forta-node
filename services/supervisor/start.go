@@ -166,18 +166,19 @@ func (sup *SupervisorService) start() error {
 	if err != nil {
 		return err
 	}
-	defaultInterface, defaultSubnet, defaultGateway, err := sup.getHostNetworkingInfo(hostNetContainer)
+	host, err := sup.getHostNetworkingInfo(hostNetContainer)
 	if err != nil {
 		return fmt.Errorf("failed to get host networking info: %v", err)
 	}
 	log.WithFields(log.Fields{
-		"iface":   defaultInterface,
-		"subnet":  defaultSubnet,
-		"gateway": defaultGateway,
+		"iface":   host.DefaultInterfaceName,
+		"subnet":  host.DefaultSubnet,
+		"gateway": host.DefaultGateway,
+		"docker0": host.Docker0Subnet,
 	}).Info("detected host networking successfully")
 
 	// select x.x.x.128-x.x.x.255 as the ip range
-	subnetParts := strings.Split(defaultSubnet, "/")
+	subnetParts := strings.Split(host.DefaultSubnet, "/")
 	ipAddr := subnetParts[0]
 	ipAddrParts := strings.Split(ipAddr, ".")
 	ipAddrParts[3] = "128"
@@ -190,14 +191,14 @@ func (sup *SupervisorService) start() error {
 		IPAM: &network.IPAM{
 			Config: []network.IPAMConfig{
 				{
-					Subnet:  defaultSubnet,
+					Subnet:  host.DefaultSubnet,
 					IPRange: ipRange,
-					Gateway: defaultGateway,
+					Gateway: host.DefaultGateway,
 				},
 			},
 		},
 		Options: map[string]string{
-			"parent": defaultInterface,
+			"parent": host.DefaultInterfaceName,
 		},
 	})
 	if err != nil {
@@ -225,11 +226,12 @@ func (sup *SupervisorService) start() error {
 	serviceHostGatewayOpt := fmt.Sprintf("host.docker.internal:%s", serviceNetworkConfig.Gateway)
 
 	// create the network manager for the bots
-	defaultGwIPAddr := net.ParseIP(defaultGateway)
+	defaultGwIPAddr := net.ParseIP(host.DefaultGateway)
 	_, botNetworkSubnet, _ := net.ParseCIDR(botNetworkConfig.Subnet)
 	_, serviceNetworkSubnet, _ := net.ParseCIDR(serviceNetworkConfig.Subnet)
+	_, docker0Subnet, _ := net.ParseCIDR(host.Docker0Subnet)
 	sup.botManager = netmgmt.NewBotManager(sup.ctx, sup.client, &defaultGwIPAddr, []*net.IPNet{
-		botNetworkSubnet, serviceNetworkSubnet,
+		botNetworkSubnet, serviceNetworkSubnet, docker0Subnet,
 	})
 
 	sup.botNetworkID = botNetworkID
@@ -323,7 +325,7 @@ func (sup *SupervisorService) start() error {
 	return nil
 }
 
-func (sup *SupervisorService) getHostNetworkingInfo(container *clients.DockerContainer) (string, string, string, error) {
+func (sup *SupervisorService) getHostNetworkingInfo(container *clients.DockerContainer) (*netmgmt.Host, error) {
 	ctx, cancel := context.WithTimeout(sup.ctx, time.Second*30)
 	defer cancel()
 	ticker := time.NewTicker(time.Second * 2)
@@ -331,7 +333,7 @@ func (sup *SupervisorService) getHostNetworkingInfo(container *clients.DockerCon
 	for {
 		select {
 		case <-ctx.Done():
-			return "", "", "", fmt.Errorf("failed to get host networking info: %v", ctx.Err())
+			return nil, fmt.Errorf("failed to get host networking info: %v", ctx.Err())
 		case <-ticker.C:
 			container, err := sup.client.GetContainerByID(ctx, container.ID)
 			if err != nil {
@@ -344,10 +346,11 @@ func (sup *SupervisorService) getHostNetworkingInfo(container *clients.DockerCon
 			output, err := sup.client.GetContainerLogs(sup.ctx, container.ID, "", -1)
 			if err != nil {
 				logger.WithError(err).Error("failed to get container output")
-				return "", "", "", err
+				return nil, err
 			}
 			parts := strings.Split(output, " ")
-			return parts[1], parts[2], parts[3], nil // skip parts[0] - that's a timestamp
+			// skip parts[0] - that's a timestamp
+			return netmgmt.ReadHostNetworking(strings.Join(parts[1:], " ")), nil
 		}
 	}
 }

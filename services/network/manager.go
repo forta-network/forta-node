@@ -59,13 +59,12 @@ func (bm *botManager) SetBotAdminRules(containerName string) error {
 
 		// allow making JSON-RPC requests to the proxy container
 		{"-A", "OUTPUT", "-p", "tcp", "--dport", "8545", "-d", proxyIpAddress, "-j", "ACCEPT"},
-		// allow responses to them
-		{"-A", "INPUT", "-s", proxyIpAddress, "-j", "ACCEPT"},
 
-		// allow gRPC requests from the scanner container
-		{"-A", "INPUT", "-s", scannerIpAddress, "-j", "ACCEPT"},
-		// allow only responding to those requests
-		{"-A", "OUTPUT", "-d", scannerIpAddress, "-m", "state", "--state", "ESTABLISHED,RELATED", "-j", "ACCEPT"},
+		// allow responding to the gRPC requests from the scanner container
+		{
+			"-A", "OUTPUT", "-p", "tcp", "--sport", config.AgentGrpcPort, "-d", scannerIpAddress,
+			"-m", "state", "--state", "ESTABLISHED,RELATED", "-j", "ACCEPT",
+		},
 	}
 	// finally, restrict access to all subnets by default
 	for _, subnet := range bm.allSubnets {
@@ -74,6 +73,8 @@ func (bm *botManager) SetBotAdminRules(containerName string) error {
 			[]string{"-A", "OUTPUT", "-d", subnet.String(), "-j", "DROP"},
 		)
 	}
+
+	// result: local networking is restricted, internet access is allowed
 
 	return NewUnixSockClient(containerName).IPTables(ruleCmds)
 }
