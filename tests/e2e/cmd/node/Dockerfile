@@ -26,6 +26,8 @@ EXPOSE 8089 8090
 
 RUN mkdir -p /.forta/coverage
 
+RUN apk add --no-cache iptables
+
 # receives '/forta-node <command>' from runner and supervisor
 # https://docs.docker.com/engine/reference/builder/#understand-how-cmd-and-entrypoint-interact
 ENTRYPOINT [ "tini", "-v", "--", "/run.sh" ]

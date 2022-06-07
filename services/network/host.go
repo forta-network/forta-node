@@ -3,7 +3,9 @@ package network
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net"
+	"os"
 	"strings"
 
 	"github.com/vishvananda/netlink"
@@ -94,16 +96,27 @@ func getDocker0Subnet(ifaces []net.Interface) (*net.IPNet, error) {
 	return nil, errors.New("could not find docker0 interface")
 }
 
+const hostNetInfoPrefix = "hostnetinfo"
+
 // OutputHostNetworking outputs host networking info.
 func OutputHostNetworking(host *Host) {
-	fmt.Printf(
-		"%s %s %s %s",
-		host.DefaultInterfaceName, host.DefaultSubnet, host.DefaultGateway, host.Docker0Subnet,
+	WriteHostNetworking(os.Stdout, host)
+}
+
+// WriteHostNetworking writes the host networking info.
+func WriteHostNetworking(w io.Writer, host *Host) {
+	fmt.Fprintf(
+		w,
+		"%s %s %s %s %s\n",
+		hostNetInfoPrefix, host.DefaultInterfaceName, host.DefaultSubnet, host.DefaultGateway, host.Docker0Subnet,
 	)
 }
 
 // ReadHostNetworking outputs host networking info.
 func ReadHostNetworking(output string) *Host {
+	prefixIndex := strings.Index(output, hostNetInfoPrefix)
+	output = output[prefixIndex+len(hostNetInfoPrefix)+1:]
+	output = strings.Split(output, "\n")[0]
 	parts := strings.Split(output, " ")
 	return &Host{
 		DefaultInterfaceName: parts[0],
