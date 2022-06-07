@@ -60,8 +60,8 @@ type DockerContainerConfig struct {
 	Name            string
 	Image           string
 	Env             map[string]string
-	LinkNetworkIDs  []string
-	NetworkID       string
+	NetworkID       string   // default network to attach to
+	LinkNetworkIDs  []string // the additional list of networks to link to later
 	Ports           map[string]string
 	PublishAllPorts bool // auto-publishing ports EXPOSEd in Dockerfile
 	Volumes         map[string]string

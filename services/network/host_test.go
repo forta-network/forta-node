@@ -20,7 +20,7 @@ func TestReadHostNetworking(t *testing.T) {
 	var buf bytes.Buffer
 	WriteHostNetworking(&buf, host)
 
-	detected := ReadHostNetworking(string(buf.Bytes()))
+	detected := UnmarshalHostNetworking(string(buf.Bytes()))
 	r.Equal(host.DefaultInterfaceName, detected.DefaultInterfaceName)
 	r.Equal(host.DefaultSubnet, detected.DefaultSubnet)
 	r.Equal(host.DefaultGateway, detected.DefaultGateway)

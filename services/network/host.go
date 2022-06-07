@@ -107,13 +107,20 @@ func OutputHostNetworking(host *Host) {
 func WriteHostNetworking(w io.Writer, host *Host) {
 	fmt.Fprintf(
 		w,
+		MarshalHostNetworking(host),
+	)
+}
+
+// MarshalHostNetworking marshals host networking info.
+func MarshalHostNetworking(host *Host) string {
+	return fmt.Sprintf(
 		"%s %s %s %s %s\n",
 		hostNetInfoPrefix, host.DefaultInterfaceName, host.DefaultSubnet, host.DefaultGateway, host.Docker0Subnet,
 	)
 }
 
-// ReadHostNetworking outputs host networking info.
-func ReadHostNetworking(output string) *Host {
+// UnmarshalHostNetworking unmarshals host networking info.
+func UnmarshalHostNetworking(output string) *Host {
 	prefixIndex := strings.Index(output, hostNetInfoPrefix)
 	output = output[prefixIndex+len(hostNetInfoPrefix)+1:]
 	output = strings.Split(output, "\n")[0]

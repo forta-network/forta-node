@@ -10,6 +10,7 @@ import (
 
 // BotManager manages bot networking.
 type BotManager interface {
+	Init(defaultGateway *net.IP, allSubnets []*net.IPNet)
 	SetBotAdminRules(containerName string) error
 }
 
@@ -23,15 +24,17 @@ type botManager struct {
 }
 
 // NewBotManager creates a new bot manager.
-func NewBotManager(
-	ctx context.Context, dockerClient clients.DockerClient, defaultGateway *net.IP, allSubnets []*net.IPNet,
-) *botManager {
+func NewBotManager(ctx context.Context, dockerClient clients.DockerClient) *botManager {
 	return &botManager{
-		ctx:            ctx,
-		dockerClient:   dockerClient,
-		defaultGateway: defaultGateway,
-		allSubnets:     allSubnets,
+		ctx:          ctx,
+		dockerClient: dockerClient,
 	}
+}
+
+// Init initializes the bot manager
+func (bm *botManager) Init(defaultGateway *net.IP, allSubnets []*net.IPNet) {
+	bm.defaultGateway = defaultGateway
+	bm.allSubnets = allSubnets
 }
 
 // SetBotAdminRules sets the default rules for any bot.

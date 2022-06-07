@@ -34,7 +34,11 @@ import (
 const (
 	// SupervisorStrategyVersion is for versioning the critical changes in supervisor's management strategy.
 	// It's effective in deciding if an agent container should be restarted or not.
-	SupervisorStrategyVersion = "1"
+	SupervisorStrategyVersion = "5"
+)
+
+var (
+	disableSocketDirCheck = false
 )
 
 // SupervisorService manages the scanner node's service and agent containers.
@@ -230,7 +234,7 @@ func (sup *SupervisorService) start() error {
 	_, botNetworkSubnet, _ := net.ParseCIDR(botNetworkConfig.Subnet)
 	_, serviceNetworkSubnet, _ := net.ParseCIDR(serviceNetworkConfig.Subnet)
 	_, docker0Subnet, _ := net.ParseCIDR(host.Docker0Subnet)
-	sup.botManager = netmgmt.NewBotManager(sup.ctx, sup.client, &defaultGwIPAddr, []*net.IPNet{
+	sup.botManager.Init(&defaultGwIPAddr, []*net.IPNet{
 		botNetworkSubnet, serviceNetworkSubnet, docker0Subnet,
 	})
 
@@ -350,20 +354,9 @@ func (sup *SupervisorService) getHostNetworkingInfo(container *clients.DockerCon
 			}
 			parts := strings.Split(output, " ")
 			// skip parts[0] - that's a timestamp
-			return netmgmt.ReadHostNetworking(strings.Join(parts[1:], " ")), nil
+			return netmgmt.UnmarshalHostNetworking(strings.Join(parts[1:], " ")), nil
 		}
 	}
-}
-
-func (sup *SupervisorService) attachToNetwork(containerName, networkID string) error {
-	container, err := sup.client.GetContainerByName(sup.ctx, containerName)
-	if err != nil {
-		return fmt.Errorf("failed to get '%s' container while attaching to network: %v", containerName, err)
-	}
-	if err := sup.client.AttachNetwork(sup.ctx, container.ID, networkID); err != nil {
-		return fmt.Errorf("failed to attach '%s' container to network: %v", containerName, err)
-	}
-	return nil
 }
 
 func (sup *SupervisorService) ensureNodeImages() error {
@@ -394,24 +387,9 @@ func (sup *SupervisorService) removeOldContainers() error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(netmgmt.BotAdminSockDir(), 0777); err != nil {
-		return fmt.Errorf("failed to create the botadmin socket dir: %v", err)
+	if err := sup.cleanSocketDir(containers); err != nil {
+		return err
 	}
-	filepath.WalkDir(netmgmt.BotAdminSockDir(), func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() {
-			return nil
-		}
-		parts := strings.Split(path, "/")
-		fileName := parts[len(parts)-1]
-		_, ok := containers.FindByName(fileName)
-		if !ok {
-			log.WithField("container", fileName).Info("removing unused socket file")
-			os.Remove(path)
-		} else {
-			os.Chmod(path, 0777) // make sure it has the right permissions
-		}
-		return nil
-	})
 
 	type containerDefinition struct {
 		ID   string
@@ -494,6 +472,32 @@ func (sup *SupervisorService) removeOldContainers() error {
 		}
 	}
 
+	return nil
+}
+
+func (sup *SupervisorService) cleanSocketDir(containers clients.DockerContainerList) error {
+	if disableSocketDirCheck {
+		return nil
+	}
+
+	if err := os.MkdirAll(netmgmt.BotAdminSockDir(), 0777); err != nil {
+		return fmt.Errorf("failed to create the bot admin socket dir: %v", err)
+	}
+	filepath.WalkDir(netmgmt.BotAdminSockDir(), func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() {
+			return nil
+		}
+		parts := strings.Split(path, "/")
+		fileName := parts[len(parts)-1]
+		_, ok := containers.FindByName(fileName)
+		if !ok {
+			log.WithField("container", fileName).Info("removing unused socket file")
+			os.Remove(path)
+		} else {
+			os.Chmod(path, 0777) // make sure it has the right permissions
+		}
+		return nil
+	})
 	return nil
 }
 
@@ -651,6 +655,7 @@ func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*Su
 		client:           dockerClient,
 		globalClient:     globalClient,
 		agentImageClient: agentImageClient,
+		botManager:       netmgmt.NewBotManager(ctx, dockerClient),
 		releaseClient:    releaseClient,
 		config:           cfg,
 		healthClient:     health.NewClient(),
