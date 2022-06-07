@@ -5,6 +5,7 @@ on:
     branches: [master]
   workflow_dispatch:
     branches: [master]
+  pull_request:
 
 env:
   DEFAULT_DEV_VERSION: v0.0.1
@@ -152,39 +153,39 @@ jobs:
           aws-access-key-id: ${{ secrets.DEV_DEPLOY_AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.DEV_DEPLOY_AWS_SECRET_KEY }}
           aws-region: us-east-1
-      - name: AWS CodeDeploy
-        uses: sourcetoad/aws-codedeploy-action@v1
-        with:
-          aws_access_key: ${{ secrets.DEV_DEPLOY_AWS_ACCESS_KEY }}
-          aws_secret_key: ${{ secrets.DEV_DEPLOY_AWS_SECRET_KEY }}
-          aws_region: us-east-1
-          codedeploy_name: dev-forta-node
-          codedeploy_group: dev-forta-deploy-group
-          s3_bucket: dev-forta-codedeploy
-          s3_folder: dev
-          directory: ./dist/
+      # - name: AWS CodeDeploy
+      #   uses: sourcetoad/aws-codedeploy-action@v1
+      #   with:
+      #     aws_access_key: ${{ secrets.DEV_DEPLOY_AWS_ACCESS_KEY }}
+      #     aws_secret_key: ${{ secrets.DEV_DEPLOY_AWS_SECRET_KEY }}
+      #     aws_region: us-east-1
+      #     codedeploy_name: dev-forta-node
+      #     codedeploy_group: dev-forta-deploy-group
+      #     s3_bucket: dev-forta-codedeploy
+      #     s3_folder: dev
+      #     directory: ./dist/
 
-  release:
-    name: Release dev
-    runs-on: ubuntu-18.04
-    needs: [build-deploy, propose]
-    environment: dev
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Release
-        id: release
-        uses: ./.github/actions/release
-        with:
-          version: ${{ env.DEFAULT_DEV_VERSION }}
-          revision: ${{ github.sha }}
-          aws_access_key: ${{ secrets.DEV_RELEASE_AWS_ACCESS_KEY }}
-          aws_secret_key: ${{ secrets.DEV_RELEASE_AWS_SECRET_KEY }}
-          build_artifacts_bucket_name: dev-forta-build-artifacts
-          release_artifacts_bucket_name: dev-forta-releases
-          release_artifacts_url: https://dist-dev.forta.network/artifacts
-          dist_base_url: https://dist-dev.forta.network
-          pgp_key_name: ${{ secrets.DEV_PGP_KEY_NAME }}
-          pgp_private_key: ${{ secrets.DEV_PGP_PRIVATE_KEY }}
-          pgp_public_key: ${{ secrets.DEV_PGP_PUBLIC_KEY }}
-          pgp_passphrase: ${{ secrets.DEV_PGP_PASSPHRASE }}
+  # release:
+  #   name: Release dev
+  #   runs-on: ubuntu-18.04
+  #   needs: [build-deploy, propose]
+  #   environment: dev
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+  #     - name: Release
+  #       id: release
+  #       uses: ./.github/actions/release
+  #       with:
+  #         version: ${{ env.DEFAULT_DEV_VERSION }}
+  #         revision: ${{ github.sha }}
+  #         aws_access_key: ${{ secrets.DEV_RELEASE_AWS_ACCESS_KEY }}
+  #         aws_secret_key: ${{ secrets.DEV_RELEASE_AWS_SECRET_KEY }}
+  #         build_artifacts_bucket_name: dev-forta-build-artifacts
+  #         release_artifacts_bucket_name: dev-forta-releases
+  #         release_artifacts_url: https://dist-dev.forta.network/artifacts
+  #         dist_base_url: https://dist-dev.forta.network
+  #         pgp_key_name: ${{ secrets.DEV_PGP_KEY_NAME }}
+  #         pgp_private_key: ${{ secrets.DEV_PGP_PRIVATE_KEY }}
+  #         pgp_public_key: ${{ secrets.DEV_PGP_PUBLIC_KEY }}
+  #         pgp_passphrase: ${{ secrets.DEV_PGP_PASSPHRASE }}
