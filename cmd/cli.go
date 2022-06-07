@@ -39,8 +39,7 @@ var (
 	cmdForta = &cobra.Command{
 		Use:   "forta",
 		Short: "Forta node command line interface",
-		Long: `Forta node scans blockchains by using agents to detect vulnerabilities and
-publishes alerts about them`,
+		Long:  `Forta node runs detection bots and feeds them blockchain data to produce alerts`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
