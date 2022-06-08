@@ -24,7 +24,7 @@ import (
 )
 
 const minUpdateInterval = 1 * time.Minute
-const maxUpdateInterval = 1 * time.Hour
+const maxUpdateInterval = 24 * time.Hour
 
 func generateIntervalMs(addr string) int64 {
 	interval := big.NewInt(0)
