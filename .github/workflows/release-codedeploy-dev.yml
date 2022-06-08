@@ -20,9 +20,9 @@ jobs:
       - name: Setup
         id: setup
         uses: ./.github/actions/setup
-      - name: Validate and test Go code
-        id: go
-        uses: ./.github/actions/go
+      # - name: Validate and test Go code
+      #   id: go
+      #   uses: ./.github/actions/go
 
   # e2e:
   #   name: E2E Test
