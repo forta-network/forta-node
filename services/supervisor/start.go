@@ -34,7 +34,7 @@ import (
 const (
 	// SupervisorStrategyVersion is for versioning the critical changes in supervisor's management strategy.
 	// It's effective in deciding if an agent container should be restarted or not.
-	SupervisorStrategyVersion = "5"
+	SupervisorStrategyVersion = "6"
 )
 
 var (
@@ -561,7 +561,7 @@ func (sup *SupervisorService) Stop() error {
 
 	ctx := context.Background()
 	for _, cnt := range sup.containers {
-		if services.IsGracefulShutdown() && cnt.IsAgent {
+		if services.IsGracefulShutdown() && (cnt.IsAgent || cnt.IsAgentAdmin) {
 			continue // keep container agents alive
 		}
 		var err error
