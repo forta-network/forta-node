@@ -46,8 +46,8 @@ import (
 )
 
 const (
-	smallTimeout = time.Minute
-	largeTimeout = time.Minute * 2
+	smallTimeout = time.Minute * 3
+	largeTimeout = time.Minute * 5
 )
 
 var (
