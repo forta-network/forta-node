@@ -695,18 +695,24 @@ func (d *dockerClient) EnsureLocalImage(ctx context.Context, name, ref string) e
 	}
 
 	ticker := time.NewTicker(time.Minute)
+	timeout := time.After(time.Minute * 10)
 
 	for {
 		err := d.PullImage(ctx, ref)
 		if err == nil {
 			break
 		}
-		log.WithFields(log.Fields{
-			"name":  name,
-			"ref":   ref,
-			"error": err,
-		}).Error("failed to pull image - retrying")
-		<-ticker.C
+		select {
+		case <-ticker.C:
+			log.WithFields(log.Fields{
+				"name":  name,
+				"ref":   ref,
+				"error": err,
+			}).Error("failed to pull image - retrying")
+		case <-timeout:
+			return fmt.Errorf("failed to pull image: %v", err)
+		}
+
 	}
 
 	log.Infof("pulled image for '%s': %s", name, ref)

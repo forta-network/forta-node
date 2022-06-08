@@ -382,12 +382,8 @@ func (sup *SupervisorService) ensureNodeImages() error {
 
 // removes old service containers and agents started with an old supervisor, cleans up socket files
 func (sup *SupervisorService) removeOldContainers() error {
-	// keep the amount of socket files under control
 	containers, err := sup.client.GetContainers(sup.ctx)
 	if err != nil {
-		return err
-	}
-	if err := sup.cleanSocketDir(containers); err != nil {
 		return err
 	}
 
@@ -472,12 +468,21 @@ func (sup *SupervisorService) removeOldContainers() error {
 		}
 	}
 
+	if err := sup.cleanSocketDir(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (sup *SupervisorService) cleanSocketDir(containers clients.DockerContainerList) error {
+func (sup *SupervisorService) cleanSocketDir() error {
 	if disableSocketDirCheck {
 		return nil
+	}
+
+	containers, err := sup.client.GetContainers(sup.ctx)
+	if err != nil {
+		return err
 	}
 
 	if err := os.MkdirAll(netmgmt.BotAdminSockDir(), 0777); err != nil {
