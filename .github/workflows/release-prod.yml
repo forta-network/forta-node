@@ -33,7 +33,7 @@ jobs:
 
   containers:
     name: Build and push containers
-    needs: [go]
+    needs: [go,e2e]
     runs-on: ubuntu-latest
     environment: prod
     outputs:
