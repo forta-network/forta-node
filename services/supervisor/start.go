@@ -229,13 +229,16 @@ func (sup *SupervisorService) start() error {
 	serviceNetworkConfig := serviceNetwork.IPAM.Config[0]
 	serviceHostGatewayOpt := fmt.Sprintf("host.docker.internal:%s", serviceNetworkConfig.Gateway)
 
+	botNetworkID = serviceNetworkID
+
 	// create the network manager for the bots
 	defaultGwIPAddr := net.ParseIP(host.DefaultGateway)
+	_, hostNetworkSubnet, _ := net.ParseCIDR(host.DefaultSubnet)
 	_, botNetworkSubnet, _ := net.ParseCIDR(botNetworkConfig.Subnet)
 	_, serviceNetworkSubnet, _ := net.ParseCIDR(serviceNetworkConfig.Subnet)
 	_, docker0Subnet, _ := net.ParseCIDR(host.Docker0Subnet)
 	sup.botManager.Init(&defaultGwIPAddr, []*net.IPNet{
-		botNetworkSubnet, serviceNetworkSubnet, docker0Subnet,
+		hostNetworkSubnet, botNetworkSubnet, serviceNetworkSubnet, docker0Subnet,
 	})
 
 	sup.botNetworkID = botNetworkID

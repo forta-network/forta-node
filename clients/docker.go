@@ -514,7 +514,7 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 
 	for _, nwID := range config.LinkNetworkIDs {
 		if err := d.AttachNetwork(ctx, cont.ID, nwID); err != nil {
-			log.Error("error attaching network", err)
+			log.WithError(err).Error("error attaching to network")
 			return nil, err
 		}
 	}
