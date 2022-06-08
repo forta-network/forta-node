@@ -28,8 +28,7 @@ import (
 
 const (
 	testImageRef                = "some.docker.registry.io/foobar@sha256:cdd4ddccf5e9c740eb4144bcc68e3ea3a056789ec7453e94a6416dcfc80937a4"
-	testBotNetworkID            = "test-bot-network-id"
-	testServiceNetworkID        = "test-service-network-id"
+	testNodeNetworkID           = "test-node-network-id"
 	testGenericContainerID      = "test-generic-container-id"
 	testScannerContainerID      = "test-scanner-container-id"
 	testProxyContainerID        = "test-proxy-container-id"
@@ -137,21 +136,9 @@ func (s *Suite) SetupTest() {
 	)
 	s.botManager.EXPECT().Init(gomock.Any(), gomock.Any())
 
-	// should create bot network
-	s.dockerClient.EXPECT().CreateNetwork(service.ctx, config.DockerBotNetworkName, gomock.Any()).Return(testBotNetworkID, nil)
-	s.dockerClient.EXPECT().GetNetworkByID(service.ctx, testBotNetworkID).Return(types.NetworkResource{
-		IPAM: network.IPAM{
-			Config: []network.IPAMConfig{
-				{
-					Subnet: "192.168.0.0/24",
-				},
-			},
-		},
-	}, nil)
-
-	// should create service network
-	s.dockerClient.EXPECT().CreatePublicNetwork(service.ctx, config.DockerServiceNetworkName).Return(testServiceNetworkID, nil)
-	s.dockerClient.EXPECT().GetNetworkByID(service.ctx, testServiceNetworkID).Return(types.NetworkResource{
+	// should create node network
+	s.dockerClient.EXPECT().CreatePublicNetwork(service.ctx, config.DockerNodeNetworkName).Return(testNodeNetworkID, nil)
+	s.dockerClient.EXPECT().GetNetworkByID(service.ctx, testNodeNetworkID).Return(types.NetworkResource{
 		IPAM: network.IPAM{
 			Config: []network.IPAMConfig{
 				{
@@ -162,26 +149,26 @@ func (s *Suite) SetupTest() {
 	}, nil)
 
 	// should attach supervisor to the service network
-	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testSupervisorContainerID, testServiceNetworkID)
+	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testSupervisorContainerID, testNodeNetworkID)
 
 	s.dockerClient.EXPECT().StartContainer(service.ctx, (configMatcher)(clients.DockerContainerConfig{
 		Name:      config.DockerIpfsContainerName,
-		NetworkID: testServiceNetworkID,
+		NetworkID: testNodeNetworkID,
 	})).Return(&clients.DockerContainer{}, nil)
 
 	s.dockerClient.EXPECT().StartContainer(service.ctx, (configMatcher)(clients.DockerContainerConfig{
 		Name:      config.DockerNatsContainerName,
-		NetworkID: testServiceNetworkID,
+		NetworkID: testNodeNetworkID,
 	})).Return(&clients.DockerContainer{}, nil)
 
 	s.dockerClient.EXPECT().StartContainer(service.ctx, (configMatcher)(clients.DockerContainerConfig{
-		Name:           config.DockerJSONRPCProxyContainerName,
-		LinkNetworkIDs: []string{testServiceNetworkID, testBotNetworkID},
+		Name:      config.DockerJSONRPCProxyContainerName,
+		NetworkID: testNodeNetworkID,
 	})).Return(&clients.DockerContainer{ID: testProxyContainerID}, nil)
 
 	s.dockerClient.EXPECT().StartContainer(service.ctx, (configMatcher)(clients.DockerContainerConfig{
-		Name:           config.DockerScannerContainerName,
-		LinkNetworkIDs: []string{testServiceNetworkID, testBotNetworkID},
+		Name:      config.DockerScannerContainerName,
+		NetworkID: testNodeNetworkID,
 	})).Return(&clients.DockerContainer{ID: testScannerContainerID}, nil)
 
 	s.dockerClient.EXPECT().WaitContainerStart(service.ctx, gomock.Any()).Return(nil).AnyTimes()
@@ -224,8 +211,8 @@ func (s *Suite) initialContainerCheck() {
 		s.dockerClient.EXPECT().RemoveContainer(s.service.ctx, testGenericContainerID).Return(nil)
 		s.dockerClient.EXPECT().WaitContainerPrune(s.service.ctx, testGenericContainerID).Return(nil)
 	}
-	// expected container count + 2 legacy networks
-	expectedNetworkCount := expectedContainerCount + 2
+	// expected container count + 1 old network
+	expectedNetworkCount := expectedContainerCount + 1
 	for i := 0; i < expectedNetworkCount; i++ {
 		s.dockerClient.EXPECT().RemoveNetworkByName(s.service.ctx, gomock.Any()).Return(nil)
 	}
@@ -251,7 +238,7 @@ func (s *Suite) TestAgentRun() {
 
 	s.dockerClient.EXPECT().StartContainer(s.service.ctx, (configMatcher)(clients.DockerContainerConfig{
 		Name:      agentConfig.AdminContainerName(),
-		NetworkID: testBotNetworkID,
+		NetworkID: testNodeNetworkID,
 	}), true).Return(&clients.DockerContainer{Name: agentConfig.AdminContainerName(), ID: testAgentAdminContainerName}, nil)
 
 	s.botManager.EXPECT().SetBotAdminRules(agentConfig.AdminContainerName())

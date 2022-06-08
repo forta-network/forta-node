@@ -40,7 +40,7 @@ func (sup *SupervisorService) startAgent(agent config.AgentConfig) error {
 		Volumes: map[string]string{
 			sup.hostFortaDir: config.DefaultContainerFortaDirPath,
 		},
-		NetworkID:   sup.botNetworkID,
+		NetworkID:   sup.nodeNetworkID,
 		MaxLogFiles: sup.maxLogFiles,
 		MaxLogSize:  sup.maxLogSize,
 		Labels: map[string]string{

@@ -12,8 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/network"
 	"github.com/forta-network/forta-core-go/manifest"
 	"github.com/forta-network/forta-core-go/release"
 
@@ -61,8 +59,7 @@ type SupervisorService struct {
 	hostFortaDir    string
 	commonNodeImage string
 
-	botNetworkID     string
-	serviceNetworkID string
+	nodeNetworkID string
 
 	scannerContainer *clients.DockerContainer
 	jsonRpcContainer *clients.DockerContainer
@@ -186,68 +183,37 @@ func (sup *SupervisorService) start() error {
 	ipAddr := subnetParts[0]
 	ipAddrParts := strings.Split(ipAddr, ".")
 	ipAddrParts[3] = "128"
-	ipRange := strings.Join([]string{strings.Join(ipAddrParts, "."), "25"}, "/")
 
-	// create an ipvlan network that uses host interface as parent so we can provide internet access
-	// to bots with easy isolation
-	botNetworkID, err := sup.client.CreateNetwork(sup.ctx, config.DockerBotNetworkName, &types.NetworkCreate{
-		Driver: "ipvlan",
-		IPAM: &network.IPAM{
-			Config: []network.IPAMConfig{
-				{
-					Subnet:  host.DefaultSubnet,
-					IPRange: ipRange,
-					Gateway: host.DefaultGateway,
-				},
-			},
-		},
-		Options: map[string]string{
-			"parent": host.DefaultInterfaceName,
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create the bot network: %v", err)
-	}
-	botNetwork, err := sup.client.GetNetworkByID(sup.ctx, botNetworkID)
-	if err != nil {
-		return fmt.Errorf("failed to get bot network id: %v", err)
-	}
-	botNetworkConfig := botNetwork.IPAM.Config[0]
-
-	// create a bridge network which connects service containers and the host
-	serviceNetworkID, err := sup.client.CreatePublicNetwork(sup.ctx, config.DockerServiceNetworkName)
+	// create a bridge network which connects all forta containers
+	nodeNetworkID, err := sup.client.CreatePublicNetwork(sup.ctx, config.DockerNodeNetworkName)
 	if err != nil {
 		return fmt.Errorf("failed to create the service network: %v", err)
 	}
-	if err := sup.client.AttachNetwork(sup.ctx, supervisorContainer.ID, serviceNetworkID); err != nil {
+	if err := sup.client.AttachNetwork(sup.ctx, supervisorContainer.ID, nodeNetworkID); err != nil {
 		return fmt.Errorf("failed to attach supervisor container to node network: %v", err)
 	}
-	serviceNetwork, err := sup.client.GetNetworkByID(sup.ctx, serviceNetworkID)
+	nodeNetwork, err := sup.client.GetNetworkByID(sup.ctx, nodeNetworkID)
 	if err != nil {
-		return fmt.Errorf("failed to get service network id: %v", err)
+		return fmt.Errorf("failed to get node network id: %v", err)
 	}
-	serviceNetworkConfig := serviceNetwork.IPAM.Config[0]
-	serviceHostGatewayOpt := fmt.Sprintf("host.docker.internal:%s", serviceNetworkConfig.Gateway)
-
-	botNetworkID = serviceNetworkID
+	nodeNetworkConfig := nodeNetwork.IPAM.Config[0]
+	//nodeHostGatewayOpt := fmt.Sprintf("host.docker.internal:%s", nodeNetworkConfig.Gateway)
 
 	// create the network manager for the bots
 	defaultGwIPAddr := net.ParseIP(host.DefaultGateway)
 	_, hostNetworkSubnet, _ := net.ParseCIDR(host.DefaultSubnet)
-	_, botNetworkSubnet, _ := net.ParseCIDR(botNetworkConfig.Subnet)
-	_, serviceNetworkSubnet, _ := net.ParseCIDR(serviceNetworkConfig.Subnet)
+	_, nodeNetworkSubnet, _ := net.ParseCIDR(nodeNetworkConfig.Subnet)
 	_, docker0Subnet, _ := net.ParseCIDR(host.Docker0Subnet)
 	sup.botManager.Init(&defaultGwIPAddr, []*net.IPNet{
-		hostNetworkSubnet, botNetworkSubnet, serviceNetworkSubnet, docker0Subnet,
+		hostNetworkSubnet, nodeNetworkSubnet, docker0Subnet,
 	})
 
-	sup.botNetworkID = botNetworkID
-	sup.serviceNetworkID = serviceNetworkID
+	sup.nodeNetworkID = nodeNetworkID
 
 	ipfsContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
 		Name:        config.DockerIpfsContainerName,
 		Image:       "ipfs/go-ipfs:v0.12.2",
-		NetworkID:   serviceNetworkID,
+		NetworkID:   nodeNetworkID,
 		MaxLogFiles: sup.maxLogFiles,
 		MaxLogSize:  sup.maxLogSize,
 	})
@@ -260,7 +226,7 @@ func (sup *SupervisorService) start() error {
 	natsContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
 		Name:        config.DockerNatsContainerName,
 		Image:       "nats:2.3.2",
-		NetworkID:   serviceNetworkID,
+		NetworkID:   nodeNetworkID,
 		MaxLogFiles: sup.maxLogFiles,
 		MaxLogSize:  sup.maxLogSize,
 	})
@@ -279,7 +245,7 @@ func (sup *SupervisorService) start() error {
 	sup.registerMessageHandlers()
 
 	// attach these service containers to the default bridge network by default
-	// then attach to the services network for convenience and bots network to make connected
+	// then attach to the node network for convenience
 
 	sup.jsonRpcContainer, err = sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerJSONRPCProxyContainerName,
@@ -293,10 +259,10 @@ func (sup *SupervisorService) start() error {
 		Ports: map[string]string{
 			"": config.DefaultHealthPort, // random host port
 		},
-		AddHosts:       []string{serviceHostGatewayOpt},
-		LinkNetworkIDs: []string{serviceNetworkID, botNetworkID},
-		MaxLogFiles:    sup.maxLogFiles,
-		MaxLogSize:     sup.maxLogSize,
+		DialHost:    true,
+		NetworkID:   nodeNetworkID,
+		MaxLogFiles: sup.maxLogFiles,
+		MaxLogSize:  sup.maxLogSize,
 	})
 	if err != nil {
 		return err
@@ -319,10 +285,10 @@ func (sup *SupervisorService) start() error {
 		Files: map[string][]byte{
 			"passphrase": []byte(sup.config.Passphrase),
 		},
-		AddHosts:       []string{serviceHostGatewayOpt},
-		LinkNetworkIDs: []string{serviceNetworkID, botNetworkID},
-		MaxLogFiles:    sup.maxLogFiles,
-		MaxLogSize:     sup.maxLogSize,
+		DialHost:    true,
+		NetworkID:   nodeNetworkID,
+		MaxLogFiles: sup.maxLogFiles,
+		MaxLogSize:  sup.maxLogSize,
 	})
 	if err != nil {
 		return err
@@ -421,6 +387,7 @@ func (sup *SupervisorService) removeOldContainers() error {
 			"containerName": containerName,
 			"containerId":   container.ID,
 		})
+		// forta-agent-123 or forta-agent-admin-123
 		if !strings.Contains(containerName, "forta-agent-") {
 			continue
 		}
@@ -457,13 +424,13 @@ func (sup *SupervisorService) removeOldContainers() error {
 			"containerId":   container.ID,
 		})
 		if err := sup.client.RemoveNetworkByName(sup.ctx, container.Name); err != nil {
-			const msg = "failed to remove old network"
+			const msg = "failed to remove legacy network"
 			logger.WithError(err).Warn(msg)
 			// ignore network removal errs
 		}
 	}
 	// but in any case, just try removing the networks - they won't be removed anyways if in use
-	for _, networkName := range []string{config.DockerBotNetworkName, config.DockerServiceNetworkName} {
+	for _, networkName := range []string{config.DockerNodeNetworkName} {
 		if err := sup.client.RemoveNetworkByName(sup.ctx, networkName); err != nil {
 			const msg = "failed to remove old network (safe to ignore)"
 			log.WithField("network", networkName).WithError(err).Warn(msg)

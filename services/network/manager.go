@@ -42,7 +42,7 @@ func (bm *botManager) SetBotAdminRules(containerName string) error {
 	proxyIpAddress, err := bm.dockerClient.GetContainerIPAddress(
 		bm.ctx,
 		config.DockerJSONRPCProxyContainerName,
-		config.DockerServiceNetworkName,
+		config.DockerNodeNetworkName,
 	)
 	if err != nil {
 		return err
@@ -50,7 +50,7 @@ func (bm *botManager) SetBotAdminRules(containerName string) error {
 	scannerIpAddress, err := bm.dockerClient.GetContainerIPAddress(
 		bm.ctx,
 		config.DockerScannerContainerName,
-		config.DockerServiceNetworkName,
+		config.DockerNodeNetworkName,
 	)
 	if err != nil {
 		return err
