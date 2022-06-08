@@ -68,6 +68,11 @@ func (bm *botManager) SetBotAdminRules(containerName string) error {
 			"-A", "OUTPUT", "-p", "tcp", "--sport", config.AgentGrpcPort, "-d", scannerIpAddress,
 			"-m", "state", "--state", "ESTABLISHED,RELATED", "-j", "ACCEPT",
 		},
+
+		// allow reaching to the default gateway
+		{
+			"-A", "OUTPUT", "-d", bm.defaultGateway.String(), "-j", "ACCEPT",
+		},
 	}
 	// finally, restrict access to all subnets by default
 	for _, subnet := range bm.allSubnets {
