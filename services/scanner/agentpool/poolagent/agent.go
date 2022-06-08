@@ -2,9 +2,10 @@ package poolagent
 
 import (
 	"context"
-	"github.com/forta-network/forta-core-go/domain"
 	"sync"
 	"time"
+
+	"github.com/forta-network/forta-core-go/domain"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/forta-network/forta-node/metrics"

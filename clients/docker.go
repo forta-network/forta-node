@@ -29,6 +29,8 @@ const (
 	DockerLabelFortaSupervisorStrategyVersion = "network.forta.supervisor.strategy-version"
 
 	DockerLabelFortaSettingsAgentLogsEnable = "network.forta.settings.agent-logs.enable"
+
+	DockerCapabilityNetAdmin = "NET_ADMIN"
 )
 
 type dockerLabel struct {
@@ -58,8 +60,8 @@ type DockerContainerConfig struct {
 	Name            string
 	Image           string
 	Env             map[string]string
-	LinkNetworkIDs  []string
-	NetworkID       string
+	NetworkID       string   // default network to attach to
+	LinkNetworkIDs  []string // the additional list of networks to link to later
 	Ports           map[string]string
 	PublishAllPorts bool // auto-publishing ports EXPOSEd in Dockerfile
 	Volumes         map[string]string
@@ -70,7 +72,9 @@ type DockerContainerConfig struct {
 	Memory          int64
 	Cmd             []string
 	DialHost        bool
+	AddHosts        []string
 	Labels          map[string]string
+	Capabilities    []string
 }
 
 // DockerContainerList contains the full container data.
@@ -183,14 +187,18 @@ func (d *dockerClient) Prune(ctx context.Context) error {
 }
 
 func (d *dockerClient) CreatePublicNetwork(ctx context.Context, name string) (string, error) {
-	return d.createNetwork(ctx, name, false)
+	return d.createNetwork(ctx, name, false, nil)
 }
 
 func (d *dockerClient) CreateInternalNetwork(ctx context.Context, name string) (string, error) {
-	return d.createNetwork(ctx, name, true)
+	return d.createNetwork(ctx, name, true, nil)
 }
 
-func (d *dockerClient) createNetwork(ctx context.Context, name string, internal bool) (string, error) {
+func (d *dockerClient) CreateNetwork(ctx context.Context, name string, opts *types.NetworkCreate) (string, error) {
+	return d.createNetwork(ctx, name, false, opts)
+}
+
+func (d *dockerClient) createNetwork(ctx context.Context, name string, internal bool, opts *types.NetworkCreate) (string, error) {
 	// Reuse if network exists.
 	networks, err := d.cli.NetworkList(ctx, types.NetworkListOptions{})
 	if err != nil {
@@ -202,14 +210,25 @@ func (d *dockerClient) createNetwork(ctx context.Context, name string, internal 
 		}
 	}
 
-	resp, err := d.cli.NetworkCreate(ctx, name, types.NetworkCreate{
-		Labels:   labelsToMap(d.labels),
-		Internal: internal,
-	})
+	var networkOpts types.NetworkCreate
+	if opts != nil {
+		networkOpts = *opts
+	} else {
+		networkOpts = types.NetworkCreate{
+			Internal: internal,
+		}
+	}
+	networkOpts.Labels = labelsToMap(d.labels)
+
+	resp, err := d.cli.NetworkCreate(ctx, name, networkOpts)
 	if err != nil {
 		return "", err
 	}
 	return resp.ID, nil
+}
+
+func (d *dockerClient) GetNetworkByID(ctx context.Context, id string) (types.NetworkResource, error) {
+	return d.cli.NetworkInspect(ctx, id, types.NetworkInspectOptions{})
 }
 
 func (d *dockerClient) RemoveNetworkByName(ctx context.Context, networkName string) error {
@@ -366,7 +385,9 @@ func (d *dockerClient) nuke(ctx context.Context) error {
 }
 
 // StartContainer kicks off a container as a daemon and returns a summary of the container
-func (d *dockerClient) StartContainer(ctx context.Context, config DockerContainerConfig) (*DockerContainer, error) {
+func (d *dockerClient) StartContainer(ctx context.Context, config DockerContainerConfig, waitStart ...bool) (*DockerContainer, error) {
+	wait := waitStart != nil && waitStart[0]
+
 	log.WithFields(log.Fields{
 		"image": config.Image,
 		"name":  config.Name,
@@ -388,7 +409,7 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 		}
 	}
 	if foundContainer != nil {
-		if err := d.cli.ContainerStart(ctx, foundContainer.ID, types.ContainerStartOptions{}); err != nil {
+		if err := d.startContainer(ctx, foundContainer.ID, wait); err != nil {
 			return nil, err
 		}
 		inspection, err := d.cli.ContainerInspect(ctx, foundContainer.ID)
@@ -464,11 +485,13 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 			CPUQuota: config.CPUQuota,
 			Memory:   config.Memory,
 		},
+		CapAdd: config.Capabilities,
 	}
 
 	if config.DialHost {
 		hostCfg.ExtraHosts = append(hostCfg.ExtraHosts, "host.docker.internal:host-gateway")
 	}
+	hostCfg.ExtraHosts = append(hostCfg.ExtraHosts, config.AddHosts...)
 
 	cont, err := d.cli.ContainerCreate(
 		ctx,
@@ -485,13 +508,13 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 		}
 	}
 
-	if err := d.cli.ContainerStart(ctx, cont.ID, types.ContainerStartOptions{}); err != nil {
+	if err := d.startContainer(ctx, cont.ID, wait); err != nil {
 		return nil, err
 	}
 
 	for _, nwID := range config.LinkNetworkIDs {
 		if err := d.AttachNetwork(ctx, cont.ID, nwID); err != nil {
-			log.Error("error attaching network", err)
+			log.WithError(err).Error("error attaching to network")
 			return nil, err
 		}
 	}
@@ -506,6 +529,18 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 		"name": config.Name,
 	}).Info("container is starting")
 	return &DockerContainer{Name: config.Name, ID: cont.ID, Config: config, ImageHash: inspection.Image}, nil
+}
+
+func (d *dockerClient) startContainer(ctx context.Context, containerID string, wait bool) error {
+	if err := d.cli.ContainerStart(ctx, containerID, types.ContainerStartOptions{}); err != nil {
+		return err
+	}
+	if wait {
+		if err := d.WaitContainerStart(ctx, containerID); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // StopContainer kills a container by ID
@@ -660,18 +695,24 @@ func (d *dockerClient) EnsureLocalImage(ctx context.Context, name, ref string) e
 	}
 
 	ticker := time.NewTicker(time.Minute)
+	timeout := time.After(time.Minute * 10)
 
 	for {
 		err := d.PullImage(ctx, ref)
 		if err == nil {
 			break
 		}
-		log.WithFields(log.Fields{
-			"name":  name,
-			"ref":   ref,
-			"error": err,
-		}).Error("failed to pull image - retrying")
-		<-ticker.C
+		select {
+		case <-ticker.C:
+			log.WithFields(log.Fields{
+				"name":  name,
+				"ref":   ref,
+				"error": err,
+			}).Error("failed to pull image - retrying")
+		case <-timeout:
+			return fmt.Errorf("failed to pull image: %v", err)
+		}
+
 	}
 
 	log.Infof("pulled image for '%s': %s", name, ref)
@@ -714,6 +755,23 @@ func (d *dockerClient) labelFilter() filters.Args {
 		filter.Add("label", fmt.Sprintf("%s=%s", label.Name, label.Value))
 	}
 	return filter
+}
+
+// GetContainerIPAddress returns the container IP address in a specific network (default: bridge).
+func (d *dockerClient) GetContainerIPAddress(ctx context.Context, containerName string, netName ...string) (string, error) {
+	networkName := "bridge"
+	if netName != nil {
+		networkName = netName[0]
+	}
+	container, err := d.GetContainerByName(ctx, containerName)
+	if err != nil {
+		return "", fmt.Errorf("failed to get '%s' container: %v", containerName, err)
+	}
+	network, ok := container.NetworkSettings.Networks[networkName]
+	if !ok {
+		return "", fmt.Errorf("container '%s' is not on the '%s' network: %v", containerName, networkName, err)
+	}
+	return network.IPAddress, nil
 }
 
 func initLabels(name string) []dockerLabel {

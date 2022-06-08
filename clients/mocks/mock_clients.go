@@ -71,6 +71,21 @@ func (mr *MockDockerClientMockRecorder) CreateInternalNetwork(ctx, name interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInternalNetwork", reflect.TypeOf((*MockDockerClient)(nil).CreateInternalNetwork), ctx, name)
 }
 
+// CreateNetwork mocks base method.
+func (m *MockDockerClient) CreateNetwork(ctx context.Context, name string, opts *types.NetworkCreate) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateNetwork", ctx, name, opts)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateNetwork indicates an expected call of CreateNetwork.
+func (mr *MockDockerClientMockRecorder) CreateNetwork(ctx, name, opts interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNetwork", reflect.TypeOf((*MockDockerClient)(nil).CreateNetwork), ctx, name, opts)
+}
+
 // CreatePublicNetwork mocks base method.
 func (m *MockDockerClient) CreatePublicNetwork(ctx context.Context, name string) (string, error) {
 	m.ctrl.T.Helper()
@@ -130,6 +145,26 @@ func (mr *MockDockerClientMockRecorder) GetContainerByName(ctx, name interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainerByName", reflect.TypeOf((*MockDockerClient)(nil).GetContainerByName), ctx, name)
 }
 
+// GetContainerIPAddress mocks base method.
+func (m *MockDockerClient) GetContainerIPAddress(ctx context.Context, containerName string, netName ...string) (string, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, containerName}
+	for _, a := range netName {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetContainerIPAddress", varargs...)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetContainerIPAddress indicates an expected call of GetContainerIPAddress.
+func (mr *MockDockerClientMockRecorder) GetContainerIPAddress(ctx, containerName interface{}, netName ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, containerName}, netName...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainerIPAddress", reflect.TypeOf((*MockDockerClient)(nil).GetContainerIPAddress), varargs...)
+}
+
 // GetContainerLogs mocks base method.
 func (m *MockDockerClient) GetContainerLogs(ctx context.Context, containerID, tail string, truncate int) (string, error) {
 	m.ctrl.T.Helper()
@@ -173,6 +208,21 @@ func (m *MockDockerClient) GetFortaServiceContainers(ctx context.Context) (clien
 func (mr *MockDockerClientMockRecorder) GetFortaServiceContainers(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFortaServiceContainers", reflect.TypeOf((*MockDockerClient)(nil).GetFortaServiceContainers), ctx)
+}
+
+// GetNetworkByID mocks base method.
+func (m *MockDockerClient) GetNetworkByID(ctx context.Context, id string) (types.NetworkResource, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNetworkByID", ctx, id)
+	ret0, _ := ret[0].(types.NetworkResource)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNetworkByID indicates an expected call of GetNetworkByID.
+func (mr *MockDockerClientMockRecorder) GetNetworkByID(ctx, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNetworkByID", reflect.TypeOf((*MockDockerClient)(nil).GetNetworkByID), ctx, id)
 }
 
 // HasLocalImage mocks base method.
@@ -274,18 +324,23 @@ func (mr *MockDockerClientMockRecorder) RemoveNetworkByName(ctx, networkName int
 }
 
 // StartContainer mocks base method.
-func (m *MockDockerClient) StartContainer(ctx context.Context, config clients.DockerContainerConfig) (*clients.DockerContainer, error) {
+func (m *MockDockerClient) StartContainer(ctx context.Context, config clients.DockerContainerConfig, waitStart ...bool) (*clients.DockerContainer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StartContainer", ctx, config)
+	varargs := []interface{}{ctx, config}
+	for _, a := range waitStart {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "StartContainer", varargs...)
 	ret0, _ := ret[0].(*clients.DockerContainer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // StartContainer indicates an expected call of StartContainer.
-func (mr *MockDockerClientMockRecorder) StartContainer(ctx, config interface{}) *gomock.Call {
+func (mr *MockDockerClientMockRecorder) StartContainer(ctx, config interface{}, waitStart ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartContainer", reflect.TypeOf((*MockDockerClient)(nil).StartContainer), ctx, config)
+	varargs := append([]interface{}{ctx, config}, waitStart...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartContainer", reflect.TypeOf((*MockDockerClient)(nil).StartContainer), varargs...)
 }
 
 // StopContainer mocks base method.

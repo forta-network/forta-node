@@ -48,5 +48,5 @@ func summarizeReports(reports health.Reports) *health.Report {
 }
 
 func Run() {
-	services.ContainerMain("publisher", initServices)
+	services.ContainerMain("publisher", initServices, services.ContainerMainOpts{})
 }

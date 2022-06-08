@@ -20,13 +20,15 @@ type DockerClient interface {
 	PullImage(ctx context.Context, refStr string) error
 	CreatePublicNetwork(ctx context.Context, name string) (string, error)
 	CreateInternalNetwork(ctx context.Context, name string) (string, error)
+	CreateNetwork(ctx context.Context, name string, opts *types.NetworkCreate) (string, error)
 	AttachNetwork(ctx context.Context, containerID string, networkID string) error
+	GetNetworkByID(ctx context.Context, id string) (types.NetworkResource, error)
 	RemoveNetworkByName(ctx context.Context, networkName string) error
 	GetContainers(ctx context.Context) (DockerContainerList, error)
 	GetFortaServiceContainers(ctx context.Context) (fortaContainers DockerContainerList, err error)
 	GetContainerByName(ctx context.Context, name string) (*types.Container, error)
 	GetContainerByID(ctx context.Context, id string) (*types.Container, error)
-	StartContainer(ctx context.Context, config DockerContainerConfig) (*DockerContainer, error)
+	StartContainer(ctx context.Context, config DockerContainerConfig, waitStart ...bool) (*DockerContainer, error)
 	StopContainer(ctx context.Context, id string) error
 	InterruptContainer(ctx context.Context, id string) error
 	TerminateContainer(ctx context.Context, id string) error
@@ -39,6 +41,7 @@ type DockerClient interface {
 	HasLocalImage(ctx context.Context, ref string) bool
 	EnsureLocalImage(ctx context.Context, name, ref string) error
 	GetContainerLogs(ctx context.Context, containerID, tail string, truncate int) (string, error)
+	GetContainerIPAddress(ctx context.Context, containerName string, netName ...string) (string, error)
 }
 
 // MessageClient receives and publishes messages.

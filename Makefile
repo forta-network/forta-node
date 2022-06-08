@@ -17,6 +17,7 @@ mocks:
 	mockgen -source clients/interfaces.go -destination clients/mocks/mock_clients.go
 	mockgen -source services/registry/registry.go -destination services/registry/mocks/mock_registry.go
 	mockgen -source store/registry.go -destination store/mocks/mock_registry.go
+	mockgen -source services/network/manager.go -destination services/network/mocks/mock_manager.go
 
 test:
 	go test -v -count=1 ./...

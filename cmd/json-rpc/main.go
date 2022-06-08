@@ -46,5 +46,5 @@ func summarizeReports(reports health.Reports) *health.Report {
 }
 
 func Run() {
-	services.ContainerMain("json-rpc", initServices)
+	services.ContainerMain("json-rpc", initServices, services.ContainerMainOpts{})
 }
