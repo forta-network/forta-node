@@ -10,6 +10,9 @@ inputs:
   version:
     description: 'Forta scan node version'
     required: true
+  prerelease:
+    description: 'Is a prerelease'
+    required: true
 outputs:
   release-cid:
     description: 'IPFS CID of the release manifest'
@@ -34,9 +37,10 @@ runs:
         IMAGE_NAME: ${{ inputs.name }}
         VERSION: ${{ inputs.version }}
         COMMIT_SHA: ${{ github.sha }}
+        PRERELEASE: ${{ inputs.prerelease }}
       run: |
         IMAGE_REF=$(./scripts/docker-build-push.sh "$REGISTRY" "$IMAGE_NAME" "$COMMIT_SHA")
         echo "::set-output name=image-reference::$IMAGE_REF"
-        ./scripts/build-manifest.sh ./scripts/manifest-template.json manifest.json "$GITHUB_SHA" "$IMAGE_REF" "$VERSION"
+        go run ./scripts/go/releasemanifest/main.go --version "$VERSION" --commit-sha "$GITHUB_SHA" --node-image "$IMAGE_REF" --is-prerelease "$PRERELEASE"
         MANIFEST_REF=$(./scripts/ipfs-add.sh "./manifest.json")
         echo "::set-output name=release-cid::$MANIFEST_REF"

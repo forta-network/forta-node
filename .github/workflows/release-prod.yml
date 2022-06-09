@@ -2,7 +2,7 @@ name: Release to Prod
 
 on:
   release:
-    types: [released]
+    types: [released,prereleased]
 
 jobs:
   go:
@@ -60,6 +60,7 @@ jobs:
           registry: disco.forta.network
           name: ${{ matrix.image-name }}
           version: ${{ github.ref_name }}
+          prerelease: ${{ github.event.action == 'prereleased' }}
       - name: Write image reference as output
         id: write-output
         run: |
@@ -82,7 +83,7 @@ jobs:
           scanner-version-contract: "0x4720c872425876B6f4b4E9130CDef667aDE553b2"
           network: "matic"
           multisig: "0xd1d4FaFd400fCD643132bb7eAF7682eE97E09C3e"
-          version: ${{ github.ref_name }}
+          version: ${{ github.ref_name }} (${{ github.event.action }})
           release-cid: ${{ needs.containers.outputs.node-release-cid }}
       - name: Proposal Url
         run: echo "Proposal ${{ steps.propose.outputs.proposal-url }}"
@@ -131,6 +132,7 @@ jobs:
     needs: [build]
     runs-on: ubuntu-18.04
     environment: prod
+    if: ${{ github.event.action == 'released' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
