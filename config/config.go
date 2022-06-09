@@ -99,8 +99,9 @@ type TelemetryConfig struct {
 }
 
 type AutoUpdateConfig struct {
-	Disable     bool `yaml:"disable" json:"disable"`
-	UpdateDelay *int `yaml:"updateDelay" json:"updateDelay"`
+	Disable           bool    `yaml:"disable" json:"disable"`
+	UpdateDelay       *int    `yaml:"updateDelay" json:"updateDelay"`
+	PrereleaseVersion *string `yaml:"prereleaseVersion" json:"prereleaseVersion"`
 }
 
 type AgentLogsConfig struct {

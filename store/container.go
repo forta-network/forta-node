@@ -30,16 +30,18 @@ type ImageRefs struct {
 }
 
 type fortaImageStore struct {
-	updaterPort string
-	latestCh    chan ImageRefs
-	latestImgs  ImageRefs
+	updaterPort      string
+	latestCh         chan ImageRefs
+	latestImgs       ImageRefs
+	optIntPrerelease string
 }
 
 // NewFortaImageStore creates a new store.
-func NewFortaImageStore(ctx context.Context, updaterPort string, autoUpdate bool) (*fortaImageStore, error) {
+func NewFortaImageStore(ctx context.Context, updaterPort string, autoUpdate bool, optIntPrerelease string) (*fortaImageStore, error) {
 	store := &fortaImageStore{
-		updaterPort: updaterPort,
-		latestCh:    make(chan ImageRefs),
+		updaterPort:      updaterPort,
+		latestCh:         make(chan ImageRefs),
+		optIntPrerelease: optIntPrerelease,
 	}
 	if autoUpdate {
 		go store.loop(ctx)
@@ -79,6 +81,10 @@ func (store *fortaImageStore) check(ctx context.Context) {
 	}
 
 	serviceImgs := latestReleaseInfo.Manifest.Release.Services
+	if latestReleaseInfo.Manifest.Prerelease != nil && latestReleaseInfo.Manifest.Prerelease.Version == store.optIntPrerelease {
+		serviceImgs = latestReleaseInfo.Manifest.Prerelease.Services
+	}
+
 	if serviceImgs.Supervisor != store.latestImgs.Supervisor || serviceImgs.Updater != store.latestImgs.Updater {
 		log.WithField("commit", latestReleaseInfo.Manifest.Release.Commit).Info("got newer release from updater")
 

@@ -30,6 +30,7 @@ type UpdaterService struct {
 	server *http.Server
 
 	developmentMode bool
+	optInPrerelease string
 
 	latestReference string
 	latestRelease   *release.ReleaseManifest
@@ -42,7 +43,7 @@ type UpdaterService struct {
 
 // NewUpdaterService creates a new updater service.
 func NewUpdaterService(ctx context.Context, rg registry.Client, rc release.Client,
-	port string, developmentMode bool, delaySeconds int,
+	port string, developmentMode bool, delaySeconds int, optInPrerelease string,
 ) *UpdaterService {
 	return &UpdaterService{
 		ctx:             ctx,
@@ -50,6 +51,7 @@ func NewUpdaterService(ctx context.Context, rg registry.Client, rc release.Clien
 		rg:              rg,
 		rl:              rc,
 		developmentMode: developmentMode,
+		optInPrerelease: optInPrerelease,
 		delaySeconds:    delaySeconds,
 	}
 }
@@ -131,6 +133,10 @@ func (updater *UpdaterService) updateLatestReleaseWithDelay(delay time.Duration)
 		if err != nil {
 			log.WithError(err).Error("error getting release manifest")
 			return fmt.Errorf("failed while downloading the release manifest: %v", err)
+		}
+
+		if rm.Prerelease != nil && updater.optInPrerelease == rm.Prerelease.Version {
+			delay = 0 // update immediately - opt-in releases == point config to specific prerelease and restart
 		}
 
 		// so that all scanners don't update simultaneously, this waits a period of time

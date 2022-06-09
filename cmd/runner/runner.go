@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/services"
@@ -14,7 +15,7 @@ import (
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
 	shouldDisableAutoUpdate := cfg.AutoUpdate.Disable || cfg.PrivateModeConfig.Enable
-	imgStore, err := store.NewFortaImageStore(ctx, config.DefaultContainerPort, !shouldDisableAutoUpdate)
+	imgStore, err := store.NewFortaImageStore(ctx, config.DefaultContainerPort, !shouldDisableAutoUpdate, utils.String(cfg.AutoUpdate.PrereleaseVersion))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the image store: %v", err)
 	}

@@ -21,7 +21,7 @@ func TestUpdaterService_UpdateLatestRelease(t *testing.T) {
 
 	rg := rm.NewMockClient(c)
 	is := im.NewMockClient(c)
-	updater := NewUpdaterService(context.Background(), rg, is, "8080", false, testDefaultCheckIntervalSeconds)
+	updater := NewUpdaterService(context.Background(), rg, is, "8080", false, testDefaultCheckIntervalSeconds, "")
 
 	rg.EXPECT().GetScannerNodeVersion().Return("reference", nil).Times(1)
 	is.EXPECT().GetReleaseManifest(gomock.Any(), "reference").Return(&release.ReleaseManifest{}, nil).Times(1)
@@ -33,7 +33,7 @@ func TestUpdaterService_UpdateLatestReleaseCached(t *testing.T) {
 	c := gomock.NewController(t)
 	rg := rm.NewMockClient(c)
 	is := im.NewMockClient(c)
-	updater := NewUpdaterService(context.Background(), rg, is, "8080", false, testDefaultCheckIntervalSeconds)
+	updater := NewUpdaterService(context.Background(), rg, is, "8080", false, testDefaultCheckIntervalSeconds, "")
 
 	// update twice
 	rg.EXPECT().GetScannerNodeVersion().Return("reference", nil).Times(2)
@@ -48,7 +48,7 @@ func TestUpdaterService_UpdateLatestReleaseNotCached(t *testing.T) {
 	c := gomock.NewController(t)
 	rg := rm.NewMockClient(c)
 	is := im.NewMockClient(c)
-	updater := NewUpdaterService(context.Background(), rg, is, "8080", false, testDefaultCheckIntervalSeconds)
+	updater := NewUpdaterService(context.Background(), rg, is, "8080", false, testDefaultCheckIntervalSeconds, "")
 
 	// update twice
 	rg.EXPECT().GetScannerNodeVersion().Return("reference1", nil).Times(1)
