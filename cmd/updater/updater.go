@@ -96,7 +96,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 
 	updaterService := updater.NewUpdaterService(
 		ctx, rg, rc, config.DefaultContainerPort,
-		developmentMode, updateDelay,
+		developmentMode, updateDelay, 0,
 	)
 
 	return []services.Service{

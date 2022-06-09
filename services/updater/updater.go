@@ -3,6 +3,7 @@ package updater
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -19,38 +20,50 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var (
+	errNotAvailable = errors.New("new release not available")
+
+	defaultUpdateCheckIntervalSeconds = 60
+)
+
 // UpdaterService receives the release updates.
 type UpdaterService struct {
 	ctx  context.Context
 	port string
 
-	mu     sync.RWMutex
-	rl     release.Client
-	rg     registry.Client
-	server *http.Server
+	mu             sync.RWMutex
+	releaseClient  release.Client
+	registryClient registry.Client
+	server         *http.Server
 
 	developmentMode bool
 
 	latestReference string
 	latestRelease   *release.ReleaseManifest
 
-	delaySeconds int
+	updateDelay         time.Duration
+	updateCheckInterval time.Duration
 
 	lastChecked health.TimeTracker
 	lastErr     health.ErrorTracker
 }
 
 // NewUpdaterService creates a new updater service.
-func NewUpdaterService(ctx context.Context, rg registry.Client, rc release.Client,
-	port string, developmentMode bool, delaySeconds int,
+func NewUpdaterService(ctx context.Context, registryClient registry.Client, releaseClient release.Client,
+	port string, developmentMode bool, updateDelaySeconds, updateCheckIntervalSeconds int,
 ) *UpdaterService {
+	if updateCheckIntervalSeconds == 0 {
+		updateCheckIntervalSeconds = defaultUpdateCheckIntervalSeconds
+	}
+
 	return &UpdaterService{
-		ctx:             ctx,
-		port:            port,
-		rg:              rg,
-		rl:              rc,
-		developmentMode: developmentMode,
-		delaySeconds:    delaySeconds,
+		ctx:                 ctx,
+		port:                port,
+		releaseClient:       releaseClient,
+		registryClient:      registryClient,
+		developmentMode:     developmentMode,
+		updateDelay:         time.Duration(updateDelaySeconds) * time.Second,
+		updateCheckInterval: time.Duration(updateCheckIntervalSeconds) * time.Second,
 	}
 }
 
@@ -89,7 +102,7 @@ func (updater *UpdaterService) Start() error {
 	utils.GoListenAndServe(updater.server)
 
 	go func() {
-		t := time.NewTicker(time.Minute)
+		t := time.NewTicker(updater.updateCheckInterval)
 		for {
 			select {
 			case <-updater.ctx.Done():
@@ -97,7 +110,7 @@ func (updater *UpdaterService) Start() error {
 				updater.stopServer()
 				return
 			case <-t.C:
-				err := updater.updateLatestReleaseWithDelay(time.Duration(updater.delaySeconds) * time.Second)
+				err := updater.updateLatestReleaseWithDelay(updater.updateCheckInterval)
 				updater.lastErr.Set(err)
 				updater.lastChecked.Set()
 				if err != nil {
@@ -122,38 +135,102 @@ func (updater *UpdaterService) updateLatestReleaseWithDelay(delay time.Duration)
 
 	log.Info("updating latest release")
 
-	ref, err := updater.rg.GetScannerNodeVersion()
-	if err != nil {
-		return fmt.Errorf("failed to get the latest release manifest ref: %v", err)
-	}
-	if ref != updater.latestReference {
-		rm, err := updater.rl.GetReleaseManifest(context.Background(), ref)
-		if err != nil {
-			log.WithError(err).Error("error getting release manifest")
-			return fmt.Errorf("failed while downloading the release manifest: %v", err)
-		}
+	ref, rm, err := updater.getNewerRelease(updater.latestReference)
+	switch err {
+	case nil:
+		// we downloaded new release info successfully
 
-		// so that all scanners don't update simultaneously, this waits a period of time
-		if delay > 0 {
-			log.WithFields(log.Fields{
-				"release": ref, "delay": delay,
-			}).Info("delaying update")
-			time.Sleep(delay)
-		}
-
-		updater.mu.Lock()
-		defer updater.mu.Unlock()
-		updater.latestRelease = rm
-		updater.latestReference = ref
-		log.WithFields(log.Fields{
-			"release": ref,
-		}).Info("updating to release")
-	} else {
+	case errNotAvailable:
 		log.WithFields(log.Fields{
 			"release": ref,
 		}).Info("no change to release")
+		return nil
+
+	default:
+		return err
 	}
+
+	// so that all scanners don't update simultaneously, this waits a period of time
+	if delay > 0 {
+		log.WithFields(log.Fields{
+			"release": ref, "delay": delay,
+		}).Info("delaying update")
+
+		if foundNew := updater.checkNewerReleaseAndWait(ref, delay); foundNew {
+			log.Info("detected newer release while delaying current update - aborting")
+			return nil
+		}
+
+		log.Info("successfully waited before version update")
+	}
+
+	updater.mu.Lock()
+	defer updater.mu.Unlock()
+	updater.latestRelease = rm
+	updater.latestReference = ref
+	log.WithFields(log.Fields{
+		"release": ref,
+	}).Info("updating to release")
+
 	return nil
+}
+
+func (updater *UpdaterService) getNewerRelease(previousRef string) (string, *release.ReleaseManifest, error) {
+	ref, err := updater.compareScannerNodeVersion(previousRef)
+	if err != nil {
+		return ref, nil, err
+	}
+	rm, err := updater.releaseClient.GetReleaseManifest(context.Background(), ref)
+	if err != nil {
+		log.WithError(err).Error("error getting release manifest")
+		return ref, nil, fmt.Errorf("failed while downloading the release manifest: %v", err)
+	}
+	return ref, rm, nil
+}
+
+func (updater *UpdaterService) compareScannerNodeVersion(previousRef string) (newRef string, err error) {
+	ref, err := updater.registryClient.GetScannerNodeVersion()
+	if err != nil {
+		log.WithError(err).Error("error getting the latest release manifest ref")
+		return "", fmt.Errorf("failed to get the latest release manifest ref: %v", err)
+	}
+	if ref == previousRef {
+		return ref, errNotAvailable
+	}
+	return ref, nil
+}
+
+func (updater *UpdaterService) checkNewerReleaseAndWait(previousRef string, delay time.Duration) (foundNew bool) {
+	detectedCh := make(chan struct{})
+	defer close(detectedCh)
+
+	ctx, cancel := context.WithCancel(updater.ctx)
+	defer cancel()
+
+	go updater.detectNewerRelease(ctx, previousRef, detectedCh)
+
+	select {
+	case <-time.After(delay):
+		return false
+	case <-detectedCh:
+		return true
+	}
+}
+
+func (updater *UpdaterService) detectNewerRelease(ctx context.Context, previousRef string, detectedCh chan struct{}) {
+	ticker := time.NewTicker(updater.updateCheckInterval)
+	for {
+		select {
+		case <-ticker.C:
+			newRef, _ := updater.compareScannerNodeVersion(previousRef)
+			if newRef != previousRef {
+				detectedCh <- struct{}{}
+				return
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 func (updater *UpdaterService) readLocalReleaseManifest() error {
