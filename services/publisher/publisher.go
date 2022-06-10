@@ -24,6 +24,7 @@ import (
 	"github.com/forta-network/forta-core-go/protocol/transform"
 	"github.com/forta-network/forta-core-go/release"
 	"github.com/forta-network/forta-core-go/security"
+	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/alertapi"
 	"github.com/forta-network/forta-node/clients/messaging"
@@ -169,10 +170,14 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 	}
 
 	if pub.cfg.Config.PrivateModeConfig.Enable {
+		scannerJwt, err := security.CreateScannerJWT(pub.cfg.Key, map[string]interface{}{
+			"privateMode": "true",
+		})
 		alertList := transform.ToWebhookAlertList(batch)
-		_, err := pub.webhookClient.SendAlerts(&operations.SendAlertsParams{
-			Context:   pub.ctx,
-			AlertList: alertList,
+		_, err = pub.webhookClient.SendAlerts(&operations.SendAlertsParams{
+			Context:       pub.ctx,
+			AlertList:     alertList,
+			Authorization: utils.StringPtr(fmt.Sprintf("Bearer %s", scannerJwt)),
 		})
 		if err != nil {
 			log.WithError(err).Error("failed to send private alerts")
