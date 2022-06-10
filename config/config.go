@@ -115,7 +115,7 @@ type ContainerRegistryConfig struct {
 
 type PrivateModeConfig struct {
 	Enable            bool                     `yaml:"enable" json:"enable"`
-	AgentImages       []string                 `yaml:"agentImages" json:"agentImages" validate:"required_if=Enable true"`
+	AgentImages       []string                 `yaml:"botImages" json:"botImages" validate:"required_if=Enable true"`
 	WebhookURL        string                   `yaml:"webhookUrl" json:"webhookUrl" validate:"required_if=Enable true"`
 	ContainerRegistry *ContainerRegistryConfig `yaml:"containerRegistry" json:"containerRegistry"`
 }

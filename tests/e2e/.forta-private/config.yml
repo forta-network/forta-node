@@ -16,7 +16,7 @@ scan:
 privateMode:
   enable: true
   webhookUrl: http://localhost:9090/batch/webhook
-  agentImages:
+  botImages:
     - forta-e2e-test-agent
 
 autoUpdate:
