@@ -23,7 +23,7 @@ func TestUpdaterService_UpdateLatestRelease(t *testing.T) {
 	registryClient := rm.NewMockClient(gomock.NewController(t))
 	releaseClient := im.NewMockClient(gomock.NewController(t))
 	updater := NewUpdaterService(
-		context.Background(), registryClient, releaseClient, "8080", false,
+		context.Background(), registryClient, releaseClient, "8080", false, false,
 		testUpdateDelaySeconds, testUpdateCheckIntervalSeconds,
 	)
 
@@ -40,7 +40,7 @@ func TestUpdaterService_UpdateLatestReleaseCached(t *testing.T) {
 	registryClient := rm.NewMockClient(gomock.NewController(t))
 	releaseClient := im.NewMockClient(gomock.NewController(t))
 	updater := NewUpdaterService(
-		context.Background(), registryClient, releaseClient, "8080", false,
+		context.Background(), registryClient, releaseClient, "8080", false, false,
 		testUpdateDelaySeconds, testUpdateCheckIntervalSeconds,
 	)
 
@@ -60,7 +60,7 @@ func TestUpdaterService_UpdateLatestReleaseNotCached(t *testing.T) {
 	registryClient := rm.NewMockClient(gomock.NewController(t))
 	releaseClient := im.NewMockClient(gomock.NewController(t))
 	updater := NewUpdaterService(
-		context.Background(), registryClient, releaseClient, "8080", false,
+		context.Background(), registryClient, releaseClient, "8080", false, false,
 		testUpdateDelaySeconds, testUpdateCheckIntervalSeconds,
 	)
 
@@ -81,7 +81,7 @@ func TestUpdaterService_UpdateLatestReleaseAbort(t *testing.T) {
 	registryClient := rm.NewMockClient(gomock.NewController(t))
 	releaseClient := im.NewMockClient(gomock.NewController(t))
 	updater := NewUpdaterService(
-		context.Background(), registryClient, releaseClient, "8080", false,
+		context.Background(), registryClient, releaseClient, "8080", false, false,
 		testUpdateDelaySeconds, testUpdateCheckIntervalSeconds,
 	)
 
