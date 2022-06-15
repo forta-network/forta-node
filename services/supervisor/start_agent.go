@@ -85,6 +85,7 @@ func (sup *SupervisorService) startAgent(agent config.AgentConfig) error {
 		Labels: map[string]string{
 			clients.DockerLabelFortaSupervisorStrategyVersion: SupervisorStrategyVersion,
 		},
+		MaxOpenFiles: 1024,
 	})
 	if err != nil {
 		return err

@@ -18,6 +18,7 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"github.com/docker/go-units"
 	"github.com/forta-network/forta-core-go/utils/workers"
 	"github.com/forta-network/forta-node/config"
 	log "github.com/sirupsen/logrus"
@@ -75,6 +76,7 @@ type DockerContainerConfig struct {
 	AddHosts        []string
 	Labels          map[string]string
 	Capabilities    []string
+	MaxOpenFiles    int
 }
 
 // DockerContainerList contains the full container data.
@@ -486,6 +488,14 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 			Memory:   config.Memory,
 		},
 		CapAdd: config.Capabilities,
+	}
+
+	if config.MaxOpenFiles > 0 {
+		hostCfg.Resources.Ulimits = append(hostCfg.Resources.Ulimits, &units.Ulimit{
+			Name: "nofile",
+			Hard: int64(config.MaxOpenFiles),
+			Soft: int64(config.MaxOpenFiles),
+		})
 	}
 
 	if config.DialHost {
