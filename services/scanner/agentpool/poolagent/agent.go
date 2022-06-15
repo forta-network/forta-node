@@ -2,13 +2,16 @@ package poolagent
 
 import (
 	"context"
-	"github.com/forta-network/forta-core-go/domain"
 	"sync"
 	"time"
+
+	"github.com/forta-network/forta-core-go/domain"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/forta-network/forta-node/metrics"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-node/clients"
@@ -22,9 +25,10 @@ import (
 
 // Constants
 const (
-	DefaultBufferSize = 2000
-	AgentTimeout      = 30 * time.Second
-	MaxFindings       = 10
+	DefaultBufferSize             = 2000
+	AgentTimeout                  = 30 * time.Second
+	MaxFindings                   = 10
+	DefaultAgentInitializeTimeout = 5 * time.Minute
 )
 
 // Agent receives blocks and transactions, and produces results.
@@ -45,6 +49,7 @@ type Agent struct {
 	readyOnce sync.Once
 	closed    chan struct{}
 	closeOnce sync.Once
+	initWait  sync.WaitGroup
 }
 
 // TxRequest contains the original request data and the encoded message.
@@ -168,8 +173,35 @@ func (agent *Agent) SetClient(agentClient clients.AgentClient) {
 // StartProcessing launches the goroutines to concurrently process incoming requests
 // from request channels.
 func (agent *Agent) StartProcessing() {
+	agent.initWait.Add(1)
+	go agent.initialize()
+
 	go agent.processTransactions()
 	go agent.processBlocks()
+}
+
+func (agent *Agent) initialize() {
+	defer agent.initWait.Done()
+
+	logger := log.WithFields(log.Fields{
+		"agent": agent.config.ID,
+	})
+
+	ctx, cancel := context.WithTimeout(agent.ctx, DefaultAgentInitializeTimeout)
+	defer cancel()
+	_, err := agent.client.Initialize(ctx, &protocol.InitializeRequest{
+		AgentId:   agent.config.ID,
+		ProxyHost: config.DockerJSONRPCProxyContainerName,
+	})
+	if status.Code(err) == codes.Unimplemented {
+		logger.WithError(err).Info("initialize() method not implemented in bot - safe to ignore")
+		return
+	}
+	if err != nil {
+		logger.WithError(err).Warn("bot initialization failed")
+		return
+	}
+	logger.Info("bot initialization suceeded")
 }
 
 func (agent *Agent) processTransactions() {
@@ -178,6 +210,9 @@ func (agent *Agent) processTransactions() {
 		"component": "agent",
 		"evaluate":  "transaction",
 	})
+
+	agent.initWait.Wait()
+
 	for request := range agent.txRequests {
 		startTime := time.Now()
 		if agent.IsClosed() {
@@ -245,6 +280,9 @@ func (agent *Agent) processBlocks() {
 		"component": "agent",
 		"evaluate":  "block",
 	})
+
+	agent.initWait.Wait()
+
 	for request := range agent.blockRequests {
 		startTime := time.Now()
 		if agent.IsClosed() {
