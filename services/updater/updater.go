@@ -36,7 +36,8 @@ type UpdaterService struct {
 	registryClient registry.Client
 	server         *http.Server
 
-	developmentMode bool
+	developmentMode  bool
+	trackPrereleases bool
 
 	latestReference string
 	latestRelease   *release.ReleaseManifest
@@ -50,7 +51,7 @@ type UpdaterService struct {
 
 // NewUpdaterService creates a new updater service.
 func NewUpdaterService(ctx context.Context, registryClient registry.Client, releaseClient release.Client,
-	port string, developmentMode bool, updateDelaySeconds, updateCheckIntervalSeconds int,
+	port string, developmentMode bool, trackPrereleases bool, updateDelaySeconds, updateCheckIntervalSeconds int,
 ) *UpdaterService {
 	if updateCheckIntervalSeconds == 0 {
 		updateCheckIntervalSeconds = defaultUpdateCheckIntervalSeconds
@@ -62,6 +63,7 @@ func NewUpdaterService(ctx context.Context, registryClient registry.Client, rele
 		releaseClient:       releaseClient,
 		registryClient:      registryClient,
 		developmentMode:     developmentMode,
+		trackPrereleases:    trackPrereleases,
 		updateDelay:         time.Duration(updateDelaySeconds) * time.Second,
 		updateCheckInterval: time.Duration(updateCheckIntervalSeconds) * time.Second,
 	}
@@ -189,7 +191,12 @@ func (updater *UpdaterService) getNewerRelease(previousRef string) (string, *rel
 }
 
 func (updater *UpdaterService) compareScannerNodeVersion(previousRef string) (newRef string, err error) {
-	ref, err := updater.registryClient.GetScannerNodeVersion()
+	var ref string
+	if updater.trackPrereleases {
+		ref, err = updater.registryClient.GetScannerNodePrereleaseVersion()
+	} else {
+		ref, err = updater.registryClient.GetScannerNodeVersion()
+	}
 	if err != nil {
 		log.WithError(err).Error("error getting the latest release manifest ref")
 		return "", fmt.Errorf("failed to get the latest release manifest ref: %v", err)

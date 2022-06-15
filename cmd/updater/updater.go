@@ -64,11 +64,11 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	cfg.Registry.IPFS.APIURL = utils.ConvertToDockerHostURL(cfg.Registry.IPFS.APIURL)
 	cfg.Registry.IPFS.GatewayURL = utils.ConvertToDockerHostURL(cfg.Registry.IPFS.GatewayURL)
 
-	rc, err := release.NewClient(cfg.Registry.IPFS.GatewayURL)
+	releaseClient, err := release.NewClient(cfg.Registry.IPFS.GatewayURL)
 	if err != nil {
 		return nil, err
 	}
-	rg, err := store.GetRegistryClient(ctx, cfg, registry.ClientConfig{
+	registryClient, err := store.GetRegistryClient(ctx, cfg, registry.ClientConfig{
 		JsonRpcUrl: cfg.Registry.JsonRpc.Url,
 		ENSAddress: cfg.ENSConfig.ContractAddress,
 		Name:       "updater",
@@ -95,8 +95,8 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	}
 
 	updaterService := updater.NewUpdaterService(
-		ctx, rg, rc, config.DefaultContainerPort,
-		developmentMode, updateDelay, 0,
+		ctx, registryClient, releaseClient, config.DefaultContainerPort,
+		developmentMode, cfg.AutoUpdate.TrackPrereleases, updateDelay, 0,
 	)
 
 	return []services.Service{
