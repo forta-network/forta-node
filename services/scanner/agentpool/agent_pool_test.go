@@ -98,6 +98,8 @@ func (s *Suite) TestStartProcessStop() {
 	blockReq := &protocol.EvaluateBlockRequest{Event: &protocol.BlockEvent{BlockNumber: "123123"}}
 	blockResp := &protocol.EvaluateBlockResponse{Metadata: map[string]string{"imageHash": ""}}
 
+	s.agentClient.EXPECT().Initialize(gomock.Any(), gomock.Any()).AnyTimes().Return(nil, nil)
+
 	s.agentClient.EXPECT().Invoke(
 		gomock.Any(), agentgrpc.MethodEvaluateTx,
 		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateTxResponse{}),

@@ -42,7 +42,7 @@ func (sup *SupervisorService) startAgent(agent config.AgentConfig) error {
 		LinkNetworkIDs: []string{},
 		Env: map[string]string{
 			config.EnvJsonRpcHost:   config.DockerJSONRPCProxyContainerName,
-			config.EnvJsonRpcPort:   "8545",
+			config.EnvJsonRpcPort:   config.DefaultJSONRPCProxyPort,
 			config.EnvAgentGrpcPort: agent.GrpcPort(),
 		},
 		MaxLogFiles: sup.maxLogFiles,
