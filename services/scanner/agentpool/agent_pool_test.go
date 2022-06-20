@@ -67,6 +67,8 @@ func (s *Suite) TestStartProcessStop() {
 	}
 	emptyPayload := messaging.AgentPayload{}
 
+	s.agentClient.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+
 	// Given that there are no agents running
 	// When the latest list is received,
 	// Then a "run" action should be published
@@ -97,8 +99,6 @@ func (s *Suite) TestStartProcessStop() {
 	txResp := &protocol.EvaluateTxResponse{Metadata: map[string]string{"imageHash": ""}}
 	blockReq := &protocol.EvaluateBlockRequest{Event: &protocol.BlockEvent{BlockNumber: "123123"}}
 	blockResp := &protocol.EvaluateBlockResponse{Metadata: map[string]string{"imageHash": ""}}
-
-	s.agentClient.EXPECT().Initialize(gomock.Any(), gomock.Any()).AnyTimes().Return(nil, nil)
 
 	s.agentClient.EXPECT().Invoke(
 		gomock.Any(), agentgrpc.MethodEvaluateTx,
