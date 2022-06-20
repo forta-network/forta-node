@@ -181,11 +181,12 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		})
 		if err != nil {
 			log.WithError(err).Error("failed to send private alerts")
+			return err
 		}
 		if alertList != nil {
 			log.WithField("count", len(alertList.Alerts)).Info("successfully sent private alerts")
 		}
-		return err
+		return nil
 	}
 
 	cid, err := pub.ipfs.CalculateFileHash(buf.Bytes())
