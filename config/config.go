@@ -62,9 +62,10 @@ type IPFSConfig struct {
 }
 
 type BatchConfig struct {
-	SkipEmpty       bool `yaml:"skipEmpty" json:"skipEmpty"`
-	IntervalSeconds *int `yaml:"intervalSeconds" json:"intervalSeconds" default:"15" `
-	MaxAlerts       *int `yaml:"maxAlerts" json:"maxAlerts" default:"1000" `
+	SkipEmpty                    bool `yaml:"skipEmpty" json:"skipEmpty"`
+	IntervalSeconds              *int `yaml:"intervalSeconds" json:"intervalSeconds" default:"15"`
+	MetricsBucketIntervalSeconds *int `yaml:"metricsBucketIntervalSeconds" json:"metricsBucketIntervalSeconds" default:"60"`
+	MaxAlerts                    *int `yaml:"maxAlerts" json:"maxAlerts" default:"1000" `
 }
 
 type TestAlertsConfig struct {

@@ -173,18 +173,18 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		scannerJwt, err := security.CreateScannerJWT(pub.cfg.Key, map[string]interface{}{
 			"localMode": "true",
 		})
-		alertList := transform.ToWebhookAlertList(batch)
+		alertBatch := transform.ToWebhookAlertBatch(batch)
 		_, err = pub.webhookClient.SendAlerts(&operations.SendAlertsParams{
 			Context:       pub.ctx,
-			AlertList:     alertList,
+			Payload:       alertBatch,
 			Authorization: utils.StringPtr(fmt.Sprintf("Bearer %s", scannerJwt)),
 		})
 		if err != nil {
 			log.WithError(err).Error("failed to send private alerts")
 			return err
 		}
-		if alertList != nil {
-			log.WithField("count", len(alertList.Alerts)).Info("successfully sent private alerts")
+		if alertBatch != nil {
+			log.WithField("count", len(alertBatch.Alerts)).Info("successfully sent private alerts")
 		}
 		return nil
 	}
@@ -671,7 +671,7 @@ func initPublisher(ctx context.Context, mc *messaging.Client, alertClient client
 		cfg:               cfg,
 		ipfs:              ipfsClient,
 		testAlertLogger:   testAlertLogger,
-		metricsAggregator: NewMetricsAggregator(),
+		metricsAggregator: NewMetricsAggregator(time.Duration(*cfg.PublisherConfig.Batch.MetricsBucketIntervalSeconds) * time.Second),
 		messageClient:     mc,
 		alertClient:       alertClient,
 		webhookClient:     webhookClient,
