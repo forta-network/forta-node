@@ -5,22 +5,15 @@ import (
 	"time"
 
 	"github.com/forta-network/forta-core-go/clients/webhook/client/models"
-	"github.com/forta-network/forta-node/cmd"
 )
 
 func (s *Suite) TestPrivateMode() {
-	const privateModeDir = ".forta-private"
+	const localModeDir = ".forta-local"
 
-	// make sure that non-registered private nodes also cannot start
-	s.forta(privateModeDir, "run")
-	s.fortaProcess.Wait()
-	s.True(s.fortaProcess.HasOutput(cmd.ErrCannotRunScanner.Error()))
-	s.T().Log("as expected: could not run scan node without registration")
-
-	s.registerNode()
-	s.forta(privateModeDir, "run")
+	// make sure that non-registered local nodes also can start
+	s.forta(localModeDir, "run")
 	defer s.stopForta()
-	// the bot in private mode list should run
+	// the bot in local mode list should run
 	s.expectUpIn(smallTimeout, "forta-agent")
 
 	// an alert should be detected and sent to the webhook url

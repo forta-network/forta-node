@@ -80,21 +80,6 @@ publishes alerts about them`,
 		Hidden: true,
 	}
 
-	cmdFortaAgent = &cobra.Command{
-		Use:   "agent",
-		Short: "agent management",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return cmd.Help()
-		},
-		Hidden: true,
-	}
-
-	cmdFortaAgentAdd = &cobra.Command{
-		Use:   "add",
-		Short: "try an agent by adding it to the local list",
-		RunE:  withAgentRegContractAddress(withDevOnly(withInitialized(withValidConfig(handleFortaAgentAdd)))),
-	}
-
 	cmdFortaImages = &cobra.Command{
 		Use:   "images",
 		Short: "list the Forta node container images",
@@ -161,9 +146,6 @@ func init() {
 	cmdFortaAccount.AddCommand(cmdFortaAccountAddress)
 	cmdFortaAccount.AddCommand(cmdFortaAccountImport)
 
-	cmdForta.AddCommand(cmdFortaAgent)
-	cmdFortaAgent.AddCommand(cmdFortaAgentAdd)
-
 	cmdForta.AddCommand(cmdFortaImages)
 
 	cmdForta.AddCommand(cmdFortaVersion)
@@ -194,9 +176,6 @@ func init() {
 	// forta account import
 	cmdFortaAccountImport.Flags().String("file", "", "path to a file that contains a private key hex")
 	cmdFortaAccountImport.MarkFlagRequired("file")
-
-	// forta agent add
-	cmdFortaAgentAdd.Flags().Uint64Var(&parsedArgs.Version, "version", 0, "agent version")
 
 	// forta run
 	cmdFortaRun.Flags().BoolVar(&parsedArgs.NoCheck, "no-check", false, "disable scanner registry check and just run")
@@ -253,9 +232,6 @@ func initConfig() {
 	cfg.Development = viper.GetBool(keyFortaDevelopment)
 	cfg.Passphrase = viper.GetString(keyFortaPassphrase)
 	cfg.ExposeNats = viper.GetBool(keyFortaExposeNats)
-
-	cfg.LocalAgentsPath = path.Join(cfg.FortaDir, config.DefaultLocalAgentsFileName)
-	cfg.LocalAgents, _ = readLocalAgents()
 
 	viper.ReadConfig(bytes.NewBuffer(configBytes))
 	config.InitLogLevel(cfg)

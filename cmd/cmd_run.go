@@ -26,8 +26,11 @@ func handleFortaRun(cmd *cobra.Command, args []string) error {
 }
 
 func checkScannerState() error {
-	// disable --no-check flag in private mode
-	if parsedArgs.NoCheck && !cfg.PrivateModeConfig.Enable {
+	// disable registration and staking check in local mode
+	if cfg.LocalModeConfig.Enable {
+		return nil
+	}
+	if parsedArgs.NoCheck && !cfg.LocalModeConfig.Enable {
 		return nil
 	}
 
@@ -54,13 +57,6 @@ func checkScannerState() error {
 	if scanner == nil {
 		yellowBold("Scanner not registered - please make sure you register with 'forta register' first.\n")
 		toStderr("You can disable this behaviour with --no-check flag.\n")
-		return ErrCannotRunScanner
-	}
-	if !scanner.Enabled && cfg.PrivateModeConfig.Enable {
-		yellowBold(`Private mode requires staking.
-If you have disabled your scan node before, please also ensure that it is enabled.
-`)
-		whiteBold("See https://docs.forta.network/en/latest/stake-on-scan-node for staking instructions.\n")
 		return ErrCannotRunScanner
 	}
 	if !scanner.Enabled {

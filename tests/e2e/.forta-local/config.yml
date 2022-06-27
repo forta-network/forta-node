@@ -13,7 +13,7 @@ scan:
   jsonRpc:
     url: http://localhost:8545
 
-privateMode:
+localMode:
   enable: true
   webhookUrl: http://localhost:9090/batch/webhook
   botImages:

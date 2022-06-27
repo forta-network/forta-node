@@ -37,7 +37,7 @@ e2e-test:
 
 	rm -rf coverage
 	cp -r tests/e2e/.forta/coverage .
-	cp -r tests/e2e/.forta-private/coverage/* coverage/
+	cp -r tests/e2e/.forta-local/coverage/* coverage/
 	./scripts/total-coverage.sh e2e
 
 run:
