@@ -163,7 +163,7 @@ func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]*config.Ag
 	defer rs.mu.Unlock()
 
 	var agentConfigs []*config.AgentConfig
-	for i, agentImage := range rs.cfg.PrivateModeConfig.AgentImages {
+	for i, agentImage := range rs.cfg.LocalModeConfig.AgentImages {
 		if len(agentImage) == 0 {
 			continue
 		}

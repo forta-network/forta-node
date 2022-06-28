@@ -13,7 +13,7 @@ import (
 )
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
-	shouldDisableAutoUpdate := cfg.AutoUpdate.Disable || cfg.PrivateModeConfig.Enable
+	shouldDisableAutoUpdate := cfg.AutoUpdate.Disable
 	imgStore, err := store.NewFortaImageStore(ctx, config.DefaultContainerPort, !shouldDisableAutoUpdate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the image store: %v", err)

@@ -62,9 +62,10 @@ type IPFSConfig struct {
 }
 
 type BatchConfig struct {
-	SkipEmpty       bool `yaml:"skipEmpty" json:"skipEmpty"`
-	IntervalSeconds *int `yaml:"intervalSeconds" json:"intervalSeconds" default:"15" `
-	MaxAlerts       *int `yaml:"maxAlerts" json:"maxAlerts" default:"1000" `
+	SkipEmpty                    bool `yaml:"skipEmpty" json:"skipEmpty"`
+	IntervalSeconds              *int `yaml:"intervalSeconds" json:"intervalSeconds" default:"15"`
+	MetricsBucketIntervalSeconds *int `yaml:"metricsBucketIntervalSeconds" json:"metricsBucketIntervalSeconds" default:"60"`
+	MaxAlerts                    *int `yaml:"maxAlerts" json:"maxAlerts" default:"1000" `
 }
 
 type TestAlertsConfig struct {
@@ -114,7 +115,7 @@ type ContainerRegistryConfig struct {
 	Password string `yaml:"password" json:"password"`
 }
 
-type PrivateModeConfig struct {
+type LocalModeConfig struct {
 	Enable            bool                     `yaml:"enable" json:"enable"`
 	AgentImages       []string                 `yaml:"botImages" json:"botImages" validate:"required_if=Enable true"`
 	WebhookURL        string                   `yaml:"webhookUrl" json:"webhookUrl" validate:"required_if=Enable true"`
@@ -124,16 +125,14 @@ type PrivateModeConfig struct {
 type Config struct {
 	// runtime values
 
-	Development                    bool           `yaml:"-" json:"_development"`
-	FortaDir                       string         `yaml:"-" json:"_fortaDir"`
-	KeyDirPath                     string         `yaml:"-" json:"_keyDirPath"`
-	Passphrase                     string         `yaml:"-" json:"_passphrase"`
-	ExposeNats                     bool           `yaml:"-" json:"_exposeNats"`
-	LocalAgentsPath                string         `yaml:"-" json:"_localAgentsPath"`
-	LocalAgents                    []*AgentConfig `yaml:"-" json:"_localAgents"`
-	AgentRegistryContractAddress   string         `yaml:"-" json:"_agentRegistryContractAddress"`
-	ScannerVersionContractAddress  string         `yaml:"-" json:"_scannerVersionContractAddress"`
-	ScannerRegistryContractAddress string         `yaml:"-" json:"_scannerRegistryContractAddress"`
+	Development                    bool   `yaml:"-" json:"_development"`
+	FortaDir                       string `yaml:"-" json:"_fortaDir"`
+	KeyDirPath                     string `yaml:"-" json:"_keyDirPath"`
+	Passphrase                     string `yaml:"-" json:"_passphrase"`
+	ExposeNats                     bool   `yaml:"-" json:"_exposeNats"`
+	AgentRegistryContractAddress   string `yaml:"-" json:"_agentRegistryContractAddress"`
+	ScannerVersionContractAddress  string `yaml:"-" json:"_scannerVersionContractAddress"`
+	ScannerRegistryContractAddress string `yaml:"-" json:"_scannerRegistryContractAddress"`
 
 	// yaml config values
 
@@ -142,16 +141,16 @@ type Config struct {
 	Scan  ScannerConfig `yaml:"scan" json:"scan"`
 	Trace TraceConfig   `yaml:"trace" json:"trace"`
 
-	Registry          RegistryConfig     `yaml:"registry" json:"registry"`
-	Publish           PublisherConfig    `yaml:"publish" json:"publish"`
-	JsonRpcProxy      JsonRpcProxyConfig `yaml:"jsonRpcProxy" json:"jsonRpcProxy"`
-	Log               LogConfig          `yaml:"log" json:"log"`
-	ResourcesConfig   ResourcesConfig    `yaml:"resources" json:"resources"`
-	ENSConfig         ENSConfig          `yaml:"ens" json:"ens"`
-	TelemetryConfig   TelemetryConfig    `yaml:"telemetry" json:"telemetry"`
-	AutoUpdate        AutoUpdateConfig   `yaml:"autoUpdate" json:"autoUpdate"`
-	AgentLogsConfig   AgentLogsConfig    `yaml:"agentLogs" json:"agentLogs"`
-	PrivateModeConfig PrivateModeConfig  `yaml:"privateMode" json:"privateMode"`
+	Registry        RegistryConfig     `yaml:"registry" json:"registry"`
+	Publish         PublisherConfig    `yaml:"publish" json:"publish"`
+	JsonRpcProxy    JsonRpcProxyConfig `yaml:"jsonRpcProxy" json:"jsonRpcProxy"`
+	Log             LogConfig          `yaml:"log" json:"log"`
+	ResourcesConfig ResourcesConfig    `yaml:"resources" json:"resources"`
+	ENSConfig       ENSConfig          `yaml:"ens" json:"ens"`
+	TelemetryConfig TelemetryConfig    `yaml:"telemetry" json:"telemetry"`
+	AutoUpdate      AutoUpdateConfig   `yaml:"autoUpdate" json:"autoUpdate"`
+	AgentLogsConfig AgentLogsConfig    `yaml:"agentLogs" json:"agentLogs"`
+	LocalModeConfig LocalModeConfig    `yaml:"localMode" json:"localMode"`
 }
 
 func (cfg *Config) ConfigFilePath() string {

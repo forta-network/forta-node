@@ -100,8 +100,6 @@ func initAlertSender(ctx context.Context, key *keystore.Key, pubClient clients.P
 }
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
-	cfg.LocalAgentsPath = config.DefaultContainerLocalAgentsFilePath
-
 	// can't dial localhost - need to dial host gateway from container
 	cfg.Scan.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Scan.JsonRpc.Url)
 	cfg.Trace.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Trace.JsonRpc.Url)
@@ -111,7 +109,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	cfg.Publish.APIURL = utils.ConvertToDockerHostURL(cfg.Publish.APIURL)
 	cfg.Publish.IPFS.APIURL = utils.ConvertToDockerHostURL(cfg.Publish.IPFS.APIURL)
 	cfg.Publish.IPFS.GatewayURL = utils.ConvertToDockerHostURL(cfg.Publish.IPFS.GatewayURL)
-	cfg.PrivateModeConfig.WebhookURL = utils.ConvertToDockerHostURL(cfg.PrivateModeConfig.WebhookURL)
+	cfg.LocalModeConfig.WebhookURL = utils.ConvertToDockerHostURL(cfg.LocalModeConfig.WebhookURL)
 
 	msgClient := messaging.NewClient("scanner", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 

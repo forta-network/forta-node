@@ -89,14 +89,15 @@ func (sup *SupervisorService) Start() error {
 }
 
 func (sup *SupervisorService) start() error {
-	// in addition to the feature disable flags, check private mode flags to disable agent logging and telemetry
+	// in addition to the feature disable flags, check local mode flags to disable agent logging and telemetry
 
-	shouldDisableTelemetry := sup.config.Config.TelemetryConfig.Disable || sup.config.Config.PrivateModeConfig.Enable
+	// TODO: Telemetry should point to the public and rate-limited URL if running local mode.
+	shouldDisableTelemetry := sup.config.Config.TelemetryConfig.Disable || sup.config.Config.LocalModeConfig.Enable
 	if !shouldDisableTelemetry {
 		go sup.syncTelemetryData()
 	}
 
-	shouldDisableAgentLogs := sup.config.Config.AgentLogsConfig.Disable || sup.config.Config.PrivateModeConfig.Enable
+	shouldDisableAgentLogs := sup.config.Config.AgentLogsConfig.Disable || sup.config.Config.LocalModeConfig.Enable
 	if !shouldDisableAgentLogs {
 		go sup.syncAgentLogs()
 	}
@@ -508,13 +509,13 @@ func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*Su
 		return nil, fmt.Errorf("failed to create the release client: %v", err)
 	}
 
-	// agent image client is helpful for loading private mode agents from a restricted container registry
+	// agent image client is helpful for loading local mode agents from a restricted container registry
 	var agentImageClient clients.DockerClient
-	if cfg.Config.PrivateModeConfig.Enable && cfg.Config.PrivateModeConfig.ContainerRegistry != nil {
+	if cfg.Config.LocalModeConfig.Enable && cfg.Config.LocalModeConfig.ContainerRegistry != nil {
 		agentImageClient, err = clients.NewAuthDockerClient(
 			"",
-			cfg.Config.PrivateModeConfig.ContainerRegistry.Username,
-			cfg.Config.PrivateModeConfig.ContainerRegistry.Password,
+			cfg.Config.LocalModeConfig.ContainerRegistry.Username,
+			cfg.Config.LocalModeConfig.ContainerRegistry.Password,
 		)
 	} else {
 		agentImageClient, err = clients.NewDockerClient("")

@@ -23,8 +23,7 @@ var (
 
 	DockerNetworkName = DockerScannerContainerName
 
-	DefaultContainerFortaDirPath        = "/.forta"
-	DefaultContainerConfigPath          = path.Join(DefaultContainerFortaDirPath, DefaultConfigFileName)
-	DefaultContainerKeyDirPath          = path.Join(DefaultContainerFortaDirPath, DefaultKeysDirName)
-	DefaultContainerLocalAgentsFilePath = path.Join(DefaultContainerFortaDirPath, DefaultLocalAgentsFileName)
+	DefaultContainerFortaDirPath = "/.forta"
+	DefaultContainerConfigPath   = path.Join(DefaultContainerFortaDirPath, DefaultConfigFileName)
+	DefaultContainerKeyDirPath   = path.Join(DefaultContainerFortaDirPath, DefaultKeysDirName)
 )

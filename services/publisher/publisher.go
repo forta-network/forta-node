@@ -169,22 +169,22 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		return nil
 	}
 
-	if pub.cfg.Config.PrivateModeConfig.Enable {
+	if pub.cfg.Config.LocalModeConfig.Enable {
 		scannerJwt, err := security.CreateScannerJWT(pub.cfg.Key, map[string]interface{}{
-			"privateMode": "true",
+			"localMode": "true",
 		})
-		alertList := transform.ToWebhookAlertList(batch)
+		alertBatch := transform.ToWebhookAlertBatch(batch)
 		_, err = pub.webhookClient.SendAlerts(&operations.SendAlertsParams{
 			Context:       pub.ctx,
-			AlertList:     alertList,
+			Payload:       alertBatch,
 			Authorization: utils.StringPtr(fmt.Sprintf("Bearer %s", scannerJwt)),
 		})
 		if err != nil {
 			log.WithError(err).Error("failed to send private alerts")
 			return err
 		}
-		if alertList != nil {
-			log.WithField("count", len(alertList.Alerts)).Info("successfully sent private alerts")
+		if alertBatch != nil {
+			log.WithField("count", len(alertBatch.Alerts)).Info("successfully sent private alerts")
 		}
 		return nil
 	}
@@ -287,8 +287,8 @@ func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, 
 		return "", false
 	}
 	const defaultReason = "because there are no alerts"
-	if pub.cfg.Config.PrivateModeConfig.Enable {
-		return defaultReason + " and private mode is enabled", true
+	if pub.cfg.Config.LocalModeConfig.Enable {
+		return defaultReason + " and local mode is enabled", true
 	}
 	if pub.skipEmpty {
 		return defaultReason + " and skipEmpty is enabled", true
@@ -658,8 +658,8 @@ func initPublisher(ctx context.Context, mc *messaging.Client, alertClient client
 	}
 
 	var webhookClient webhook.AlertWebhookClient
-	if cfg.Config.PrivateModeConfig.Enable {
-		dest := cfg.Config.PrivateModeConfig.WebhookURL
+	if cfg.Config.LocalModeConfig.Enable {
+		dest := cfg.Config.LocalModeConfig.WebhookURL
 		webhookClient, err = webhook.NewAlertWebhookClient(dest)
 		if err != nil {
 			return nil, fmt.Errorf("invalid private alert webhook url: %s", dest)
@@ -671,7 +671,7 @@ func initPublisher(ctx context.Context, mc *messaging.Client, alertClient client
 		cfg:               cfg,
 		ipfs:              ipfsClient,
 		testAlertLogger:   testAlertLogger,
-		metricsAggregator: NewMetricsAggregator(),
+		metricsAggregator: NewMetricsAggregator(time.Duration(*cfg.PublisherConfig.Batch.MetricsBucketIntervalSeconds) * time.Second),
 		messageClient:     mc,
 		alertClient:       alertClient,
 		webhookClient:     webhookClient,

@@ -66,7 +66,7 @@ func (rs *RegistryService) Init() error {
 		regStr store.RegistryStore
 		err    error
 	)
-	if rs.cfg.PrivateModeConfig.Enable {
+	if rs.cfg.LocalModeConfig.Enable {
 		regStr, err = store.NewPrivateRegistryStore(context.Background(), rs.cfg)
 	} else {
 		regStr, err = store.NewRegistryStore(context.Background(), rs.cfg, rs.ethClient)
