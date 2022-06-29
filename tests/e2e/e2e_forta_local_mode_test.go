@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/forta-network/forta-core-go/clients/webhook/client/models"
 )
@@ -29,7 +30,8 @@ scan:
 localMode:
   enable: true
   includeMetrics: true
-  webhookUrl: http://localhost:9090/batch/webhook
+  webhookUrl: %s
+  logFileName: %s
   botImages:
     - forta-e2e-test-agent
   runtimeLimits:
@@ -56,9 +58,28 @@ log:
   level: trace
 `
 
-func (s *Suite) TestLocalMode() {
-	const localModeDir = ".forta-local"
+const localModeDir = ".forta-local"
 
+func (s *Suite) TestLocalModeWithWebhookClient() {
+	webhookURL := "http://localhost:9090/batch/webhook"
+	s.runLocalMode(webhookURL, "", func() ([]byte, bool) {
+		return s.alertServer.GetAlert("webhook")
+	})
+}
+
+func (s *Suite) TestLocalModeWithWebhookLogger() {
+	webhookURL := "" // should cause the logger to be used
+	logFileName := "test-log-file"
+	logFilePath := path.Join(localModeDir, "logs", logFileName)
+	os.Remove(logFilePath)
+	s.runLocalMode(webhookURL, logFileName, func() ([]byte, bool) {
+		b, err := ioutil.ReadFile(logFilePath)
+		b = []byte(strings.TrimSpace(string(b)))
+		return b, err == nil && len(b) > 0
+	})
+}
+
+func (s *Suite) runLocalMode(webhookURL, logFileName string, readAlertsFunc func() ([]byte, bool)) {
 	// get the start block number
 	startBlockNumber, err := s.ethClient.BlockNumber(s.ctx)
 	s.r.NoError(err)
@@ -76,7 +97,9 @@ func (s *Suite) TestLocalMode() {
 	os.Remove(configFilePath)
 	s.r.NoError(
 		ioutil.WriteFile(
-			configFilePath, []byte(fmt.Sprintf(localModeConfig, startBlockNumber, stopBlockNumber)), 0777,
+			configFilePath,
+			[]byte(fmt.Sprintf(localModeConfig, webhookURL, logFileName, startBlockNumber, stopBlockNumber)),
+			0777,
 		),
 	)
 
@@ -86,12 +109,10 @@ func (s *Suite) TestLocalMode() {
 	// the bot in local mode list should run
 	s.expectUpIn(smallTimeout, "forta-agent")
 
-	// an alert should be detected and sent to the webhook url
 	var b []byte
 	s.expectIn(smallTimeout, func() (ok bool) {
-		// try to receive the alert
-		b, ok = s.alertServer.GetAlert("webhook")
-		return ok
+		b, ok = readAlertsFunc()
+		return
 	})
 	var webhookAlerts models.AlertBatch
 	s.r.NoError(json.Unmarshal(b, &webhookAlerts))
