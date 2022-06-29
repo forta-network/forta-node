@@ -181,7 +181,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		})
 		alertBatch := transform.ToWebhookAlertBatch(batch)
 		if !pub.cfg.Config.LocalModeConfig.IncludeMetrics {
-			log.Debug("excluding metrics due to flag")
+			log.Debug("excluding metrics due to local mode config")
 			alertBatch.Metrics = nil
 		}
 		_, err = pub.webhookClient.SendAlerts(&operations.SendAlertsParams{
