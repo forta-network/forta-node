@@ -313,6 +313,15 @@ func (d *dockerClient) GetContainerByID(ctx context.Context, id string) (*types.
 	return nil, fmt.Errorf("%w with id '%s'", ErrContainerNotFound, id)
 }
 
+// InspectContainer returns container details.
+func (d *dockerClient) InspectContainer(ctx context.Context, id string) (*types.ContainerJSON, error) {
+	info, err := d.cli.ContainerInspect(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get container details: %v", err)
+	}
+	return &info, nil
+}
+
 // Nuke makes sure that all running Forta containers are stopped and pruned, quickly enough.
 func (d *dockerClient) Nuke(ctx context.Context) error {
 	var err error

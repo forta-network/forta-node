@@ -150,17 +150,12 @@ func (sup *SupervisorService) start() error {
 		return fmt.Errorf("failed to attach supervisor container to node network: %v", err)
 	}
 
-	var internalNetworkID string
-	if sup.config.Config.ExposeNats {
-		internalNetworkID = nodeNetworkID
-	} else {
-		internalNetworkID, err = sup.client.CreateInternalNetwork(sup.ctx, config.DockerNatsContainerName)
-		if err != nil {
-			return err
-		}
-		if err := sup.client.AttachNetwork(sup.ctx, supervisorContainer.ID, internalNetworkID); err != nil {
-			return fmt.Errorf("failed to attach supervisor container to nats network: %v", err)
-		}
+	internalNetworkID, err := sup.client.CreateInternalNetwork(sup.ctx, config.DockerNatsContainerName)
+	if err != nil {
+		return err
+	}
+	if err := sup.client.AttachNetwork(sup.ctx, supervisorContainer.ID, internalNetworkID); err != nil {
+		return fmt.Errorf("failed to attach supervisor container to nats network: %v", err)
 	}
 
 	ipfsContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
@@ -253,13 +248,11 @@ func (sup *SupervisorService) start() error {
 	}
 	sup.addContainerUnsafe(sup.scannerContainer)
 
-	if !sup.config.Config.ExposeNats {
-		if err := sup.attachToNetwork(config.DockerScannerContainerName, internalNetworkID); err != nil {
-			return err
-		}
-		if err := sup.attachToNetwork(config.DockerJSONRPCProxyContainerName, internalNetworkID); err != nil {
-			return err
-		}
+	if err := sup.attachToNetwork(config.DockerScannerContainerName, internalNetworkID); err != nil {
+		return err
+	}
+	if err := sup.attachToNetwork(config.DockerJSONRPCProxyContainerName, internalNetworkID); err != nil {
+		return err
 	}
 
 	return nil

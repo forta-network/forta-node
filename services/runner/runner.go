@@ -14,6 +14,7 @@ import (
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/healthutils"
+	"github.com/forta-network/forta-node/services"
 	"github.com/forta-network/forta-node/store"
 	log "github.com/sirupsen/logrus"
 )
@@ -362,6 +363,15 @@ func (runner *Runner) doKeepContainersAlive() error {
 	if runner.supervisorContainer != nil {
 		container, err := runner.dockerClient.GetContainerByID(runner.ctx, runner.supervisorContainer.ID)
 		if err == nil && container.State == "exited" {
+			containerDetails, err := runner.dockerClient.InspectContainer(runner.ctx, container.ID)
+			if err != nil {
+				return err
+			}
+			if containerDetails.State.ExitCode == services.ExitCodeTriggered {
+				log.WithField("name", runner.supervisorContainer.Name).Info("detected internal exit trigger - exiting")
+				services.TriggerExit()
+				return nil
+			}
 			runner.dockerClient.StartContainer(runner.ctx, runner.supervisorContainer.Config)
 		}
 	}

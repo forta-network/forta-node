@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/config"
@@ -51,7 +52,12 @@ func Run(cfg config.Config) {
 		return
 	}
 
-	if err := services.StartServices(ctx, cancel, log.NewEntry(log.StandardLogger()), serviceList); err != nil {
+	err = services.StartServices(ctx, cancel, log.NewEntry(log.StandardLogger()), serviceList)
+	if err == services.ErrExitTriggered {
+		logger.Info("exiting successfully after internal trigger")
+		os.Exit(0)
+	}
+	if err != nil {
 		logger.WithError(err).Error("error running services")
 	}
 }

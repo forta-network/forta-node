@@ -166,7 +166,6 @@ func (t *BlockAnalyzerService) Start() error {
 }
 
 func (t *BlockAnalyzerService) Stop() error {
-	log.Infof("Stopping %s", t.Name())
 	return nil
 }
 

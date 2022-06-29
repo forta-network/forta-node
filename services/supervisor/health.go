@@ -5,6 +5,7 @@ import (
 
 	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/services"
 
 	"fmt"
 	"time"
@@ -58,6 +59,9 @@ func (sup *SupervisorService) doHealthCheck() error {
 			log.Error(err.Error())
 			continue
 		}
+		if foundContainer == nil {
+			continue
+		}
 		if err := sup.ensureUp(knownContainer, foundContainer); err != nil {
 			return err
 		}
@@ -70,14 +74,26 @@ func (sup *SupervisorService) ensureUp(knownContainer *Container, foundContainer
 	case "created", "running", "restarting", "paused", "dead":
 		return nil
 	case "exited":
-		log.Warnf("starting exited container '%s'", knownContainer.Name)
-		_, err := sup.client.StartContainer(sup.ctx, knownContainer.Config)
+		logger := log.WithField("name", knownContainer.Name)
+
+		containerDetails, err := sup.client.InspectContainer(sup.ctx, foundContainer.ID)
+		if err != nil {
+			return err
+		}
+		if containerDetails.State.ExitCode == services.ExitCodeTriggered {
+			logger.Info("detected internal exit trigger - exiting")
+			services.TriggerExit()
+			return nil
+		}
+
+		logger.Warn("starting exited container")
+		_, err = sup.client.StartContainer(sup.ctx, knownContainer.Config)
 		if err != nil {
 			return fmt.Errorf("failed to start container '%s': %v", knownContainer.Name, err)
 		}
 		return nil
 	default:
-		log.Panicf("unhandled container state: %s", foundContainer.State)
+		log.WithField("name", knownContainer.Name).Panicf("unhandled container state: %s", foundContainer.State)
 	}
 	return nil
 }
