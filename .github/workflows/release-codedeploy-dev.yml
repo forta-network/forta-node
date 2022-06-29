@@ -88,7 +88,7 @@ jobs:
 
   build-deploy:
     name: Build and deploy
-    needs: [containers, propose]
+    needs: [containers]
     runs-on: ubuntu-latest
     environment: dev
     steps:
