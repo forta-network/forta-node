@@ -29,7 +29,6 @@ import (
 	"github.com/forta-network/forta-node/clients/alertapi"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/config"
-	"github.com/forta-network/forta-node/services/publisher/testalerts"
 	"github.com/forta-network/forta-node/store"
 	ipfsapi "github.com/ipfs/go-ipfs-api"
 	log "github.com/sirupsen/logrus"
@@ -49,7 +48,6 @@ type Publisher struct {
 	cfg               PublisherConfig
 	contract          AlertsContract
 	ipfs              ipfs.Client
-	testAlertLogger   TestAlertLogger
 	metricsAggregator *AgentMetricsAggregator
 	messageClient     *messaging.Client
 	alertClient       clients.AlertAPIClient
@@ -155,8 +153,12 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 
 	if pub.skipPublish {
 		const reason = "skipping batch, because skipPublish is enabled"
-		log.Infof("alert batch: blockStart=%d, blockEnd=%d, alertCount=%d, maxSeverity=%s", batch.BlockStart, batch.BlockEnd, batch.AlertCount, batch.MaxSeverity.String())
-		log.Info(reason)
+		log.WithFields(log.Fields{
+			"blockStart":  batch.BlockStart,
+			"blockEnd":    batch.BlockEnd,
+			"alertCount":  batch.AlertCount,
+			"maxSeverity": batch.MaxSeverity.String(),
+		}).Info(reason)
 		pub.lastBatchSkip.Set()
 		pub.lastBatchSkipReason.Set(reason)
 		return nil
@@ -175,7 +177,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		})
 		alertBatch := transform.ToWebhookAlertBatch(batch)
 		_, err = pub.webhookClient.SendAlerts(&operations.SendAlertsParams{
-			Context:       pub.ctx,
+			Context:       context.Background(),
 			Payload:       alertBatch,
 			Authorization: utils.StringPtr(fmt.Sprintf("Bearer %s", scannerJwt)),
 		})
@@ -520,17 +522,7 @@ func (pub *Publisher) prepareLatestBatch() {
 			alert := notif.SignedAlert
 			hasAlert := alert != nil
 			if hasAlert {
-				log.Debugf("alert: %s", alert.Alert.Id)
-			}
-
-			if hasAlert && notif.SignedAlert.Alert.Agent.IsTest {
-				if pub.cfg.PublisherConfig.TestAlerts.Disable {
-					continue
-				}
-				if err := pub.testAlertLogger.LogTestAlert(pub.ctx, notif.SignedAlert); err != nil {
-					log.Warnf("failed to log test alert: %v", err)
-				}
-				continue
+				log.WithField("alertId", alert.Alert.Id).Debug("publisher received alert")
 			}
 
 			// Notifications with empty alerts shouldn't be taken into account while limiting the batch.
@@ -584,7 +576,13 @@ func (pub *Publisher) Start() error {
 }
 
 func (pub *Publisher) Stop() error {
-	log.Infof("Stopping %s", pub.Name())
+	cfg := pub.cfg.Config
+	if cfg.LocalModeConfig.Enable {
+		timeoutSeconds := cfg.LocalModeConfig.RuntimeLimits.StopTimeoutSeconds
+		log.WithField("timeout", fmt.Sprintf("%ds", timeoutSeconds)).Info("waiting for scanning to finish")
+		time.Sleep(time.Duration(timeoutSeconds) * time.Second)
+		log.WithField("timeout", fmt.Sprintf("%ds", timeoutSeconds)).Info("done waiting scanning to finish")
+	}
 	if pub.server != nil {
 		pub.server.Stop()
 	}
@@ -652,11 +650,6 @@ func initPublisher(ctx context.Context, mc *messaging.Client, alertClient client
 		batchLimit = *cfg.PublisherConfig.Batch.MaxAlerts
 	}
 
-	var testAlertLogger TestAlertLogger
-	if !cfg.PublisherConfig.TestAlerts.Disable {
-		testAlertLogger = testalerts.NewLogger(cfg.PublisherConfig.TestAlerts.WebhookURL)
-	}
-
 	var webhookClient webhook.AlertWebhookClient
 	if cfg.Config.LocalModeConfig.Enable {
 		dest := cfg.Config.LocalModeConfig.WebhookURL
@@ -670,7 +663,6 @@ func initPublisher(ctx context.Context, mc *messaging.Client, alertClient client
 		ctx:               ctx,
 		cfg:               cfg,
 		ipfs:              ipfsClient,
-		testAlertLogger:   testAlertLogger,
 		metricsAggregator: NewMetricsAggregator(time.Duration(*cfg.PublisherConfig.Batch.MetricsBucketIntervalSeconds) * time.Second),
 		messageClient:     mc,
 		alertClient:       alertClient,

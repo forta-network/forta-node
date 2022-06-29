@@ -163,7 +163,6 @@ func (t *TxAnalyzerService) Start() error {
 }
 
 func (t *TxAnalyzerService) Stop() error {
-	log.Infof("Stopping %s", t.Name())
 	return nil
 }
 

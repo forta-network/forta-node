@@ -3,11 +3,14 @@ package scanner
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-node/services/publisher"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	gethlog "github.com/ethereum/go-ethereum/log"
@@ -52,16 +55,47 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 	if cfg.Scan.BlockMaxAgeSeconds > 0 {
 		maxAge = time.Duration(cfg.Scan.BlockMaxAgeSeconds) * time.Second
 	}
+
+	var (
+		startBlock *big.Int
+		stopBlock  *big.Int
+	)
+	if cfg.LocalModeConfig.Enable {
+		runtimeLimits := cfg.LocalModeConfig.RuntimeLimits
+		if runtimeLimits.StartBlock > 0 {
+			startBlock = big.NewInt(0).SetUint64(runtimeLimits.StartBlock)
+		}
+		if runtimeLimits.StopBlock > 0 {
+			stopBlock = big.NewInt(0).SetUint64(runtimeLimits.StopBlock)
+		}
+	}
+
 	blockFeed, err := feeds.NewBlockFeed(ctx, ethClient, traceClient, feeds.BlockFeedConfig{
 		ChainID:             chainID,
 		Tracing:             cfg.Trace.Enabled,
 		RateLimit:           rateLimit,
 		SkipBlocksOlderThan: &maxAge,
 		Offset:              config.GetBlockOffset(cfg.ChainID),
+		Start:               startBlock,
+		End:                 stopBlock,
 	})
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// subscribe to block feed so we can detect block end and trigger exit
+	blockErrCh := blockFeed.Subscribe(func(evt *domain.BlockEvent) error {
+		return nil
+	})
+	// detect end block, wait for scanning to finish, trigger exit
+	go func() {
+		err := <-blockErrCh
+		if err != feeds.ErrEndBlockReached {
+			return
+		}
+		log.Info("end block reached - triggering exit")
+		services.TriggerExit()
+	}()
 
 	txStream, err := scanner.NewTxStreamService(ctx, ethClient, blockFeed, scanner.TxStreamServiceConfig{
 		JsonRpcConfig:       cfg.Scan.JsonRpc,
@@ -147,9 +181,14 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	if err != nil {
 		return nil, err
 	}
-
 	registryService := registry.New(cfg, key.Address, msgClient, registryClient)
-	agentPool := agentpool.NewAgentPool(ctx, cfg.Scan, msgClient)
+
+	var waitBots int
+	if cfg.LocalModeConfig.Enable {
+		waitBots = len(cfg.LocalModeConfig.BotImages)
+	}
+
+	agentPool := agentpool.NewAgentPool(ctx, cfg.Scan, msgClient, waitBots)
 	txAnalyzer, err := initTxAnalyzer(ctx, cfg, as, txStream, agentPool, msgClient)
 	if err != nil {
 		return nil, err

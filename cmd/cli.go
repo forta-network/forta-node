@@ -56,7 +56,7 @@ publishes alerts about them`,
 	cmdFortaRun = &cobra.Command{
 		Use:   "run",
 		Short: "launch the node",
-		RunE:  withContractAddresses(withInitialized(withValidConfig(handleFortaRun))),
+		RunE:  withInitialized(withValidConfig(handleFortaRun)),
 	}
 
 	cmdFortaAccount = &cobra.Command{
@@ -115,19 +115,19 @@ publishes alerts about them`,
 	cmdFortaRegister = &cobra.Command{
 		Use:   "register",
 		Short: "register your scan node to enable it for scanning (requires MATIC in your scan node address)",
-		RunE:  withContractAddresses(withInitialized(withValidConfig(handleFortaRegister))),
+		RunE:  withInitialized(withValidConfig(handleFortaRegister)),
 	}
 
 	cmdFortaEnable = &cobra.Command{
 		Use:   "enable",
 		Short: "enable your scan node (requires MATIC in your scan node address)",
-		RunE:  withContractAddresses(withInitialized(withValidConfig(handleFortaEnable))),
+		RunE:  withInitialized(withValidConfig(handleFortaEnable)),
 	}
 
 	cmdFortaDisable = &cobra.Command{
 		Use:   "disable",
 		Short: "disable your scan node (requires MATIC in your scan node address)",
-		RunE:  withContractAddresses(withInitialized(withValidConfig(handleFortaDisable))),
+		RunE:  withInitialized(withValidConfig(handleFortaDisable)),
 	}
 )
 
@@ -231,7 +231,6 @@ func initConfig() {
 	cfg.KeyDirPath = path.Join(cfg.FortaDir, config.DefaultKeysDirName)
 	cfg.Development = viper.GetBool(keyFortaDevelopment)
 	cfg.Passphrase = viper.GetString(keyFortaPassphrase)
-	cfg.ExposeNats = viper.GetBool(keyFortaExposeNats)
 
 	viper.ReadConfig(bytes.NewBuffer(configBytes))
 	config.InitLogLevel(cfg)
@@ -298,30 +297,6 @@ func withDevOnly(handler func(*cobra.Command, []string) error) func(*cobra.Comma
 	return func(cmd *cobra.Command, args []string) error {
 		if !cfg.Development {
 			return nil // no-op feature if not a dev run
-		}
-		return handler(cmd, args)
-	}
-}
-
-func withContractAddresses(handler func(*cobra.Command, []string) error) func(*cobra.Command, []string) error {
-	return func(cmd *cobra.Command, args []string) error {
-		if cfg.ENSConfig.Override {
-			if err := overrideEns(); err != nil {
-				return err
-			}
-		} else {
-			if err := useEnsDefaults(); err != nil {
-				return err
-			}
-		}
-		return handler(cmd, args)
-	}
-}
-
-func withAgentRegContractAddress(handler func(*cobra.Command, []string) error) func(*cobra.Command, []string) error {
-	return func(cmd *cobra.Command, args []string) error {
-		if err := useEnsAgentReg(); err != nil {
-			return err
 		}
 		return handler(cmd, args)
 	}

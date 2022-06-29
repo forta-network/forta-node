@@ -30,10 +30,11 @@ type AgentPool struct {
 	msgClient    clients.MessageClient
 	dialer       func(config.AgentConfig) (clients.AgentClient, error)
 	mu           sync.RWMutex
+	botWaitGroup *sync.WaitGroup
 }
 
 // NewAgentPool creates a new agent pool.
-func NewAgentPool(ctx context.Context, cfg config.ScannerConfig, msgClient clients.MessageClient) *AgentPool {
+func NewAgentPool(ctx context.Context, cfg config.ScannerConfig, msgClient clients.MessageClient, waitBots int) *AgentPool {
 	agentPool := &AgentPool{
 		ctx:          ctx,
 		txResults:    make(chan *scanner.TxResult),
@@ -46,6 +47,11 @@ func NewAgentPool(ctx context.Context, cfg config.ScannerConfig, msgClient clien
 			}
 			return client, nil
 		},
+	}
+	if waitBots > 0 {
+		agentPool.botWaitGroup = &sync.WaitGroup{}
+		agentPool.botWaitGroup.Add(waitBots)
+		go agentPool.logBotWait()
 	}
 
 	agentPool.registerMessageHandlers()
@@ -88,6 +94,13 @@ func (ap *AgentPool) Name() string {
 	return "agent-pool"
 }
 
+func (ap *AgentPool) logBotWait() {
+	if ap.botWaitGroup != nil {
+		ap.botWaitGroup.Wait()
+		log.Info("started all bots")
+	}
+}
+
 // discardAgent removes the agent from the list which eventually causes the
 // request channels to be deallocated.
 func (ap *AgentPool) discardAgent(discarded *poolagent.Agent) {
@@ -113,6 +126,10 @@ func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 		"component": "pool",
 	})
 	lg.Debug("SendEvaluateTxRequest")
+
+	if ap.botWaitGroup != nil {
+		ap.botWaitGroup.Wait()
+	}
 
 	ap.mu.RLock()
 	agents := ap.agents
@@ -172,6 +189,11 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 		"component": "pool",
 	})
 	lg.Debug("SendEvaluateBlockRequest")
+
+	if ap.botWaitGroup != nil {
+		ap.botWaitGroup.Wait()
+	}
+
 	ap.mu.RLock()
 	agents := ap.agents
 	ap.mu.RUnlock()
@@ -301,6 +323,9 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 }
 
 func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
+	ap.mu.Lock()
+	defer ap.mu.Unlock()
+
 	log.Debug("handleStatusRunning")
 	// If an agent was added before and just started to run, we should mark as ready.
 	var agentsToStop []config.AgentConfig
@@ -325,6 +350,9 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	}
 	if len(agentsReady) > 0 {
 		ap.msgClient.Publish(messaging.SubjectAgentsStatusAttached, agentsReady)
+		if ap.botWaitGroup != nil {
+			ap.botWaitGroup.Add(-len(agentsReady))
+		}
 	}
 	if len(agentsToStop) > 0 {
 		ap.msgClient.Publish(messaging.SubjectAgentsActionStop, agentsToStop)

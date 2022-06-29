@@ -189,6 +189,21 @@ func (mr *MockDockerClientMockRecorder) HasLocalImage(ctx, ref interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasLocalImage", reflect.TypeOf((*MockDockerClient)(nil).HasLocalImage), ctx, ref)
 }
 
+// InspectContainer mocks base method.
+func (m *MockDockerClient) InspectContainer(ctx context.Context, id string) (*types.ContainerJSON, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InspectContainer", ctx, id)
+	ret0, _ := ret[0].(*types.ContainerJSON)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// InspectContainer indicates an expected call of InspectContainer.
+func (mr *MockDockerClientMockRecorder) InspectContainer(ctx, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InspectContainer", reflect.TypeOf((*MockDockerClient)(nil).InspectContainer), ctx, id)
+}
+
 // InterruptContainer mocks base method.
 func (m *MockDockerClient) InterruptContainer(ctx context.Context, id string) error {
 	m.ctrl.T.Helper()

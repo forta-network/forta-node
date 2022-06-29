@@ -14,12 +14,10 @@ type JsonRpcConfig struct {
 }
 
 type ScannerConfig struct {
-	StartBlock         int           `yaml:"-" json:"_startBlock"`
-	EndBlock           int           `yaml:"-" json:"_endBlock"`
 	JsonRpc            JsonRpcConfig `yaml:"jsonRpc" json:"jsonRpc"`
 	DisableAutostart   bool          `yaml:"disableAutostart" json:"disableAutostart"`
 	BlockRateLimit     int           `yaml:"blockRateLimit" json:"blockRateLimit" default:"200"`
-	BlockMaxAgeSeconds int64         `json:"blockMaxAgeSeconds" json:"blockMaxAgeSeconds" default:"600"`
+	BlockMaxAgeSeconds int64         `yaml:"blockMaxAgeSeconds" json:"blockMaxAgeSeconds" default:"600"`
 }
 
 type TraceConfig struct {
@@ -46,7 +44,6 @@ type LogConfig struct {
 type RegistryConfig struct {
 	JsonRpc              JsonRpcConfig `yaml:"jsonRpc" json:"jsonRpc" default:"{\"url\": \"https://polygon-rpc.com\"}"`
 	IPFS                 IPFSConfig    `yaml:"ipfs" json:"ipfs"`
-	ContractAddress      string        `yaml:"contractAddress" json:"contractAddress" validate:"eth_addr"`
 	ContainerRegistry    string        `yaml:"containerRegistry" json:"containerRegistry" validate:"hostname|hostname_port" default:"disco.forta.network" `
 	Username             string        `yaml:"username" json:"username"`
 	Password             string        `yaml:"password" json:"password"`
@@ -68,17 +65,11 @@ type BatchConfig struct {
 	MaxAlerts                    *int `yaml:"maxAlerts" json:"maxAlerts" default:"1000" `
 }
 
-type TestAlertsConfig struct {
-	Disable    bool   `yaml:"disable" json:"disable"`
-	WebhookURL string `yaml:"webhookUrl" json:"webhookUrl" validate:"omitempty,url"`
-}
-
 type PublisherConfig struct {
-	SkipPublish bool             `yaml:"skipPublish" json:"skipPublish" default:"false"`
-	APIURL      string           `yaml:"apiUrl" json:"apiUrl" default:"https://alerts.forta.network" validate:"url"`
-	IPFS        IPFSConfig       `yaml:"ipfs" json:"ipfs" validate:"required_unless=SkipPublish true"`
-	Batch       BatchConfig      `yaml:"batch" json:"batch"`
-	TestAlerts  TestAlertsConfig `yaml:"testAlerts" json:"testAlerts"`
+	SkipPublish bool        `yaml:"skipPublish" json:"skipPublish" default:"false"`
+	APIURL      string      `yaml:"apiUrl" json:"apiUrl" default:"https://alerts.forta.network" validate:"url"`
+	IPFS        IPFSConfig  `yaml:"ipfs" json:"ipfs" validate:"required_unless=SkipPublish true"`
+	Batch       BatchConfig `yaml:"batch" json:"batch"`
 }
 
 type ResourcesConfig struct {
@@ -115,24 +106,27 @@ type ContainerRegistryConfig struct {
 	Password string `yaml:"password" json:"password"`
 }
 
+type RuntimeLimits struct {
+	StartBlock         uint64 `yaml:"startBlock" json:"startBlock"`
+	StopBlock          uint64 `yaml:"stopBlock" json:"stopBlock" validate:"omitempty,gtfield=StartBlock"`
+	StopTimeoutSeconds int    `yaml:"stopTimeoutSeconds" json:"stopTimeoutSeconds" default:"10"`
+}
+
 type LocalModeConfig struct {
 	Enable            bool                     `yaml:"enable" json:"enable"`
-	AgentImages       []string                 `yaml:"botImages" json:"botImages" validate:"required_if=Enable true"`
+	BotImages         []string                 `yaml:"botImages" json:"botImages" validate:"required_if=Enable true"`
 	WebhookURL        string                   `yaml:"webhookUrl" json:"webhookUrl" validate:"required_if=Enable true"`
 	ContainerRegistry *ContainerRegistryConfig `yaml:"containerRegistry" json:"containerRegistry"`
+	RuntimeLimits     RuntimeLimits            `yaml:"runtimeLimits" json:"runtimeLimits"`
 }
 
 type Config struct {
 	// runtime values
 
-	Development                    bool   `yaml:"-" json:"_development"`
-	FortaDir                       string `yaml:"-" json:"_fortaDir"`
-	KeyDirPath                     string `yaml:"-" json:"_keyDirPath"`
-	Passphrase                     string `yaml:"-" json:"_passphrase"`
-	ExposeNats                     bool   `yaml:"-" json:"_exposeNats"`
-	AgentRegistryContractAddress   string `yaml:"-" json:"_agentRegistryContractAddress"`
-	ScannerVersionContractAddress  string `yaml:"-" json:"_scannerVersionContractAddress"`
-	ScannerRegistryContractAddress string `yaml:"-" json:"_scannerRegistryContractAddress"`
+	Development bool   `yaml:"-" json:"_development"`
+	FortaDir    string `yaml:"-" json:"_fortaDir"`
+	KeyDirPath  string `yaml:"-" json:"_keyDirPath"`
+	Passphrase  string `yaml:"-" json:"_passphrase"`
 
 	// yaml config values
 
