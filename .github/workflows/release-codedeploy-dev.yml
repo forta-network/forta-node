@@ -161,7 +161,7 @@ jobs:
   release:
     name: Release dev
     runs-on: ubuntu-18.04
-    needs: [build-deploy, propose]
+    needs: [build-deploy]
     environment: dev
     steps:
       - name: Checkout
