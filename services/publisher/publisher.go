@@ -113,9 +113,13 @@ func (pub *Publisher) Notify(ctx context.Context, req *protocol.NotifyRequest) (
 func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 	// flush only if we are publishing so we can make the best use of aggregated metrics
 	if _, skip := pub.shouldSkipPublishing(batch); !skip {
-		batch.Metrics = pub.metricsAggregator.TryFlush()
-		if len(batch.Metrics) > 0 {
+		var flushed bool
+		batch.Metrics, flushed = pub.metricsAggregator.TryFlush()
+		if flushed {
+			log.Debug("flushed metrics")
 			pub.lastMetricsFlush.Set()
+		} else {
+			log.Debug("not flushing metrics yet")
 		}
 	}
 
@@ -176,6 +180,10 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 			"localMode": "true",
 		})
 		alertBatch := transform.ToWebhookAlertBatch(batch)
+		if !pub.cfg.Config.LocalModeConfig.IncludeMetrics {
+			log.Debug("excluding metrics due to flag")
+			alertBatch.Metrics = nil
+		}
 		_, err = pub.webhookClient.SendAlerts(&operations.SendAlertsParams{
 			Context:       context.Background(),
 			Payload:       alertBatch,
@@ -186,7 +194,10 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 			return err
 		}
 		if alertBatch != nil {
-			log.WithField("count", len(alertBatch.Alerts)).Info("successfully sent private alerts")
+			log.WithFields(log.Fields{
+				"alertCount":   len(alertBatch.Alerts),
+				"metricsCount": len(alertBatch.Metrics),
+			}).Info("successfully sent private alerts")
 		}
 		return nil
 	}
@@ -288,9 +299,14 @@ func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, 
 	if batch.AlertCount > 0 {
 		return "", false
 	}
+	// after this line, alert count is considered as zero but let's check metrics
+	localModeMetricsOnly := pub.cfg.Config.LocalModeConfig.Enable && len(batch.Metrics) > 0
+	if localModeMetricsOnly {
+		return "", false
+	}
 	const defaultReason = "because there are no alerts"
 	if pub.cfg.Config.LocalModeConfig.Enable {
-		return defaultReason + " and local mode is enabled", true
+		return defaultReason + " or metrics and local mode is enabled", true
 	}
 	if pub.skipEmpty {
 		return defaultReason + " and skipEmpty is enabled", true

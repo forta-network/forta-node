@@ -77,8 +77,9 @@ func TestAgentMetricsAggregator_math(t *testing.T) {
 		assert.NoError(t, err)
 		time.Sleep(testBucketInterval * 2)
 
-		res := aggregator.TryFlush()
+		res, flushed := aggregator.TryFlush()
 
+		assert.True(t, flushed)
 		assert.Len(t, res, 1)
 		assert.Len(t, res[0].Metrics, 1)
 		assert.Equal(t, res[0].Metrics[0], test.expected)

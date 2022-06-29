@@ -145,6 +145,7 @@ func StartServices(ctx context.Context, cancelMainCtx context.CancelFunc, logger
 		logger := logger.WithField("service", service.Name())
 
 		go func() {
+			logger.Info("starting service")
 			if err := service.Start(); err != nil {
 				logger.WithError(err).Error("failed to start service")
 				cancelMainCtx()
@@ -171,9 +172,9 @@ func StartServices(ctx context.Context, cancelMainCtx context.CancelFunc, logger
 	// stop all services
 	for _, service := range services {
 		serviceLogger := logger.WithField("service", service.Name())
-		serviceLogger.Info("stopping")
+		serviceLogger.Info("stopping service")
 		err := service.Stop()
-		serviceLogger.WithError(err).Info("stopped")
+		serviceLogger.WithError(err).Info("stopped service")
 	}
 
 	if exitTriggered {
