@@ -21,6 +21,14 @@ func handleFortaRun(cmd *cobra.Command, args []string) error {
 	if err := checkScannerState(); err != nil {
 		return err
 	}
+	if cfg.LocalModeConfig.Enable {
+		whiteBold("Running in local mode...\n")
+		if len(cfg.LocalModeConfig.WebhookURL) > 0 {
+			yellowBold("Sending alerts to %s\n", cfg.LocalModeConfig.WebhookURL)
+		} else {
+			yellowBold("No webhook URL specified! Logging alerts in %s/logs/\n", cfg.FortaDir)
+		}
+	}
 	runner.Run(cfg)
 	return nil
 }

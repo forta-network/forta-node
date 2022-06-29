@@ -29,6 +29,7 @@ import (
 	"github.com/forta-network/forta-node/clients/alertapi"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/services/publisher/webhooklog"
 	"github.com/forta-network/forta-node/store"
 	ipfsapi "github.com/ipfs/go-ipfs-api"
 	log "github.com/sirupsen/logrus"
@@ -51,7 +52,7 @@ type Publisher struct {
 	metricsAggregator *AgentMetricsAggregator
 	messageClient     *messaging.Client
 	alertClient       clients.AlertAPIClient
-	webhookClient     webhook.AlertWebhookClient
+	localAlertClient  LocalAlertClient
 
 	batchRefStore    store.StringStore
 	lastReceiptStore store.StringStore
@@ -77,10 +78,8 @@ type Publisher struct {
 	latestBlockInputMu sync.RWMutex
 }
 
-// TestAlertLogger logs the test alerts.
-type TestAlertLogger interface {
-	LogTestAlert(context.Context, *protocol.SignedAlert) error
-}
+// LocalAlertClient sends the local alerts.
+type LocalAlertClient webhook.AlertWebhookClient
 
 // EthClient interacts with the Ethereum API.
 type EthClient interface {
@@ -184,20 +183,20 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 			log.Debug("excluding metrics due to local mode config")
 			alertBatch.Metrics = nil
 		}
-		_, err = pub.webhookClient.SendAlerts(&operations.SendAlertsParams{
+		_, err = pub.localAlertClient.SendAlerts(&operations.SendAlertsParams{
 			Context:       context.Background(),
 			Payload:       alertBatch,
 			Authorization: utils.StringPtr(fmt.Sprintf("Bearer %s", scannerJwt)),
 		})
 		if err != nil {
-			log.WithError(err).Error("failed to send private alerts")
+			log.WithError(err).Error("failed to send local mode alerts")
 			return err
 		}
 		if alertBatch != nil {
 			log.WithFields(log.Fields{
 				"alertCount":   len(alertBatch.Alerts),
 				"metricsCount": len(alertBatch.Metrics),
-			}).Info("successfully sent private alerts")
+			}).Info("successfully sent local mode alerts")
 		}
 		return nil
 	}
@@ -666,12 +665,18 @@ func initPublisher(ctx context.Context, mc *messaging.Client, alertClient client
 		batchLimit = *cfg.PublisherConfig.Batch.MaxAlerts
 	}
 
-	var webhookClient webhook.AlertWebhookClient
-	if cfg.Config.LocalModeConfig.Enable {
-		dest := cfg.Config.LocalModeConfig.WebhookURL
-		webhookClient, err = webhook.NewAlertWebhookClient(dest)
+	var localAlertClient LocalAlertClient
+	localAlertDest := cfg.Config.LocalModeConfig.WebhookURL
+	if cfg.Config.LocalModeConfig.Enable && len(localAlertDest) > 0 {
+		localAlertClient, err = webhook.NewAlertWebhookClient(localAlertDest)
 		if err != nil {
-			return nil, fmt.Errorf("invalid private alert webhook url: %s", dest)
+			return nil, fmt.Errorf("failed to create local alert webhook client: %s", localAlertDest)
+		}
+	}
+	if cfg.Config.LocalModeConfig.Enable && len(localAlertDest) == 0 {
+		localAlertClient, err = webhooklog.NewLogger(cfg.Config.LocalModeConfig.LogFileName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create local alert logger: %s", localAlertDest)
 		}
 	}
 
@@ -682,7 +687,7 @@ func initPublisher(ctx context.Context, mc *messaging.Client, alertClient client
 		metricsAggregator: NewMetricsAggregator(time.Duration(*cfg.PublisherConfig.Batch.MetricsBucketIntervalSeconds) * time.Second),
 		messageClient:     mc,
 		alertClient:       alertClient,
-		webhookClient:     webhookClient,
+		localAlertClient:  localAlertClient,
 		batchRefStore:     store.NewFileStringStore(path.Join(cfg.Config.FortaDir, ".last-batch")),
 		lastReceiptStore:  store.NewFileStringStore(path.Join(cfg.Config.FortaDir, ".last-receipt")),
 
