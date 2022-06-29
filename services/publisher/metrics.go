@@ -100,10 +100,10 @@ func (ama *AgentMetricsAggregator) ForceFlush() []*protocol.AgentMetrics {
 }
 
 // TryFlush checks the flushing condition(s) an returns metrics accordingly.
-func (ama *AgentMetricsAggregator) TryFlush() []*protocol.AgentMetrics {
+func (ama *AgentMetricsAggregator) TryFlush() ([]*protocol.AgentMetrics, bool) {
 	now := time.Now()
 	if now.Sub(ama.lastFlush) < ama.bucketInterval {
-		return nil
+		return nil, false
 	}
 
 	ama.lastFlush = now
@@ -117,7 +117,7 @@ func (ama *AgentMetricsAggregator) TryFlush() []*protocol.AgentMetrics {
 		allMetrics = append(allMetrics, &bucket.AgentMetrics)
 	}
 
-	return allMetrics
+	return allMetrics, true
 }
 
 // allAgentMetrics is an alias type for post-processing aggregated in-memory metrics

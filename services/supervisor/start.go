@@ -105,7 +105,6 @@ func (sup *SupervisorService) start() error {
 	sup.mu.Lock()
 	defer sup.mu.Unlock()
 
-	log.Infof("Starting %s", sup.Name())
 	_, err := log.ParseLevel(sup.config.Config.Log.Level)
 	if err != nil {
 		log.Error("invalid log level", err)

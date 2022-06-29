@@ -80,7 +80,6 @@ func (rs *RegistryService) Init() error {
 
 // Start initializes and starts the registry service.
 func (rs *RegistryService) Start() error {
-	log.Infof("Starting %s", rs.Name())
 	if err := rs.Init(); err != nil {
 		return err
 	}

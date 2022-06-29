@@ -17,10 +17,10 @@ registry:
   jsonRpc:
     url: http://localhost:8545
 
-publisher:
+publish:
   batch:
-    intervalSeconds: 10
-    metricsBucketIntervalSeconds: 10
+    intervalSeconds: 1
+    metricsBucketIntervalSeconds: 1
 
 scan:
   jsonRpc:
@@ -28,6 +28,7 @@ scan:
 
 localMode:
   enable: true
+  includeMetrics: true
   webhookUrl: http://localhost:9090/batch/webhook
   botImages:
     - forta-e2e-test-agent
@@ -55,7 +56,7 @@ log:
   level: trace
 `
 
-func (s *Suite) TestPrivateMode() {
+func (s *Suite) TestLocalMode() {
 	const localModeDir = ".forta-local"
 
 	// get the start block number
@@ -72,7 +73,7 @@ func (s *Suite) TestPrivateMode() {
 
 	// change the config accordingly so we scan the block that includes the tx
 	configFilePath := path.Join(localModeDir, "config.yml")
-	s.r.NoError(os.Remove(configFilePath))
+	os.Remove(configFilePath)
 	s.r.NoError(
 		ioutil.WriteFile(
 			configFilePath, []byte(fmt.Sprintf(localModeConfig, startBlockNumber, stopBlockNumber)), 0777,
@@ -94,5 +95,7 @@ func (s *Suite) TestPrivateMode() {
 	})
 	var webhookAlerts models.AlertBatch
 	s.r.NoError(json.Unmarshal(b, &webhookAlerts))
+	s.r.NotEmpty(webhookAlerts.Alerts)
+	s.r.NotEmpty(webhookAlerts.Metrics)
 	s.T().Log(string(b))
 }

@@ -30,7 +30,8 @@ func checkScannerState() error {
 	if cfg.LocalModeConfig.Enable {
 		return nil
 	}
-	if parsedArgs.NoCheck && !cfg.LocalModeConfig.Enable {
+	// disable if flag was provided
+	if parsedArgs.NoCheck {
 		return nil
 	}
 

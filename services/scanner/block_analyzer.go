@@ -93,8 +93,6 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 }
 
 func (t *BlockAnalyzerService) Start() error {
-	log.Infof("Starting %s", t.Name())
-
 	// Gear 2: receive result from agent
 	go func() {
 		for result := range t.cfg.AgentPool.BlockResults() {
