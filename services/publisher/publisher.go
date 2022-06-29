@@ -522,7 +522,7 @@ func (pub *Publisher) prepareLatestBatch() {
 			alert := notif.SignedAlert
 			hasAlert := alert != nil
 			if hasAlert {
-				log.WithField("alertId", alert.Alert.Id).Debugf("publisher received alert", alert.Alert.Id)
+				log.WithField("alertId", alert.Alert.Id).Debug("publisher received alert")
 			}
 
 			// Notifications with empty alerts shouldn't be taken into account while limiting the batch.
