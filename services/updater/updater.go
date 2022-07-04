@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"path"
+	"strconv"
 	"sync"
 	"time"
 
@@ -45,8 +46,10 @@ type UpdaterService struct {
 	updateDelay         time.Duration
 	updateCheckInterval time.Duration
 
-	lastChecked health.TimeTracker
-	lastErr     health.ErrorTracker
+	lastChecked        health.TimeTracker
+	lastErr            health.ErrorTracker
+	latestVersion      health.MessageTracker
+	latestIsPrerelease health.MessageTracker
 }
 
 // NewUpdaterService creates a new updater service.
@@ -165,6 +168,9 @@ func (updater *UpdaterService) updateLatestReleaseWithDelay(delay time.Duration)
 
 		log.Info("successfully waited before version update")
 	}
+
+	updater.latestVersion.Set(rm.Release.Version)
+	updater.latestIsPrerelease.Set(strconv.FormatBool(updater.trackPrereleases))
 
 	updater.mu.Lock()
 	defer updater.mu.Unlock()
@@ -287,5 +293,7 @@ func (updater *UpdaterService) Health() health.Reports {
 	return health.Reports{
 		updater.lastChecked.GetReport("event.checked.time"),
 		updater.lastErr.GetReport("event.checked.error"),
+		updater.latestVersion.GetReport("latest.version"),
+		updater.latestIsPrerelease.GetReport("latest.is-prerelease"),
 	}
 }

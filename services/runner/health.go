@@ -20,6 +20,12 @@ func (runner *Runner) checkHealth() (allReports health.Reports) {
 		}
 	}
 
+	allReports = append(allReports, &health.Report{
+		Name:    "forta.version",
+		Status:  health.StatusInfo,
+		Details: config.GetBuildReleaseInfo().Manifest.Release.Version,
+	})
+
 	for _, container := range containers {
 		name := fmt.Sprintf("forta.container.%s", container.Names[0][1:])
 
