@@ -66,7 +66,7 @@ func (rs *RegistryService) Init() error {
 		regStr store.RegistryStore
 		err    error
 	)
-	if rs.cfg.PrivateModeConfig.Enable {
+	if rs.cfg.LocalModeConfig.Enable {
 		regStr, err = store.NewPrivateRegistryStore(context.Background(), rs.cfg)
 	} else {
 		regStr, err = store.NewRegistryStore(context.Background(), rs.cfg, rs.ethClient)
@@ -80,7 +80,6 @@ func (rs *RegistryService) Init() error {
 
 // Start initializes and starts the registry service.
 func (rs *RegistryService) Start() error {
-	log.Infof("Starting %s", rs.Name())
 	if err := rs.Init(); err != nil {
 		return err
 	}

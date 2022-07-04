@@ -56,7 +56,7 @@ publishes alerts about them`,
 	cmdFortaRun = &cobra.Command{
 		Use:   "run",
 		Short: "launch the node",
-		RunE:  withContractAddresses(withInitialized(withValidConfig(handleFortaRun))),
+		RunE:  withInitialized(withValidConfig(handleFortaRun)),
 	}
 
 	cmdFortaAccount = &cobra.Command{
@@ -78,21 +78,6 @@ publishes alerts about them`,
 		Short:  "import new scanner account (removes the old one)",
 		RunE:   withInitialized(handleFortaAccountImport),
 		Hidden: true,
-	}
-
-	cmdFortaAgent = &cobra.Command{
-		Use:   "agent",
-		Short: "agent management",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return cmd.Help()
-		},
-		Hidden: true,
-	}
-
-	cmdFortaAgentAdd = &cobra.Command{
-		Use:   "add",
-		Short: "try an agent by adding it to the local list",
-		RunE:  withAgentRegContractAddress(withDevOnly(withInitialized(withValidConfig(handleFortaAgentAdd)))),
 	}
 
 	cmdFortaImages = &cobra.Command{
@@ -130,19 +115,19 @@ publishes alerts about them`,
 	cmdFortaRegister = &cobra.Command{
 		Use:   "register",
 		Short: "register your scan node to enable it for scanning (requires MATIC in your scan node address)",
-		RunE:  withContractAddresses(withInitialized(withValidConfig(handleFortaRegister))),
+		RunE:  withInitialized(withValidConfig(handleFortaRegister)),
 	}
 
 	cmdFortaEnable = &cobra.Command{
 		Use:   "enable",
 		Short: "enable your scan node (requires MATIC in your scan node address)",
-		RunE:  withContractAddresses(withInitialized(withValidConfig(handleFortaEnable))),
+		RunE:  withInitialized(withValidConfig(handleFortaEnable)),
 	}
 
 	cmdFortaDisable = &cobra.Command{
 		Use:   "disable",
 		Short: "disable your scan node (requires MATIC in your scan node address)",
-		RunE:  withContractAddresses(withInitialized(withValidConfig(handleFortaDisable))),
+		RunE:  withInitialized(withValidConfig(handleFortaDisable)),
 	}
 )
 
@@ -160,9 +145,6 @@ func init() {
 	cmdForta.AddCommand(cmdFortaAccount)
 	cmdFortaAccount.AddCommand(cmdFortaAccountAddress)
 	cmdFortaAccount.AddCommand(cmdFortaAccountImport)
-
-	cmdForta.AddCommand(cmdFortaAgent)
-	cmdFortaAgent.AddCommand(cmdFortaAgentAdd)
 
 	cmdForta.AddCommand(cmdFortaImages)
 
@@ -194,9 +176,6 @@ func init() {
 	// forta account import
 	cmdFortaAccountImport.Flags().String("file", "", "path to a file that contains a private key hex")
 	cmdFortaAccountImport.MarkFlagRequired("file")
-
-	// forta agent add
-	cmdFortaAgentAdd.Flags().Uint64Var(&parsedArgs.Version, "version", 0, "agent version")
 
 	// forta run
 	cmdFortaRun.Flags().BoolVar(&parsedArgs.NoCheck, "no-check", false, "disable scanner registry check and just run")
@@ -252,10 +231,6 @@ func initConfig() {
 	cfg.KeyDirPath = path.Join(cfg.FortaDir, config.DefaultKeysDirName)
 	cfg.Development = viper.GetBool(keyFortaDevelopment)
 	cfg.Passphrase = viper.GetString(keyFortaPassphrase)
-	cfg.ExposeNats = viper.GetBool(keyFortaExposeNats)
-
-	cfg.LocalAgentsPath = path.Join(cfg.FortaDir, config.DefaultLocalAgentsFileName)
-	cfg.LocalAgents, _ = readLocalAgents()
 
 	viper.ReadConfig(bytes.NewBuffer(configBytes))
 	config.InitLogLevel(cfg)
@@ -322,30 +297,6 @@ func withDevOnly(handler func(*cobra.Command, []string) error) func(*cobra.Comma
 	return func(cmd *cobra.Command, args []string) error {
 		if !cfg.Development {
 			return nil // no-op feature if not a dev run
-		}
-		return handler(cmd, args)
-	}
-}
-
-func withContractAddresses(handler func(*cobra.Command, []string) error) func(*cobra.Command, []string) error {
-	return func(cmd *cobra.Command, args []string) error {
-		if cfg.ENSConfig.Override {
-			if err := overrideEns(); err != nil {
-				return err
-			}
-		} else {
-			if err := useEnsDefaults(); err != nil {
-				return err
-			}
-		}
-		return handler(cmd, args)
-	}
-}
-
-func withAgentRegContractAddress(handler func(*cobra.Command, []string) error) func(*cobra.Command, []string) error {
-	return func(cmd *cobra.Command, args []string) error {
-		if err := useEnsAgentReg(); err != nil {
-			return err
 		}
 		return handler(cmd, args)
 	}

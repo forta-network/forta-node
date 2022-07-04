@@ -9,15 +9,11 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// Adjustable package settings
-var (
-	DefaultBucketInterval = time.Minute
-)
-
 // AgentMetricsAggregator aggregates agents' metrics and produces a list of summary of them when flushed.
 type AgentMetricsAggregator struct {
-	buckets   []*metricsBucket
-	lastFlush time.Time
+	buckets        []*metricsBucket
+	bucketInterval time.Duration
+	lastFlush      time.Time
 }
 
 type metricsBucket struct {
@@ -38,14 +34,15 @@ func (mb *metricsBucket) CreateAndGetSummary(name string) *protocol.MetricSummar
 }
 
 // NewAgentMetricsAggregator creates a new agent metrics aggregator.
-func NewMetricsAggregator() *AgentMetricsAggregator {
+func NewMetricsAggregator(bucketInterval time.Duration) *AgentMetricsAggregator {
 	return &AgentMetricsAggregator{
-		lastFlush: time.Now(), // avoid flushing immediately
+		bucketInterval: bucketInterval,
+		lastFlush:      time.Now(), // avoid flushing immediately
 	}
 }
 
 func (ama *AgentMetricsAggregator) findBucket(agentID string, t time.Time) *metricsBucket {
-	bucketTime := FindClosestBucketTime(t)
+	bucketTime := ama.FindClosestBucketTime(t)
 	for _, bucket := range ama.buckets {
 		if bucket.AgentId != agentID {
 			continue
@@ -67,9 +64,9 @@ func (ama *AgentMetricsAggregator) findBucket(agentID string, t time.Time) *metr
 
 // FindClosestBucketTime finds the closest bucket time. If it is per minute and the time is 15:15:15,
 // then the closest is 15:15:00.
-func FindClosestBucketTime(t time.Time) time.Time {
+func (ama *AgentMetricsAggregator) FindClosestBucketTime(t time.Time) time.Time {
 	ts := t.UnixNano()
-	rem := ts % int64(DefaultBucketInterval)
+	rem := ts % int64(ama.bucketInterval)
 	return time.Unix(0, ts-rem)
 }
 
@@ -103,10 +100,10 @@ func (ama *AgentMetricsAggregator) ForceFlush() []*protocol.AgentMetrics {
 }
 
 // TryFlush checks the flushing condition(s) an returns metrics accordingly.
-func (ama *AgentMetricsAggregator) TryFlush() []*protocol.AgentMetrics {
+func (ama *AgentMetricsAggregator) TryFlush() ([]*protocol.AgentMetrics, bool) {
 	now := time.Now()
-	if now.Sub(ama.lastFlush) < DefaultBucketInterval {
-		return nil
+	if now.Sub(ama.lastFlush) < ama.bucketInterval {
+		return nil, false
 	}
 
 	ama.lastFlush = now
@@ -120,7 +117,7 @@ func (ama *AgentMetricsAggregator) TryFlush() []*protocol.AgentMetrics {
 		allMetrics = append(allMetrics, &bucket.AgentMetrics)
 	}
 
-	return allMetrics
+	return allMetrics, true
 }
 
 // allAgentMetrics is an alias type for post-processing aggregated in-memory metrics

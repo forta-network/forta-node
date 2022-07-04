@@ -27,7 +27,6 @@ func (t *TxLogger) Start() error {
 }
 
 func (t *TxLogger) Stop() error {
-	log.Infof("Stopping %s", t.Name())
 	return nil
 }
 

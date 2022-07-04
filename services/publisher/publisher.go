@@ -29,7 +29,7 @@ import (
 	"github.com/forta-network/forta-node/clients/alertapi"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/config"
-	"github.com/forta-network/forta-node/services/publisher/testalerts"
+	"github.com/forta-network/forta-node/services/publisher/webhooklog"
 	"github.com/forta-network/forta-node/store"
 	ipfsapi "github.com/ipfs/go-ipfs-api"
 	log "github.com/sirupsen/logrus"
@@ -49,11 +49,10 @@ type Publisher struct {
 	cfg               PublisherConfig
 	contract          AlertsContract
 	ipfs              ipfs.Client
-	testAlertLogger   TestAlertLogger
 	metricsAggregator *AgentMetricsAggregator
 	messageClient     *messaging.Client
 	alertClient       clients.AlertAPIClient
-	webhookClient     webhook.AlertWebhookClient
+	localAlertClient  LocalAlertClient
 
 	batchRefStore    store.StringStore
 	lastReceiptStore store.StringStore
@@ -79,10 +78,8 @@ type Publisher struct {
 	latestBlockInputMu sync.RWMutex
 }
 
-// TestAlertLogger logs the test alerts.
-type TestAlertLogger interface {
-	LogTestAlert(context.Context, *protocol.SignedAlert) error
-}
+// LocalAlertClient sends the local alerts.
+type LocalAlertClient webhook.AlertWebhookClient
 
 // EthClient interacts with the Ethereum API.
 type EthClient interface {
@@ -115,9 +112,13 @@ func (pub *Publisher) Notify(ctx context.Context, req *protocol.NotifyRequest) (
 func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 	// flush only if we are publishing so we can make the best use of aggregated metrics
 	if _, skip := pub.shouldSkipPublishing(batch); !skip {
-		batch.Metrics = pub.metricsAggregator.TryFlush()
-		if len(batch.Metrics) > 0 {
+		var flushed bool
+		batch.Metrics, flushed = pub.metricsAggregator.TryFlush()
+		if flushed {
+			log.Debug("flushed metrics")
 			pub.lastMetricsFlush.Set()
+		} else {
+			log.Debug("not flushing metrics yet")
 		}
 	}
 
@@ -155,8 +156,12 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 
 	if pub.skipPublish {
 		const reason = "skipping batch, because skipPublish is enabled"
-		log.Infof("alert batch: blockStart=%d, blockEnd=%d, alertCount=%d, maxSeverity=%s", batch.BlockStart, batch.BlockEnd, batch.AlertCount, batch.MaxSeverity.String())
-		log.Info(reason)
+		log.WithFields(log.Fields{
+			"blockStart":  batch.BlockStart,
+			"blockEnd":    batch.BlockEnd,
+			"alertCount":  batch.AlertCount,
+			"maxSeverity": batch.MaxSeverity.String(),
+		}).Info(reason)
 		pub.lastBatchSkip.Set()
 		pub.lastBatchSkipReason.Set(reason)
 		return nil
@@ -169,22 +174,29 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		return nil
 	}
 
-	if pub.cfg.Config.PrivateModeConfig.Enable {
+	if pub.cfg.Config.LocalModeConfig.Enable {
 		scannerJwt, err := security.CreateScannerJWT(pub.cfg.Key, map[string]interface{}{
-			"privateMode": "true",
+			"localMode": "true",
 		})
-		alertList := transform.ToWebhookAlertList(batch)
-		_, err = pub.webhookClient.SendAlerts(&operations.SendAlertsParams{
-			Context:       pub.ctx,
-			AlertList:     alertList,
+		alertBatch := transform.ToWebhookAlertBatch(batch)
+		if !pub.cfg.Config.LocalModeConfig.IncludeMetrics {
+			log.Debug("excluding metrics due to local mode config")
+			alertBatch.Metrics = nil
+		}
+		_, err = pub.localAlertClient.SendAlerts(&operations.SendAlertsParams{
+			Context:       context.Background(),
+			Payload:       alertBatch,
 			Authorization: utils.StringPtr(fmt.Sprintf("Bearer %s", scannerJwt)),
 		})
 		if err != nil {
-			log.WithError(err).Error("failed to send private alerts")
+			log.WithError(err).Error("failed to send local mode alerts")
 			return err
 		}
-		if alertList != nil {
-			log.WithField("count", len(alertList.Alerts)).Info("successfully sent private alerts")
+		if alertBatch != nil {
+			log.WithFields(log.Fields{
+				"alertCount":   len(alertBatch.Alerts),
+				"metricsCount": len(alertBatch.Metrics),
+			}).Info("successfully sent local mode alerts")
 		}
 		return nil
 	}
@@ -286,9 +298,14 @@ func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, 
 	if batch.AlertCount > 0 {
 		return "", false
 	}
+	// after this line, alert count is considered as zero but let's check metrics
+	localModeMetricsOnly := pub.cfg.Config.LocalModeConfig.Enable && len(batch.Metrics) > 0
+	if localModeMetricsOnly {
+		return "", false
+	}
 	const defaultReason = "because there are no alerts"
-	if pub.cfg.Config.PrivateModeConfig.Enable {
-		return defaultReason + " and private mode is enabled", true
+	if pub.cfg.Config.LocalModeConfig.Enable {
+		return defaultReason + " or metrics and local mode is enabled", true
 	}
 	if pub.skipEmpty {
 		return defaultReason + " and skipEmpty is enabled", true
@@ -520,17 +537,7 @@ func (pub *Publisher) prepareLatestBatch() {
 			alert := notif.SignedAlert
 			hasAlert := alert != nil
 			if hasAlert {
-				log.Debugf("alert: %s", alert.Alert.Id)
-			}
-
-			if hasAlert && notif.SignedAlert.Alert.Agent.IsTest {
-				if pub.cfg.PublisherConfig.TestAlerts.Disable {
-					continue
-				}
-				if err := pub.testAlertLogger.LogTestAlert(pub.ctx, notif.SignedAlert); err != nil {
-					log.Warnf("failed to log test alert: %v", err)
-				}
-				continue
+				log.WithField("alertId", alert.Alert.Id).Debug("publisher received alert")
 			}
 
 			// Notifications with empty alerts shouldn't be taken into account while limiting the batch.
@@ -584,7 +591,13 @@ func (pub *Publisher) Start() error {
 }
 
 func (pub *Publisher) Stop() error {
-	log.Infof("Stopping %s", pub.Name())
+	cfg := pub.cfg.Config
+	if cfg.LocalModeConfig.Enable {
+		timeoutSeconds := cfg.LocalModeConfig.RuntimeLimits.StopTimeoutSeconds
+		log.WithField("timeout", fmt.Sprintf("%ds", timeoutSeconds)).Info("waiting for scanning to finish")
+		time.Sleep(time.Duration(timeoutSeconds) * time.Second)
+		log.WithField("timeout", fmt.Sprintf("%ds", timeoutSeconds)).Info("done waiting scanning to finish")
+	}
 	if pub.server != nil {
 		pub.server.Stop()
 	}
@@ -652,17 +665,18 @@ func initPublisher(ctx context.Context, mc *messaging.Client, alertClient client
 		batchLimit = *cfg.PublisherConfig.Batch.MaxAlerts
 	}
 
-	var testAlertLogger TestAlertLogger
-	if !cfg.PublisherConfig.TestAlerts.Disable {
-		testAlertLogger = testalerts.NewLogger(cfg.PublisherConfig.TestAlerts.WebhookURL)
-	}
-
-	var webhookClient webhook.AlertWebhookClient
-	if cfg.Config.PrivateModeConfig.Enable {
-		dest := cfg.Config.PrivateModeConfig.WebhookURL
-		webhookClient, err = webhook.NewAlertWebhookClient(dest)
+	var localAlertClient LocalAlertClient
+	localAlertDest := cfg.Config.LocalModeConfig.WebhookURL
+	if cfg.Config.LocalModeConfig.Enable && len(localAlertDest) > 0 {
+		localAlertClient, err = webhook.NewAlertWebhookClient(localAlertDest)
 		if err != nil {
-			return nil, fmt.Errorf("invalid private alert webhook url: %s", dest)
+			return nil, fmt.Errorf("failed to create local alert webhook client: %s", localAlertDest)
+		}
+	}
+	if cfg.Config.LocalModeConfig.Enable && len(localAlertDest) == 0 {
+		localAlertClient, err = webhooklog.NewLogger(cfg.Config.LocalModeConfig.LogFileName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create local alert logger: %s", localAlertDest)
 		}
 	}
 
@@ -670,11 +684,10 @@ func initPublisher(ctx context.Context, mc *messaging.Client, alertClient client
 		ctx:               ctx,
 		cfg:               cfg,
 		ipfs:              ipfsClient,
-		testAlertLogger:   testAlertLogger,
-		metricsAggregator: NewMetricsAggregator(),
+		metricsAggregator: NewMetricsAggregator(time.Duration(*cfg.PublisherConfig.Batch.MetricsBucketIntervalSeconds) * time.Second),
 		messageClient:     mc,
 		alertClient:       alertClient,
-		webhookClient:     webhookClient,
+		localAlertClient:  localAlertClient,
 		batchRefStore:     store.NewFileStringStore(path.Join(cfg.Config.FortaDir, ".last-batch")),
 		lastReceiptStore:  store.NewFileStringStore(path.Join(cfg.Config.FortaDir, ".last-receipt")),
 

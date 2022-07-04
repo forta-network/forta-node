@@ -89,14 +89,15 @@ func (sup *SupervisorService) Start() error {
 }
 
 func (sup *SupervisorService) start() error {
-	// in addition to the feature disable flags, check private mode flags to disable agent logging and telemetry
+	// in addition to the feature disable flags, check local mode flags to disable agent logging and telemetry
 
-	shouldDisableTelemetry := sup.config.Config.TelemetryConfig.Disable || sup.config.Config.PrivateModeConfig.Enable
+	// TODO: Telemetry should point to the public and rate-limited URL if running local mode.
+	shouldDisableTelemetry := sup.config.Config.TelemetryConfig.Disable || sup.config.Config.LocalModeConfig.Enable
 	if !shouldDisableTelemetry {
 		go sup.syncTelemetryData()
 	}
 
-	shouldDisableAgentLogs := sup.config.Config.AgentLogsConfig.Disable || sup.config.Config.PrivateModeConfig.Enable
+	shouldDisableAgentLogs := sup.config.Config.AgentLogsConfig.Disable || sup.config.Config.LocalModeConfig.Enable
 	if !shouldDisableAgentLogs {
 		go sup.syncAgentLogs()
 	}
@@ -104,7 +105,6 @@ func (sup *SupervisorService) start() error {
 	sup.mu.Lock()
 	defer sup.mu.Unlock()
 
-	log.Infof("Starting %s", sup.Name())
 	_, err := log.ParseLevel(sup.config.Config.Log.Level)
 	if err != nil {
 		log.Error("invalid log level", err)
@@ -149,17 +149,12 @@ func (sup *SupervisorService) start() error {
 		return fmt.Errorf("failed to attach supervisor container to node network: %v", err)
 	}
 
-	var internalNetworkID string
-	if sup.config.Config.ExposeNats {
-		internalNetworkID = nodeNetworkID
-	} else {
-		internalNetworkID, err = sup.client.CreateInternalNetwork(sup.ctx, config.DockerNatsContainerName)
-		if err != nil {
-			return err
-		}
-		if err := sup.client.AttachNetwork(sup.ctx, supervisorContainer.ID, internalNetworkID); err != nil {
-			return fmt.Errorf("failed to attach supervisor container to nats network: %v", err)
-		}
+	internalNetworkID, err := sup.client.CreateInternalNetwork(sup.ctx, config.DockerNatsContainerName)
+	if err != nil {
+		return err
+	}
+	if err := sup.client.AttachNetwork(sup.ctx, supervisorContainer.ID, internalNetworkID); err != nil {
+		return fmt.Errorf("failed to attach supervisor container to nats network: %v", err)
 	}
 
 	ipfsContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
@@ -252,13 +247,11 @@ func (sup *SupervisorService) start() error {
 	}
 	sup.addContainerUnsafe(sup.scannerContainer)
 
-	if !sup.config.Config.ExposeNats {
-		if err := sup.attachToNetwork(config.DockerScannerContainerName, internalNetworkID); err != nil {
-			return err
-		}
-		if err := sup.attachToNetwork(config.DockerJSONRPCProxyContainerName, internalNetworkID); err != nil {
-			return err
-		}
+	if err := sup.attachToNetwork(config.DockerScannerContainerName, internalNetworkID); err != nil {
+		return err
+	}
+	if err := sup.attachToNetwork(config.DockerJSONRPCProxyContainerName, internalNetworkID); err != nil {
+		return err
 	}
 
 	return nil
@@ -508,13 +501,13 @@ func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*Su
 		return nil, fmt.Errorf("failed to create the release client: %v", err)
 	}
 
-	// agent image client is helpful for loading private mode agents from a restricted container registry
+	// agent image client is helpful for loading local mode agents from a restricted container registry
 	var agentImageClient clients.DockerClient
-	if cfg.Config.PrivateModeConfig.Enable && cfg.Config.PrivateModeConfig.ContainerRegistry != nil {
+	if cfg.Config.LocalModeConfig.Enable && cfg.Config.LocalModeConfig.ContainerRegistry != nil {
 		agentImageClient, err = clients.NewAuthDockerClient(
 			"",
-			cfg.Config.PrivateModeConfig.ContainerRegistry.Username,
-			cfg.Config.PrivateModeConfig.ContainerRegistry.Password,
+			cfg.Config.LocalModeConfig.ContainerRegistry.Username,
+			cfg.Config.LocalModeConfig.ContainerRegistry.Password,
 		)
 	} else {
 		agentImageClient, err = clients.NewDockerClient("")

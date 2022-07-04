@@ -2,12 +2,11 @@ package services
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
-
-	"github.com/forta-network/forta-core-go/ens"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -21,6 +20,13 @@ const (
 
 const (
 	GracefulShutdownSignal = syscall.SIGTERM
+
+	ExitCodeTriggered = 77
+)
+
+// Errors
+var (
+	ErrExitTriggered = errors.New("exit was triggered")
 )
 
 // Service is a service abstraction.
@@ -50,36 +56,12 @@ func initExecID(ctx context.Context) context.Context {
 	return context.WithValue(ctx, execIDKey, execID.String())
 }
 
-func setContracts(cfg *config.Config) error {
-	es, err := ens.DialENSStoreAt(cfg.ENSConfig.JsonRpc.Url, cfg.ENSConfig.ContractAddress)
-	if err != nil {
-		return err
-	}
-
-	contracts, err := es.ResolveRegistryContracts()
-	if err != nil {
-		return err
-	}
-
-	if cfg.Registry.ContractAddress == "" {
-		cfg.Registry.ContractAddress = contracts.Dispatch.Hex()
-	}
-	cfg.ScannerVersionContractAddress = contracts.ScannerRegistry.Hex()
-	cfg.AgentRegistryContractAddress = contracts.AgentRegistry.Hex()
-	return nil
-}
-
 func ContainerMain(name string, getServices func(ctx context.Context, cfg config.Config) ([]Service, error)) {
 	logger := log.WithField("container", name)
 
 	cfg, err := config.GetConfigForContainer()
 	if err != nil {
 		logger.WithError(err).Error("could not get config")
-		return
-	}
-
-	if err := setContracts(&cfg); err != nil {
-		logger.WithError(err).Error("could not initialize contract addresses using config")
 		return
 	}
 
@@ -102,12 +84,20 @@ func ContainerMain(name string, getServices func(ctx context.Context, cfg config
 		return
 	}
 
-	if err := StartServices(ctx, cancel, logger, serviceList); err != nil {
+	err = StartServices(ctx, cancel, logger, serviceList)
+	if err == ErrExitTriggered {
+		logger.Info("exiting due to internal trigger")
+		os.Exit(ExitCodeTriggered)
+	}
+	if err != nil {
 		logger.WithError(err).Error("failed to start services")
 	}
 }
 
-var gracefulShutdown bool
+var (
+	gracefulShutdown bool
+	exitTriggered    bool
+)
 
 // IsGracefulShutdown tells if we have reached a graceful shutdown condition.
 func IsGracefulShutdown() bool {
@@ -139,6 +129,12 @@ func InterruptMainContext() {
 	}
 }
 
+// TriggerExit triggers exit internally.
+func TriggerExit() {
+	exitTriggered = true
+	InterruptMainContext()
+}
+
 // StartServices kicks off all services.
 func StartServices(ctx context.Context, cancelMainCtx context.CancelFunc, logger *log.Entry, services []Service) error {
 	// each service should be able to start successfully within reasonable time
@@ -149,6 +145,7 @@ func StartServices(ctx context.Context, cancelMainCtx context.CancelFunc, logger
 		logger := logger.WithField("service", service.Name())
 
 		go func() {
+			logger.Info("starting service")
 			if err := service.Start(); err != nil {
 				logger.WithError(err).Error("failed to start service")
 				cancelMainCtx()
@@ -174,8 +171,14 @@ func StartServices(ctx context.Context, cancelMainCtx context.CancelFunc, logger
 
 	// stop all services
 	for _, service := range services {
+		serviceLogger := logger.WithField("service", service.Name())
+		serviceLogger.Info("stopping service")
 		err := service.Stop()
-		logger.WithError(err).WithField("service", service.Name()).Info("stopped")
+		serviceLogger.WithError(err).Info("stopped service")
+	}
+
+	if exitTriggered {
+		return ErrExitTriggered
 	}
 
 	return nil

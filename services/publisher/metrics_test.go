@@ -12,12 +12,9 @@ import (
 )
 
 var (
-	testNow = time.Now()
+	testNow            = time.Now()
+	testBucketInterval = time.Millisecond
 )
-
-func init() {
-	publisher.DefaultBucketInterval = time.Millisecond
-}
 
 type MetricsMathTest struct {
 	metrics  []float64
@@ -75,13 +72,14 @@ func TestAgentMetricsAggregator_math(t *testing.T) {
 			})
 		}
 
-		aggregator := publisher.NewMetricsAggregator()
+		aggregator := publisher.NewMetricsAggregator(testBucketInterval)
 		err := aggregator.AddAgentMetrics(&protocol.AgentMetricList{Metrics: metrics})
 		assert.NoError(t, err)
-		time.Sleep(publisher.DefaultBucketInterval * 2)
+		time.Sleep(testBucketInterval * 2)
 
-		res := aggregator.TryFlush()
+		res, flushed := aggregator.TryFlush()
 
+		assert.True(t, flushed)
 		assert.Len(t, res, 1)
 		assert.Len(t, res[0].Metrics, 1)
 		assert.Equal(t, res[0].Metrics[0], test.expected)

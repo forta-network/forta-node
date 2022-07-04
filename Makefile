@@ -30,6 +30,8 @@ e2e-test-deps:
 e2e-test:
 	rm -rf tests/e2e/.forta/coverage
 	mkdir -p tests/e2e/.forta/coverage
+	rm -rf tests/e2e/.forta-local/coverage
+	mkdir -p tests/e2e/.forta-local/coverage
 
 	./tests/e2e/build.sh
 
@@ -37,7 +39,7 @@ e2e-test:
 
 	rm -rf coverage
 	cp -r tests/e2e/.forta/coverage .
-	cp -r tests/e2e/.forta-private/coverage/* coverage/
+	cp -r tests/e2e/.forta-local/coverage/* coverage/
 	./scripts/total-coverage.sh e2e
 
 run:

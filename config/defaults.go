@@ -1,7 +1,6 @@
 package config
 
 const (
-	DefaultLocalAgentsFileName = "local-agents.json"
 	DefaultKeysDirName         = ".keys"
 	DefaultConfigFileName      = "config.yml"
 	DefaultNatsPort            = "4222"

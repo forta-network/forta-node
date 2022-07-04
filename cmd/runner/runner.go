@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/config"
@@ -13,7 +14,7 @@ import (
 )
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
-	shouldDisableAutoUpdate := cfg.AutoUpdate.Disable || cfg.PrivateModeConfig.Enable
+	shouldDisableAutoUpdate := cfg.AutoUpdate.Disable
 	imgStore, err := store.NewFortaImageStore(ctx, config.DefaultContainerPort, !shouldDisableAutoUpdate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the image store: %v", err)
@@ -51,7 +52,12 @@ func Run(cfg config.Config) {
 		return
 	}
 
-	if err := services.StartServices(ctx, cancel, log.NewEntry(log.StandardLogger()), serviceList); err != nil {
+	err = services.StartServices(ctx, cancel, log.NewEntry(log.StandardLogger()), serviceList)
+	if err == services.ErrExitTriggered {
+		logger.Info("exiting successfully after internal trigger")
+		os.Exit(0)
+	}
+	if err != nil {
 		logger.WithError(err).Error("error running services")
 	}
 }

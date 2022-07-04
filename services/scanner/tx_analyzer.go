@@ -98,8 +98,6 @@ func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *pr
 }
 
 func (t *TxAnalyzerService) Start() error {
-	log.Infof("Starting %s", t.Name())
-
 	go func() {
 		for result := range t.cfg.AgentPool.TxResults() {
 			ts := time.Now().UTC()
@@ -163,7 +161,6 @@ func (t *TxAnalyzerService) Start() error {
 }
 
 func (t *TxAnalyzerService) Stop() error {
-	log.Infof("Stopping %s", t.Name())
 	return nil
 }
 

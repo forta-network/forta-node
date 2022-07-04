@@ -313,7 +313,7 @@ func (s *Suite) SetupTest() {
 	}
 	b, _ := json.MarshalIndent(ensOverrides, "", "  ")
 	s.r.NoError(ioutil.WriteFile(".forta/ens-override.json", b, 0644))
-	s.r.NoError(ioutil.WriteFile(".forta-private/ens-override.json", b, 0644))
+	s.r.NoError(ioutil.WriteFile(".forta-local/ens-override.json", b, 0644))
 
 	// set runtime vars and put release to ipfs and to the scanner version contract
 	nodeImageRef := s.readImageRef("node")

@@ -41,8 +41,6 @@ type JsonRpcProxy struct {
 }
 
 func (p *JsonRpcProxy) Start() error {
-	log.Infof("Starting %s", p.Name())
-
 	p.registerMessageHandlers()
 
 	rpcUrl, err := url.Parse(p.cfg.Url)
@@ -147,7 +145,6 @@ func (p *JsonRpcProxy) handleAgentVersionsUpdate(payload messaging.AgentPayload)
 }
 
 func (p *JsonRpcProxy) Stop() error {
-	log.Infof("Stopping %s", p.Name())
 	if p.server != nil {
 		return p.server.Close()
 	}
