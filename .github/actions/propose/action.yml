@@ -22,9 +22,14 @@ inputs:
   api-secret:
     description: 'API Secret for Defender'
     required: true
+  is-release:
+    description: 'Signals if a release or a prerelease is made'
+    required: true
 outputs:
-  proposal-url:
-    description: "URL of proposal"
+  release-proposal-url:
+    description: 'URL of release proposal'
+  prerelease-proposal-url:
+    description: 'URL of prerelease proposal'
 
 runs:
   using: 'node16'
