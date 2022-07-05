@@ -2,7 +2,7 @@ name: Release to Prod
 
 on:
   release:
-    types: [released]
+    types: [released, prereleased]
 
 jobs:
   go:
@@ -84,12 +84,16 @@ jobs:
           multisig: "0xd1d4FaFd400fCD643132bb7eAF7682eE97E09C3e"
           version: ${{ github.ref_name }}
           release-cid: ${{ needs.containers.outputs.node-release-cid }}
-      - name: Proposal Url
-        run: echo "Proposal ${{ steps.propose.outputs.proposal-url }}"
+          is-release: ${{ github.event.action == 'released' }}
+      - name: Release Proposal Url
+        run: echo "Proposal ${{ steps.propose.outputs.release-proposal-url }}"
+      - name: Prerelease Proposal Url
+        run: echo "Proposal ${{ steps.propose.outputs.prerelease-proposal-url }}"
 
   build:
+    if: ${{ github.event.action == 'released' }}
     name: Build
-    needs: [containers, propose]
+    needs: [containers]
     runs-on: ubuntu-latest
     environment: prod
     steps:
@@ -127,6 +131,7 @@ jobs:
           aws s3 cp forta "s3://$BUCKET_NAME/forta-$REVISION"
 
   release:
+    if: ${{ github.event.action == 'released' }}
     name: Release to prod
     needs: [build]
     runs-on: ubuntu-18.04

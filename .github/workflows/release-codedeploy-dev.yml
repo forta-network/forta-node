@@ -86,6 +86,21 @@ jobs:
         run: |
           ./scripts/publish-release.sh ${{ needs.containers.outputs.node-release-cid }} ${{ secrets.DEV_PUBLISH_AUTOTASK_KEY }} ${{ secrets.DEV_PUBLISH_AUTOTASK_URL }}
 
+  publish-hash-beta:
+    name: Publish Hash (Beta) to Contract
+    needs: containers
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Echo Hash
+        run: |
+          echo "release-cid=${{ needs.containers.outputs.node-release-cid }}"
+      - name: Publish Hash
+        run: |
+          ./scripts/publish-release.sh ${{ needs.containers.outputs.node-release-cid }} ${{ secrets.DEV_PUBLISH_AUTOTASK_KEY }} ${{ secrets.DEV_PUBLISH_BETA_AUTOTASK_URL }}
+
   build-deploy:
     name: Build and deploy
     needs: [containers]
