@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -130,7 +131,12 @@ func InterruptMainContext() {
 }
 
 // TriggerExit triggers exit internally.
-func TriggerExit() {
+func TriggerExit(delay time.Duration) {
+	if delay > 0 {
+		log.WithField("timeout", fmt.Sprintf("%s", delay)).Info("waiting before triggering exit")
+		time.Sleep(delay)
+		log.WithField("timeout", fmt.Sprintf("%s", delay)).Info("done waiting before triggering exit")
+	}
 	exitTriggered = true
 	InterruptMainContext()
 }

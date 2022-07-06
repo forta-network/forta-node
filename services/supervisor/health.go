@@ -82,7 +82,7 @@ func (sup *SupervisorService) ensureUp(knownContainer *Container, foundContainer
 		}
 		if !knownContainer.IsAgent && containerDetails.State.ExitCode == services.ExitCodeTriggered {
 			logger.Info("detected internal exit trigger - exiting")
-			services.TriggerExit()
+			services.TriggerExit(0)
 			return nil
 		}
 

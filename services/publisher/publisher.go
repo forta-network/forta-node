@@ -591,13 +591,6 @@ func (pub *Publisher) Start() error {
 }
 
 func (pub *Publisher) Stop() error {
-	cfg := pub.cfg.Config
-	if cfg.LocalModeConfig.Enable {
-		timeoutSeconds := cfg.LocalModeConfig.RuntimeLimits.StopTimeoutSeconds
-		log.WithField("timeout", fmt.Sprintf("%ds", timeoutSeconds)).Info("waiting for scanning to finish")
-		time.Sleep(time.Duration(timeoutSeconds) * time.Second)
-		log.WithField("timeout", fmt.Sprintf("%ds", timeoutSeconds)).Info("done waiting scanning to finish")
-	}
 	if pub.server != nil {
 		pub.server.Stop()
 	}
