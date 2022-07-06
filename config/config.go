@@ -109,7 +109,7 @@ type ContainerRegistryConfig struct {
 type RuntimeLimits struct {
 	StartBlock         uint64 `yaml:"startBlock" json:"startBlock"`
 	StopBlock          uint64 `yaml:"stopBlock" json:"stopBlock" validate:"omitempty,gtfield=StartBlock"`
-	StopTimeoutSeconds int    `yaml:"stopTimeoutSeconds" json:"stopTimeoutSeconds" default:"10"`
+	StopTimeoutSeconds int    `yaml:"stopTimeoutSeconds" json:"stopTimeoutSeconds" default:"30"`
 }
 
 type LocalModeConfig struct {

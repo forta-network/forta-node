@@ -31,6 +31,8 @@ func NewLogger(logFileName string) (*Logger, error) {
 	}
 
 	fullPath := path.Join(logsDir, fileName)
+	log.WithField("file", fullPath).Info("logging local alerts and metrics")
+
 	file, err := os.Create(fullPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the webhook log file: %v", err)

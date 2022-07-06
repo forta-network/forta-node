@@ -369,7 +369,7 @@ func (runner *Runner) doKeepContainersAlive() error {
 			}
 			if containerDetails.State.ExitCode == services.ExitCodeTriggered {
 				log.WithField("name", runner.supervisorContainer.Name).Info("detected internal exit trigger - exiting")
-				services.TriggerExit()
+				services.TriggerExit(0)
 				return nil
 			}
 			runner.dockerClient.StartContainer(runner.ctx, runner.supervisorContainer.Config)
