@@ -26,7 +26,7 @@ func (j *JWTProvider) createJWTHandler(w http.ResponseWriter, req *http.Request)
 		return
 	}
 	
-	jwt, err := CreateBotJWT(j.key, agentID, msg.Hash, msg.Exp)
+	jwt, err := CreateBotJWT(j.Key, agentID, msg.Hash, msg.Exp)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return

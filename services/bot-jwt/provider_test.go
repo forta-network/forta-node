@@ -95,7 +95,6 @@ func TestJWTProvider_Start(t *testing.T) {
 	}
 	
 	type fields struct {
-		key *keystore.Key
 		cfg JWTProviderConfig
 	}
 	tests := []struct {
@@ -106,7 +105,7 @@ func TestJWTProvider_Start(t *testing.T) {
 		{
 			name: "spawn jwt provider service for 10 seconds",
 			fields: fields{
-				key: key,
+				cfg: JWTProviderConfig{Key: key},
 			},
 			wantErr: false,
 		},
@@ -114,7 +113,7 @@ func TestJWTProvider_Start(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(
 			tt.name, func(t *testing.T) {
-				j, err := NewBotJWTProvider(tt.fields.key, tt.fields.cfg)
+				j, err := NewBotJWTProvider(tt.fields.cfg)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -122,7 +121,7 @@ func TestJWTProvider_Start(t *testing.T) {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 				defer cancel()
 				
-				if err := j.Start(ctx); (err != nil) != tt.wantErr {
+				if err := j.StartWithContext(ctx); (err != nil) != tt.wantErr {
 					t.Errorf("Start() error = %v, wantErr %v", err, tt.wantErr)
 				}
 			},

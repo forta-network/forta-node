@@ -7,10 +7,13 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"time"
 	
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/forta-network/forta-core-go/clients/health"
+	"github.com/forta-network/forta-core-go/ethereum"
 	"github.com/forta-network/forta-core-go/security"
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/messaging"
@@ -25,17 +28,21 @@ type JWTProvider struct {
 	botConfigsMutex sync.RWMutex
 	
 	dockerClient clients.DockerClient
+	
 	// msgClient to subscribe to bot changes
 	msgClient clients.MessageClient
 	
-	key *keystore.Key
+	cfg *JWTProviderConfig
 	
-	cfg JWTProviderConfig
+	lastErr health.ErrorTracker
+	
+	srv *http.Server
 }
 
 type JWTProviderConfig struct {
 	// Addr is the host:port of the provider server
 	Addr string
+	Key  *keystore.Key
 }
 
 const (
@@ -43,7 +50,7 @@ const (
 )
 
 func NewBotJWTProvider(
-	key *keystore.Key, cfg JWTProviderConfig,
+	cfg *JWTProviderConfig,
 ) (*JWTProvider, error) {
 	globalClient, err := clients.NewDockerClient("")
 	if err != nil {
@@ -57,32 +64,51 @@ func NewBotJWTProvider(
 		),
 	)
 	
-	return &JWTProvider{dockerClient: globalClient, key: key, msgClient: msgClient, cfg: cfg}, nil
+	return &JWTProvider{dockerClient: globalClient, msgClient: msgClient, cfg: cfg}, nil
 }
 
-// Start subscribe to bot updates and spawn a Bot JWT Provider http server.
-func (j *JWTProvider) Start(ctx context.Context) error {
+// Start spawns a jwt provider routine and returns.
+func (j *JWTProvider) Start() error {
+	return j.StartWithContext(context.Background())
+}
+
+func (j *JWTProvider) Stop() error {
+	return j.srv.Close()
+}
+
+// StartWithContext subscribe to bot updates and spawn a Bot JWT Provider http server.
+func (j *JWTProvider) StartWithContext(ctx context.Context) error {
 	j.registerMessageHandlers()
 	
-	addr := j.cfg.Addr
-	if addr == "" {
-		addr = DefaultJWTProviderAddr
+	if j.cfg.Addr == "" {
+		j.cfg.Addr = DefaultJWTProviderAddr
 	}
 	
 	// setup routes
 	r := mux.NewRouter()
 	r.HandleFunc("/create", j.createJWTHandler).Methods(http.MethodPost)
 	
-	srv := &http.Server{
-		Addr:    addr,
+	j.srv = &http.Server{
+		Addr:    j.cfg.Addr,
 		Handler: r,
 	}
 	
+	go func() {
+		err := j.listenAndServeWithContext(ctx)
+		if err != nil {
+			logrus.WithError(err).Panic("server error")
+		}
+	}()
+	
+	return nil
+}
+
+func (j *JWTProvider) listenAndServeWithContext(ctx context.Context) error {
 	errChan := make(chan error)
 	
 	go func() {
-		logrus.Infof("Starting Bot JWT Provider Service on: %s", srv.Addr)
-		err := srv.ListenAndServe()
+		logrus.Infof("Starting Bot JWT Provider Service on: %s", j.srv.Addr)
+		err := j.srv.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errChan <- err
 		}
@@ -93,7 +119,7 @@ func (j *JWTProvider) Start(ctx context.Context) error {
 	case err := <-errChan:
 		return err
 	case <-ctx.Done():
-		_ = srv.Close()
+		_ = j.srv.Close()
 		return nil
 	}
 }
@@ -147,6 +173,29 @@ func (j *JWTProvider) botUpdateHandler(payload messaging.AgentPayload) error {
 	j.botConfigs = payload
 	j.botConfigsMutex.Unlock()
 	return nil
+}
+
+func (j *JWTProvider) testAPI(ctx context.Context) {
+	err := ethereum.TestAPI(ctx, j.cfg.Addr)
+	j.lastErr.Set(err)
+}
+
+func (j *JWTProvider) apiHealthChecker(ctx context.Context) {
+	j.testAPI(ctx)
+	ticker := time.NewTicker(time.Minute * 5)
+	for range ticker.C {
+		j.testAPI(ctx)
+	}
+}
+
+func (j *JWTProvider) Name() string {
+	return "bot-jwt-provider"
+}
+
+func (j *JWTProvider) Health() health.Reports {
+	return health.Reports{
+		j.lastErr.GetReport("api"),
+	}
 }
 
 // requestHash used for "hash" claim in JWT token
