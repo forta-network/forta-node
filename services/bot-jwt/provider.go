@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/forta-network/forta-core-go/clients/health"
-	"github.com/forta-network/forta-core-go/ethereum"
 	"github.com/forta-network/forta-core-go/security"
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/messaging"
@@ -40,18 +39,27 @@ type JWTProvider struct {
 }
 
 type JWTProviderConfig struct {
-	// Addr is the host:port of the provider server
-	Addr string
-	Key  *keystore.Key
+	Key    *keystore.Key
+	Config config.Config
 }
 
-const (
-	DefaultJWTProviderAddr = ":7070"
-)
-
 func NewBotJWTProvider(
-	cfg *JWTProviderConfig,
+	cfg config.Config,
 ) (*JWTProvider, error) {
+	key, err := security.LoadKey(config.DefaultContainerKeyDirPath)
+	if err != nil {
+		return nil, err
+	}
+	
+	return initProvider(
+		&JWTProviderConfig{
+			Key:    key,
+			Config: cfg,
+		},
+	)
+}
+
+func initProvider(cfg *JWTProviderConfig) (*JWTProvider, error) {
 	globalClient, err := clients.NewDockerClient("")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the global docker client: %v", err)
@@ -80,8 +88,8 @@ func (j *JWTProvider) Stop() error {
 func (j *JWTProvider) StartWithContext(ctx context.Context) error {
 	j.registerMessageHandlers()
 	
-	if j.cfg.Addr == "" {
-		j.cfg.Addr = DefaultJWTProviderAddr
+	if j.cfg.Config.JWTProvider.Addr == "" {
+		j.cfg.Config.JWTProvider.Addr = fmt.Sprintf(":%s", config.DefaultBotJWTProviderPort)
 	}
 	
 	// setup routes
@@ -89,7 +97,7 @@ func (j *JWTProvider) StartWithContext(ctx context.Context) error {
 	r.HandleFunc("/create", j.createJWTHandler).Methods(http.MethodPost)
 	
 	j.srv = &http.Server{
-		Addr:    j.cfg.Addr,
+		Addr:    j.cfg.Config.JWTProvider.Addr,
 		Handler: r,
 	}
 	
@@ -175,9 +183,8 @@ func (j *JWTProvider) botUpdateHandler(payload messaging.AgentPayload) error {
 	return nil
 }
 
-func (j *JWTProvider) testAPI(ctx context.Context) {
-	err := ethereum.TestAPI(ctx, j.cfg.Addr)
-	j.lastErr.Set(err)
+func (j *JWTProvider) testAPI(_ context.Context) {
+	j.lastErr.Set(nil)
 }
 
 func (j *JWTProvider) apiHealthChecker(ctx context.Context) {

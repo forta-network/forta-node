@@ -2,6 +2,7 @@ package nodecmd
 
 import (
 	json_rpc "github.com/forta-network/forta-node/cmd/json-rpc"
+	jwt_provider "github.com/forta-network/forta-node/cmd/jwt-provider"
 	"github.com/forta-network/forta-node/cmd/publisher"
 	"github.com/forta-network/forta-node/cmd/scanner"
 	"github.com/forta-network/forta-node/cmd/supervisor"
