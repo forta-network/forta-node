@@ -6,7 +6,6 @@ import (
 	"time"
 	
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/forta-network/forta-core-go/security"
 	"github.com/golang-jwt/jwt/v4"
 )
@@ -28,7 +27,8 @@ func Test_createBotJWT(t *testing.T) {
 	type args struct {
 		key   *keystore.Key
 		botID string
-		hash  common.Hash
+		hash  string
+		exp   uint64
 	}
 	tests := []struct {
 		name    string
@@ -41,7 +41,7 @@ func Test_createBotJWT(t *testing.T) {
 			args: args{
 				key:   key,
 				botID: "0xbbb",
-				hash:  requestHash("/home", nil),
+				hash:  requestHash("/home", nil).String(),
 			},
 			want:    "{}",
 			wantErr: false,
@@ -50,7 +50,7 @@ func Test_createBotJWT(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(
 			tt.name, func(t *testing.T) {
-				got, err := CreateBotJWT(tt.args.key, tt.args.botID, tt.args.hash)
+				got, err := CreateBotJWT(tt.args.key, tt.args.botID, tt.args.hash, tt.args.exp)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("createBotJWT() error = %v, wantErr %v", err, tt.wantErr)
 					return
@@ -66,7 +66,7 @@ func Test_createBotJWT(t *testing.T) {
 					t.Fatal("invalid jwt claims")
 				}
 				
-				if hash := claims["hash"]; hash != tt.args.hash.String() {
+				if hash := claims["hash"]; hash != tt.args.hash {
 					t.Errorf("createBotJWT() got hash = %v, want hash %v", hash, tt.args.hash)
 				}
 				

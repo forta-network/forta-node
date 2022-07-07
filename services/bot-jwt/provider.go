@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"sync"
@@ -16,6 +15,7 @@ import (
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/config"
+	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 )
 
@@ -69,9 +69,13 @@ func (j *JWTProvider) Start(ctx context.Context) error {
 		addr = DefaultJWTProviderAddr
 	}
 	
+	// setup routes
+	r := mux.NewRouter()
+	r.HandleFunc("/create", j.createJWTHandler).Methods(http.MethodPost)
+	
 	srv := &http.Server{
 		Addr:    addr,
-		Handler: http.HandlerFunc(j.createJWTHandler),
+		Handler: r,
 	}
 	
 	errChan := make(chan error)
@@ -92,30 +96,6 @@ func (j *JWTProvider) Start(ctx context.Context) error {
 		_ = srv.Close()
 		return nil
 	}
-}
-
-// createJWTHandler returns a scanner jwt token with claims [hash] = hash(uri,payload) and [bot] = "bot id"
-func (j *JWTProvider) createJWTHandler(w http.ResponseWriter, req *http.Request) {
-	agentID, err := j.agentIDReverseLookup(req.Context(), req.RemoteAddr)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	
-	payload, err := io.ReadAll(req.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	
-	jwt, err := CreateBotJWT(j.key, agentID, requestHash(req.RequestURI, payload))
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	
-	w.WriteHeader(http.StatusOK)
-	_, _ = fmt.Fprint(w, jwt)
 }
 
 // agentIDReverseLookup reverse lookup from ip to agent id.
@@ -177,10 +157,15 @@ func requestHash(uri string, payload []byte) common.Hash {
 }
 
 // CreateBotJWT returns a bot JWT token. Basically security.ScannerJWT with bot&request info.
-func CreateBotJWT(key *keystore.Key, agentID string, hash common.Hash) (string, error) {
+func CreateBotJWT(key *keystore.Key, agentID string, hash string, exp uint64) (string, error) {
 	claims := map[string]interface{}{
 		"bot":  agentID,
-		"hash": hash.String(),
+		"hash": hash,
+	}
+	
+	// security.CreateScannerJWT has already a default 30sec expiry
+	if exp != 0 {
+		claims["exp"] = exp
 	}
 	
 	return security.CreateScannerJWT(key, claims)
