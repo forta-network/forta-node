@@ -113,7 +113,7 @@ func TestJWTProvider_Start(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(
 			tt.name, func(t *testing.T) {
-				j, err := NewBotJWTProvider(tt.fields.cfg)
+				j, err := initProvider(&tt.fields.cfg)
 				if err != nil {
 					t.Fatal(err)
 				}
