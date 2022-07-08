@@ -213,16 +213,12 @@ func requestHash(uri string, payload []byte) common.Hash {
 }
 
 // CreateBotJWT returns a bot JWT token. Basically security.ScannerJWT with bot&request info.
-func CreateBotJWT(key *keystore.Key, agentID string, hash string, exp uint64) (string, error) {
-	claims := map[string]interface{}{
-		"bot":  agentID,
-		"hash": hash,
+func CreateBotJWT(key *keystore.Key, agentID string, claims map[string]interface{}) (string, error) {
+	if claims == nil {
+		claims = make(map[string]interface{})
 	}
 	
-	// security.CreateScannerJWT has already a default 30sec expiry
-	if exp != 0 {
-		claims["exp"] = exp
-	}
+	claims["bot-id"] = agentID
 	
 	return security.CreateScannerJWT(key, claims)
 }
