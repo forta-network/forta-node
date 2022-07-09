@@ -47,11 +47,11 @@ type SupervisorService struct {
 	maxLogSize  string
 	maxLogFiles int
 	
-	scannerContainer        *clients.DockerContainer
-	jsonRpcContainer        *clients.DockerContainer
-	botJWTProviderContainer *clients.DockerContainer
-	containers              []*Container
-	mu                      sync.RWMutex
+	scannerContainer     *clients.DockerContainer
+	jsonRpcContainer     *clients.DockerContainer
+	jwtProviderContainer *clients.DockerContainer
+	containers           []*Container
+	mu                   sync.RWMutex
 	
 	lastRun                   health.TimeTracker
 	lastStop                  health.TimeTracker
@@ -248,11 +248,11 @@ func (sup *SupervisorService) start() error {
 	}
 	sup.addContainerUnsafe(sup.scannerContainer)
 	
-	sup.botJWTProviderContainer, err = sup.client.StartContainer(
+	sup.jwtProviderContainer, err = sup.client.StartContainer(
 		sup.ctx, clients.DockerContainerConfig{
-			Name:  config.DockerBotJWTProviderContainerName,
+			Name:  config.DockerJWTProviderContainerName,
 			Image: commonNodeImage,
-			Cmd:   []string{config.DefaultFortaNodeBinaryPath, "bot-jwt-provider"},
+			Cmd:   []string{config.DefaultFortaNodeBinaryPath, "jwt-provider"},
 			Env: map[string]string{
 				config.EnvReleaseInfo: releaseInfo.String(),
 			},
@@ -274,7 +274,7 @@ func (sup *SupervisorService) start() error {
 	if err != nil {
 		return err
 	}
-	sup.addContainerUnsafe(sup.botJWTProviderContainer)
+	sup.addContainerUnsafe(sup.jwtProviderContainer)
 	
 	if err := sup.attachToNetwork(config.DockerScannerContainerName, internalNetworkID); err != nil {
 		return err
@@ -282,7 +282,7 @@ func (sup *SupervisorService) start() error {
 	if err := sup.attachToNetwork(config.DockerJSONRPCProxyContainerName, internalNetworkID); err != nil {
 		return err
 	}
-	if err := sup.attachToNetwork(config.DockerBotJWTProviderContainerName, internalNetworkID); err != nil {
+	if err := sup.attachToNetwork(config.DockerJWTProviderContainerName, internalNetworkID); err != nil {
 		return err
 	}
 	
@@ -333,7 +333,7 @@ func (sup *SupervisorService) removeOldContainers() error {
 	for _, containerName := range []string{
 		config.DockerScannerContainerName,
 		config.DockerJSONRPCProxyContainerName,
-		config.DockerBotJWTProviderContainerName,
+		config.DockerJWTProviderContainerName,
 		config.DockerNatsContainerName,
 		config.DockerIpfsContainerName,
 	} {

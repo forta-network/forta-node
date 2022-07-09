@@ -43,8 +43,8 @@ var (
 		},
 	}
 	
-	cmdBotJWTProvider = &cobra.Command{
-		Use: "bot-jwt-provider",
+	cmdJWTProvider = &cobra.Command{
+		Use: "jwt-provider",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jwt_provider.Run()
 			return nil
@@ -74,7 +74,7 @@ func init() {
 	cmdFortaNode.AddCommand(cmdScanner)
 	cmdFortaNode.AddCommand(cmdPublisher)
 	cmdFortaNode.AddCommand(cmdJsonRpc)
-	cmdFortaNode.AddCommand(cmdBotJWTProvider)
+	cmdFortaNode.AddCommand(cmdJWTProvider)
 }
 
 func Run() error {

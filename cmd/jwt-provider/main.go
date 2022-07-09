@@ -11,7 +11,7 @@ import (
 )
 
 func initJWTProvider(cfg config.Config) (*botjwt.JWTProvider, error) {
-	return botjwt.NewBotJWTProvider(cfg)
+	return botjwt.NewJWTProvider(cfg)
 }
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
@@ -41,5 +41,5 @@ func summarizeReports(reports health.Reports) *health.Report {
 }
 
 func Run() {
-	services.ContainerMain("bot-jwt-provider", initServices)
+	services.ContainerMain("jwt-provider", initServices)
 }

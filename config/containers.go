@@ -20,10 +20,10 @@ var (
 	DockerIpfsContainerName           = fmt.Sprintf("%s-ipfs", ContainerNamePrefix)
 	DockerScannerContainerName        = fmt.Sprintf("%s-scanner", ContainerNamePrefix)
 	DockerJSONRPCProxyContainerName   = fmt.Sprintf("%s-json-rpc", ContainerNamePrefix)
-	DockerBotJWTProviderContainerName = fmt.Sprintf("%s-bot-jwt-provider", ContainerNamePrefix)
-
+	DockerJWTProviderContainerName    = fmt.Sprintf("%s-jwt-provider", ContainerNamePrefix)
+	
 	DockerNetworkName = DockerScannerContainerName
-
+	
 	DefaultContainerFortaDirPath = "/.forta"
 	DefaultContainerConfigPath   = path.Join(DefaultContainerFortaDirPath, DefaultConfigFileName)
 	DefaultContainerKeyDirPath   = path.Join(DefaultContainerFortaDirPath, DefaultKeysDirName)

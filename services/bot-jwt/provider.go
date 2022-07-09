@@ -43,7 +43,7 @@ type JWTProviderConfig struct {
 	Config config.Config
 }
 
-func NewBotJWTProvider(
+func NewJWTProvider(
 	cfg config.Config,
 ) (*JWTProvider, error) {
 	key, err := security.LoadKey(config.DefaultContainerKeyDirPath)
@@ -89,7 +89,7 @@ func (j *JWTProvider) StartWithContext(ctx context.Context) error {
 	j.registerMessageHandlers()
 	
 	if j.cfg.Config.JWTProvider.Addr == "" {
-		j.cfg.Config.JWTProvider.Addr = fmt.Sprintf(":%s", config.DefaultBotJWTProviderPort)
+		j.cfg.Config.JWTProvider.Addr = fmt.Sprintf(":%s", config.DefaultJWTProviderPort)
 	}
 	
 	// setup routes
@@ -196,7 +196,7 @@ func (j *JWTProvider) apiHealthChecker(ctx context.Context) {
 }
 
 func (j *JWTProvider) Name() string {
-	return "bot-jwt-provider"
+	return "jwt-provider"
 }
 
 func (j *JWTProvider) Health() health.Reports {

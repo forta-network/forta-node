@@ -44,8 +44,8 @@ func (sup *SupervisorService) startAgent(agent config.AgentConfig) error {
 			Env: map[string]string{
 				config.EnvJsonRpcHost:     config.DockerJSONRPCProxyContainerName,
 				config.EnvJsonRpcPort:     config.DefaultJSONRPCProxyPort,
-				config.EnvJWTProviderHost: config.DockerBotJWTProviderContainerName,
-				config.EnvJWTProviderPort: config.DefaultBotJWTProviderPort,
+				config.EnvJWTProviderHost: config.DockerJWTProviderContainerName,
+				config.EnvJWTProviderPort: config.DefaultJWTProviderPort,
 				config.EnvAgentGrpcPort:   agent.GrpcPort(),
 			},
 			MaxLogFiles: sup.maxLogFiles,
@@ -63,16 +63,16 @@ func (sup *SupervisorService) startAgent(agent config.AgentConfig) error {
 	// Attach the scanner, JWT Provider and the JSON-RPC proxy to the agent's network.
 	for _, containerID := range []string{
 		sup.scannerContainer.ID, sup.jsonRpcContainer.ID,
-		sup.botJWTProviderContainer.ID,
+		sup.jwtProviderContainer.ID,
 	} {
 		err := sup.client.AttachNetwork(sup.ctx, containerID, nwID)
 		if err != nil {
 			return err
 		}
 	}
-
+	
 	sup.addContainerUnsafe(agentContainer, &agent)
-
+	
 	return nil
 }
 
