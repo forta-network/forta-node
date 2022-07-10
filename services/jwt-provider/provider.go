@@ -1,14 +1,13 @@
-package bot_jwt
+package jwt_provider
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"sync"
 	"time"
-	
+
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -25,16 +24,16 @@ import (
 type JWTProvider struct {
 	botConfigs      []config.AgentConfig
 	botConfigsMutex sync.RWMutex
-	
+
 	dockerClient clients.DockerClient
-	
+
 	// msgClient to subscribe to bot changes
 	msgClient clients.MessageClient
-	
+
 	cfg *JWTProviderConfig
-	
+
 	lastErr health.ErrorTracker
-	
+
 	srv *http.Server
 }
 
@@ -50,7 +49,7 @@ func NewJWTProvider(
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return initProvider(
 		&JWTProviderConfig{
 			Key:    key,
@@ -64,14 +63,14 @@ func initProvider(cfg *JWTProviderConfig) (*JWTProvider, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the global docker client: %v", err)
 	}
-	
+
 	msgClient := messaging.NewClient(
 		"jwt-provider", fmt.Sprintf(
 			"%s:%s", config.DockerNatsContainerName,
 			config.DefaultNatsPort,
 		),
 	)
-	
+
 	return &JWTProvider{dockerClient: globalClient, msgClient: msgClient, cfg: cfg}, nil
 }
 
@@ -87,33 +86,33 @@ func (j *JWTProvider) Stop() error {
 // StartWithContext subscribe to bot updates and spawn a Bot JWT Provider http server.
 func (j *JWTProvider) StartWithContext(ctx context.Context) error {
 	j.registerMessageHandlers()
-	
+
 	if j.cfg.Config.JWTProvider.Addr == "" {
 		j.cfg.Config.JWTProvider.Addr = fmt.Sprintf(":%s", config.DefaultJWTProviderPort)
 	}
-	
+
 	// setup routes
 	r := mux.NewRouter()
 	r.HandleFunc("/create", j.createJWTHandler).Methods(http.MethodPost)
-	
+
 	j.srv = &http.Server{
 		Addr:    j.cfg.Config.JWTProvider.Addr,
 		Handler: r,
 	}
-	
+
 	go func() {
 		err := j.listenAndServeWithContext(ctx)
 		if err != nil {
 			logrus.WithError(err).Panic("server error")
 		}
 	}()
-	
+
 	return nil
 }
 
 func (j *JWTProvider) listenAndServeWithContext(ctx context.Context) error {
 	errChan := make(chan error)
-	
+
 	go func() {
 		logrus.Infof("Starting Bot JWT Provider Service on: %s", j.srv.Addr)
 		err := j.srv.ListenAndServe()
@@ -121,7 +120,7 @@ func (j *JWTProvider) listenAndServeWithContext(ctx context.Context) error {
 			errChan <- err
 		}
 	}()
-	
+
 	// gracefully handle stopping server
 	select {
 	case err := <-errChan:
@@ -133,42 +132,25 @@ func (j *JWTProvider) listenAndServeWithContext(ctx context.Context) error {
 }
 
 // agentIDReverseLookup reverse lookup from ip to agent id.
-func (j *JWTProvider) agentIDReverseLookup(ctx context.Context, remoteAddr string) (string, error) {
-	ipAddr, _, err := net.SplitHostPort(remoteAddr)
+func (j *JWTProvider) agentIDReverseLookup(ctx context.Context, ipAddr string) (string, error) {
+	hosts, err := resolver.LookupAddr(ctx, ipAddr)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("can't lookup ip: %v", err)
 	}
-	
-	containers, err := j.dockerClient.GetContainers(ctx)
-	if err != nil {
-		return "", err
-	}
-	
-	var agentContainerNames []string
-	for _, container := range containers {
-		for _, network := range container.NetworkSettings.Networks {
-			if network.IPAddress == ipAddr {
-				agentContainerNames = container.Names
-				break
-			}
-		}
-		
-		if agentContainerNames != nil {
-			break
-		}
-	}
-	
-	if len(agentContainerNames) == 0 {
+
+	if len(hosts) == 0 {
 		return "", fmt.Errorf("can not find bot id of %s", ipAddr)
 	}
-	
-	containerName := agentContainerNames[0][1:]
-	for _, agentConfig := range j.botConfigs {
-		if agentConfig.ContainerName() == containerName {
-			return agentConfig.ID, nil
+	for _, hostname := range hosts {
+		for _, agentConfig := range j.botConfigs {
+			// handling subdomain stuff
+			containerName := fmt.Sprintf("%s.%s.", agentConfig.ContainerName(), agentConfig.ContainerName())
+			if containerName == hostname {
+				return agentConfig.ID, nil
+			}
 		}
 	}
-	
+
 	return "", fmt.Errorf("no bots with ip: %s exist", ipAddr)
 }
 
@@ -208,7 +190,7 @@ func (j *JWTProvider) Health() health.Reports {
 // requestHash used for "hash" claim in JWT token
 func requestHash(uri string, payload []byte) common.Hash {
 	requestStr := fmt.Sprintf("%s%s", uri, payload)
-	
+
 	return crypto.Keccak256Hash([]byte(requestStr))
 }
 
@@ -217,8 +199,8 @@ func CreateBotJWT(key *keystore.Key, agentID string, claims map[string]interface
 	if claims == nil {
 		claims = make(map[string]interface{})
 	}
-	
+
 	claims["bot-id"] = agentID
-	
+
 	return security.CreateScannerJWT(key, claims)
 }

@@ -1,10 +1,10 @@
-package bot_jwt
+package jwt_provider
 
 import (
 	"context"
 	"testing"
 	"time"
-	
+
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/forta-network/forta-core-go/security"
 	"github.com/golang-jwt/jwt/v4"
@@ -13,17 +13,17 @@ import (
 func Test_createBotJWT(t *testing.T) {
 	dir := t.TempDir()
 	ks := keystore.NewKeyStore(dir, keystore.StandardScryptN, keystore.StandardScryptP)
-	
+
 	_, err := ks.NewAccount("Forta123")
 	if err != nil {
 		t.Fatal(err)
 	}
-	
+
 	key, err := security.LoadKeyWithPassphrase(dir, "Forta123")
 	if err != nil {
 		t.Fatal(err)
 	}
-	
+
 	type args struct {
 		key   *keystore.Key
 		data  map[string]interface{}
@@ -56,21 +56,21 @@ func Test_createBotJWT(t *testing.T) {
 					t.Errorf("createBotJWT() error = %v, wantErr %v", err, tt.wantErr)
 					return
 				}
-				
+
 				token, err := security.VerifyScannerJWT(got)
 				if err != nil {
 					t.Fatal(err)
 				}
-				
+
 				claims, ok := token.Token.Claims.(jwt.MapClaims)
 				if !ok {
 					t.Fatal("invalid jwt claims")
 				}
-				
+
 				if hash := claims["hash"]; hash != tt.args.data["hash"] {
 					t.Errorf("createBotJWT() got hash = %v, want hash %v", hash, tt.args.data["hash"])
 				}
-				
+
 				if botID := claims["bot-id"]; botID != tt.args.botID {
 					t.Errorf("createBotJWT() got bot id = %v, want bot id %v", botID, tt.args.botID)
 				}
@@ -80,21 +80,21 @@ func Test_createBotJWT(t *testing.T) {
 }
 
 func TestJWTProvider_Start(t *testing.T) {
-	t.SkipNow()
-	
+	// t.SkipNow()
+
 	dir := t.TempDir()
 	ks := keystore.NewKeyStore(dir, keystore.StandardScryptN, keystore.StandardScryptP)
-	
+
 	_, err := ks.NewAccount("Forta123")
 	if err != nil {
 		t.Fatal(err)
 	}
-	
+
 	key, err := security.LoadKeyWithPassphrase(dir, "Forta123")
 	if err != nil {
 		t.Fatal(err)
 	}
-	
+
 	type fields struct {
 		cfg JWTProviderConfig
 	}
@@ -118,13 +118,15 @@ func TestJWTProvider_Start(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second*155)
 				defer cancel()
-				
+
 				if err := j.StartWithContext(ctx); (err != nil) != tt.wantErr {
 					t.Errorf("Start() error = %v, wantErr %v", err, tt.wantErr)
 				}
+
+				<-ctx.Done()
 			},
 		)
 	}
