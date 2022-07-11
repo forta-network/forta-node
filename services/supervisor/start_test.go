@@ -132,7 +132,7 @@ func (s *Suite) SetupTest() {
 	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testScannerContainerID, testNatsNetworkID)
 	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerJSONRPCProxyContainerName).Return(&types.Container{ID: testProxyContainerID}, nil).AnyTimes()
 	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testProxyContainerID, testNatsNetworkID)
-	s.dockerClient.EXPECT().GetContainerByName(service.ctx,
+	s.dockerClient.EXPECT().GetContainerByName(
 		service.ctx,
 		config.DockerJWTProviderContainerName,
 	).Return(&types.Container{ID: testJWTProviderContainerID}, nil).AnyTimes()
