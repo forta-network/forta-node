@@ -80,7 +80,7 @@ func Test_createBotJWT(t *testing.T) {
 }
 
 func TestJWTProvider_Start(t *testing.T) {
-	// t.SkipNow()
+	t.SkipNow()
 
 	dir := t.TempDir()
 	ks := keystore.NewKeyStore(dir, keystore.StandardScryptN, keystore.StandardScryptP)
