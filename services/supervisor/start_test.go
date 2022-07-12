@@ -136,7 +136,6 @@ func (s *Suite) SetupTest() {
 		service.ctx,
 		config.DockerJWTProviderContainerName,
 	).Return(&types.Container{ID: testJWTProviderContainerID}, nil).AnyTimes()
-	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testJWTProviderContainerID, testNatsNetworkID)
 	s.dockerClient.EXPECT().WaitContainerStart(service.ctx, gomock.Any()).Return(nil).AnyTimes()
 	s.msgClient.EXPECT().Subscribe(messaging.SubjectAgentsActionRun, gomock.Any())
 	s.msgClient.EXPECT().Subscribe(messaging.SubjectAgentsActionStop, gomock.Any())
