@@ -35,6 +35,11 @@ type JsonRpcProxyConfig struct {
 	RateLimitConfig *RateLimitConfig `yaml:"rateLimit" json:"rateLimit"`
 }
 
+type JWTProviderConfig struct {
+	// Addr is the host:port of the provider server
+	Addr string
+}
+
 type LogConfig struct {
 	Level       string `yaml:"level" json:"level" default:"info" `
 	MaxLogSize  string `yaml:"maxLogSize" json:"maxLogSize" default:"50m" `
@@ -140,6 +145,7 @@ type Config struct {
 	Registry        RegistryConfig     `yaml:"registry" json:"registry"`
 	Publish         PublisherConfig    `yaml:"publish" json:"publish"`
 	JsonRpcProxy    JsonRpcProxyConfig `yaml:"jsonRpcProxy" json:"jsonRpcProxy"`
+	JWTProvider     JWTProviderConfig  `json:"jwt_provider_config"`
 	Log             LogConfig          `yaml:"log" json:"log"`
 	ResourcesConfig ResourcesConfig    `yaml:"resources" json:"resources"`
 	ENSConfig       ENSConfig          `yaml:"ens" json:"ens"`

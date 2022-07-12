@@ -22,17 +22,18 @@ import (
 )
 
 const (
-	testImageRef              = "some.docker.registry.io/foobar@sha256:cdd4ddccf5e9c740eb4144bcc68e3ea3a056789ec7453e94a6416dcfc80937a4"
-	testNodeNetworkID         = "node-network-id"
-	testNatsNetworkID         = "nats-network-id"
-	testGenericContainerID    = "test-generic-container-id"
-	testScannerContainerID    = "test-scanner-container-id"
-	testProxyContainerID      = "test-proxy-container-id"
-	testSupervisorContainerID = "test-supervisor-container-id"
-	testAgentID               = "test-agent"
-	testAgentContainerName    = "forta-agent-test-age-cdd4" // This is a result
-	testAgentNetworkID        = "test-agent-network-id"
-	testAgentContainerID      = "test-agent-container-id"
+	testImageRef               = "some.docker.registry.io/foobar@sha256:cdd4ddccf5e9c740eb4144bcc68e3ea3a056789ec7453e94a6416dcfc80937a4"
+	testNodeNetworkID          = "node-network-id"
+	testNatsNetworkID          = "nats-network-id"
+	testGenericContainerID     = "test-generic-container-id"
+	testScannerContainerID     = "test-scanner-container-id"
+	testProxyContainerID       = "test-proxy-container-id"
+	testJWTProviderContainerID = "test-jwt-provider-container-id"
+	testSupervisorContainerID  = "test-supervisor-container-id"
+	testAgentID                = "test-agent"
+	testAgentContainerName     = "forta-agent-test-age-cdd4" // This is a result
+	testAgentNetworkID         = "test-agent-network-id"
+	testAgentContainerID       = "test-agent-container-id"
 )
 
 // TestSuite runs the test suite.
@@ -115,6 +116,13 @@ func (s *Suite) SetupTest() {
 	s.dockerClient.EXPECT().StartContainer(service.ctx, (configMatcher)(clients.DockerContainerConfig{
 		Name: config.DockerScannerContainerName,
 	})).Return(&clients.DockerContainer{ID: testScannerContainerID}, nil)
+	s.dockerClient.EXPECT().StartContainer(
+		service.ctx, (configMatcher)(
+			clients.DockerContainerConfig{
+				Name: config.DockerJWTProviderContainerName,
+			},
+		),
+	).Return(&clients.DockerContainer{ID: testJWTProviderContainerID}, nil)
 	s.dockerClient.EXPECT().HasLocalImage(service.ctx, gomock.Any()).Return(true).AnyTimes()
 	s.globalClient.EXPECT().GetContainerByName(service.ctx, config.DockerSupervisorContainerName).Return(&types.Container{ID: testSupervisorContainerID}, nil).AnyTimes()
 	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testSupervisorContainerID, testNodeNetworkID)
@@ -124,7 +132,10 @@ func (s *Suite) SetupTest() {
 	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testScannerContainerID, testNatsNetworkID)
 	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerJSONRPCProxyContainerName).Return(&types.Container{ID: testProxyContainerID}, nil).AnyTimes()
 	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testProxyContainerID, testNatsNetworkID)
-
+	s.dockerClient.EXPECT().GetContainerByName(
+		service.ctx,
+		config.DockerJWTProviderContainerName,
+	).Return(&types.Container{ID: testJWTProviderContainerID}, nil).AnyTimes()
 	s.dockerClient.EXPECT().WaitContainerStart(service.ctx, gomock.Any()).Return(nil).AnyTimes()
 	s.msgClient.EXPECT().Subscribe(messaging.SubjectAgentsActionRun, gomock.Any())
 	s.msgClient.EXPECT().Subscribe(messaging.SubjectAgentsActionStop, gomock.Any())
@@ -136,6 +147,7 @@ func (s *Suite) initialContainerCheck() {
 	for _, containerName := range []string{
 		config.DockerScannerContainerName,
 		config.DockerJSONRPCProxyContainerName,
+		config.DockerJWTProviderContainerName,
 		config.DockerNatsContainerName,
 		config.DockerIpfsContainerName,
 	} {
@@ -191,9 +203,10 @@ func (s *Suite) TestAgentRun() {
 	})).Return(&clients.DockerContainer{Name: agentConfig.ContainerName(), ID: testAgentContainerID}, nil)
 	s.dockerClient.EXPECT().AttachNetwork(s.service.ctx, testScannerContainerID, testAgentNetworkID)
 	s.dockerClient.EXPECT().AttachNetwork(s.service.ctx, testProxyContainerID, testAgentNetworkID)
-
+	s.dockerClient.EXPECT().AttachNetwork(s.service.ctx, testJWTProviderContainerID, testAgentNetworkID)
+	
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusRunning, agentPayload)
-
+	
 	s.r.NoError(s.service.handleAgentRun(agentPayload))
 }
 

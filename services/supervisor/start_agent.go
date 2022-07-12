@@ -32,40 +32,48 @@ func (sup *SupervisorService) startAgent(agent config.AgentConfig) error {
 	if err != nil {
 		return err
 	}
-
+	
 	limits := config.GetAgentResourceLimits(sup.config.Config.ResourcesConfig)
-
-	agentContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
-		Name:           agent.ContainerName(),
-		Image:          agent.Image,
-		NetworkID:      nwID,
-		LinkNetworkIDs: []string{},
-		Env: map[string]string{
-			config.EnvJsonRpcHost:   config.DockerJSONRPCProxyContainerName,
-			config.EnvJsonRpcPort:   config.DefaultJSONRPCProxyPort,
-			config.EnvAgentGrpcPort: agent.GrpcPort(),
+	
+	agentContainer, err := sup.client.StartContainer(
+		sup.ctx, clients.DockerContainerConfig{
+			Name:           agent.ContainerName(),
+			Image:          agent.Image,
+			NetworkID:      nwID,
+			LinkNetworkIDs: []string{},
+			Env: map[string]string{
+				config.EnvJsonRpcHost:     config.DockerJSONRPCProxyContainerName,
+				config.EnvJsonRpcPort:     config.DefaultJSONRPCProxyPort,
+				config.EnvJWTProviderHost: config.DockerJWTProviderContainerName,
+				config.EnvJWTProviderPort: config.DefaultJWTProviderPort,
+				config.EnvAgentGrpcPort:   agent.GrpcPort(),
+				config.EnvFortaBotID:      agent.ID,
+			},
+			MaxLogFiles: sup.maxLogFiles,
+			MaxLogSize:  sup.maxLogSize,
+			CPUQuota:    limits.CPUQuota,
+			Memory:      limits.Memory,
+			Labels: map[string]string{
+				clients.DockerLabelFortaSupervisorStrategyVersion: SupervisorStrategyVersion,
+			},
 		},
-		MaxLogFiles: sup.maxLogFiles,
-		MaxLogSize:  sup.maxLogSize,
-		CPUQuota:    limits.CPUQuota,
-		Memory:      limits.Memory,
-		Labels: map[string]string{
-			clients.DockerLabelFortaSupervisorStrategyVersion: SupervisorStrategyVersion,
-		},
-	})
+	)
 	if err != nil {
 		return err
 	}
-	// Attach the scanner and the JSON-RPC proxy to the agent's network.
-	for _, containerID := range []string{sup.scannerContainer.ID, sup.jsonRpcContainer.ID} {
+	// Attach the scanner, JWT Provider and the JSON-RPC proxy to the agent's network.
+	for _, containerID := range []string{
+		sup.scannerContainer.ID, sup.jsonRpcContainer.ID,
+		sup.jwtProviderContainer.ID,
+	} {
 		err := sup.client.AttachNetwork(sup.ctx, containerID, nwID)
 		if err != nil {
 			return err
 		}
 	}
-
+	
 	sup.addContainerUnsafe(agentContainer, &agent)
-
+	
 	return nil
 }
 
