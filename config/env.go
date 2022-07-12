@@ -4,13 +4,14 @@ const (
 	EnvHostFortaDir = "HOST_FORTA_DIR" // for retrieving forta dir path on the host os
 	EnvDevelopment  = "FORTA_DEVELOPMENT"
 	EnvReleaseInfo  = "FORTA_RELEASE_INFO"
-	
+
 	// Agent env vars
 	EnvJsonRpcHost     = "JSON_RPC_HOST"
 	EnvJsonRpcPort     = "JSON_RPC_PORT"
-	EnvJWTProviderHost = "JWT_PROVIDER_HOST"
-	EnvJWTProviderPort = "JWT_PROVIDER_PORT"
+	EnvJWTProviderHost = "FORTA_JWT_PROVIDER_HOST"
+	EnvJWTProviderPort = "FORTA_JWT_PROVIDER_PORT"
 	EnvAgentGrpcPort   = "AGENT_GRPC_PORT"
+	EnvFortaBotID      = "FORTA_BOT_ID"
 )
 
 // EnvDefaults contain default values for one env.

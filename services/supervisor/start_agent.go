@@ -47,6 +47,7 @@ func (sup *SupervisorService) startAgent(agent config.AgentConfig) error {
 				config.EnvJWTProviderHost: config.DockerJWTProviderContainerName,
 				config.EnvJWTProviderPort: config.DefaultJWTProviderPort,
 				config.EnvAgentGrpcPort:   agent.GrpcPort(),
+				config.EnvFortaBotID:      agent.ID,
 			},
 			MaxLogFiles: sup.maxLogFiles,
 			MaxLogSize:  sup.maxLogSize,
