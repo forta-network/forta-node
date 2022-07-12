@@ -5,16 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/docker/docker/api/types"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/security"
 	"github.com/forta-network/forta-node/clients"
-	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/config"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
@@ -25,10 +26,8 @@ type JWTProvider struct {
 	botConfigs      []config.AgentConfig
 	botConfigsMutex sync.RWMutex
 
+	// to match request ip <-> bot id
 	dockerClient clients.DockerClient
-
-	// msgClient to subscribe to bot changes
-	msgClient clients.MessageClient
 
 	cfg *JWTProviderConfig
 
@@ -64,14 +63,7 @@ func initProvider(cfg *JWTProviderConfig) (*JWTProvider, error) {
 		return nil, fmt.Errorf("failed to create the global docker client: %v", err)
 	}
 
-	msgClient := messaging.NewClient(
-		"jwt-provider", fmt.Sprintf(
-			"%s:%s", config.DockerNatsContainerName,
-			config.DefaultNatsPort,
-		),
-	)
-
-	return &JWTProvider{dockerClient: globalClient, msgClient: msgClient, cfg: cfg}, nil
+	return &JWTProvider{dockerClient: globalClient, cfg: cfg}, nil
 }
 
 // Start spawns a jwt provider routine and returns.
@@ -85,8 +77,6 @@ func (j *JWTProvider) Stop() error {
 
 // StartWithContext subscribe to bot updates and spawn a Bot JWT Provider http server.
 func (j *JWTProvider) StartWithContext(ctx context.Context) error {
-	j.registerMessageHandlers()
-
 	if j.cfg.Config.JWTProvider.Addr == "" {
 		j.cfg.Config.JWTProvider.Addr = fmt.Sprintf(":%s", config.DefaultJWTProviderPort)
 	}
@@ -133,36 +123,53 @@ func (j *JWTProvider) listenAndServeWithContext(ctx context.Context) error {
 
 // agentIDReverseLookup reverse lookup from ip to agent id.
 func (j *JWTProvider) agentIDReverseLookup(ctx context.Context, ipAddr string) (string, error) {
-	hosts, err := resolver.LookupAddr(ctx, ipAddr)
+	container, err := j.findContainerByIP(ctx, ipAddr)
 	if err != nil {
-		return "", fmt.Errorf("can't lookup ip: %v", err)
+		return "", err
 	}
 
-	if len(hosts) == 0 {
-		return "", fmt.Errorf("can not find bot id of %s", ipAddr)
+	botID, err := j.extractBotIDFromContainer(ctx, container)
+	if err != nil {
+		return "", err
 	}
-	for _, hostname := range hosts {
-		for _, agentConfig := range j.botConfigs {
-			// handling subdomain stuff
-			containerName := fmt.Sprintf("%s.%s.", agentConfig.ContainerName(), agentConfig.ContainerName())
-			if containerName == hostname {
-				return agentConfig.ID, nil
-			}
+
+	return botID, nil
+}
+
+const envPrefix = config.EnvFortaBotID + "="
+
+func (j *JWTProvider) extractBotIDFromContainer(ctx context.Context, container types.Container) (string, error) {
+	// container struct doesn't have the "env" information, inspection required.
+	c, err := j.dockerClient.InspectContainer(ctx, container.ID)
+	if err != nil {
+		return "", err
+	}
+
+	// find the env variable with bot id
+	for _, s := range c.Config.Env {
+		if env := strings.SplitAfter(s, envPrefix); len(env) == 2 {
+			return env[1], nil
 		}
 	}
 
-	return "", fmt.Errorf("no bots with ip: %s exist", ipAddr)
+	return "", fmt.Errorf("can't extract bot id from container")
 }
 
-func (j *JWTProvider) registerMessageHandlers() {
-	j.msgClient.Subscribe(messaging.SubjectAgentsVersionsLatest, messaging.AgentsHandler(j.botUpdateHandler))
-}
+func (j *JWTProvider) findContainerByIP(ctx context.Context, ipAddr string) (types.Container, error) {
+	containers, err := j.dockerClient.GetContainers(ctx)
+	if err != nil {
+		return types.Container{}, err
+	}
 
-func (j *JWTProvider) botUpdateHandler(payload messaging.AgentPayload) error {
-	j.botConfigsMutex.Lock()
-	j.botConfigs = payload
-	j.botConfigsMutex.Unlock()
-	return nil
+	// find the container that has the same ip
+	for _, container := range containers {
+		for _, network := range container.NetworkSettings.Networks {
+			if network.IPAddress == ipAddr {
+				return container, nil
+			}
+		}
+	}
+	return types.Container{}, fmt.Errorf("can't find container %s", ipAddr)
 }
 
 func (j *JWTProvider) testAPI(_ context.Context) {

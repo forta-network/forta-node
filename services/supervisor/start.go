@@ -257,7 +257,9 @@ func (sup *SupervisorService) start() error {
 				config.EnvReleaseInfo: releaseInfo.String(),
 			},
 			Volumes: map[string]string{
-				hostFortaDir: config.DefaultContainerFortaDirPath,
+				// give access to host docker
+				"/var/run/docker.sock": "/var/run/docker.sock",
+				hostFortaDir:           config.DefaultContainerFortaDirPath,
 			},
 			Ports: map[string]string{
 				"": config.DefaultHealthPort, // random host port
@@ -266,7 +268,7 @@ func (sup *SupervisorService) start() error {
 				"passphrase": []byte(sup.config.Passphrase),
 			},
 			DialHost:    true,
-			NetworkID:   nodeNetworkID,
+			NetworkID:   internalNetworkID,
 			MaxLogFiles: sup.maxLogFiles,
 			MaxLogSize:  sup.maxLogSize,
 		},
@@ -275,17 +277,14 @@ func (sup *SupervisorService) start() error {
 		return err
 	}
 	sup.addContainerUnsafe(sup.jwtProviderContainer)
-	
+
 	if err := sup.attachToNetwork(config.DockerScannerContainerName, internalNetworkID); err != nil {
 		return err
 	}
 	if err := sup.attachToNetwork(config.DockerJSONRPCProxyContainerName, internalNetworkID); err != nil {
 		return err
 	}
-	if err := sup.attachToNetwork(config.DockerJWTProviderContainerName, internalNetworkID); err != nil {
-		return err
-	}
-	
+
 	return nil
 }
 

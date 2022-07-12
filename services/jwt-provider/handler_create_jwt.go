@@ -19,14 +19,6 @@ const (
 	errFailedToCreateJWT = "can't find bot id from request source"
 )
 
-var (
-	resolver = &net.Resolver{
-		PreferGo:     true,
-		StrictErrors: false,
-		Dial:         nil,
-	}
-)
-
 // createJWTHandler returns a scanner jwt token with claims [hash] = hash(uri,payload) and [bot] = "bot id"
 func (j *JWTProvider) createJWTHandler(w http.ResponseWriter, req *http.Request) {
 	var msg CreateJWTMessage
