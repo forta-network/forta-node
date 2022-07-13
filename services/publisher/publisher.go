@@ -122,6 +122,14 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		} else {
 			log.Debug("not flushing metrics yet")
 		}
+
+		batch.SlaChecks, flushed = pub.slaChecksAggregator.TryFlush()
+		if flushed {
+			log.Debug("flushed sla checks")
+			pub.lastSLAChecksFlush.Set()
+		} else {
+			log.Debug("not flushing sla checks yet")
+		}
 	}
 
 	// add release info if it's available
