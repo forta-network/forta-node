@@ -26,6 +26,7 @@ const (
 	testNodeNetworkID         = "node-network-id"
 	testNatsNetworkID         = "nats-network-id"
 	testGenericContainerID    = "test-generic-container-id"
+	testSLATrackerContainerID = "test-sla-trackter-container-id"
 	testScannerContainerID    = "test-scanner-container-id"
 	testProxyContainerID      = "test-proxy-container-id"
 	testSupervisorContainerID = "test-supervisor-container-id"
@@ -103,18 +104,41 @@ func (s *Suite) SetupTest() {
 	s.dockerClient.EXPECT().EnsureLocalImage(service.ctx, gomock.Any(), gomock.Any()).Times(2) // needs to get nats and ipfs
 	s.dockerClient.EXPECT().CreatePublicNetwork(service.ctx, gomock.Any()).Return(testNodeNetworkID, nil)
 	s.dockerClient.EXPECT().CreateInternalNetwork(service.ctx, gomock.Any()).Return(testNatsNetworkID, nil) // for nats
-	s.dockerClient.EXPECT().StartContainer(service.ctx, (configMatcher)(clients.DockerContainerConfig{
-		Name: config.DockerIpfsContainerName,
-	})).Return(&clients.DockerContainer{}, nil)
-	s.dockerClient.EXPECT().StartContainer(service.ctx, (configMatcher)(clients.DockerContainerConfig{
-		Name: config.DockerNatsContainerName,
-	})).Return(&clients.DockerContainer{}, nil)
-	s.dockerClient.EXPECT().StartContainer(service.ctx, (configMatcher)(clients.DockerContainerConfig{
-		Name: config.DockerJSONRPCProxyContainerName,
-	})).Return(&clients.DockerContainer{ID: testProxyContainerID}, nil)
-	s.dockerClient.EXPECT().StartContainer(service.ctx, (configMatcher)(clients.DockerContainerConfig{
-		Name: config.DockerScannerContainerName,
-	})).Return(&clients.DockerContainer{ID: testScannerContainerID}, nil)
+	s.dockerClient.EXPECT().StartContainer(
+		service.ctx, (configMatcher)(
+			clients.DockerContainerConfig{
+				Name: config.DockerIpfsContainerName,
+			},
+		),
+	).Return(&clients.DockerContainer{}, nil)
+	s.dockerClient.EXPECT().StartContainer(
+		service.ctx, (configMatcher)(
+			clients.DockerContainerConfig{
+				Name: config.DockerNatsContainerName,
+			},
+		),
+	).Return(&clients.DockerContainer{}, nil)
+	s.dockerClient.EXPECT().StartContainer(
+		service.ctx, (configMatcher)(
+			clients.DockerContainerConfig{
+				Name: config.DockerSLATrackerContainerName,
+			},
+		),
+	).Return(&clients.DockerContainer{ID: testProxyContainerID}, nil)
+	s.dockerClient.EXPECT().StartContainer(
+		service.ctx, (configMatcher)(
+			clients.DockerContainerConfig{
+				Name: config.DockerJSONRPCProxyContainerName,
+			},
+		),
+	).Return(&clients.DockerContainer{ID: testProxyContainerID}, nil)
+	s.dockerClient.EXPECT().StartContainer(
+		service.ctx, (configMatcher)(
+			clients.DockerContainerConfig{
+				Name: config.DockerScannerContainerName,
+			},
+		),
+	).Return(&clients.DockerContainer{ID: testScannerContainerID}, nil)
 	s.dockerClient.EXPECT().HasLocalImage(service.ctx, gomock.Any()).Return(true).AnyTimes()
 	s.globalClient.EXPECT().GetContainerByName(service.ctx, config.DockerSupervisorContainerName).Return(&types.Container{ID: testSupervisorContainerID}, nil).AnyTimes()
 	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testSupervisorContainerID, testNodeNetworkID)
@@ -122,6 +146,8 @@ func (s *Suite) SetupTest() {
 	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerScannerContainerName).Return(&types.Container{ID: testScannerContainerID}, nil).AnyTimes()
 	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerScannerContainerName).Return(&types.Container{ID: testScannerContainerID}, nil).AnyTimes()
 	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testScannerContainerID, testNatsNetworkID)
+	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerSLATrackerContainerName).Return(&types.Container{ID: testSLATrackerContainerID}, nil).AnyTimes()
+	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testSLATrackerContainerID, testNatsNetworkID)
 	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerJSONRPCProxyContainerName).Return(&types.Container{ID: testProxyContainerID}, nil).AnyTimes()
 	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testProxyContainerID, testNatsNetworkID)
 
@@ -135,6 +161,7 @@ func (s *Suite) SetupTest() {
 func (s *Suite) initialContainerCheck() {
 	for _, containerName := range []string{
 		config.DockerScannerContainerName,
+		config.DockerSLATrackerContainerName,
 		config.DockerJSONRPCProxyContainerName,
 		config.DockerNatsContainerName,
 		config.DockerIpfsContainerName,
@@ -186,9 +213,13 @@ func (s *Suite) TestAgentRun() {
 	// agent network, publishes a "running" message.
 	s.agentImageClient.EXPECT().EnsureLocalImage(s.service.ctx, "agent test-agent", agentConfig.Image).Return(nil)
 	s.dockerClient.EXPECT().CreatePublicNetwork(s.service.ctx, testAgentContainerName).Return(testAgentNetworkID, nil)
-	s.dockerClient.EXPECT().StartContainer(s.service.ctx, (configMatcher)(clients.DockerContainerConfig{
-		Name: agentConfig.ContainerName(),
-	})).Return(&clients.DockerContainer{Name: agentConfig.ContainerName(), ID: testAgentContainerID}, nil)
+	s.dockerClient.EXPECT().StartContainer(
+		s.service.ctx, (configMatcher)(
+			clients.DockerContainerConfig{
+				Name: agentConfig.ContainerName(),
+			},
+		),
+	).Return(&clients.DockerContainer{Name: agentConfig.ContainerName(), ID: testAgentContainerID}, nil)
 	s.dockerClient.EXPECT().AttachNetwork(s.service.ctx, testScannerContainerID, testAgentNetworkID)
 	s.dockerClient.EXPECT().AttachNetwork(s.service.ctx, testProxyContainerID, testAgentNetworkID)
 
