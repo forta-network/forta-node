@@ -4,6 +4,7 @@ import (
 	json_rpc "github.com/forta-network/forta-node/cmd/json-rpc"
 	"github.com/forta-network/forta-node/cmd/publisher"
 	"github.com/forta-network/forta-node/cmd/scanner"
+	sla_tracker "github.com/forta-network/forta-node/cmd/sla-tracker"
 	"github.com/forta-network/forta-node/cmd/supervisor"
 	"github.com/forta-network/forta-node/cmd/updater"
 	"github.com/spf13/cobra"
@@ -50,6 +51,13 @@ var (
 		},
 	}
 
+	cmdSLATracker = &cobra.Command{
+		Use: "sla-tracker",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			sla_tracker.Run()
+			return nil
+		},
+	}
 	cmdJsonRpc = &cobra.Command{
 		Use: "json-rpc",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -64,6 +72,7 @@ func init() {
 	cmdFortaNode.AddCommand(cmdSupervisor)
 	cmdFortaNode.AddCommand(cmdScanner)
 	cmdFortaNode.AddCommand(cmdPublisher)
+	cmdFortaNode.AddCommand(cmdSLATracker)
 	cmdFortaNode.AddCommand(cmdJsonRpc)
 }
 
