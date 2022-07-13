@@ -45,14 +45,15 @@ const (
 // Publisher receives, collects and publishes alerts.
 type Publisher struct {
 	protocol.UnimplementedPublisherNodeServer
-	ctx               context.Context
-	cfg               PublisherConfig
-	contract          AlertsContract
-	ipfs              ipfs.Client
-	metricsAggregator *AgentMetricsAggregator
-	messageClient     *messaging.Client
-	alertClient       clients.AlertAPIClient
-	localAlertClient  LocalAlertClient
+	ctx                 context.Context
+	cfg                 PublisherConfig
+	contract            AlertsContract
+	ipfs                ipfs.Client
+	metricsAggregator   *AgentMetricsAggregator
+	slaChecksAggregator *SLAChecksAggregator
+	messageClient       *messaging.Client
+	alertClient         clients.AlertAPIClient
+	localAlertClient    LocalAlertClient
 
 	batchRefStore    store.StringStore
 	lastReceiptStore store.StringStore
@@ -73,6 +74,7 @@ type Publisher struct {
 	lastBatchSkipReason health.MessageTracker
 	lastBatchPublishErr health.ErrorTracker
 	lastMetricsFlush    health.TimeTracker
+	lastSLAChecksFlush  health.TimeTracker
 
 	latestBlockInput   uint64
 	latestBlockInputMu sync.RWMutex
@@ -316,6 +318,7 @@ func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, 
 
 func (pub *Publisher) registerMessageHandlers() {
 	pub.messageClient.Subscribe(messaging.SubjectMetricAgent, messaging.AgentMetricHandler(pub.metricsAggregator.AddAgentMetrics))
+	pub.messageClient.Subscribe(messaging.SubjectMetricSLA, messaging.SLAChecksHandler(pub.slaChecksAggregator.AddSLACheck))
 	pub.messageClient.Subscribe(messaging.SubjectScannerBlock, messaging.ScannerHandler(pub.handleScannerBlock))
 }
 
