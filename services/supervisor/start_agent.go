@@ -1,8 +1,10 @@
 package supervisor
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/messaging"
@@ -15,8 +17,12 @@ var (
 	errAgentAlreadyRunning = errors.New("agent already running")
 )
 
-func (sup *SupervisorService) startAgent(agent config.AgentConfig) error {
-	if err := sup.agentImageClient.EnsureLocalImage(sup.ctx, fmt.Sprintf("agent %s", agent.ID), agent.Image); err != nil {
+const (
+	agentStartTimeout = time.Minute * 2
+)
+
+func (sup *SupervisorService) startAgent(ctx context.Context, agent config.AgentConfig) error {
+	if err := sup.agentImageClient.EnsureLocalImage(ctx, fmt.Sprintf("agent %s", agent.ID), agent.Image); err != nil {
 		return err
 	}
 
@@ -28,7 +34,7 @@ func (sup *SupervisorService) startAgent(agent config.AgentConfig) error {
 		return errAgentAlreadyRunning
 	}
 
-	nwID, err := sup.client.CreatePublicNetwork(sup.ctx, agent.ContainerName())
+	nwID, err := sup.client.CreatePublicNetwork(ctx, agent.ContainerName())
 	if err != nil {
 		return err
 	}
@@ -98,19 +104,23 @@ func (sup *SupervisorService) handleAgentRun(payload messaging.AgentPayload) err
 	}).Infof("handle agent run")
 
 	for _, agent := range payload {
-		err := sup.startAgent(agent)
+		ctx, cancel := context.WithTimeout(sup.ctx, agentStartTimeout)
+		err := sup.startAgent(ctx, agent)
 		if err == errAgentAlreadyRunning {
 			log.Infof("agent container '%s' is already running - skipped", agent.ContainerName())
 			sup.msgClient.Publish(messaging.SubjectAgentsStatusRunning, messaging.AgentPayload{agent})
+			cancel()
 			continue
 		}
 		if err != nil {
 			log.Errorf("failed to start agent: %v", err)
+			cancel()
 			continue
 		}
 
 		// Broadcast the agent status.
 		sup.msgClient.Publish(messaging.SubjectAgentsStatusRunning, messaging.AgentPayload{agent})
+		cancel()
 	}
 	return nil
 }
