@@ -42,30 +42,32 @@ func (sup *SupervisorService) startAgent(ctx context.Context, agent config.Agent
 
 	limits := config.GetAgentResourceLimits(sup.config.Config.ResourcesConfig)
 
-	agentContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
-		Name:           agent.ContainerName(),
-		Image:          agent.Image,
-		NetworkID:      nwID,
-		LinkNetworkIDs: []string{},
-		Env: map[string]string{
-			config.EnvJsonRpcHost:   config.DockerJSONRPCProxyContainerName,
-			config.EnvJsonRpcPort:   config.DefaultJSONRPCProxyPort,
-			config.EnvAgentGrpcPort: agent.GrpcPort(),
+	agentContainer, err := sup.client.StartContainer(
+		ctx, clients.DockerContainerConfig{
+			Name:           agent.ContainerName(),
+			Image:          agent.Image,
+			NetworkID:      nwID,
+			LinkNetworkIDs: []string{},
+			Env: map[string]string{
+				config.EnvJsonRpcHost:   config.DockerJSONRPCProxyContainerName,
+				config.EnvJsonRpcPort:   config.DefaultJSONRPCProxyPort,
+				config.EnvAgentGrpcPort: agent.GrpcPort(),
+			},
+			MaxLogFiles: sup.maxLogFiles,
+			MaxLogSize:  sup.maxLogSize,
+			CPUQuota:    limits.CPUQuota,
+			Memory:      limits.Memory,
+			Labels: map[string]string{
+				clients.DockerLabelFortaSupervisorStrategyVersion: SupervisorStrategyVersion,
+			},
 		},
-		MaxLogFiles: sup.maxLogFiles,
-		MaxLogSize:  sup.maxLogSize,
-		CPUQuota:    limits.CPUQuota,
-		Memory:      limits.Memory,
-		Labels: map[string]string{
-			clients.DockerLabelFortaSupervisorStrategyVersion: SupervisorStrategyVersion,
-		},
-	})
+	)
 	if err != nil {
 		return err
 	}
 	// Attach the scanner and the JSON-RPC proxy to the agent's network.
 	for _, containerID := range []string{sup.scannerContainer.ID, sup.jsonRpcContainer.ID} {
-		err := sup.client.AttachNetwork(sup.ctx, containerID, nwID)
+		err := sup.client.AttachNetwork(ctx, containerID, nwID)
 		if err != nil {
 			return err
 		}
@@ -87,17 +89,26 @@ func (sup *SupervisorService) getContainerUnsafe(name string) (*Container, bool)
 
 func (sup *SupervisorService) addContainerUnsafe(container *clients.DockerContainer, agentConfig ...*config.AgentConfig) {
 	if agentConfig != nil {
-		sup.containers = append(sup.containers, &Container{
-			DockerContainer: *container,
-			IsAgent:         true,
-			AgentConfig:     agentConfig[0],
-		})
+		sup.containers = append(
+			sup.containers, &Container{
+				DockerContainer: *container,
+				IsAgent:         true,
+				AgentConfig:     agentConfig[0],
+			},
+		)
 		return
 	}
 	sup.containers = append(sup.containers, &Container{DockerContainer: *container})
 }
 
 func (sup *SupervisorService) handleAgentRun(payload messaging.AgentPayload) error {
+	startCtx, cancel := context.WithTimeout(sup.ctx, agentStartTimeout)
+	defer cancel()
+
+	return sup.handleAgentRunWithContext(startCtx, payload)
+}
+
+func (sup *SupervisorService) handleAgentRunWithContext(ctx context.Context, payload messaging.AgentPayload) error {
 	sup.lastRun.Set()
 
 	log.WithFields(
@@ -111,7 +122,7 @@ func (sup *SupervisorService) handleAgentRun(payload messaging.AgentPayload) err
 	wg.Add(len(payload))
 
 	for _, agent := range payload {
-		go sup.doStartAgent(sup.ctx, agent, &wg)
+		go sup.doStartAgent(ctx, agent, &wg)
 	}
 
 	wg.Wait()
@@ -123,10 +134,7 @@ func (sup *SupervisorService) handleAgentRun(payload messaging.AgentPayload) err
 func (sup *SupervisorService) doStartAgent(ctx context.Context, agent config.AgentConfig, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	startCtx, cancel := context.WithTimeout(ctx, agentStartTimeout)
-	defer cancel()
-
-	err := sup.startAgent(startCtx, agent)
+	err := sup.startAgent(ctx, agent)
 	if err == errAgentAlreadyRunning {
 		log.Infof("agent container '%s' is already running - skipped", agent.ContainerName())
 		sup.msgClient.Publish(messaging.SubjectAgentsStatusRunning, messaging.AgentPayload{agent})
@@ -140,6 +148,7 @@ func (sup *SupervisorService) doStartAgent(ctx context.Context, agent config.Age
 	// Broadcast the agent status.
 	sup.msgClient.Publish(messaging.SubjectAgentsStatusRunning, messaging.AgentPayload{agent})
 }
+
 func (sup *SupervisorService) handleAgentStop(payload messaging.AgentPayload) error {
 	sup.mu.Lock()
 	defer sup.mu.Unlock()
