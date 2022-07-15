@@ -134,14 +134,16 @@ func (sup *SupervisorService) handleAgentRunWithContext(ctx context.Context, pay
 func (sup *SupervisorService) doStartAgent(ctx context.Context, agent config.AgentConfig, wg *sync.WaitGroup) {
 	defer wg.Done()
 
+	logger := agentLogger(agent)
+
 	err := sup.startAgent(ctx, agent)
 	if err == errAgentAlreadyRunning {
-		log.Infof("agent container '%s' is already running - skipped", agent.ContainerName())
+		logger.Infof("agent container is already running - skipped")
 		sup.msgClient.Publish(messaging.SubjectAgentsStatusRunning, messaging.AgentPayload{agent})
 		return
 	}
 	if err != nil {
-		log.Errorf("failed to start agent: %v", err)
+		logger.WithError(err).Error("failed to start agent")
 		return
 	}
 
@@ -157,15 +159,17 @@ func (sup *SupervisorService) handleAgentStop(payload messaging.AgentPayload) er
 
 	stopped := make(map[string]bool)
 	for _, agentCfg := range payload {
+		logger := agentLogger(agentCfg)
+
 		container, ok := sup.getContainerUnsafe(agentCfg.ContainerName())
 		if !ok {
-			log.Warnf("container for agent '%s' was not found - skipping stop action", agentCfg.ContainerName())
+			logger.Warnf("container for agent was not found - skipping stop action")
 			continue
 		}
 		if err := sup.client.StopContainer(sup.ctx, container.ID); err != nil {
 			return fmt.Errorf("failed to stop container '%s': %v", container.ID, err)
 		}
-		log.Infof("successfully stopped the container: %v", agentCfg.ContainerName())
+		logger.Infof("successfully stopped the container")
 		stopped[container.ID] = true
 	}
 
@@ -188,4 +192,12 @@ func (sup *SupervisorService) handleAgentStop(payload messaging.AgentPayload) er
 func (sup *SupervisorService) registerMessageHandlers() {
 	sup.msgClient.Subscribe(messaging.SubjectAgentsActionRun, messaging.AgentsHandler(sup.handleAgentRun))
 	sup.msgClient.Subscribe(messaging.SubjectAgentsActionStop, messaging.AgentsHandler(sup.handleAgentStop))
+}
+
+func agentLogger(agent config.AgentConfig) *log.Entry {
+	return log.WithFields(
+		log.Fields{
+			"agentId": agent.ID, "image": agent.Image, "containerName": agent.ContainerName(),
+		},
+	)
 }
