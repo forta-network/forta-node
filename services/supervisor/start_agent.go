@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/forta-network/forta-node/clients"
@@ -99,32 +100,46 @@ func (sup *SupervisorService) addContainerUnsafe(container *clients.DockerContai
 func (sup *SupervisorService) handleAgentRun(payload messaging.AgentPayload) error {
 	sup.lastRun.Set()
 
-	log.WithFields(log.Fields{
-		"payload": len(payload),
-	}).Infof("handle agent run")
+	log.WithFields(
+		log.Fields{
+			"payload": len(payload),
+		},
+	).Infof("handle agent run")
+
+	var wg sync.WaitGroup
+
+	wg.Add(len(payload))
 
 	for _, agent := range payload {
-		ctx, cancel := context.WithTimeout(sup.ctx, agentStartTimeout)
-		err := sup.startAgent(ctx, agent)
-		if err == errAgentAlreadyRunning {
-			log.Infof("agent container '%s' is already running - skipped", agent.ContainerName())
-			sup.msgClient.Publish(messaging.SubjectAgentsStatusRunning, messaging.AgentPayload{agent})
-			cancel()
-			continue
-		}
-		if err != nil {
-			log.Errorf("failed to start agent: %v", err)
-			cancel()
-			continue
-		}
-
-		// Broadcast the agent status.
-		sup.msgClient.Publish(messaging.SubjectAgentsStatusRunning, messaging.AgentPayload{agent})
-		cancel()
+		go sup.doStartAgent(sup.ctx, agent, &wg)
 	}
+
+	wg.Wait()
+
 	return nil
 }
 
+// doStartAgent intended to use during multiple agent starts
+func (sup *SupervisorService) doStartAgent(ctx context.Context, agent config.AgentConfig, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	startCtx, cancel := context.WithTimeout(ctx, agentStartTimeout)
+	defer cancel()
+
+	err := sup.startAgent(startCtx, agent)
+	if err == errAgentAlreadyRunning {
+		log.Infof("agent container '%s' is already running - skipped", agent.ContainerName())
+		sup.msgClient.Publish(messaging.SubjectAgentsStatusRunning, messaging.AgentPayload{agent})
+		return
+	}
+	if err != nil {
+		log.Errorf("failed to start agent: %v", err)
+		return
+	}
+
+	// Broadcast the agent status.
+	sup.msgClient.Publish(messaging.SubjectAgentsStatusRunning, messaging.AgentPayload{agent})
+}
 func (sup *SupervisorService) handleAgentStop(payload messaging.AgentPayload) error {
 	sup.mu.Lock()
 	defer sup.mu.Unlock()
