@@ -680,7 +680,12 @@ func (d *dockerClient) EnsureLocalImage(ctx context.Context, name, ref string) e
 			"ref":   ref,
 			"error": err,
 		}).Error("failed to pull image - retrying")
-		<-ticker.C
+		select {
+		case <-ticker.C:
+			// continue
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
 
 	log.Infof("pulled image for '%s': %s", name, ref)
