@@ -19,7 +19,7 @@ var (
 )
 
 const (
-	agentStartTimeout = time.Minute * 2
+	agentStartTimeout = time.Minute * 5
 )
 
 func (sup *SupervisorService) startAgent(ctx context.Context, agent config.AgentConfig) error {
