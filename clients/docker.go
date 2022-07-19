@@ -717,6 +717,9 @@ func (d *dockerClient) GetContainerLogs(ctx context.Context, containerID, tail s
 			continue
 		}
 		prefixEnd := strings.Index(line, "2") // timestamp beginning
+		if prefixEnd < 0 || prefixEnd > len(line) {
+			continue
+		}
 		lines[i] = line[prefixEnd:]
 	}
 	return strings.Join(lines, "\n"), nil
