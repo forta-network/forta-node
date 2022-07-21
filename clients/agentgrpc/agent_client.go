@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-const defaultAgentResponseMaxByteCount = 1000000 // 1M
+const defaultAgentResponseMaxByteCount = 50000 // 50K
 
 // Method is gRPC method type.
 type Method string
