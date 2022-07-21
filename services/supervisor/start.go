@@ -47,11 +47,11 @@ type SupervisorService struct {
 	maxLogSize  string
 	maxLogFiles int
 
-	scannerContainer    *clients.DockerContainer
-	slaTrackerContainer *clients.DockerContainer
-	jsonRpcContainer    *clients.DockerContainer
-	containers          []*Container
-	mu                  sync.RWMutex
+	scannerContainer   *clients.DockerContainer
+	inspectorContainer *clients.DockerContainer
+	jsonRpcContainer   *clients.DockerContainer
+	containers         []*Container
+	mu                 sync.RWMutex
 
 	lastRun                   health.TimeTracker
 	lastStop                  health.TimeTracker
@@ -200,7 +200,7 @@ func (sup *SupervisorService) start() error {
 	}
 	sup.registerMessageHandlers()
 
-	err = sup.startSLATrackerContainer(commonNodeImage, nodeNetworkID)
+	err = sup.startInspectorContainer(commonNodeImage, nodeNetworkID)
 	if err != nil {
 		return err
 	}
@@ -260,7 +260,7 @@ func (sup *SupervisorService) start() error {
 	if err := sup.attachToNetwork(config.DockerScannerContainerName, internalNetworkID); err != nil {
 		return err
 	}
-	if err := sup.attachToNetwork(config.DockerSLATrackerContainerName, internalNetworkID); err != nil {
+	if err := sup.attachToNetwork(config.DockerInspectorContainerName, internalNetworkID); err != nil {
 		return err
 	}
 	if err := sup.attachToNetwork(config.DockerJSONRPCProxyContainerName, internalNetworkID); err != nil {
@@ -313,7 +313,7 @@ func (sup *SupervisorService) removeOldContainers() error {
 	// gather old service containers
 	for _, containerName := range []string{
 		config.DockerScannerContainerName,
-		config.DockerSLATrackerContainerName,
+		config.DockerInspectorContainerName,
 		config.DockerJSONRPCProxyContainerName,
 		config.DockerNatsContainerName,
 		config.DockerIpfsContainerName,
@@ -500,15 +500,14 @@ func (sup *SupervisorService) Health() health.Reports {
 	}
 }
 
-func (sup *SupervisorService) startSLATrackerContainer(commonNodeImage string, nodeNetworkID string) error {
+func (sup *SupervisorService) startInspectorContainer(commonNodeImage string, nodeNetworkID string) error {
 	var err error
-	sup.slaTrackerContainer, err = sup.client.StartContainer(
+	sup.inspectorContainer, err = sup.client.StartContainer(
 		sup.ctx, clients.DockerContainerConfig{
-			Name:  config.DockerSLATrackerContainerName,
-			Image: commonNodeImage,
-			Cmd:   []string{config.DefaultFortaNodeBinaryPath, "sla-tracker"},
-			Volumes: map[string]string{
-			},
+			Name:    config.DockerInspectorContainerName,
+			Image:   commonNodeImage,
+			Cmd:     []string{config.DefaultFortaNodeBinaryPath, "inspector"},
+			Volumes: map[string]string{},
 			Ports: map[string]string{
 				"": config.DefaultHealthPort, // random host port
 			},
@@ -521,7 +520,7 @@ func (sup *SupervisorService) startSLATrackerContainer(commonNodeImage string, n
 	if err != nil {
 		return err
 	}
-	sup.addContainerUnsafe(sup.slaTrackerContainer)
+	sup.addContainerUnsafe(sup.inspectorContainer)
 
 	return nil
 }

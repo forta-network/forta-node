@@ -15,7 +15,7 @@ const (
 	SubjectAgentsStatusStopped  = "agents.status.stopped"
 	SubjectMetricAgent          = "metric.agent"
 	SubjectScannerBlock         = "scanner.block"
-	SubjectMetricSLA            = "metric.sla"
+	SubjectInspectionDone       = "inspection.done"
 )
 
 // AgentPayload is the message payload.

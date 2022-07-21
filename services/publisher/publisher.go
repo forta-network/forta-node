@@ -45,15 +45,14 @@ const (
 // Publisher receives, collects and publishes alerts.
 type Publisher struct {
 	protocol.UnimplementedPublisherNodeServer
-	ctx                 context.Context
-	cfg                 PublisherConfig
-	contract            AlertsContract
-	ipfs                ipfs.Client
-	metricsAggregator   *AgentMetricsAggregator
-	slaChecksAggregator *SLAChecksAggregator
-	messageClient       *messaging.Client
-	alertClient         clients.AlertAPIClient
-	localAlertClient    LocalAlertClient
+	ctx               context.Context
+	cfg               PublisherConfig
+	contract          AlertsContract
+	ipfs              ipfs.Client
+	metricsAggregator *AgentMetricsAggregator
+	messageClient     *messaging.Client
+	alertClient       clients.AlertAPIClient
+	localAlertClient  LocalAlertClient
 
 	batchRefStore    store.StringStore
 	lastReceiptStore store.StringStore
@@ -74,10 +73,12 @@ type Publisher struct {
 	lastBatchSkipReason health.MessageTracker
 	lastBatchPublishErr health.ErrorTracker
 	lastMetricsFlush    health.TimeTracker
-	lastSLAChecksFlush  health.TimeTracker
 
 	latestBlockInput   uint64
 	latestBlockInputMu sync.RWMutex
+
+	latestInspectionResults   *protocol.InspectionResults
+	latestInspectionResultsMu sync.Mutex
 }
 
 // LocalAlertClient sends the local alerts.
@@ -122,15 +123,10 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		} else {
 			log.Debug("not flushing metrics yet")
 		}
-
-		batch.SlaChecks, flushed = pub.slaChecksAggregator.TryFlush()
-		if flushed {
-			log.Debug("flushed sla checks")
-			pub.lastSLAChecksFlush.Set()
-		} else {
-			log.Debug("not flushing sla checks yet")
-		}
 	}
+
+	// always add the latest known results
+	batch.InspectionResults = pub.latestInspectionResults
 
 	// add release info if it's available
 	if pub.cfg.ReleaseSummary != nil {
@@ -326,8 +322,8 @@ func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, 
 
 func (pub *Publisher) registerMessageHandlers() {
 	pub.messageClient.Subscribe(messaging.SubjectMetricAgent, messaging.AgentMetricHandler(pub.metricsAggregator.AddAgentMetrics))
-	pub.messageClient.Subscribe(messaging.SubjectMetricSLA, messaging.SLAChecksHandler(pub.slaChecksAggregator.AddSLACheck))
 	pub.messageClient.Subscribe(messaging.SubjectScannerBlock, messaging.ScannerHandler(pub.handleScannerBlock))
+	pub.messageClient.Subscribe(messaging.SubjectInspectionDone, messaging.InspectionResultsHandler(pub.handleInspectionResults))
 }
 
 func (pub *Publisher) handleScannerBlock(payload messaging.ScannerPayload) error {
@@ -344,6 +340,14 @@ func (pub *Publisher) handleScannerBlock(payload messaging.ScannerPayload) error
 	}
 	logger.Info("received scanner update")
 	pub.latestBlockInput = payload.LatestBlockInput
+	return nil
+}
+
+func (pub *Publisher) handleInspectionResults(payload *protocol.InspectionResults) error {
+	pub.latestInspectionResultsMu.Lock()
+	defer pub.latestInspectionResultsMu.Unlock()
+
+	pub.latestInspectionResults = payload
 	return nil
 }
 
