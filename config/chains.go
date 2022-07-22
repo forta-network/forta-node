@@ -7,50 +7,69 @@ var defaultRateLimiting = &RateLimitConfig{
 	Burst: 50, // 100,
 }
 
+const defaultInspectionInterval = 100
+
 // ChainSettings contains chain-specific settings.
 type ChainSettings struct {
 	Name                string
 	ChainID             int
+	EnableTrace         bool
 	Offset              int
 	JsonRpcRateLimiting *RateLimitConfig
+	InspectionInterval  int // in block number
 }
 
 var allChainSettings = []ChainSettings{
 	{
 		Name:                "Ethereum Mainnet",
 		ChainID:             1,
+		EnableTrace:         true,
 		Offset:              defaultBlockOffset,
 		JsonRpcRateLimiting: defaultRateLimiting,
+		InspectionInterval:  50,
 	},
 	{
 		Name:                "BSC",
 		ChainID:             56,
 		Offset:              defaultBlockOffset,
 		JsonRpcRateLimiting: defaultRateLimiting,
+		InspectionInterval:  250,
 	},
 	{
 		Name:                "Polygon",
 		ChainID:             137,
 		Offset:              defaultBlockOffset,
 		JsonRpcRateLimiting: defaultRateLimiting,
+		InspectionInterval:  350,
 	},
 	{
 		Name:                "Avalanche",
 		ChainID:             43114,
 		Offset:              defaultBlockOffset,
 		JsonRpcRateLimiting: defaultRateLimiting,
+		InspectionInterval:  1000,
 	},
 	{
 		Name:                "Arbitrum",
 		ChainID:             42161,
 		Offset:              defaultBlockOffset,
 		JsonRpcRateLimiting: defaultRateLimiting,
+		InspectionInterval:  1000,
 	},
 	{
 		Name:                "Optimism",
 		ChainID:             10,
 		Offset:              defaultBlockOffset,
 		JsonRpcRateLimiting: defaultRateLimiting,
+		InspectionInterval:  5000,
+	},
+	{
+		Name:                "Fantom",
+		ChainID:             250,
+		EnableTrace:         true,
+		Offset:              defaultBlockOffset,
+		JsonRpcRateLimiting: defaultRateLimiting,
+		InspectionInterval:  1000,
 	},
 }
 
@@ -66,6 +85,7 @@ func GetChainSettings(chainID int) *ChainSettings {
 		ChainID:             chainID,
 		Offset:              defaultBlockOffset,
 		JsonRpcRateLimiting: defaultRateLimiting,
+		InspectionInterval:  defaultInspectionInterval,
 	}
 }
 
