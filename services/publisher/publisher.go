@@ -78,7 +78,7 @@ type Publisher struct {
 	latestBlockInputMu sync.RWMutex
 
 	latestInspectionResults   *protocol.InspectionResults
-	latestInspectionResultsMu sync.Mutex
+	latestInspectionResultsMu sync.RWMutex
 }
 
 // LocalAlertClient sends the local alerts.
@@ -126,7 +126,9 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 	}
 
 	// always add the latest known results
+	pub.latestInspectionResultsMu.RLock()
 	batch.InspectionResults = pub.latestInspectionResults
+	pub.latestInspectionResultsMu.RUnlock()
 
 	// add release info if it's available
 	if pub.cfg.ReleaseSummary != nil {
