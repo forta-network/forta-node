@@ -26,6 +26,7 @@ const (
 	testNodeNetworkID         = "node-network-id"
 	testNatsNetworkID         = "nats-network-id"
 	testGenericContainerID    = "test-generic-container-id"
+	testInspectorContainerID  = "test-inspector-container-id"
 	testScannerContainerID    = "test-scanner-container-id"
 	testProxyContainerID      = "test-proxy-container-id"
 	testSupervisorContainerID = "test-supervisor-container-id"
@@ -120,6 +121,13 @@ func (s *Suite) SetupTest() {
 	s.dockerClient.EXPECT().StartContainer(
 		service.ctx, (configMatcher)(
 			clients.DockerContainerConfig{
+				Name: config.DockerInspectorContainerName,
+			},
+		),
+	).Return(&clients.DockerContainer{ID: testProxyContainerID}, nil)
+	s.dockerClient.EXPECT().StartContainer(
+		service.ctx, (configMatcher)(
+			clients.DockerContainerConfig{
 				Name: config.DockerJSONRPCProxyContainerName,
 			},
 		),
@@ -138,6 +146,8 @@ func (s *Suite) SetupTest() {
 	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerScannerContainerName).Return(&types.Container{ID: testScannerContainerID}, nil).AnyTimes()
 	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerScannerContainerName).Return(&types.Container{ID: testScannerContainerID}, nil).AnyTimes()
 	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testScannerContainerID, testNatsNetworkID)
+	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerInspectorContainerName).Return(&types.Container{ID: testInspectorContainerID}, nil).AnyTimes()
+	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testInspectorContainerID, testNatsNetworkID)
 	s.dockerClient.EXPECT().GetContainerByName(service.ctx, config.DockerJSONRPCProxyContainerName).Return(&types.Container{ID: testProxyContainerID}, nil).AnyTimes()
 	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testProxyContainerID, testNatsNetworkID)
 
@@ -151,6 +161,7 @@ func (s *Suite) SetupTest() {
 func (s *Suite) initialContainerCheck() {
 	for _, containerName := range []string{
 		config.DockerScannerContainerName,
+		config.DockerInspectorContainerName,
 		config.DockerJSONRPCProxyContainerName,
 		config.DockerNatsContainerName,
 		config.DockerIpfsContainerName,
@@ -213,6 +224,7 @@ func (s *Suite) TestAgentRun() {
 			},
 		),
 	).Return(&clients.DockerContainer{Name: agentConfig.ContainerName(), ID: testAgentContainerID}, nil)
+
 	s.dockerClient.EXPECT().AttachNetwork(ctx, testScannerContainerID, testAgentNetworkID)
 	s.dockerClient.EXPECT().AttachNetwork(ctx, testProxyContainerID, testAgentNetworkID)
 
