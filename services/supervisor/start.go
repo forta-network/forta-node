@@ -200,10 +200,27 @@ func (sup *SupervisorService) start() error {
 	}
 	sup.registerMessageHandlers()
 
-	err = sup.startInspectorContainer(commonNodeImage, nodeNetworkID)
+	sup.inspectorContainer, err = sup.client.StartContainer(
+		sup.ctx, clients.DockerContainerConfig{
+			Name:  config.DockerInspectorContainerName,
+			Image: commonNodeImage,
+			Cmd:   []string{config.DefaultFortaNodeBinaryPath, "inspector"},
+			Volumes: map[string]string{
+				hostFortaDir: config.DefaultContainerFortaDirPath,
+			},
+			Ports: map[string]string{
+				"": config.DefaultHealthPort, // random host port
+			},
+			DialHost:    true,
+			NetworkID:   nodeNetworkID,
+			MaxLogFiles: sup.maxLogFiles,
+			MaxLogSize:  sup.maxLogSize,
+		},
+	)
 	if err != nil {
 		return err
 	}
+	sup.addContainerUnsafe(sup.inspectorContainer)
 
 	sup.jsonRpcContainer, err = sup.client.StartContainer(
 		sup.ctx, clients.DockerContainerConfig{
@@ -498,31 +515,6 @@ func (sup *SupervisorService) Health() health.Reports {
 		sup.lastAgentLogsRequest.GetReport("event.agent-logs-sync.time"),
 		sup.lastAgentLogsRequestError.GetReport("event.agent-logs-sync.error"),
 	}
-}
-
-func (sup *SupervisorService) startInspectorContainer(commonNodeImage string, nodeNetworkID string) error {
-	var err error
-	sup.inspectorContainer, err = sup.client.StartContainer(
-		sup.ctx, clients.DockerContainerConfig{
-			Name:    config.DockerInspectorContainerName,
-			Image:   commonNodeImage,
-			Cmd:     []string{config.DefaultFortaNodeBinaryPath, "inspector"},
-			Volumes: map[string]string{},
-			Ports: map[string]string{
-				"": config.DefaultHealthPort, // random host port
-			},
-			DialHost:    true,
-			NetworkID:   nodeNetworkID,
-			MaxLogFiles: sup.maxLogFiles,
-			MaxLogSize:  sup.maxLogSize,
-		},
-	)
-	if err != nil {
-		return err
-	}
-	sup.addContainerUnsafe(sup.inspectorContainer)
-
-	return nil
 }
 
 func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*SupervisorService, error) {
