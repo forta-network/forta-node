@@ -2,6 +2,7 @@ package inspector
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/forta-network/forta-core-go/clients/health"
@@ -33,14 +34,24 @@ type InspectorConfig struct {
 }
 
 func (ins *Inspector) Start() error {
-	for {
-		select {
-		case <-ins.ctx.Done():
-			return nil
-		case blockNum := <-ins.inspectCh:
-			ins.inspectionWorker(ins.ctx, blockNum)
-		}
+	if ins.cfg.Config.LocalModeConfig.Enable && !ins.cfg.Config.LocalModeConfig.EnableInspection {
+		log.Warn("inspection is disabled - please enable it from the local mode config if you need it")
+		return nil
 	}
+
+	ins.registerMessageHandlers()
+
+	go func() {
+		for {
+			select {
+			case <-ins.ctx.Done():
+				return
+			case blockNum := <-ins.inspectCh:
+				ins.inspectionWorker(ins.ctx, blockNum)
+			}
+		}
+	}()
+	return nil
 }
 
 func (ins *Inspector) inspectionWorker(ctx context.Context, blockNum uint64) {
@@ -54,6 +65,8 @@ func (ins *Inspector) inspectionWorker(ctx context.Context, blockNum uint64) {
 	if err != nil {
 		log.WithError(err).Warn("error(s) during inspection")
 	}
+	b, _ := json.Marshal(results)
+	log.WithField("results", string(b)).Info("inspection done")
 
 	ins.msgClient.PublishProto(messaging.SubjectInspectionDone, results.ToProto())
 	return
@@ -64,7 +77,8 @@ func (ins *Inspector) registerMessageHandlers() {
 }
 
 func (ins *Inspector) handleScannerBlock(payload messaging.ScannerPayload) error {
-	if payload.LatestBlockInput%uint64(ins.inspectEvery) == 0 {
+	if payload.LatestBlockInput > 0 && payload.LatestBlockInput%uint64(ins.inspectEvery) == 0 {
+		log.WithField("blockNumber", payload.LatestBlockInput).Info("triggering inspection")
 		ins.inspectCh <- payload.LatestBlockInput
 	}
 	return nil
@@ -87,13 +101,18 @@ func (ins *Inspector) Health() health.Reports {
 
 func NewInspector(ctx context.Context, cfg InspectorConfig) (*Inspector, error) {
 	msgClient := messaging.NewClient("inspector", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
+
 	chainSettings := config.GetChainSettings(cfg.Config.ChainID)
+	inspectionInterval := chainSettings.InspectionInterval
+	if cfg.Config.InspectionConfig.BlockInterval != nil {
+		inspectionInterval = *cfg.Config.InspectionConfig.BlockInterval
+	}
 
 	return &Inspector{
 		ctx:          ctx,
 		msgClient:    msgClient,
 		cfg:          cfg,
-		inspectEvery: chainSettings.InspectionInterval,
+		inspectEvery: inspectionInterval,
 		inspectTrace: chainSettings.EnableTrace,
 		inspectCh:    make(chan uint64),
 	}, nil

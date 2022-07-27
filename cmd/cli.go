@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/creasty/defaults"
+	"github.com/sirupsen/logrus"
 
 	"github.com/forta-network/forta-node/config"
 	"gopkg.in/yaml.v3"
@@ -221,7 +222,9 @@ func initConfig() {
 
 	configPath := path.Join(fortaDir, config.DefaultConfigFileName)
 	configBytes, _ := ioutil.ReadFile(configPath)
-	yaml.Unmarshal(configBytes, &cfg)
+	if err := yaml.Unmarshal(configBytes, &cfg); err != nil {
+		logrus.WithError(err).Fatal("failed to read config")
+	}
 
 	if err := defaults.Set(&cfg); err != nil {
 		panic(err)
