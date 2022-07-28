@@ -1,8 +1,11 @@
 package supervisor
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"sync"
+	"time"
 
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/messaging"
@@ -15,8 +18,12 @@ var (
 	errAgentAlreadyRunning = errors.New("agent already running")
 )
 
-func (sup *SupervisorService) startAgent(agent config.AgentConfig) error {
-	if err := sup.agentImageClient.EnsureLocalImage(sup.ctx, fmt.Sprintf("agent %s", agent.ID), agent.Image); err != nil {
+const (
+	agentStartTimeout = time.Minute * 5
+)
+
+func (sup *SupervisorService) startAgent(ctx context.Context, agent config.AgentConfig) error {
+	if err := sup.agentImageClient.EnsureLocalImage(ctx, fmt.Sprintf("agent %s", agent.ID), agent.Image); err != nil {
 		return err
 	}
 
@@ -28,7 +35,7 @@ func (sup *SupervisorService) startAgent(agent config.AgentConfig) error {
 		return errAgentAlreadyRunning
 	}
 
-	nwID, err := sup.client.CreatePublicNetwork(sup.ctx, agent.ContainerName())
+	nwID, err := sup.client.CreatePublicNetwork(ctx, agent.ContainerName())
 	if err != nil {
 		return err
 	}
@@ -88,39 +95,66 @@ func (sup *SupervisorService) getContainerUnsafe(name string) (*Container, bool)
 
 func (sup *SupervisorService) addContainerUnsafe(container *clients.DockerContainer, agentConfig ...*config.AgentConfig) {
 	if agentConfig != nil {
-		sup.containers = append(sup.containers, &Container{
-			DockerContainer: *container,
-			IsAgent:         true,
-			AgentConfig:     agentConfig[0],
-		})
+		sup.containers = append(
+			sup.containers, &Container{
+				DockerContainer: *container,
+				IsAgent:         true,
+				AgentConfig:     agentConfig[0],
+			},
+		)
 		return
 	}
 	sup.containers = append(sup.containers, &Container{DockerContainer: *container})
 }
 
 func (sup *SupervisorService) handleAgentRun(payload messaging.AgentPayload) error {
+	startCtx, cancel := context.WithTimeout(sup.ctx, agentStartTimeout)
+	defer cancel()
+
+	return sup.handleAgentRunWithContext(startCtx, payload)
+}
+
+func (sup *SupervisorService) handleAgentRunWithContext(ctx context.Context, payload messaging.AgentPayload) error {
 	sup.lastRun.Set()
 
-	log.WithFields(log.Fields{
-		"payload": len(payload),
-	}).Infof("handle agent run")
+	log.WithFields(
+		log.Fields{
+			"payload": len(payload),
+		},
+	).Infof("handle agent run")
+
+	var wg sync.WaitGroup
+
+	wg.Add(len(payload))
 
 	for _, agent := range payload {
-		err := sup.startAgent(agent)
-		if err == errAgentAlreadyRunning {
-			log.Infof("agent container '%s' is already running - skipped", agent.ContainerName())
-			sup.msgClient.Publish(messaging.SubjectAgentsStatusRunning, messaging.AgentPayload{agent})
-			continue
-		}
-		if err != nil {
-			log.Errorf("failed to start agent: %v", err)
-			continue
-		}
-
-		// Broadcast the agent status.
-		sup.msgClient.Publish(messaging.SubjectAgentsStatusRunning, messaging.AgentPayload{agent})
+		go sup.doStartAgent(ctx, agent, &wg)
 	}
+
+	wg.Wait()
+
 	return nil
+}
+
+// doStartAgent intended to use during multiple agent starts
+func (sup *SupervisorService) doStartAgent(ctx context.Context, agent config.AgentConfig, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	logger := agentLogger(agent)
+
+	err := sup.startAgent(ctx, agent)
+	if err == errAgentAlreadyRunning {
+		logger.Infof("agent container is already running - skipped")
+		sup.msgClient.Publish(messaging.SubjectAgentsStatusRunning, messaging.AgentPayload{agent})
+		return
+	}
+	if err != nil {
+		logger.WithError(err).Error("failed to start agent")
+		return
+	}
+
+	// Broadcast the agent status.
+	sup.msgClient.Publish(messaging.SubjectAgentsStatusRunning, messaging.AgentPayload{agent})
 }
 
 func (sup *SupervisorService) handleAgentStop(payload messaging.AgentPayload) error {
@@ -131,15 +165,17 @@ func (sup *SupervisorService) handleAgentStop(payload messaging.AgentPayload) er
 
 	stopped := make(map[string]bool)
 	for _, agentCfg := range payload {
+		logger := agentLogger(agentCfg)
+
 		container, ok := sup.getContainerUnsafe(agentCfg.ContainerName())
 		if !ok {
-			log.Warnf("container for agent '%s' was not found - skipping stop action", agentCfg.ContainerName())
+			logger.Warnf("container for agent was not found - skipping stop action")
 			continue
 		}
 		if err := sup.client.StopContainer(sup.ctx, container.ID); err != nil {
 			return fmt.Errorf("failed to stop container '%s': %v", container.ID, err)
 		}
-		log.Infof("successfully stopped the container: %v", agentCfg.ContainerName())
+		logger.Infof("successfully stopped the container")
 		stopped[container.ID] = true
 	}
 
@@ -162,4 +198,12 @@ func (sup *SupervisorService) handleAgentStop(payload messaging.AgentPayload) er
 func (sup *SupervisorService) registerMessageHandlers() {
 	sup.msgClient.Subscribe(messaging.SubjectAgentsActionRun, messaging.AgentsHandler(sup.handleAgentRun))
 	sup.msgClient.Subscribe(messaging.SubjectAgentsActionStop, messaging.AgentsHandler(sup.handleAgentStop))
+}
+
+func agentLogger(agent config.AgentConfig) *log.Entry {
+	return log.WithFields(
+		log.Fields{
+			"agentId": agent.ID, "image": agent.Image, "containerName": agent.ContainerName(),
+		},
+	)
 }

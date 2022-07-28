@@ -51,9 +51,12 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 		rateLimit = time.NewTicker(time.Duration(cfg.Scan.BlockRateLimit) * time.Millisecond)
 	}
 
-	var maxAge time.Duration
-	if cfg.Scan.BlockMaxAgeSeconds > 0 {
-		maxAge = time.Duration(cfg.Scan.BlockMaxAgeSeconds) * time.Second
+	var maxAgePtr *time.Duration
+	// support scanning old block ranges in local mode
+	hasLocalModeBlockRange := cfg.LocalModeConfig.Enable && cfg.LocalModeConfig.RuntimeLimits.StopBlock > 0
+	if !hasLocalModeBlockRange && cfg.Scan.BlockMaxAgeSeconds > 0 {
+		maxAge := time.Duration(cfg.Scan.BlockMaxAgeSeconds) * time.Second
+		maxAgePtr = &maxAge
 	}
 
 	var (
@@ -74,7 +77,7 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 		ChainID:             chainID,
 		Tracing:             cfg.Trace.Enabled,
 		RateLimit:           rateLimit,
-		SkipBlocksOlderThan: &maxAge,
+		SkipBlocksOlderThan: maxAgePtr,
 		Offset:              config.GetBlockOffset(cfg.ChainID),
 		Start:               startBlock,
 		End:                 stopBlock,
@@ -94,13 +97,17 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 			return
 		}
 		log.Info("end block reached - triggering exit")
-		services.TriggerExit()
+		var delay time.Duration
+		if cfg.LocalModeConfig.Enable {
+			delay = time.Duration(cfg.LocalModeConfig.RuntimeLimits.StopTimeoutSeconds) * time.Second
+		}
+		services.TriggerExit(delay)
 	}()
 
 	txStream, err := scanner.NewTxStreamService(ctx, ethClient, blockFeed, scanner.TxStreamServiceConfig{
 		JsonRpcConfig:       cfg.Scan.JsonRpc,
 		TraceJsonRpcConfig:  cfg.Trace.JsonRpc,
-		SkipBlocksOlderThan: &maxAge,
+		SkipBlocksOlderThan: maxAgePtr,
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create the tx stream service: %v", err)
