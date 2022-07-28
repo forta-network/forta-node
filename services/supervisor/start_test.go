@@ -240,7 +240,7 @@ func (s *Suite) TestAgentRun() {
 	s.dockerClient.EXPECT().AttachNetwork(ctx, testScannerContainerID, testAgentNetworkID)
 	s.dockerClient.EXPECT().AttachNetwork(ctx, testProxyContainerID, testAgentNetworkID)
 
-	s.dockerClient.EXPECT().AttachNetwork(s.service.ctx, testJWTProviderContainerID, testAgentNetworkID)
+	s.dockerClient.EXPECT().AttachNetwork(ctx, testJWTProviderContainerID, testAgentNetworkID)
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusRunning, agentPayload)
 
 	s.r.NoError(s.service.handleAgentRunWithContext(ctx, agentPayload))

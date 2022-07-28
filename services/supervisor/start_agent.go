@@ -39,11 +39,11 @@ func (sup *SupervisorService) startAgent(ctx context.Context, agent config.Agent
 	if err != nil {
 		return err
 	}
-	
+
 	limits := config.GetAgentResourceLimits(sup.config.Config.ResourcesConfig)
-	
+
 	agentContainer, err := sup.client.StartContainer(
-		sup.ctx, clients.DockerContainerConfig{
+		ctx, clients.DockerContainerConfig{
 			Name:           agent.ContainerName(),
 			Image:          agent.Image,
 			NetworkID:      nwID,
@@ -73,14 +73,14 @@ func (sup *SupervisorService) startAgent(ctx context.Context, agent config.Agent
 		sup.scannerContainer.ID, sup.jsonRpcContainer.ID,
 		sup.jwtProviderContainer.ID,
 	} {
-		err := sup.client.AttachNetwork(sup.ctx, containerID, nwID)
+		err := sup.client.AttachNetwork(ctx, containerID, nwID)
 		if err != nil {
 			return err
 		}
 	}
-	
+
 	sup.addContainerUnsafe(agentContainer, &agent)
-	
+
 	return nil
 }
 
