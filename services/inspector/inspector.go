@@ -79,7 +79,9 @@ func (ins *Inspector) registerMessageHandlers() {
 
 func (ins *Inspector) handleScannerBlock(payload messaging.ScannerPayload) error {
 	if payload.LatestBlockInput > 0 && payload.LatestBlockInput%uint64(ins.inspectEvery) == 0 {
-		log.WithField("blockNumber", payload.LatestBlockInput).Info("triggering inspection")
+		// inspect from N blocks back to avoid synchronizations issues
+		inspectionBlockNum := payload.LatestBlockInput - uint64(ins.inspectEvery)
+		log.WithField("blockNumber", inspectionBlockNum).Info("triggering inspection")
 		ins.inspectCh <- payload.LatestBlockInput
 	}
 	return nil
