@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
+	"github.com/cenkalti/backoff"
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/inspect"
 	"github.com/forta-network/forta-core-go/protocol/transform"
@@ -48,14 +50,27 @@ func (ins *Inspector) Start() error {
 			case <-ins.ctx.Done():
 				return
 			case blockNum := <-ins.inspectCh:
-				ins.inspectionWorker(ins.ctx, blockNum)
+				inspectBackoff := backoff.NewExponentialBackOff()
+				inspectBackoff.InitialInterval = time.Second * 3
+				inspectBackoff.MaxInterval = time.Second * 30
+				inspectBackoff.MaxElapsedTime = time.Minute * 5
+				if err := backoff.Retry(func() error {
+					ctx, cancel := context.WithTimeout(ins.ctx, time.Minute*2)
+					defer cancel()
+					return ins.runInspection(ctx, blockNum)
+				}, inspectBackoff); err != nil {
+					log.WithFields(log.Fields{
+						"error":             err,
+						"inspectingAtBlock": blockNum,
+					}).Error("finally failed to complete inspection")
+				}
 			}
 		}
 	}()
 	return nil
 }
 
-func (ins *Inspector) inspectionWorker(ctx context.Context, blockNum uint64) {
+func (ins *Inspector) runInspection(ctx context.Context, blockNum uint64) error {
 	results, err := inspect.Inspect(ctx, inspect.InspectionConfig{
 		ScanAPIURL:  ins.cfg.Config.Scan.JsonRpc.Url,
 		ProxyAPIURL: fmt.Sprintf("http://%s:%s", ins.cfg.ProxyHost, ins.cfg.ProxyPort),
@@ -63,14 +78,15 @@ func (ins *Inspector) inspectionWorker(ctx context.Context, blockNum uint64) {
 		BlockNumber: blockNum,
 		CheckTrace:  ins.inspectTrace,
 	})
-	if err != nil {
-		log.WithError(err).Warn("error(s) during inspection")
-	}
 	b, _ := json.Marshal(results)
 	log.WithField("results", string(b)).Info("inspection done")
+	if err != nil {
+		log.WithError(err).Warn("error(s) during inspection")
+		return err
+	}
 
 	ins.msgClient.PublishProto(messaging.SubjectInspectionDone, transform.ToProtoInspectionResults(results))
-	return
+	return nil
 }
 
 func (ins *Inspector) registerMessageHandlers() {
@@ -79,8 +95,20 @@ func (ins *Inspector) registerMessageHandlers() {
 
 func (ins *Inspector) handleScannerBlock(payload messaging.ScannerPayload) error {
 	if payload.LatestBlockInput > 0 && payload.LatestBlockInput%uint64(ins.inspectEvery) == 0 {
-		log.WithField("blockNumber", payload.LatestBlockInput).Info("triggering inspection")
-		ins.inspectCh <- payload.LatestBlockInput
+		// inspect from N blocks back to avoid synchronizations issues
+		inspectionBlockNum := payload.LatestBlockInput - uint64(ins.inspectEvery)
+		logger := log.WithFields(log.Fields{
+			"triggeredAtBlock":  payload.LatestBlockInput,
+			"inspectingAtBlock": inspectionBlockNum,
+		})
+		logger.Info("triggering inspection")
+		// non-blocking insert
+		select {
+		case ins.inspectCh <- payload.LatestBlockInput:
+			logger.Info("successfully triggered new inspection")
+		default:
+			logger.Info("failed to trigger new inspection: already busy")
+		}
 	}
 	return nil
 }
@@ -109,12 +137,14 @@ func NewInspector(ctx context.Context, cfg InspectorConfig) (*Inspector, error) 
 		inspectionInterval = *cfg.Config.InspectionConfig.BlockInterval
 	}
 
+	inspect.DownloadTestSavingMode = cfg.Config.InspectionConfig.NetworkSavingMode
+
 	return &Inspector{
 		ctx:          ctx,
 		msgClient:    msgClient,
 		cfg:          cfg,
 		inspectEvery: inspectionInterval,
 		inspectTrace: chainSettings.EnableTrace,
-		inspectCh:    make(chan uint64),
+		inspectCh:    make(chan uint64, 1), // let it tolerate being late on one block inspection
 	}, nil
 }
