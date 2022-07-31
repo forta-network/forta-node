@@ -7,6 +7,7 @@ import (
 
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/inspect"
+	"github.com/forta-network/forta-core-go/protocol/transform"
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/config"
@@ -68,7 +69,7 @@ func (ins *Inspector) inspectionWorker(ctx context.Context, blockNum uint64) {
 	b, _ := json.Marshal(results)
 	log.WithField("results", string(b)).Info("inspection done")
 
-	ins.msgClient.PublishProto(messaging.SubjectInspectionDone, results.ToProto())
+	ins.msgClient.PublishProto(messaging.SubjectInspectionDone, transform.ToProtoInspectionResults(results))
 	return
 }
 
