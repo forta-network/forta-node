@@ -104,7 +104,7 @@ func (ins *Inspector) handleScannerBlock(payload messaging.ScannerPayload) error
 		logger.Info("triggering inspection")
 		// non-blocking insert
 		select {
-		case ins.inspectCh <- payload.LatestBlockInput:
+		case ins.inspectCh <- inspectionBlockNum:
 			logger.Info("successfully triggered new inspection")
 		default:
 			logger.Info("failed to trigger new inspection: already busy")
