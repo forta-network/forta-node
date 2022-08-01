@@ -115,7 +115,7 @@ func (updater *UpdaterService) Start() error {
 				updater.stopServer()
 				return
 			case <-t.C:
-				err := updater.updateLatestReleaseWithDelay(updater.updateCheckInterval)
+				err := updater.updateLatestReleaseWithDelay(updater.updateDelay)
 				updater.lastErr.Set(err)
 				updater.lastChecked.Set()
 				if err != nil {
@@ -134,20 +134,29 @@ func (updater *UpdaterService) updateLatestRelease() error {
 }
 
 func (updater *UpdaterService) updateLatestReleaseWithDelay(delay time.Duration) error {
-	if updater.developmentMode {
-		return updater.readLocalReleaseManifest()
-	}
-
 	log.Info("updating latest release")
 
-	ref, rm, err := updater.getNewerRelease(updater.latestReference)
+	updater.mu.RLock()
+	latestReference := updater.latestReference
+	updater.mu.RUnlock()
+
+	var (
+		releaseRef      string
+		releaseManifest *release.ReleaseManifest
+		err             error
+	)
+	if updater.developmentMode {
+		releaseRef, releaseManifest, err = updater.readLocalRelease(latestReference)
+	} else {
+		releaseRef, releaseManifest, err = updater.fetchNewerRelease(latestReference)
+	}
 	switch err {
 	case nil:
 		// we downloaded new release info successfully
 
 	case errNotAvailable:
 		log.WithFields(log.Fields{
-			"release": ref,
+			"release": releaseRef,
 		}).Info("no change to release")
 		return nil
 
@@ -158,10 +167,10 @@ func (updater *UpdaterService) updateLatestReleaseWithDelay(delay time.Duration)
 	// so that all scanners don't update simultaneously, this waits a period of time
 	if delay > 0 {
 		log.WithFields(log.Fields{
-			"release": ref, "delay": delay,
+			"release": releaseRef, "delay": delay,
 		}).Info("delaying update")
 
-		if foundNew := updater.checkNewerReleaseAndWait(ref, delay); foundNew {
+		if foundNew := updater.checkNewerReleaseAndWait(releaseRef, delay); foundNew {
 			log.Info("detected newer release while delaying current update - aborting")
 			return nil
 		}
@@ -169,21 +178,21 @@ func (updater *UpdaterService) updateLatestReleaseWithDelay(delay time.Duration)
 		log.Info("successfully waited before version update")
 	}
 
-	updater.latestVersion.Set(rm.Release.Version)
+	updater.latestVersion.Set(releaseManifest.Release.Version)
 	updater.latestIsPrerelease.Set(strconv.FormatBool(updater.trackPrereleases))
 
 	updater.mu.Lock()
 	defer updater.mu.Unlock()
-	updater.latestRelease = rm
-	updater.latestReference = ref
+	updater.latestRelease = releaseManifest
+	updater.latestReference = releaseRef
 	log.WithFields(log.Fields{
-		"release": ref,
+		"release": releaseRef,
 	}).Info("updating to release")
 
 	return nil
 }
 
-func (updater *UpdaterService) getNewerRelease(previousRef string) (string, *release.ReleaseManifest, error) {
+func (updater *UpdaterService) fetchNewerRelease(previousRef string) (string, *release.ReleaseManifest, error) {
 	ref, err := updater.compareScannerNodeVersion(previousRef)
 	if err != nil {
 		return ref, nil, err
@@ -197,6 +206,11 @@ func (updater *UpdaterService) getNewerRelease(previousRef string) (string, *rel
 }
 
 func (updater *UpdaterService) compareScannerNodeVersion(previousRef string) (newRef string, err error) {
+	if updater.developmentMode {
+		newRef, _, err = updater.readLocalRelease(previousRef)
+		return
+	}
+
 	var ref string
 	if updater.trackPrereleases {
 		ref, err = updater.registryClient.GetScannerNodePrereleaseVersion()
@@ -215,7 +229,6 @@ func (updater *UpdaterService) compareScannerNodeVersion(previousRef string) (ne
 
 func (updater *UpdaterService) checkNewerReleaseAndWait(previousRef string, delay time.Duration) (foundNew bool) {
 	detectedCh := make(chan struct{})
-	defer close(detectedCh)
 
 	ctx, cancel := context.WithCancel(updater.ctx)
 	defer cancel()
@@ -246,22 +259,22 @@ func (updater *UpdaterService) detectNewerRelease(ctx context.Context, previousR
 	}
 }
 
-func (updater *UpdaterService) readLocalReleaseManifest() error {
-	b, err := ioutil.ReadFile(path.Join(config.DefaultContainerFortaDirPath, "test-release.json"))
+func (updater *UpdaterService) readLocalRelease(previousRef string) (string, *release.ReleaseManifest, error) {
+	b, err := ioutil.ReadFile(path.Join(config.DefaultContainerFortaDirPath, "local-release.json"))
 	if err != nil {
 		log.WithError(err).Info("could not read the test release manifest file - ignoring error")
-		return nil
+		return "", nil, err
 	}
 	var release release.ReleaseManifest
 	if err := json.Unmarshal(b, &release); err != nil {
 		log.WithError(err).Info("could not unmarshal the test release manifest - ignoring error")
-		return nil
+		return "", nil, err
 	}
-	updater.mu.Lock()
-	defer updater.mu.Unlock()
-	updater.latestReference = "test-release.json"
-	updater.latestRelease = &release
-	return nil
+	currentRef := release.Release.Commit // use commit as ref (dev mode hack)
+	if currentRef == previousRef {
+		return currentRef, nil, errNotAvailable
+	}
+	return currentRef, &release, nil
 }
 
 // Name returns the name of the service.
