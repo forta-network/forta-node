@@ -16,14 +16,10 @@ import (
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-node/config"
 	jwt_provider "github.com/forta-network/forta-node/services/jwt-provider"
+	"github.com/forta-network/forta-node/tests/e2e/agents/txdetectoragent/testbotalertid"
 	"github.com/forta-network/forta-node/tests/e2e/ethaccounts"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-)
-
-const (
-	ExploiterAlertId = "EXPLOITER_TRANSACTION"
-	TokenAlertId     = "TOKEN_RETRIEVED"
 )
 
 func main() {
@@ -85,7 +81,7 @@ func (as *agentServer) EvaluateTx(ctx context.Context, txRequest *protocol.Evalu
 			{
 				Protocol:    "testchain",
 				Severity:    protocol.Finding_CRITICAL,
-				AlertId:     ExploiterAlertId,
+				AlertId:     testbotalertid.ExploiterAlertId,
 				Name:        "Exploiter Transaction Detected",
 				Description: txRequest.Event.Receipt.TransactionHash,
 				Metadata: map[string]string{
@@ -96,7 +92,7 @@ func (as *agentServer) EvaluateTx(ctx context.Context, txRequest *protocol.Evalu
 			{
 				Protocol:    "testchain",
 				Severity:    protocol.Finding_INFO,
-				AlertId:     TokenAlertId,
+				AlertId:     testbotalertid.TokenAlertId,
 				Name:        "Scanner Token Retrieved",
 				Description: txRequest.Event.Receipt.TransactionHash,
 				Metadata: map[string]string{
