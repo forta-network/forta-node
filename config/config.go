@@ -35,11 +35,6 @@ type JsonRpcProxyConfig struct {
 	RateLimitConfig *RateLimitConfig `yaml:"rateLimit" json:"rateLimit"`
 }
 
-type JWTProviderConfig struct {
-	// Addr is the host:port of the provider server
-	Addr string
-}
-
 type LogConfig struct {
 	Level       string `yaml:"level" json:"level" default:"info" `
 	MaxLogSize  string `yaml:"maxLogSize" json:"maxLogSize" default:"50m" `
@@ -158,14 +153,13 @@ type Config struct {
 	AgentLogsConfig  AgentLogsConfig    `yaml:"agentLogs" json:"agentLogs"`
 	LocalModeConfig  LocalModeConfig    `yaml:"localMode" json:"localMode"`
 	InspectionConfig InspectionConfig   `yaml:"inspection" json:"inspection"`
-	JWTProvider     JWTProviderConfig  `json:"jwt_provider_config"`
 }
 
 func (cfg *Config) ConfigFilePath() string {
 	return path.Join(cfg.FortaDir, DefaultConfigFileName)
 }
 
-//GetConfigForContainer is how a container gets the forta configuration (file or env var)
+// GetConfigForContainer is how a container gets the forta configuration (file or env var)
 func GetConfigForContainer() (Config, error) {
 	var cfg Config
 	if _, err := os.Stat(DefaultContainerConfigPath); os.IsNotExist(err) {

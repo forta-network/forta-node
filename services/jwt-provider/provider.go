@@ -77,16 +77,14 @@ func (j *JWTProvider) Stop() error {
 
 // StartWithContext subscribe to bot updates and spawn a Bot JWT Provider http server.
 func (j *JWTProvider) StartWithContext(ctx context.Context) error {
-	if j.cfg.Config.JWTProvider.Addr == "" {
-		j.cfg.Config.JWTProvider.Addr = fmt.Sprintf(":%s", config.DefaultJWTProviderPort)
-	}
+	addr := fmt.Sprintf(":%s", config.DefaultJWTProviderPort)
 
 	// setup routes
 	r := mux.NewRouter()
 	r.HandleFunc("/create", j.createJWTHandler).Methods(http.MethodPost)
 
 	j.srv = &http.Server{
-		Addr:    j.cfg.Config.JWTProvider.Addr,
+		Addr:    addr,
 		Handler: r,
 	}
 
