@@ -16,6 +16,7 @@ require (
 	github.com/forta-network/forta-core-go v0.0.0-20220801114911-f1eccf236e8e
 	github.com/go-playground/validator/v10 v10.9.0
 	github.com/goccy/go-json v0.9.4
+	github.com/golang-jwt/jwt/v4 v4.4.1
 	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.3.0

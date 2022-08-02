@@ -1,22 +1,25 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-node/config"
+	jwt_provider "github.com/forta-network/forta-node/services/jwt-provider"
+	"github.com/forta-network/forta-node/tests/e2e/agents/txdetectoragent/testbotalertid"
 	"github.com/forta-network/forta-node/tests/e2e/ethaccounts"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-)
-
-const (
-	AlertId = "EXPLOITER_TRANSACTION"
 )
 
 func main() {
@@ -54,6 +57,13 @@ func (as *agentServer) EvaluateTx(ctx context.Context, txRequest *protocol.Evalu
 	response := &protocol.EvaluateTxResponse{
 		Status: protocol.ResponseStatus_SUCCESS,
 	}
+
+	token, err := fetchJWTToken()
+	if err != nil {
+		logrus.WithError(err).Warn("can't fetch token")
+		return nil, err
+	}
+
 	// detect exploiter address transactions
 	if strings.EqualFold(txRequest.Event.Transaction.From, ethaccounts.ExploiterAddress.Hex()) {
 		balance, err := as.ethClient.BalanceAt(context.Background(), ethaccounts.ExploiterAddress, nil)
@@ -71,12 +81,22 @@ func (as *agentServer) EvaluateTx(ctx context.Context, txRequest *protocol.Evalu
 			{
 				Protocol:    "testchain",
 				Severity:    protocol.Finding_CRITICAL,
-				AlertId:     AlertId,
+				AlertId:     testbotalertid.ExploiterAlertId,
 				Name:        "Exploiter Transaction Detected",
 				Description: txRequest.Event.Receipt.TransactionHash,
 				Metadata: map[string]string{
 					"exploiter": ethaccounts.ExploiterAddress.Hex(),
 					"balance":   balance.String(),
+				},
+			},
+			{
+				Protocol:    "testchain",
+				Severity:    protocol.Finding_INFO,
+				AlertId:     testbotalertid.TokenAlertId,
+				Name:        "Scanner Token Retrieved",
+				Description: txRequest.Event.Receipt.TransactionHash,
+				Metadata: map[string]string{
+					"token": token,
 				},
 			},
 		}
@@ -88,4 +108,46 @@ func (as *agentServer) EvaluateBlock(context.Context, *protocol.EvaluateBlockReq
 	return &protocol.EvaluateBlockResponse{
 		Status: protocol.ResponseStatus_SUCCESS,
 	}, nil
+}
+
+func fetchJWTToken() (string, error) {
+	jwtProviderAddr := fmt.Sprintf(
+		"%s:%s", os.Getenv(config.EnvJWTProviderHost), os.Getenv(config.EnvJWTProviderPort),
+	)
+
+	payload, err := json.Marshal(
+		jwt_provider.CreateJWTMessage{
+			Claims: map[string]interface{}{
+				"data":    "123",
+				"payload": 123,
+			},
+		},
+	)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := http.Post(
+		fmt.Sprintf("http://%s/create", jwtProviderAddr), "application/json", bytes.NewReader(payload),
+	)
+	if err != nil {
+		logrus.WithError(err).Warn("can not fetch jwt token")
+		return "", err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		reason, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return "", err
+		}
+		return "", fmt.Errorf("can't fetch jwt, status code: %d, reason: %s ", resp.StatusCode, string(reason))
+	}
+
+	var s jwt_provider.CreateJWTResponse
+	err = json.NewDecoder(resp.Body).Decode(&s)
+	if err != nil {
+		return "", err
+	}
+
+	return s.Token, nil
 }

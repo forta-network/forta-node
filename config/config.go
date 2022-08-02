@@ -160,7 +160,7 @@ func (cfg *Config) ConfigFilePath() string {
 	return path.Join(cfg.FortaDir, DefaultConfigFileName)
 }
 
-//GetConfigForContainer is how a container gets the forta configuration (file or env var)
+// GetConfigForContainer is how a container gets the forta configuration (file or env var)
 func GetConfigForContainer() (Config, error) {
 	var cfg Config
 	if _, err := os.Stat(DefaultContainerConfigPath); os.IsNotExist(err) {

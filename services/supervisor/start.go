@@ -34,14 +34,14 @@ const (
 // SupervisorService manages the scanner node's service and agent containers.
 type SupervisorService struct {
 	ctx context.Context
-
+	
 	client           clients.DockerClient
 	globalClient     clients.DockerClient
 	agentImageClient clients.DockerClient
-
+	
 	manifestClient manifest.Client
 	releaseClient  release.Client
-
+	
 	msgClient   clients.MessageClient
 	config      SupervisorServiceConfig
 	maxLogSize  string
@@ -53,15 +53,16 @@ type SupervisorService struct {
 	containers         []*Container
 	mu                 sync.RWMutex
 
+	jwtProviderContainer *clients.DockerContainer
 	lastRun                   health.TimeTracker
 	lastStop                  health.TimeTracker
 	lastTelemetryRequest      health.TimeTracker
 	lastTelemetryRequestError health.ErrorTracker
 	lastAgentLogsRequest      health.TimeTracker
 	lastAgentLogsRequestError health.ErrorTracker
-
+	
 	healthClient health.HealthClient
-
+	
 	agentLogsClient agentlogs.Client
 	prevAgentLogs   agentlogs.Agents
 }
@@ -273,6 +274,36 @@ func (sup *SupervisorService) start() error {
 		return err
 	}
 	sup.addContainerUnsafe(sup.scannerContainer)
+	
+	sup.jwtProviderContainer, err = sup.client.StartContainer(
+		sup.ctx, clients.DockerContainerConfig{
+			Name:  config.DockerJWTProviderContainerName,
+			Image: commonNodeImage,
+			Cmd:   []string{config.DefaultFortaNodeBinaryPath, "jwt-provider"},
+			Env: map[string]string{
+				config.EnvReleaseInfo: releaseInfo.String(),
+			},
+			Volumes: map[string]string{
+				// give access to host docker
+				"/var/run/docker.sock": "/var/run/docker.sock",
+				hostFortaDir:           config.DefaultContainerFortaDirPath,
+			},
+			Ports: map[string]string{
+				"": config.DefaultHealthPort, // random host port
+			},
+			Files: map[string][]byte{
+				"passphrase": []byte(sup.config.Passphrase),
+			},
+			DialHost:    true,
+			NetworkID:   internalNetworkID,
+			MaxLogFiles: sup.maxLogFiles,
+			MaxLogSize:  sup.maxLogSize,
+		},
+	)
+	if err != nil {
+		return err
+	}
+	sup.addContainerUnsafe(sup.jwtProviderContainer)
 
 	if err := sup.attachToNetwork(config.DockerScannerContainerName, internalNetworkID); err != nil {
 		return err
@@ -332,6 +363,7 @@ func (sup *SupervisorService) removeOldContainers() error {
 		config.DockerScannerContainerName,
 		config.DockerInspectorContainerName,
 		config.DockerJSONRPCProxyContainerName,
+		config.DockerJWTProviderContainerName,
 		config.DockerNatsContainerName,
 		config.DockerIpfsContainerName,
 	} {

@@ -3,6 +3,7 @@ package nodecmd
 import (
 	inspector "github.com/forta-network/forta-node/cmd/inspector"
 	json_rpc "github.com/forta-network/forta-node/cmd/json-rpc"
+	jwt_provider "github.com/forta-network/forta-node/cmd/jwt-provider"
 	"github.com/forta-network/forta-node/cmd/publisher"
 	"github.com/forta-network/forta-node/cmd/scanner"
 	"github.com/forta-network/forta-node/cmd/supervisor"
@@ -42,7 +43,15 @@ var (
 			return nil
 		},
 	}
-
+	
+	cmdJWTProvider = &cobra.Command{
+		Use: "jwt-provider",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			jwt_provider.Run()
+			return nil
+		},
+	}
+	
 	cmdPublisher = &cobra.Command{
 		Use: "publisher",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -74,6 +83,7 @@ func init() {
 	cmdFortaNode.AddCommand(cmdPublisher)
 	cmdFortaNode.AddCommand(cmdInspector)
 	cmdFortaNode.AddCommand(cmdJsonRpc)
+	cmdFortaNode.AddCommand(cmdJWTProvider)
 }
 
 func Run() error {
