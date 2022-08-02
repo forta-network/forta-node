@@ -118,5 +118,10 @@ func (s *Suite) runLocalMode(webhookURL, logFileName string, readAlertsFunc func
 	s.r.NoError(json.Unmarshal(b, &webhookAlerts))
 	s.r.NotEmpty(webhookAlerts.Alerts)
 	s.r.NotEmpty(webhookAlerts.Metrics)
+
+	// TODO: Find token from metadata of one of the alerts
+	// _, err := security.VerifyScannerJWT(request.Header.Get("Authorization"))
+	// s.r.NoError(err)
+
 	s.T().Log(string(b))
 }
