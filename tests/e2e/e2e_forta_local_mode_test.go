@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/forta-network/forta-core-go/clients/webhook/client/models"
+	"github.com/forta-network/forta-core-go/security"
+	"github.com/forta-network/forta-node/tests/e2e/agents/txdetectoragent/testbotalertid"
 )
 
 const localModeConfig = `chainId: 137
@@ -116,7 +118,36 @@ func (s *Suite) runLocalMode(webhookURL, logFileName string, readAlertsFunc func
 	})
 	var webhookAlerts models.AlertBatch
 	s.r.NoError(json.Unmarshal(b, &webhookAlerts))
-	s.r.NotEmpty(webhookAlerts.Alerts)
+	s.r.Len(webhookAlerts.Alerts, 2)
 	s.r.NotEmpty(webhookAlerts.Metrics)
+
+	var (
+		exploiterAlert *models.Alert
+		tokenAlert     *models.Alert
+	)
+	for _, alert := range webhookAlerts.Alerts {
+		if alert.AlertID == testbotalertid.ExploiterAlertId {
+			exploiterAlert = alert
+		}
+		if alert.AlertID == testbotalertid.TokenAlertId {
+			tokenAlert = alert
+		}
+	}
+	s.r.NotNil(exploiterAlert)
+	s.r.NotNil(tokenAlert)
+
+	_, err = security.VerifyScannerJWT(s.getTokenFromAlert(tokenAlert))
+	s.r.NoError(err)
+
 	s.T().Log(string(b))
+}
+
+func (s *Suite) getTokenFromAlert(tokenAlert *models.Alert) string {
+	tokenAlertMeta, ok := tokenAlert.Metadata.(map[string]interface{})
+	s.r.True(ok)
+	tokenV := tokenAlertMeta["token"]
+	s.r.NotNil(tokenV)
+	token, ok := tokenV.(string)
+	s.r.True(ok)
+	return token
 }
