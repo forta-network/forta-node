@@ -23,21 +23,10 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	return []services.Service{
 		health.NewService(
 			ctx, "", healthutils.DefaultHealthServerErrHandler,
-			health.CheckerFrom(summarizeReports, jwtProvider),
+			health.CheckerFrom(nil, jwtProvider),
 		),
 		jwtProvider,
 	}, nil
-}
-
-func summarizeReports(reports health.Reports) *health.Report {
-	summary := health.NewSummary()
-
-	apiErr, ok := reports.NameContains("service.jwt-provider.api")
-	if ok && len(apiErr.Details) > 0 {
-		summary.Addf("last time the api failed with error '%s'.", apiErr.Details)
-	}
-
-	return summary.Finish()
 }
 
 func Run() {
