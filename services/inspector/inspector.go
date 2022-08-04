@@ -71,13 +71,18 @@ func (ins *Inspector) Start() error {
 }
 
 func (ins *Inspector) runInspection(ctx context.Context, blockNum uint64) error {
-	results, err := inspect.Inspect(ctx, inspect.InspectionConfig{
-		ScanAPIURL:  ins.cfg.Config.Scan.JsonRpc.Url,
-		ProxyAPIURL: fmt.Sprintf("http://%s:%s", ins.cfg.ProxyHost, ins.cfg.ProxyPort),
-		TraceAPIURL: ins.cfg.Config.Trace.JsonRpc.Url,
-		BlockNumber: blockNum,
-		CheckTrace:  ins.inspectTrace,
-	})
+	results, err := inspect.Inspect(
+		ctx, inspect.InspectionConfig{
+			ScanAPIURL:  ins.cfg.Config.Scan.JsonRpc.Url,
+			ProxyAPIURL: fmt.Sprintf("http://%s:%s", ins.cfg.ProxyHost, ins.cfg.ProxyPort),
+			TraceAPIURL: ins.cfg.Config.Trace.JsonRpc.Url,
+			BlockNumber: blockNum,
+			CheckTrace:  ins.inspectTrace,
+		},
+	)
+	// publish inspection results even if there are errors, because inspection results are independent from errors
+	ins.msgClient.PublishProto(messaging.SubjectInspectionDone, transform.ToProtoInspectionResults(results))
+
 	b, _ := json.Marshal(results)
 	log.WithField("results", string(b)).Info("inspection done")
 	if err != nil {
@@ -85,7 +90,6 @@ func (ins *Inspector) runInspection(ctx context.Context, blockNum uint64) error 
 		return err
 	}
 
-	ins.msgClient.PublishProto(messaging.SubjectInspectionDone, transform.ToProtoInspectionResults(results))
 	return nil
 }
 
