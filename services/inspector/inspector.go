@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cenkalti/backoff"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/forta-network/forta-core-go/clients/health"
@@ -84,17 +83,7 @@ func (ins *Inspector) Start() error {
 }
 
 func (ins *Inspector) doRunInspection(blockNum uint64) {
-	inspectBackoff := backoff.NewExponentialBackOff()
-	inspectBackoff.InitialInterval = time.Second * 25
-	inspectBackoff.MaxInterval = time.Second * 25
-	inspectBackoff.MaxElapsedTime = time.Minute * 1
-	if err := backoff.Retry(
-		func() error {
-			ctx, cancel := context.WithTimeout(ins.ctx, time.Minute*2)
-			defer cancel()
-			return ins.runInspection(ctx, blockNum)
-		}, inspectBackoff,
-	); err != nil {
+	if err := ins.runInspection(ins.ctx, blockNum); err != nil {
 		log.WithFields(
 			log.Fields{
 				"error":             err,
