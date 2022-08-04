@@ -95,13 +95,25 @@ func (ins *Inspector) runInspection(blockNum uint64) error {
 		},
 	)
 	cancel()
-	// publish inspection results even if there are errors, because inspection results are independent from errors
+	// publish inspection results even if there are errors, because inspection results are independent of errors
 	ins.msgClient.PublishProto(messaging.SubjectInspectionDone, transform.ToProtoInspectionResults(results))
 
 	b, _ := json.Marshal(results)
-	log.WithField("results", string(b)).Info("inspection done")
+	log.WithFields(
+		log.Fields{
+			"results":           string(b),
+			"inspectingAtBlock": blockNum,
+		},
+	).Info("inspection done")
+
 	if err != nil {
-		log.WithError(err).Warn("error(s) during inspection")
+		log.WithFields(
+			log.Fields{
+				"error":             err,
+				"inspectingAtBlock": blockNum,
+			},
+		).Error("failed to execute inspection")
+
 		return err
 	}
 
