@@ -34,7 +34,7 @@ type Inspector struct {
 	latestBlockEventTime time.Time
 }
 
-const blockEventWaitTimeout = time.Minute * 10
+const blockEventWaitTimeout = time.Minute * 20
 
 type InspectorConfig struct {
 	Config    config.Config
@@ -51,76 +51,56 @@ func (ins *Inspector) Start() error {
 	ins.registerMessageHandlers()
 
 	go func() {
-		err := ins.inspectionTimeoutWorker(ins.ctx)
-		if err != nil {
-			log.WithFields(
-				log.Fields{
-					"error": err,
-				},
-			).Error("inspection timeout ticker failed")
-		}
-	}()
-
-	go func() {
 		for {
 			select {
 			case <-ins.ctx.Done():
 				return
-			case blockNum := <-ins.inspectCh:
-				inspectBackoff := backoff.NewExponentialBackOff()
-				inspectBackoff.InitialInterval = time.Second * 3
-				inspectBackoff.MaxInterval = time.Second * 30
-				inspectBackoff.MaxElapsedTime = time.Minute * 5
-				if err := backoff.Retry(
-					func() error {
-						ctx, cancel := context.WithTimeout(ins.ctx, time.Minute*2)
-						defer cancel()
-						return ins.runInspection(ctx, blockNum)
-					}, inspectBackoff,
-				); err != nil {
-					log.WithFields(
-						log.Fields{
-							"error":             err,
-							"inspectingAtBlock": blockNum,
-						},
-					).Error("finally failed to complete inspection")
+
+			case <-time.After(blockEventWaitTimeout):
+				// if scan api is failing, run a placeholder-like inspection with genesis block
+				dialCtx, cancel := context.WithTimeout(ins.ctx, time.Second*3)
+				rpcClient, err := rpc.DialContext(dialCtx, ins.cfg.Config.Scan.JsonRpc.Url)
+				cancel()
+				if err != nil {
+					ins.doRunInspection(0)
+					continue
 				}
+				reqCtx, cancel := context.WithTimeout(ins.ctx, time.Second*3)
+				blockNum, err := ethclient.NewClient(rpcClient).BlockNumber(reqCtx)
+				cancel()
+				if err != nil {
+					ins.doRunInspection(0)
+					continue
+				}
+				blockNum -= ins.blockNumRemainder(blockNum) // turn it into an expected block num
+				ins.doRunInspection(blockNum)
+
+			case blockNum := <-ins.inspectCh:
+				ins.doRunInspection(blockNum)
 			}
 		}
 	}()
 	return nil
 }
 
-func (ins *Inspector) inspectionTimeoutWorker(ctx context.Context) error {
-	t := time.NewTicker(time.Second)
-
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-t.C:
-			if time.Now().After(ins.latestBlockEventTime.Add(blockEventWaitTimeout)) {
-				rpcClient, err := rpc.DialContext(ctx, ins.cfg.Config.Scan.JsonRpc.Url)
-				// if scan api is still failing, run a placeholder-like inspection with genesis block
-				if err != nil {
-					ins.inspectCh <- 0
-					continue
-				}
-
-				blockNum, err := ethclient.NewClient(rpcClient).BlockNumber(ctx)
-				// if scan api is still failing, run a placeholder-like inspection with genesis block
-				if err != nil {
-					ins.inspectCh <- 0
-					continue
-				}
-
-				// run inspection with current block, even though scanner didn't publish any blocks for some time
-				if blockNum%uint64(ins.inspectEvery) == 0 {
-					ins.inspectCh <- blockNum
-					continue
-				}
-			}
-		}
+func (ins *Inspector) doRunInspection(blockNum uint64) {
+	inspectBackoff := backoff.NewExponentialBackOff()
+	inspectBackoff.InitialInterval = time.Second * 3
+	inspectBackoff.MaxInterval = time.Second * 30
+	inspectBackoff.MaxElapsedTime = time.Minute * 5
+	if err := backoff.Retry(
+		func() error {
+			ctx, cancel := context.WithTimeout(ins.ctx, time.Minute*2)
+			defer cancel()
+			return ins.runInspection(ctx, blockNum)
+		}, inspectBackoff,
+	); err != nil {
+		log.WithFields(
+			log.Fields{
+				"error":             err,
+				"inspectingAtBlock": blockNum,
+			},
+		).Error("finally failed to complete inspection")
 	}
 }
 
@@ -154,7 +134,7 @@ func (ins *Inspector) registerMessageHandlers() {
 func (ins *Inspector) handleScannerBlock(payload messaging.ScannerPayload) error {
 	ins.latestBlockEventTime = time.Now()
 
-	if payload.LatestBlockInput > 0 && payload.LatestBlockInput%uint64(ins.inspectEvery) == 0 {
+	if payload.LatestBlockInput > 0 && ins.blockNumRemainder(payload.LatestBlockInput) == 0 {
 		// inspect from N blocks back to avoid synchronizations issues
 		inspectionBlockNum := payload.LatestBlockInput - uint64(ins.inspectEvery)
 		logger := log.WithFields(
@@ -173,6 +153,10 @@ func (ins *Inspector) handleScannerBlock(payload messaging.ScannerPayload) error
 		}
 	}
 	return nil
+}
+
+func (ins *Inspector) blockNumRemainder(blockNum uint64) uint64 {
+	return blockNum % uint64(ins.inspectEvery)
 }
 
 func (ins *Inspector) Stop() error {
