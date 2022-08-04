@@ -61,41 +61,31 @@ func (ins *Inspector) Start() error {
 				rpcClient, err := rpc.DialContext(dialCtx, ins.cfg.Config.Scan.JsonRpc.Url)
 				cancel()
 				if err != nil {
-					ins.doRunInspection(0)
+					ins.runInspection(0)
 					continue
 				}
 				reqCtx, cancel := context.WithTimeout(ins.ctx, time.Second*3)
 				blockNum, err := ethclient.NewClient(rpcClient).BlockNumber(reqCtx)
 				cancel()
 				if err != nil {
-					ins.doRunInspection(0)
+					ins.runInspection(0)
 					continue
 				}
 				blockNum -= ins.blockNumRemainder(blockNum) // turn it into an expected block num
-				ins.doRunInspection(blockNum)
+				ins.runInspection(blockNum)
 
 			case blockNum := <-ins.inspectCh:
-				ins.doRunInspection(blockNum)
+				ins.runInspection(blockNum)
 			}
 		}
 	}()
 	return nil
 }
 
-func (ins *Inspector) doRunInspection(blockNum uint64) {
-	if err := ins.runInspection(ins.ctx, blockNum); err != nil {
-		log.WithFields(
-			log.Fields{
-				"error":             err,
-				"inspectingAtBlock": blockNum,
-			},
-		).Error("finally failed to complete inspection")
-	}
-}
-
-func (ins *Inspector) runInspection(ctx context.Context, blockNum uint64) error {
+func (ins *Inspector) runInspection(blockNum uint64) error {
+	inspectCtx, cancel := context.WithTimeout(ins.ctx, time.Minute*2)
 	results, err := inspect.Inspect(
-		ctx, inspect.InspectionConfig{
+		inspectCtx, inspect.InspectionConfig{
 			ScanAPIURL:  ins.cfg.Config.Scan.JsonRpc.Url,
 			ProxyAPIURL: fmt.Sprintf("http://%s:%s", ins.cfg.ProxyHost, ins.cfg.ProxyPort),
 			TraceAPIURL: ins.cfg.Config.Trace.JsonRpc.Url,
@@ -103,6 +93,7 @@ func (ins *Inspector) runInspection(ctx context.Context, blockNum uint64) error 
 			CheckTrace:  ins.inspectTrace,
 		},
 	)
+	cancel()
 	// publish inspection results even if there are errors, because inspection results are independent from errors
 	ins.msgClient.PublishProto(messaging.SubjectInspectionDone, transform.ToProtoInspectionResults(results))
 
