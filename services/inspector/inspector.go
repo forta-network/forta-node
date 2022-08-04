@@ -85,9 +85,9 @@ func (ins *Inspector) Start() error {
 
 func (ins *Inspector) doRunInspection(blockNum uint64) {
 	inspectBackoff := backoff.NewExponentialBackOff()
-	inspectBackoff.InitialInterval = time.Second * 3
-	inspectBackoff.MaxInterval = time.Second * 30
-	inspectBackoff.MaxElapsedTime = time.Minute * 5
+	inspectBackoff.InitialInterval = time.Second * 25
+	inspectBackoff.MaxInterval = time.Second * 25
+	inspectBackoff.MaxElapsedTime = time.Minute * 1
 	if err := backoff.Retry(
 		func() error {
 			ctx, cancel := context.WithTimeout(ins.ctx, time.Minute*2)
