@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/inspect"
+	"github.com/forta-network/forta-core-go/protocol/settings"
 	"github.com/forta-network/forta-core-go/protocol/transform"
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/messaging"
@@ -157,7 +158,7 @@ func (ins *Inspector) Health() health.Reports {
 func NewInspector(ctx context.Context, cfg InspectorConfig) (*Inspector, error) {
 	msgClient := messaging.NewClient("inspector", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 
-	chainSettings := config.GetChainSettings(cfg.Config.ChainID)
+	chainSettings := settings.GetChainSettings(cfg.Config.ChainID)
 	inspectionInterval := chainSettings.InspectionInterval
 	if cfg.Config.InspectionConfig.BlockInterval != nil {
 		inspectionInterval = *cfg.Config.InspectionConfig.BlockInterval

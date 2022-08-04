@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/forta-network/forta-core-go/domain"
+	"github.com/forta-network/forta-core-go/protocol/settings"
 	"github.com/forta-network/forta-node/services/publisher"
 	log "github.com/sirupsen/logrus"
 
@@ -78,7 +79,7 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 		Tracing:             cfg.Trace.Enabled,
 		RateLimit:           rateLimit,
 		SkipBlocksOlderThan: maxAgePtr,
-		Offset:              config.GetBlockOffset(cfg.ChainID),
+		Offset:              settings.GetBlockOffset(cfg.ChainID),
 		Start:               startBlock,
 		End:                 stopBlock,
 	})
