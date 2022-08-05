@@ -6,6 +6,7 @@ import (
 	"path"
 
 	"github.com/creasty/defaults"
+	"github.com/forta-network/forta-core-go/protocol/settings"
 )
 
 type JsonRpcConfig struct {
@@ -176,8 +177,8 @@ func GetConfigForContainer() (Config, error) {
 
 // apply defaults that apply in certain contexts
 func applyContextDefaults(cfg *Config) {
-	settings := GetChainSettings(cfg.ChainID)
-	if settings.EnableTrace {
+	chainSettings := settings.GetChainSettings(cfg.ChainID)
+	if chainSettings.EnableTrace {
 		cfg.Trace.Enabled = true
 	}
 	if cfg.ENSConfig.DefaultContract {

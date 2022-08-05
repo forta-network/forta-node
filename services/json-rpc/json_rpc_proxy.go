@@ -17,6 +17,7 @@ import (
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/ethereum"
 	"github.com/forta-network/forta-core-go/protocol"
+	"github.com/forta-network/forta-core-go/protocol/settings"
 	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/messaging"
@@ -192,7 +193,7 @@ func NewJsonRpcProxy(ctx context.Context, cfg config.Config) (*JsonRpcProxy, err
 
 	rateLimiting := cfg.JsonRpcProxy.RateLimitConfig
 	if rateLimiting == nil {
-		rateLimiting = config.GetChainSettings(cfg.ChainID).JsonRpcRateLimiting
+		rateLimiting = (*config.RateLimitConfig)(settings.GetChainSettings(cfg.ChainID).JsonRpcRateLimiting)
 	}
 
 	return &JsonRpcProxy{

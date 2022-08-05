@@ -6,14 +6,13 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/Microsoft/go-winio v0.5.0 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
-	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/creasty/defaults v1.5.2
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v1.4.2-0.20180625184442-8e610b2b55bf
 	github.com/docker/go-connections v0.4.0
 	github.com/ethereum/go-ethereum v1.10.16
 	github.com/fatih/color v1.13.0
-	github.com/forta-network/forta-core-go v0.0.0-20220802145831-47f51df9be9c
+	github.com/forta-network/forta-core-go v0.0.0-20220804181351-3b61094b1648
 	github.com/go-playground/validator/v10 v10.9.0
 	github.com/goccy/go-json v0.9.4
 	github.com/golang-jwt/jwt/v4 v4.4.1

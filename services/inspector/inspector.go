@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cenkalti/backoff"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/inspect"
+	"github.com/forta-network/forta-core-go/protocol/settings"
 	"github.com/forta-network/forta-core-go/protocol/transform"
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/messaging"
@@ -28,7 +30,11 @@ type Inspector struct {
 	inspectEvery int
 	inspectTrace bool
 	inspectCh    chan uint64
+
+	latestBlockEventTime time.Time
 }
+
+const blockEventWaitTimeout = time.Minute * 20
 
 type InspectorConfig struct {
 	Config    config.Config
@@ -49,43 +55,68 @@ func (ins *Inspector) Start() error {
 			select {
 			case <-ins.ctx.Done():
 				return
-			case blockNum := <-ins.inspectCh:
-				inspectBackoff := backoff.NewExponentialBackOff()
-				inspectBackoff.InitialInterval = time.Second * 3
-				inspectBackoff.MaxInterval = time.Second * 30
-				inspectBackoff.MaxElapsedTime = time.Minute * 5
-				if err := backoff.Retry(func() error {
-					ctx, cancel := context.WithTimeout(ins.ctx, time.Minute*2)
-					defer cancel()
-					return ins.runInspection(ctx, blockNum)
-				}, inspectBackoff); err != nil {
-					log.WithFields(log.Fields{
-						"error":             err,
-						"inspectingAtBlock": blockNum,
-					}).Error("finally failed to complete inspection")
+
+			case <-time.After(blockEventWaitTimeout):
+				// if scan api is failing, run a placeholder-like inspection with genesis block
+				dialCtx, cancel := context.WithTimeout(ins.ctx, time.Second*3)
+				rpcClient, err := rpc.DialContext(dialCtx, ins.cfg.Config.Scan.JsonRpc.Url)
+				cancel()
+				if err != nil {
+					ins.runInspection(0)
+					continue
 				}
+				reqCtx, cancel := context.WithTimeout(ins.ctx, time.Second*3)
+				blockNum, err := ethclient.NewClient(rpcClient).BlockNumber(reqCtx)
+				cancel()
+				if err != nil {
+					ins.runInspection(0)
+					continue
+				}
+				blockNum -= ins.blockNumRemainder(blockNum) // turn it into an expected block num
+				ins.runInspection(blockNum)
+
+			case blockNum := <-ins.inspectCh:
+				ins.runInspection(blockNum)
 			}
 		}
 	}()
 	return nil
 }
 
-func (ins *Inspector) runInspection(ctx context.Context, blockNum uint64) error {
-	results, err := inspect.Inspect(ctx, inspect.InspectionConfig{
-		ScanAPIURL:  ins.cfg.Config.Scan.JsonRpc.Url,
-		ProxyAPIURL: fmt.Sprintf("http://%s:%s", ins.cfg.ProxyHost, ins.cfg.ProxyPort),
-		TraceAPIURL: ins.cfg.Config.Trace.JsonRpc.Url,
-		BlockNumber: blockNum,
-		CheckTrace:  ins.inspectTrace,
-	})
+func (ins *Inspector) runInspection(blockNum uint64) error {
+	inspectCtx, cancel := context.WithTimeout(ins.ctx, time.Minute*2)
+	results, err := inspect.Inspect(
+		inspectCtx, inspect.InspectionConfig{
+			ScanAPIURL:  ins.cfg.Config.Scan.JsonRpc.Url,
+			ProxyAPIURL: fmt.Sprintf("http://%s:%s", ins.cfg.ProxyHost, ins.cfg.ProxyPort),
+			TraceAPIURL: ins.cfg.Config.Trace.JsonRpc.Url,
+			BlockNumber: blockNum,
+			CheckTrace:  ins.inspectTrace,
+		},
+	)
+	cancel()
+	// publish inspection results even if there are errors, because inspection results are independent of errors
+	ins.msgClient.PublishProto(messaging.SubjectInspectionDone, transform.ToProtoInspectionResults(results))
+
 	b, _ := json.Marshal(results)
-	log.WithField("results", string(b)).Info("inspection done")
+	log.WithFields(
+		log.Fields{
+			"results":           string(b),
+			"inspectingAtBlock": blockNum,
+		},
+	).Info("inspection done")
+
 	if err != nil {
-		log.WithError(err).Warn("error(s) during inspection")
+		log.WithFields(
+			log.Fields{
+				"error":             err,
+				"inspectingAtBlock": blockNum,
+			},
+		).Error("failed to execute inspection")
+
 		return err
 	}
 
-	ins.msgClient.PublishProto(messaging.SubjectInspectionDone, transform.ToProtoInspectionResults(results))
 	return nil
 }
 
@@ -94,13 +125,17 @@ func (ins *Inspector) registerMessageHandlers() {
 }
 
 func (ins *Inspector) handleScannerBlock(payload messaging.ScannerPayload) error {
-	if payload.LatestBlockInput > 0 && payload.LatestBlockInput%uint64(ins.inspectEvery) == 0 {
+	ins.latestBlockEventTime = time.Now()
+
+	if payload.LatestBlockInput > 0 && ins.blockNumRemainder(payload.LatestBlockInput) == 0 {
 		// inspect from N blocks back to avoid synchronizations issues
 		inspectionBlockNum := payload.LatestBlockInput - uint64(ins.inspectEvery)
-		logger := log.WithFields(log.Fields{
-			"triggeredAtBlock":  payload.LatestBlockInput,
-			"inspectingAtBlock": inspectionBlockNum,
-		})
+		logger := log.WithFields(
+			log.Fields{
+				"triggeredAtBlock":  payload.LatestBlockInput,
+				"inspectingAtBlock": inspectionBlockNum,
+			},
+		)
 		logger.Info("triggering inspection")
 		// non-blocking insert
 		select {
@@ -111,6 +146,10 @@ func (ins *Inspector) handleScannerBlock(payload messaging.ScannerPayload) error
 		}
 	}
 	return nil
+}
+
+func (ins *Inspector) blockNumRemainder(blockNum uint64) uint64 {
+	return blockNum % uint64(ins.inspectEvery)
 }
 
 func (ins *Inspector) Stop() error {
@@ -131,7 +170,7 @@ func (ins *Inspector) Health() health.Reports {
 func NewInspector(ctx context.Context, cfg InspectorConfig) (*Inspector, error) {
 	msgClient := messaging.NewClient("inspector", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 
-	chainSettings := config.GetChainSettings(cfg.Config.ChainID)
+	chainSettings := settings.GetChainSettings(cfg.Config.ChainID)
 	inspectionInterval := chainSettings.InspectionInterval
 	if cfg.Config.InspectionConfig.BlockInterval != nil {
 		inspectionInterval = *cfg.Config.InspectionConfig.BlockInterval
