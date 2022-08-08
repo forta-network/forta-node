@@ -4,12 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/inspect"
+	"github.com/forta-network/forta-core-go/inspect/scorecalc"
 	"github.com/forta-network/forta-core-go/protocol/settings"
 	"github.com/forta-network/forta-core-go/protocol/transform"
 	"github.com/forta-network/forta-node/clients"
@@ -18,6 +21,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const blockEventWaitTimeout = time.Minute * 20
+
 // Inspector runs continuous inspections.
 type Inspector struct {
 	ctx context.Context
@@ -25,16 +30,14 @@ type Inspector struct {
 
 	msgClient clients.MessageClient
 
-	lastErr health.ErrorTracker
+	lastErr          health.ErrorTracker
+	indicatorReports []*health.Report
+	trackerMu        sync.RWMutex
 
 	inspectEvery int
 	inspectTrace bool
 	inspectCh    chan uint64
-
-	latestBlockEventTime time.Time
 }
-
-const blockEventWaitTimeout = time.Minute * 20
 
 type InspectorConfig struct {
 	Config    config.Config
@@ -98,6 +101,24 @@ func (ins *Inspector) runInspection(blockNum uint64) error {
 	// publish inspection results even if there are errors, because inspection results are independent of errors
 	ins.msgClient.PublishProto(messaging.SubjectInspectionDone, transform.ToProtoInspectionResults(results))
 
+	ins.trackerMu.Lock()
+	ins.indicatorReports = nil
+	for indicatorName, indicatorValue := range results.Indicators {
+		ins.indicatorReports = append(ins.indicatorReports, &health.Report{
+			Name:    indicatorName,
+			Status:  health.StatusInfo,
+			Details: strconv.FormatFloat(indicatorValue, 'f', -1, 64),
+		})
+	}
+	chainID := uint64(ins.cfg.Config.ChainID)
+	inspectionScore, _ := scorecalc.NewScoreCalculator([]scorecalc.ScoreCalculatorConfig{{ChainID: chainID}}).CalculateScore(chainID, results)
+	ins.indicatorReports = append(ins.indicatorReports, &health.Report{
+		Name:    "expected-score",
+		Status:  health.StatusInfo,
+		Details: strconv.FormatFloat(inspectionScore, 'f', -1, 64),
+	})
+	ins.trackerMu.Unlock()
+
 	b, _ := json.Marshal(results)
 	log.WithFields(
 		log.Fields{
@@ -125,8 +146,6 @@ func (ins *Inspector) registerMessageHandlers() {
 }
 
 func (ins *Inspector) handleScannerBlock(payload messaging.ScannerPayload) error {
-	ins.latestBlockEventTime = time.Now()
-
 	if payload.LatestBlockInput > 0 && ins.blockNumRemainder(payload.LatestBlockInput) == 0 {
 		// inspect from N blocks back to avoid synchronizations issues
 		inspectionBlockNum := payload.LatestBlockInput - uint64(ins.inspectEvery)
@@ -162,9 +181,14 @@ func (ins *Inspector) Name() string {
 
 // Health implements health.Reporter interface.
 func (ins *Inspector) Health() health.Reports {
-	return health.Reports{
+	reports := health.Reports{
 		ins.lastErr.GetReport("last-error"),
 	}
+	ins.trackerMu.RLock()
+	reports = append(reports, ins.indicatorReports...)
+	ins.trackerMu.RUnlock()
+
+	return reports
 }
 
 func NewInspector(ctx context.Context, cfg InspectorConfig) (*Inspector, error) {
