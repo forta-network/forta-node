@@ -228,6 +228,10 @@ func (sup *SupervisorService) start() error {
 		if err := sup.client.WaitContainerStart(sup.ctx, sup.inspectorContainer.ID); err != nil {
 			return fmt.Errorf("failed while waiting for nats to start: %v", err)
 		}
+		
+		// this makes sure that inspector published a message. Which means publisher has also received it and
+		// inspection results will be available for every batch starting first batch.
+		<-sup.inspectionCh
 	}
 
 	sup.jsonRpcContainer, err = sup.client.StartContainer(
