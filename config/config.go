@@ -87,8 +87,9 @@ type ENSConfig struct {
 }
 
 type TelemetryConfig struct {
-	URL     string `yaml:"url" json:"url" default:"https://alerts.forta.network/telemetry" validate:"url"`
-	Disable bool   `yaml:"disable" json:"disable"`
+	URL       string `yaml:"url" json:"url" default:"https://alerts.forta.network/telemetry" validate:"url"`
+	CustomURL string `yaml:"customUrl" validate:"omitempty,url"`
+	Disable   bool   `yaml:"disable" json:"disable"`
 }
 
 type AutoUpdateConfig struct {

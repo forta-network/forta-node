@@ -34,14 +34,14 @@ const (
 // SupervisorService manages the scanner node's service and agent containers.
 type SupervisorService struct {
 	ctx context.Context
-	
+
 	client           clients.DockerClient
 	globalClient     clients.DockerClient
 	agentImageClient clients.DockerClient
-	
+
 	manifestClient manifest.Client
 	releaseClient  release.Client
-	
+
 	msgClient   clients.MessageClient
 	config      SupervisorServiceConfig
 	maxLogSize  string
@@ -53,16 +53,16 @@ type SupervisorService struct {
 	containers         []*Container
 	mu                 sync.RWMutex
 
-	jwtProviderContainer *clients.DockerContainer
+	jwtProviderContainer      *clients.DockerContainer
 	lastRun                   health.TimeTracker
 	lastStop                  health.TimeTracker
 	lastTelemetryRequest      health.TimeTracker
 	lastTelemetryRequestError health.ErrorTracker
 	lastAgentLogsRequest      health.TimeTracker
 	lastAgentLogsRequestError health.ErrorTracker
-	
+
 	healthClient health.HealthClient
-	
+
 	agentLogsClient agentlogs.Client
 	prevAgentLogs   agentlogs.Agents
 }
@@ -93,8 +93,7 @@ func (sup *SupervisorService) Start() error {
 func (sup *SupervisorService) start() error {
 	// in addition to the feature disable flags, check local mode flags to disable agent logging and telemetry
 
-	// TODO: Telemetry should point to the public and rate-limited URL if running local mode.
-	shouldDisableTelemetry := sup.config.Config.TelemetryConfig.Disable || sup.config.Config.LocalModeConfig.Enable
+	shouldDisableTelemetry := sup.config.Config.TelemetryConfig.Disable
 	if !shouldDisableTelemetry {
 		go sup.syncTelemetryData()
 	}
@@ -274,7 +273,7 @@ func (sup *SupervisorService) start() error {
 		return err
 	}
 	sup.addContainerUnsafe(sup.scannerContainer)
-	
+
 	sup.jwtProviderContainer, err = sup.client.StartContainer(
 		sup.ctx, clients.DockerContainerConfig{
 			Name:  config.DockerJWTProviderContainerName,
@@ -435,8 +434,8 @@ func (sup *SupervisorService) removeOldContainers() error {
 }
 
 func (sup *SupervisorService) syncTelemetryData() {
-	time.After(time.Second * 15)          // rate limit crash loops
-	ticker := time.NewTicker(time.Minute) // slow down with auto-upgrade later
+	time.After(time.Second * 15) // rate limit crash loops
+	ticker := time.NewTicker(time.Minute)
 	for {
 		err := sup.doSyncTelemetryData()
 		sup.lastTelemetryRequest.Set()
@@ -455,11 +454,27 @@ func (sup *SupervisorService) doSyncTelemetryData() error {
 	if err != nil {
 		return err
 	}
-	return sup.healthClient.SendReports(
-		fmt.Sprintf("http://host.docker.internal:%s/health", config.DefaultHealthPort),
+	dataSrc := fmt.Sprintf("http://host.docker.internal:%s/health", config.DefaultHealthPort)
+	sendErr := sup.healthClient.SendReports(
+		dataSrc,
 		sup.config.Config.TelemetryConfig.URL,
 		scannerJwt,
 	)
+	customURL := sup.config.Config.TelemetryConfig.CustomURL
+	if len(customURL) > 0 {
+		err := sup.healthClient.SendReports(
+			dataSrc,
+			customURL,
+			scannerJwt,
+		)
+		if err != nil && sendErr == nil {
+			return err
+		}
+		if err != nil {
+			sendErr = fmt.Errorf("%v, %v", sendErr, err)
+		}
+	}
+	return sendErr
 }
 
 // complete release info in case runner is old and starts supervisor by providing missing release properties
@@ -527,6 +542,11 @@ func (sup *SupervisorService) Health() health.Reports {
 	}
 
 	return health.Reports{
+		&health.Report{
+			Name:    "local-mode",
+			Status:  health.StatusInfo,
+			Details: strconv.FormatBool(sup.config.Config.LocalModeConfig.Enable),
+		},
 		&health.Report{
 			Name:    "containers.managed",
 			Status:  containersStatus,
