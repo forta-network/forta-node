@@ -198,6 +198,9 @@ func (sup *SupervisorService) handleAgentStop(payload messaging.AgentPayload) er
 func (sup *SupervisorService) registerMessageHandlers() {
 	sup.msgClient.Subscribe(messaging.SubjectAgentsActionRun, messaging.AgentsHandler(sup.handleAgentRun))
 	sup.msgClient.Subscribe(messaging.SubjectAgentsActionStop, messaging.AgentsHandler(sup.handleAgentStop))
+	if sup.config.Config.InspectionConfig.InspectAtStartup {
+		sup.msgClient.Subscribe(messaging.SubjectInspectionDone, messaging.InspectionResultsHandler(sup.handleInspectionResults))
+	}
 }
 
 func agentLogger(agent config.AgentConfig) *log.Entry {

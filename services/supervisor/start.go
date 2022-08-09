@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/forta-network/forta-core-go/manifest"
+	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-core-go/release"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -65,6 +66,7 @@ type SupervisorService struct {
 
 	agentLogsClient agentlogs.Client
 	prevAgentLogs   agentlogs.Agents
+	inspectionCh    chan *protocol.InspectionResults
 }
 
 type SupervisorServiceConfig struct {
@@ -200,28 +202,6 @@ func (sup *SupervisorService) start() error {
 	}
 	sup.registerMessageHandlers()
 
-	sup.inspectorContainer, err = sup.client.StartContainer(
-		sup.ctx, clients.DockerContainerConfig{
-			Name:  config.DockerInspectorContainerName,
-			Image: commonNodeImage,
-			Cmd:   []string{config.DefaultFortaNodeBinaryPath, "inspector"},
-			Volumes: map[string]string{
-				hostFortaDir: config.DefaultContainerFortaDirPath,
-			},
-			Ports: map[string]string{
-				"": config.DefaultHealthPort, // random host port
-			},
-			DialHost:    true,
-			NetworkID:   nodeNetworkID,
-			MaxLogFiles: sup.maxLogFiles,
-			MaxLogSize:  sup.maxLogSize,
-		},
-	)
-	if err != nil {
-		return err
-	}
-	sup.addContainerUnsafe(sup.inspectorContainer)
-
 	sup.jsonRpcContainer, err = sup.client.StartContainer(
 		sup.ctx, clients.DockerContainerConfig{
 			Name:  config.DockerJSONRPCProxyContainerName,
@@ -245,6 +225,44 @@ func (sup *SupervisorService) start() error {
 		return err
 	}
 	sup.addContainerUnsafe(sup.jsonRpcContainer)
+
+	if sup.config.Config.InspectionConfig.InspectAtStartup {
+		if err := sup.client.WaitContainerStart(sup.ctx, sup.jsonRpcContainer.ID); err != nil {
+			return fmt.Errorf("failed while waiting for json-rpc container to start: %v", err)
+		}
+	}
+
+	sup.inspectorContainer, err = sup.client.StartContainer(
+		sup.ctx, clients.DockerContainerConfig{
+			Name:  config.DockerInspectorContainerName,
+			Image: commonNodeImage,
+			Cmd:   []string{config.DefaultFortaNodeBinaryPath, "inspector"},
+			Volumes: map[string]string{
+				hostFortaDir: config.DefaultContainerFortaDirPath,
+			},
+			Ports: map[string]string{
+				"": config.DefaultHealthPort, // random host port
+			},
+			DialHost:    true,
+			NetworkID:   nodeNetworkID,
+			MaxLogFiles: sup.maxLogFiles,
+			MaxLogSize:  sup.maxLogSize,
+		},
+	)
+	if err != nil {
+		return err
+	}
+	sup.addContainerUnsafe(sup.inspectorContainer)
+
+	if sup.config.Config.InspectionConfig.InspectAtStartup {
+		if err := sup.client.WaitContainerStart(sup.ctx, sup.inspectorContainer.ID); err != nil {
+			return fmt.Errorf("failed while waiting for inspector to start: %v", err)
+		}
+
+		// this makes sure that inspector published a message. Which means publisher has also received it and
+		// inspection results will be available for every batch starting first batch.
+		<-sup.inspectionCh
+	}
 
 	sup.scannerContainer, err = sup.client.StartContainer(
 		sup.ctx, clients.DockerContainerConfig{
@@ -569,6 +587,17 @@ func (sup *SupervisorService) Health() health.Reports {
 	}
 }
 
+// handleInspectionResults listen for inspections.
+func (sup *SupervisorService) handleInspectionResults(payload *protocol.InspectionResults) error {
+	// do a non-blocking write because messages are consumed only at startup
+	select {
+	case sup.inspectionCh <- payload:
+		return nil
+	default:
+		return nil
+	}
+}
+
 func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*SupervisorService, error) {
 	dockerClient, err := clients.NewDockerClient("supervisor")
 	if err != nil {
@@ -608,5 +637,6 @@ func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*Su
 		config:           cfg,
 		healthClient:     health.NewClient(),
 		agentLogsClient:  agentlogs.NewClient(cfg.Config.AgentLogsConfig.URL),
+		inspectionCh:     make(chan *protocol.InspectionResults),
 	}, nil
 }
