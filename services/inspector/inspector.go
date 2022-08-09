@@ -51,6 +51,11 @@ func (ins *Inspector) Start() error {
 		return nil
 	}
 
+	if ins.cfg.Config.InspectionConfig.InspectAtStartup {
+		blockNumber := ins.getClosestBlockToInspect()
+		ins.runInspection(blockNumber)
+	}
+
 	ins.registerMessageHandlers()
 
 	go func() {
@@ -60,22 +65,7 @@ func (ins *Inspector) Start() error {
 				return
 
 			case <-time.After(blockEventWaitTimeout):
-				// if scan api is failing, run a placeholder-like inspection with genesis block
-				dialCtx, cancel := context.WithTimeout(ins.ctx, time.Second*3)
-				rpcClient, err := rpc.DialContext(dialCtx, ins.cfg.Config.Scan.JsonRpc.Url)
-				cancel()
-				if err != nil {
-					ins.runInspection(0)
-					continue
-				}
-				reqCtx, cancel := context.WithTimeout(ins.ctx, time.Second*3)
-				blockNum, err := ethclient.NewClient(rpcClient).BlockNumber(reqCtx)
-				cancel()
-				if err != nil {
-					ins.runInspection(0)
-					continue
-				}
-				blockNum -= ins.blockNumRemainder(blockNum) // turn it into an expected block num
+				blockNum := ins.getClosestBlockToInspect()
 				ins.runInspection(blockNum)
 
 			case blockNum := <-ins.inspectCh:
@@ -104,19 +94,23 @@ func (ins *Inspector) runInspection(blockNum uint64) error {
 	ins.trackerMu.Lock()
 	ins.indicatorReports = nil
 	for indicatorName, indicatorValue := range results.Indicators {
-		ins.indicatorReports = append(ins.indicatorReports, &health.Report{
-			Name:    indicatorName,
-			Status:  health.StatusInfo,
-			Details: strconv.FormatFloat(indicatorValue, 'f', -1, 64),
-		})
+		ins.indicatorReports = append(
+			ins.indicatorReports, &health.Report{
+				Name:    indicatorName,
+				Status:  health.StatusInfo,
+				Details: strconv.FormatFloat(indicatorValue, 'f', -1, 64),
+			},
+		)
 	}
 	chainID := uint64(ins.cfg.Config.ChainID)
 	inspectionScore, _ := scorecalc.NewScoreCalculator([]scorecalc.ScoreCalculatorConfig{{ChainID: chainID}}).CalculateScore(chainID, results)
-	ins.indicatorReports = append(ins.indicatorReports, &health.Report{
-		Name:    "expected-score",
-		Status:  health.StatusInfo,
-		Details: strconv.FormatFloat(inspectionScore, 'f', -1, 64),
-	})
+	ins.indicatorReports = append(
+		ins.indicatorReports, &health.Report{
+			Name:    "expected-score",
+			Status:  health.StatusInfo,
+			Details: strconv.FormatFloat(inspectionScore, 'f', -1, 64),
+		},
+	)
 	ins.trackerMu.Unlock()
 
 	b, _ := json.Marshal(results)
@@ -189,6 +183,27 @@ func (ins *Inspector) Health() health.Reports {
 	ins.trackerMu.RUnlock()
 
 	return reports
+}
+
+func (ins *Inspector) getClosestBlockToInspect() uint64 {
+	// if scan api is failing, run a placeholder-like inspection with genesis block
+	dialCtx, cancel := context.WithTimeout(ins.ctx, time.Second*3)
+	rpcClient, err := rpc.DialContext(dialCtx, ins.cfg.Config.Scan.JsonRpc.Url)
+	cancel()
+	if err != nil {
+		return 0
+	}
+
+	reqCtx, cancel := context.WithTimeout(ins.ctx, time.Second*3)
+	blockNum, err := ethclient.NewClient(rpcClient).BlockNumber(reqCtx)
+	cancel()
+	if err != nil {
+		return 0
+	}
+
+	blockNum -= ins.blockNumRemainder(blockNum) // turn it into an expected block num
+
+	return blockNum
 }
 
 func NewInspector(ctx context.Context, cfg InspectorConfig) (*Inspector, error) {
