@@ -65,6 +65,7 @@ type SupervisorService struct {
 	
 	agentLogsClient agentlogs.Client
 	prevAgentLogs   agentlogs.Agents
+	inspectionCh    chan *protocol.InspectionResults
 }
 
 type SupervisorServiceConfig struct {
@@ -555,6 +556,17 @@ func (sup *SupervisorService) Health() health.Reports {
 	}
 }
 
+// handleInspectionResults listen for inspections.
+func (sup *SupervisorService) handleInspectionResults(payload *protocol.InspectionResults) error {
+	// do a non-blocking write because messages are consumed only at startup
+	select {
+	case sup.inspectionCh <- payload:
+		return nil
+	default:
+		return nil
+	}
+}
+
 func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*SupervisorService, error) {
 	dockerClient, err := clients.NewDockerClient("supervisor")
 	if err != nil {
@@ -594,5 +606,6 @@ func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*Su
 		config:           cfg,
 		healthClient:     health.NewClient(),
 		agentLogsClient:  agentlogs.NewClient(cfg.Config.AgentLogsConfig.URL),
+		inspectionCh:     make(chan *protocol.InspectionResults),
 	}, nil
 }
