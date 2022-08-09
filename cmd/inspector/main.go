@@ -45,24 +45,18 @@ func summarizeReports(reports health.Reports) *health.Report {
 
 	var failingApis []string
 
-	scanAccessible, ok := reports.GetByName(inspect.IndicatorScanAPIAccessible)
+	scanAccessible, ok := reports.NameContains(inspect.IndicatorScanAPIAccessible)
 	if !ok {
 		return summary.Finish()
 	}
 	if ok && scanAccessible.Details != "1" {
 		failingApis = append(failingApis, "scan")
 	}
-	proxyAccessible, ok := reports.GetByName(inspect.IndicatorProxyAPIAccessible)
-	if !ok {
-		return summary.Finish()
-	}
+	proxyAccessible, ok := reports.NameContains(inspect.IndicatorProxyAPIAccessible)
 	if ok && proxyAccessible.Details != "1" {
 		failingApis = append(failingApis, "proxy")
 	}
-	traceAccessible, ok := reports.GetByName(inspect.IndicatorTraceAccessible)
-	if !ok {
-		return summary.Finish()
-	}
+	traceAccessible, ok := reports.NameContains(inspect.IndicatorTraceAccessible)
 	if ok && traceAccessible.Details != "1" && chainSetings.EnableTrace {
 		failingApis = append(failingApis, "trace")
 	}
@@ -72,7 +66,28 @@ func summarizeReports(reports health.Reports) *health.Report {
 		summary.Status(health.StatusFailing)
 	}
 
-	totalMemory, ok := reports.GetByName(inspect.IndicatorResourcesMemoryTotal)
+	var incompatibleApis []string
+
+	expectedChainID := strconv.FormatInt(int64(nodeConfig.ChainID), 10)
+
+	scanChainID, ok := reports.NameContains(inspect.IndicatorScanAPIChainID)
+	if ok && scanChainID.Details != expectedChainID {
+		incompatibleApis = append(incompatibleApis, "scan")
+	}
+	proxyChainID, ok := reports.NameContains(inspect.IndicatorProxyAPIChainID)
+	if ok && proxyChainID.Details != expectedChainID {
+		incompatibleApis = append(incompatibleApis, "proxy")
+	}
+	traceChainID, ok := reports.NameContains(inspect.IndicatorTraceAPIChainID)
+	if ok && traceChainID.Details != expectedChainID && chainSetings.EnableTrace {
+		incompatibleApis = append(incompatibleApis, "trace")
+	}
+	if len(incompatibleApis) > 0 {
+		summary.Addf("different chain detected from %s api (expected chain id %s).", strings.Join(incompatibleApis, ", "), expectedChainID)
+		summary.Status(health.StatusFailing)
+	}
+
+	totalMemory, ok := reports.NameContains(inspect.IndicatorResourcesMemoryTotal)
 	if ok {
 		mem, _ := strconv.ParseFloat(totalMemory.Details, 64)
 		if mem < scorecalc.MinTotalMemoryRequired {
@@ -81,10 +96,10 @@ func summarizeReports(reports health.Reports) *health.Report {
 		}
 	}
 
-	score, ok := reports.GetByName("expected-score")
+	score, ok := reports.NameContains("expected-score")
 	if ok {
 		scoreNum, _ := strconv.ParseFloat(score.Details, 64)
-		if scoreNum == 0 {
+		if scoreNum < 1 {
 			summary.Add("please fix your node to avoid losing rewards.")
 			summary.Status(health.StatusFailing)
 		}
