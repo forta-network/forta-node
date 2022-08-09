@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/forta-network/forta-core-go/manifest"
+	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-core-go/release"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -202,6 +203,36 @@ func (sup *SupervisorService) start() error {
 	}
 	sup.registerMessageHandlers()
 
+	sup.jsonRpcContainer, err = sup.client.StartContainer(
+		sup.ctx, clients.DockerContainerConfig{
+			Name:  config.DockerJSONRPCProxyContainerName,
+			Image: commonNodeImage,
+			Cmd:   []string{config.DefaultFortaNodeBinaryPath, "json-rpc"},
+			Volumes: map[string]string{
+				// give access to host docker
+				"/var/run/docker.sock": "/var/run/docker.sock",
+				hostFortaDir:           config.DefaultContainerFortaDirPath,
+			},
+			Ports: map[string]string{
+				"": config.DefaultHealthPort, // random host port
+			},
+			DialHost:    true,
+			NetworkID:   nodeNetworkID,
+			MaxLogFiles: sup.maxLogFiles,
+			MaxLogSize:  sup.maxLogSize,
+		},
+	)
+	if err != nil {
+		return err
+	}
+	sup.addContainerUnsafe(sup.jsonRpcContainer)
+
+	if sup.config.Config.InspectionConfig.InspectAtStartup {
+		if err := sup.client.WaitContainerStart(sup.ctx, sup.jsonRpcContainer.ID); err != nil {
+			return fmt.Errorf("failed while waiting for json-rpc container to start: %v", err)
+		}
+	}
+
 	sup.inspectorContainer, err = sup.client.StartContainer(
 		sup.ctx, clients.DockerContainerConfig{
 			Name:  config.DockerInspectorContainerName,
@@ -226,37 +257,13 @@ func (sup *SupervisorService) start() error {
 
 	if sup.config.Config.InspectionConfig.InspectAtStartup {
 		if err := sup.client.WaitContainerStart(sup.ctx, sup.inspectorContainer.ID); err != nil {
-			return fmt.Errorf("failed while waiting for nats to start: %v", err)
+			return fmt.Errorf("failed while waiting for inspector to start: %v", err)
 		}
-		
+
 		// this makes sure that inspector published a message. Which means publisher has also received it and
 		// inspection results will be available for every batch starting first batch.
 		<-sup.inspectionCh
 	}
-
-	sup.jsonRpcContainer, err = sup.client.StartContainer(
-		sup.ctx, clients.DockerContainerConfig{
-			Name:  config.DockerJSONRPCProxyContainerName,
-			Image: commonNodeImage,
-			Cmd:   []string{config.DefaultFortaNodeBinaryPath, "json-rpc"},
-			Volumes: map[string]string{
-				// give access to host docker
-				"/var/run/docker.sock": "/var/run/docker.sock",
-				hostFortaDir:           config.DefaultContainerFortaDirPath,
-			},
-			Ports: map[string]string{
-				"": config.DefaultHealthPort, // random host port
-			},
-			DialHost:    true,
-			NetworkID:   nodeNetworkID,
-			MaxLogFiles: sup.maxLogFiles,
-			MaxLogSize:  sup.maxLogSize,
-		},
-	)
-	if err != nil {
-		return err
-	}
-	sup.addContainerUnsafe(sup.jsonRpcContainer)
 
 	sup.scannerContainer, err = sup.client.StartContainer(
 		sup.ctx, clients.DockerContainerConfig{
@@ -285,7 +292,7 @@ func (sup *SupervisorService) start() error {
 		return err
 	}
 	sup.addContainerUnsafe(sup.scannerContainer)
-	
+
 	sup.jwtProviderContainer, err = sup.client.StartContainer(
 		sup.ctx, clients.DockerContainerConfig{
 			Name:  config.DockerJWTProviderContainerName,
