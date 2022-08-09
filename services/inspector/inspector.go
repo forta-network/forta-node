@@ -46,8 +46,8 @@ type InspectorConfig struct {
 }
 
 func (ins *Inspector) Start() error {
-	if ins.cfg.Config.LocalModeConfig.Enable && !ins.cfg.Config.LocalModeConfig.EnableInspection {
-		log.Warn("inspection is disabled - please enable it from the local mode config if you need it")
+	if ins.cfg.Config.LocalModeConfig.Enable && !ins.cfg.Config.LocalModeConfig.ForceEnableInspection {
+		log.Warn("inspection is disabled - please enable it from the local mode config using 'forceEnableInspection' if you need it")
 		return nil
 	}
 

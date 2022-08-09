@@ -24,9 +24,11 @@ test:
 perf-test:
 	go test ./... -tags=perf_test
 
+.PHONY: e2e-test-deps
 e2e-test-deps:
 	./tests/e2e/deps-start.sh
 
+.PHONY: e2e-test
 e2e-test:
 	rm -rf tests/e2e/.forta/coverage
 	mkdir -p tests/e2e/.forta/coverage

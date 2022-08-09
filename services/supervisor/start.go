@@ -227,7 +227,12 @@ func (sup *SupervisorService) start() error {
 	}
 	sup.addContainerUnsafe(sup.jsonRpcContainer)
 
-	if sup.config.Config.InspectionConfig.InspectAtStartup {
+	shouldInspectAtStartup := sup.config.Config.InspectionConfig.InspectAtStartup
+	if sup.config.Config.LocalModeConfig.Enable {
+		shouldInspectAtStartup = shouldInspectAtStartup && sup.config.Config.LocalModeConfig.ForceEnableInspection
+	}
+
+	if shouldInspectAtStartup {
 		if err := sup.client.WaitContainerStart(sup.ctx, sup.jsonRpcContainer.ID); err != nil {
 			return fmt.Errorf("failed while waiting for json-rpc container to start: %v", err)
 		}
@@ -256,7 +261,7 @@ func (sup *SupervisorService) start() error {
 	}
 	sup.addContainerUnsafe(sup.inspectorContainer)
 
-	if sup.config.Config.InspectionConfig.InspectAtStartup {
+	if shouldInspectAtStartup {
 		if err := sup.client.WaitContainerStart(sup.ctx, sup.inspectorContainer.ID); err != nil {
 			return fmt.Errorf("failed while waiting for inspector to start: %v", err)
 		}
