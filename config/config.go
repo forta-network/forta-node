@@ -127,6 +127,7 @@ type LocalModeConfig struct {
 type InspectionConfig struct {
 	BlockInterval     *int `yaml:"blockInterval" json:"blockInterval"`
 	NetworkSavingMode bool `yaml:"networkSavingMode" json:"networkSavingMode"`
+	InspectAtStartup  bool `yaml:"inspectAtStartup" json:"inspect_at_startup" default:"true"`
 }
 
 type Config struct {

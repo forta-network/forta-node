@@ -223,6 +223,12 @@ func (sup *SupervisorService) start() error {
 	}
 	sup.addContainerUnsafe(sup.inspectorContainer)
 
+	if sup.config.Config.InspectionConfig.InspectAtStartup {
+		if err := sup.client.WaitContainerStart(sup.ctx, sup.inspectorContainer.ID); err != nil {
+			return fmt.Errorf("failed while waiting for nats to start: %v", err)
+		}
+	}
+
 	sup.jsonRpcContainer, err = sup.client.StartContainer(
 		sup.ctx, clients.DockerContainerConfig{
 			Name:  config.DockerJSONRPCProxyContainerName,
