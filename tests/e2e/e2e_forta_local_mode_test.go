@@ -56,9 +56,6 @@ telemetry:
 agentLogs:
   disable: true
 
-inspection:
-  disable: true
-
 log:
   level: trace
 `
