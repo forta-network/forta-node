@@ -31,7 +31,7 @@ type Inspector struct {
 	msgClient clients.MessageClient
 
 	lastErr          health.ErrorTracker
-	indicatorReports []*health.Report
+	indicatorReports []health.Report
 	trackerMu        sync.RWMutex
 
 	inspectEvery int
@@ -94,23 +94,19 @@ func (ins *Inspector) runInspection(blockNum uint64) error {
 	ins.trackerMu.Lock()
 	ins.indicatorReports = nil
 	for indicatorName, indicatorValue := range results.Indicators {
-		ins.indicatorReports = append(
-			ins.indicatorReports, &health.Report{
-				Name:    indicatorName,
-				Status:  health.StatusInfo,
-				Details: strconv.FormatFloat(indicatorValue, 'f', -1, 64),
-			},
-		)
+		ins.indicatorReports = append(ins.indicatorReports, health.Report{
+			Name:    indicatorName,
+			Status:  health.StatusInfo,
+			Details: strconv.FormatFloat(indicatorValue, 'f', -1, 64),
+		})
 	}
 	chainID := uint64(ins.cfg.Config.ChainID)
 	inspectionScore, _ := scorecalc.NewScoreCalculator([]scorecalc.ScoreCalculatorConfig{{ChainID: chainID}}).CalculateScore(chainID, results)
-	ins.indicatorReports = append(
-		ins.indicatorReports, &health.Report{
-			Name:    "expected-score",
-			Status:  health.StatusInfo,
-			Details: strconv.FormatFloat(inspectionScore, 'f', -1, 64),
-		},
-	)
+	ins.indicatorReports = append(ins.indicatorReports, health.Report{
+		Name:    "expected-score",
+		Status:  health.StatusInfo,
+		Details: strconv.FormatFloat(inspectionScore, 'f', -1, 64),
+	})
 	ins.trackerMu.Unlock()
 
 	b, _ := json.Marshal(results)
@@ -179,7 +175,10 @@ func (ins *Inspector) Health() health.Reports {
 		ins.lastErr.GetReport("last-error"),
 	}
 	ins.trackerMu.RLock()
-	reports = append(reports, ins.indicatorReports...)
+	for _, report := range ins.indicatorReports {
+		reportCopy := report
+		reports = append(reports, &reportCopy)
+	}
 	ins.trackerMu.RUnlock()
 
 	return reports

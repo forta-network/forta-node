@@ -223,6 +223,7 @@ func initConfig() {
 	configPath := path.Join(fortaDir, config.DefaultConfigFileName)
 	configBytes, _ := ioutil.ReadFile(configPath)
 	if err := yaml.Unmarshal(configBytes, &cfg); err != nil {
+		yellowBold("Your config file is invalid! Please check the values and fix any formatting issues.\n")
 		logrus.WithError(err).Fatal("failed to read config")
 	}
 
