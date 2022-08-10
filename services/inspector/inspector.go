@@ -38,7 +38,7 @@ type Inspector struct {
 	trackerMu        sync.RWMutex
 
 	latestInspection          *inspect.InspectionResults
-	latestInspectionRW        sync.RWMutex
+	latestInspectionMu        sync.RWMutex
 	inspectionPublishInterval time.Duration
 
 	inspectEvery int
@@ -65,12 +65,7 @@ func (ins *Inspector) Start() error {
 
 	ins.registerMessageHandlers()
 
-	go func() {
-		err := ins.inspectionPublisher(ins.ctx)
-		if err != nil {
-			return
-		}
-	}()
+	go ins.inspectionPublisher(ins.ctx)
 
 	go func() {
 		for {
@@ -98,10 +93,9 @@ func (ins *Inspector) inspectionPublisher(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-t.C:
-			// publish inspection results even if there are errors, because inspection results are independent of errors
-			ins.latestInspectionRW.RLock()
+			ins.latestInspectionMu.RLock()
 			ins.msgClient.PublishProto(messaging.SubjectInspectionDone, transform.ToProtoInspectionResults(ins.latestInspection))
-			ins.latestInspectionRW.RUnlock()
+			ins.latestInspectionMu.RUnlock()
 		}
 	}
 }
@@ -119,9 +113,11 @@ func (ins *Inspector) runInspection(blockNum uint64) error {
 	)
 	cancel()
 
-	ins.latestInspectionRW.Lock()
+	// use inspection results even if there are errors
+	// because inspection results are independent of errors
+	ins.latestInspectionMu.Lock()
 	ins.latestInspection = results
-	ins.latestInspectionRW.Unlock()
+	ins.latestInspectionMu.Unlock()
 
 	ins.trackerMu.Lock()
 	ins.indicatorReports = nil
