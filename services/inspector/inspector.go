@@ -21,7 +21,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const blockEventWaitTimeout = time.Minute * 20
+const (
+	blockEventWaitTimeout            = time.Minute * 20
+	defaultPublishInspectionInterval = time.Second * 5
+)
 
 // Inspector runs continuous inspections.
 type Inspector struct {
@@ -33,6 +36,10 @@ type Inspector struct {
 	lastErr          health.ErrorTracker
 	indicatorReports []health.Report
 	trackerMu        sync.RWMutex
+
+	latestInspection          *inspect.InspectionResults
+	latestInspectionMu        sync.RWMutex
+	inspectionPublishInterval time.Duration
 
 	inspectEvery int
 	inspectTrace bool
@@ -58,6 +65,8 @@ func (ins *Inspector) Start() error {
 
 	ins.registerMessageHandlers()
 
+	go ins.inspectionPublisher(ins.ctx)
+
 	go func() {
 		for {
 			select {
@@ -76,6 +85,21 @@ func (ins *Inspector) Start() error {
 	return nil
 }
 
+func (ins *Inspector) inspectionPublisher(ctx context.Context) error {
+	t := time.NewTicker(ins.inspectionPublishInterval)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-t.C:
+			ins.latestInspectionMu.RLock()
+			ins.msgClient.PublishProto(messaging.SubjectInspectionDone, transform.ToProtoInspectionResults(ins.latestInspection))
+			ins.latestInspectionMu.RUnlock()
+		}
+	}
+}
+
 func (ins *Inspector) runInspection(blockNum uint64) error {
 	inspectCtx, cancel := context.WithTimeout(ins.ctx, time.Minute*2)
 	results, err := inspect.Inspect(
@@ -88,25 +112,33 @@ func (ins *Inspector) runInspection(blockNum uint64) error {
 		},
 	)
 	cancel()
-	// publish inspection results even if there are errors, because inspection results are independent of errors
-	ins.msgClient.PublishProto(messaging.SubjectInspectionDone, transform.ToProtoInspectionResults(results))
+
+	// use inspection results even if there are errors
+	// because inspection results are independent of errors
+	ins.latestInspectionMu.Lock()
+	ins.latestInspection = results
+	ins.latestInspectionMu.Unlock()
 
 	ins.trackerMu.Lock()
 	ins.indicatorReports = nil
 	for indicatorName, indicatorValue := range results.Indicators {
-		ins.indicatorReports = append(ins.indicatorReports, health.Report{
-			Name:    indicatorName,
-			Status:  health.StatusInfo,
-			Details: strconv.FormatFloat(indicatorValue, 'f', -1, 64),
-		})
+		ins.indicatorReports = append(
+			ins.indicatorReports, health.Report{
+				Name:    indicatorName,
+				Status:  health.StatusInfo,
+				Details: strconv.FormatFloat(indicatorValue, 'f', -1, 64),
+			},
+		)
 	}
 	chainID := uint64(ins.cfg.Config.ChainID)
 	inspectionScore, _ := scorecalc.NewScoreCalculator([]scorecalc.ScoreCalculatorConfig{{ChainID: chainID}}).CalculateScore(chainID, results)
-	ins.indicatorReports = append(ins.indicatorReports, health.Report{
-		Name:    "expected-score",
-		Status:  health.StatusInfo,
-		Details: strconv.FormatFloat(inspectionScore, 'f', -1, 64),
-	})
+	ins.indicatorReports = append(
+		ins.indicatorReports, health.Report{
+			Name:    "expected-score",
+			Status:  health.StatusInfo,
+			Details: strconv.FormatFloat(inspectionScore, 'f', -1, 64),
+		},
+	)
 	ins.trackerMu.Unlock()
 
 	b, _ := json.Marshal(results)
@@ -214,14 +246,19 @@ func NewInspector(ctx context.Context, cfg InspectorConfig) (*Inspector, error) 
 		inspectionInterval = *cfg.Config.InspectionConfig.BlockInterval
 	}
 
+	publishInterval := defaultPublishInspectionInterval
+	if cfg.Config.Publish.Batch.IntervalSeconds != nil {
+		publishInterval = (time.Duration(*cfg.Config.Publish.Batch.IntervalSeconds) * time.Second) / 3
+	}
 	inspect.DownloadTestSavingMode = cfg.Config.InspectionConfig.NetworkSavingMode
 
 	return &Inspector{
-		ctx:          ctx,
-		msgClient:    msgClient,
-		cfg:          cfg,
-		inspectEvery: inspectionInterval,
-		inspectTrace: chainSettings.EnableTrace,
-		inspectCh:    make(chan uint64, 1), // let it tolerate being late on one block inspection
+		ctx:                       ctx,
+		msgClient:                 msgClient,
+		cfg:                       cfg,
+		inspectEvery:              inspectionInterval,
+		inspectTrace:              chainSettings.EnableTrace,
+		inspectCh:                 make(chan uint64, 1), // let it tolerate being late on one block inspection
+		inspectionPublishInterval: publishInterval,
 	}, nil
 }
