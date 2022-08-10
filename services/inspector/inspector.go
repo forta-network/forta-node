@@ -248,7 +248,7 @@ func NewInspector(ctx context.Context, cfg InspectorConfig) (*Inspector, error) 
 
 	publishInterval := defaultPublishInspectionInterval
 	if cfg.Config.Publish.Batch.IntervalSeconds != nil {
-		publishInterval = time.Duration(*cfg.Config.Publish.Batch.IntervalSeconds / 3)
+		publishInterval = (time.Duration(*cfg.Config.Publish.Batch.IntervalSeconds) * time.Second) / 3
 	}
 	inspect.DownloadTestSavingMode = cfg.Config.InspectionConfig.NetworkSavingMode
 
