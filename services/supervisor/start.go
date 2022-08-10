@@ -29,7 +29,7 @@ import (
 const (
 	// SupervisorStrategyVersion is for versioning the critical changes in supervisor's management strategy.
 	// It's effective in deciding if an agent container should be restarted or not.
-	SupervisorStrategyVersion = "1"
+	SupervisorStrategyVersion = "2"
 )
 
 // SupervisorService manages the scanner node's service and agent containers.
