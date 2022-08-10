@@ -52,10 +52,6 @@ func summarizeReports(reports health.Reports) *health.Report {
 	if ok && scanAccessible.Details != "1" {
 		failingApis = append(failingApis, "scan")
 	}
-	proxyAccessible, ok := reports.NameContains(inspect.IndicatorProxyAPIAccessible)
-	if ok && proxyAccessible.Details != "1" {
-		failingApis = append(failingApis, "proxy")
-	}
 	traceAccessible, ok := reports.NameContains(inspect.IndicatorTraceAccessible)
 	if ok && traceAccessible.Details != "1" && chainSetings.EnableTrace {
 		failingApis = append(failingApis, "trace")
@@ -74,10 +70,6 @@ func summarizeReports(reports health.Reports) *health.Report {
 	if ok && scanChainID.Details != expectedChainID {
 		incompatibleApis = append(incompatibleApis, "scan")
 	}
-	proxyChainID, ok := reports.NameContains(inspect.IndicatorProxyAPIChainID)
-	if ok && proxyChainID.Details != expectedChainID {
-		incompatibleApis = append(incompatibleApis, "proxy")
-	}
 	traceChainID, ok := reports.NameContains(inspect.IndicatorTraceAPIChainID)
 	if ok && traceChainID.Details != expectedChainID && chainSetings.EnableTrace {
 		incompatibleApis = append(incompatibleApis, "trace")
@@ -87,20 +79,17 @@ func summarizeReports(reports health.Reports) *health.Report {
 		summary.Status(health.StatusFailing)
 	}
 
+	traceSupported, ok := reports.NameContains(inspect.IndicatorTraceSupported)
+	if ok && traceSupported.Details == "-1" && chainSetings.EnableTrace {
+		summary.Add("trace api does not support `trace_block`.")
+		summary.Status(health.StatusFailing)
+	}
+
 	totalMemory, ok := reports.NameContains(inspect.IndicatorResourcesMemoryTotal)
 	if ok {
 		mem, _ := strconv.ParseFloat(totalMemory.Details, 64)
 		if mem < scorecalc.MinTotalMemoryRequired {
 			summary.Add("low total memory.")
-			summary.Status(health.StatusFailing)
-		}
-	}
-
-	score, ok := reports.NameContains("expected-score")
-	if ok {
-		scoreNum, _ := strconv.ParseFloat(score.Details, 64)
-		if scoreNum < 1 {
-			summary.Add("please fix your node to avoid losing rewards.")
 			summary.Status(health.StatusFailing)
 		}
 	}
