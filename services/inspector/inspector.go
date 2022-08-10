@@ -21,7 +21,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const blockEventWaitTimeout = time.Minute * 20
+const (
+	publishInspectionInterval = time.Second * 5
+	blockEventWaitTimeout     = time.Minute * 20
+)
 
 // Inspector runs continuous inspections.
 type Inspector struct {
@@ -33,6 +36,9 @@ type Inspector struct {
 	lastErr          health.ErrorTracker
 	indicatorReports []health.Report
 	trackerMu        sync.RWMutex
+
+	latestInspection   *inspect.InspectionResults
+	latestInspectionRW sync.RWMutex
 
 	inspectEvery int
 	inspectTrace bool
@@ -59,6 +65,13 @@ func (ins *Inspector) Start() error {
 	ins.registerMessageHandlers()
 
 	go func() {
+		err := ins.inspectionPublisher(ins.ctx)
+		if err != nil {
+			return
+		}
+	}()
+
+	go func() {
 		for {
 			select {
 			case <-ins.ctx.Done():
@@ -76,6 +89,22 @@ func (ins *Inspector) Start() error {
 	return nil
 }
 
+func (ins *Inspector) inspectionPublisher(ctx context.Context) error {
+	t := time.NewTicker(publishInspectionInterval)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-t.C:
+			// publish inspection results even if there are errors, because inspection results are independent of errors
+			ins.latestInspectionRW.RLock()
+			ins.msgClient.PublishProto(messaging.SubjectInspectionDone, transform.ToProtoInspectionResults(ins.latestInspection))
+			ins.latestInspectionRW.RUnlock()
+		}
+	}
+}
+
 func (ins *Inspector) runInspection(blockNum uint64) error {
 	inspectCtx, cancel := context.WithTimeout(ins.ctx, time.Minute*2)
 	results, err := inspect.Inspect(
@@ -88,25 +117,31 @@ func (ins *Inspector) runInspection(blockNum uint64) error {
 		},
 	)
 	cancel()
-	// publish inspection results even if there are errors, because inspection results are independent of errors
-	ins.msgClient.PublishProto(messaging.SubjectInspectionDone, transform.ToProtoInspectionResults(results))
+
+	ins.latestInspectionRW.Lock()
+	ins.latestInspection = results
+	ins.latestInspectionRW.Unlock()
 
 	ins.trackerMu.Lock()
 	ins.indicatorReports = nil
 	for indicatorName, indicatorValue := range results.Indicators {
-		ins.indicatorReports = append(ins.indicatorReports, health.Report{
-			Name:    indicatorName,
-			Status:  health.StatusInfo,
-			Details: strconv.FormatFloat(indicatorValue, 'f', -1, 64),
-		})
+		ins.indicatorReports = append(
+			ins.indicatorReports, health.Report{
+				Name:    indicatorName,
+				Status:  health.StatusInfo,
+				Details: strconv.FormatFloat(indicatorValue, 'f', -1, 64),
+			},
+		)
 	}
 	chainID := uint64(ins.cfg.Config.ChainID)
 	inspectionScore, _ := scorecalc.NewScoreCalculator([]scorecalc.ScoreCalculatorConfig{{ChainID: chainID}}).CalculateScore(chainID, results)
-	ins.indicatorReports = append(ins.indicatorReports, health.Report{
-		Name:    "expected-score",
-		Status:  health.StatusInfo,
-		Details: strconv.FormatFloat(inspectionScore, 'f', -1, 64),
-	})
+	ins.indicatorReports = append(
+		ins.indicatorReports, health.Report{
+			Name:    "expected-score",
+			Status:  health.StatusInfo,
+			Details: strconv.FormatFloat(inspectionScore, 'f', -1, 64),
+		},
+	)
 	ins.trackerMu.Unlock()
 
 	b, _ := json.Marshal(results)
