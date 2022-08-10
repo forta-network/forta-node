@@ -22,8 +22,8 @@ import (
 )
 
 const (
-	publishInspectionInterval = time.Second * 5
-	blockEventWaitTimeout     = time.Minute * 20
+	blockEventWaitTimeout            = time.Minute * 20
+	defaultPublishInspectionInterval = time.Second * 5
 )
 
 // Inspector runs continuous inspections.
@@ -37,8 +37,9 @@ type Inspector struct {
 	indicatorReports []health.Report
 	trackerMu        sync.RWMutex
 
-	latestInspection   *inspect.InspectionResults
-	latestInspectionRW sync.RWMutex
+	latestInspection          *inspect.InspectionResults
+	latestInspectionRW        sync.RWMutex
+	inspectionPublishInterval time.Duration
 
 	inspectEvery int
 	inspectTrace bool
@@ -90,7 +91,7 @@ func (ins *Inspector) Start() error {
 }
 
 func (ins *Inspector) inspectionPublisher(ctx context.Context) error {
-	t := time.NewTicker(publishInspectionInterval)
+	t := time.NewTicker(ins.inspectionPublishInterval)
 
 	for {
 		select {
@@ -249,14 +250,19 @@ func NewInspector(ctx context.Context, cfg InspectorConfig) (*Inspector, error) 
 		inspectionInterval = *cfg.Config.InspectionConfig.BlockInterval
 	}
 
+	publishInterval := defaultPublishInspectionInterval
+	if cfg.Config.Publish.Batch.IntervalSeconds != nil {
+		publishInterval = time.Duration(*cfg.Config.Publish.Batch.IntervalSeconds / 3)
+	}
 	inspect.DownloadTestSavingMode = cfg.Config.InspectionConfig.NetworkSavingMode
 
 	return &Inspector{
-		ctx:          ctx,
-		msgClient:    msgClient,
-		cfg:          cfg,
-		inspectEvery: inspectionInterval,
-		inspectTrace: chainSettings.EnableTrace,
-		inspectCh:    make(chan uint64, 1), // let it tolerate being late on one block inspection
+		ctx:                       ctx,
+		msgClient:                 msgClient,
+		cfg:                       cfg,
+		inspectEvery:              inspectionInterval,
+		inspectTrace:              chainSettings.EnableTrace,
+		inspectCh:                 make(chan uint64, 1), // let it tolerate being late on one block inspection
+		inspectionPublishInterval: publishInterval,
 	}, nil
 }
