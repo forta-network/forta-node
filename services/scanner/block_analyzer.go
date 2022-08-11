@@ -50,7 +50,7 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 				BotImage: result.AgentConfig.Image,
 				BotID:    result.AgentConfig.ID,
 			},
-		}
+		},
 	)
 	blockNumber, err := utils.HexToBigInt(result.Request.Event.BlockNumber)
 	if err != nil {
