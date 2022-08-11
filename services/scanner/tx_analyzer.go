@@ -2,15 +2,13 @@ package scanner
 
 import (
 	"context"
-	"sort"
-	"strings"
 	"time"
 
 	"github.com/forta-network/forta-core-go/clients/health"
+	"github.com/forta-network/forta-core-go/protocol/alerthash"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/metrics"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-core-go/utils"
@@ -36,33 +34,22 @@ type TxAnalyzerServiceConfig struct {
 	MsgClient   clients.MessageClient
 }
 
-// WARNING, this must be deterministic (any maps must be converted to sorted lists)
-func (t *TxAnalyzerService) calculateAlertID(result *TxResult, f *protocol.Finding) string {
-	addrs := utils.MapKeys(result.Request.Event.Addresses)
-	sort.Strings(addrs)
-	idStr := strings.Join([]string{
-		result.Request.Event.Network.ChainId,
-		result.Request.Event.Transaction.Hash,
-		f.Name,
-		f.Description,
-		f.Protocol,
-		f.Type.String(),
-		f.AlertId,
-		f.Severity.String(),
-		result.AgentConfig.Image,
-		result.AgentConfig.ID,
-		strings.Join(addrs, ""),
-		strings.Join(f.Addresses, "")}, "")
-	return crypto.Keccak256Hash([]byte(idStr)).Hex()
-}
-
 func (t *TxAnalyzerService) publishMetrics(result *TxResult) {
 	m := metrics.GetTxMetrics(result.AgentConfig, result.Response, result.Timestamps)
 	t.cfg.MsgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: m})
 }
 
 func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
-	alertID := t.calculateAlertID(result, f)
+	alertID := alerthash.ForTransactionAlert(
+		&alerthash.Inputs{
+			Transaction: result.Request.Event,
+			Finding:     f,
+			BotInfo: alerthash.BotInfo{
+				BotImage: result.AgentConfig.Image,
+				BotID:    result.AgentConfig.ID,
+			},
+		},
+	)
 	blockNumber, err := utils.HexToBigInt(result.Request.Event.Block.BlockNumber)
 	if err != nil {
 		return nil, err
@@ -116,7 +103,7 @@ func (t *TxAnalyzerService) Start() error {
 				}
 			}
 
-			//TODO: validate finding returned is well-formed
+			// TODO: validate finding returned is well-formed
 			for _, f := range result.Response.Findings {
 				alert, err := t.findingToAlert(result, ts, f)
 				if err != nil {

@@ -2,16 +2,15 @@ package scanner
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/domain"
+	"github.com/forta-network/forta-core-go/protocol/alerthash"
 	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/metrics"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -37,30 +36,22 @@ type BlockAnalyzerServiceConfig struct {
 	MsgClient    clients.MessageClient
 }
 
-// WARNING, this must be deterministic (any maps must be converted to sorted lists)
-func (t *BlockAnalyzerService) calculateAlertID(result *BlockResult, f *protocol.Finding) string {
-	idStr := strings.Join([]string{
-		result.Request.Event.Network.ChainId,
-		result.Request.Event.BlockHash,
-		f.AlertId,
-		f.Name,
-		f.Description,
-		f.Protocol,
-		f.Type.String(),
-		f.Severity.String(),
-		result.AgentConfig.Image,
-		result.AgentConfig.ID,
-		strings.Join(f.Addresses, "")}, "")
-	return crypto.Keccak256Hash([]byte(idStr)).Hex()
-}
-
 func (t *BlockAnalyzerService) publishMetrics(result *BlockResult) {
 	m := metrics.GetBlockMetrics(result.AgentConfig, result.Response, result.Timestamps)
 	t.cfg.MsgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: m})
 }
 
 func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
-	alertID := t.calculateAlertID(result, f)
+	alertID := alerthash.ForBlockAlert(
+		&alerthash.Inputs{
+			Block:   result.Request.Event,
+			Finding: f,
+			BotInfo: alerthash.BotInfo{
+				BotImage: result.AgentConfig.Image,
+				BotID:    result.AgentConfig.ID,
+			},
+		}
+	)
 	blockNumber, err := utils.HexToBigInt(result.Request.Event.BlockNumber)
 	if err != nil {
 		return nil, err
