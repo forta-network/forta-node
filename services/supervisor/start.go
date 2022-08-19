@@ -54,13 +54,15 @@ type SupervisorService struct {
 	containers         []*Container
 	mu                 sync.RWMutex
 
-	jwtProviderContainer      *clients.DockerContainer
-	lastRun                   health.TimeTracker
-	lastStop                  health.TimeTracker
-	lastTelemetryRequest      health.TimeTracker
-	lastTelemetryRequestError health.ErrorTracker
-	lastAgentLogsRequest      health.TimeTracker
-	lastAgentLogsRequestError health.ErrorTracker
+	jwtProviderContainer            *clients.DockerContainer
+	lastRun                         health.TimeTracker
+	lastStop                        health.TimeTracker
+	lastTelemetryRequest            health.TimeTracker
+	lastTelemetryRequestError       health.ErrorTracker
+	lastCustomTelemetryRequest      health.TimeTracker
+	lastCustomTelemetryRequestError health.ErrorTracker
+	lastAgentLogsRequest            health.TimeTracker
+	lastAgentLogsRequestError       health.ErrorTracker
 
 	healthClient health.HealthClient
 
@@ -450,20 +452,46 @@ func (sup *SupervisorService) removeOldContainers() error {
 }
 
 func (sup *SupervisorService) syncTelemetryData() {
-	time.After(time.Second * 15) // rate limit crash loops
-	ticker := time.NewTicker(time.Minute)
+	slowTicker := time.NewTicker(time.Minute * 5)
+	fastTicker := time.NewTicker(time.Minute)
 	for {
-		err := sup.doSyncTelemetryData()
-		sup.lastTelemetryRequest.Set()
-		sup.lastTelemetryRequestError.Set(err)
-		if err != nil {
-			log.WithError(err).Warn("telemetry sync failed")
+		var err error
+		select {
+		case <-slowTicker.C:
+			err = sup.doSyncTelemetryDataToPublicHandler()
+			if err != nil {
+				log.WithError(err).Warn("telemetry sync failed (public handler)")
+			}
+			sup.lastTelemetryRequest.Set()
+			sup.lastTelemetryRequestError.Set(err)
+
+		case <-fastTicker.C:
+			err = sup.doSyncTelemetryDataToCustomHandler()
+			if err != nil {
+				log.WithError(err).Warn("telemetry sync failed (custom handler)")
+			}
+			sup.lastCustomTelemetryRequest.Set()
+			sup.lastCustomTelemetryRequestError.Set(err)
+
+		case <-sup.ctx.Done():
+			return
 		}
-		<-ticker.C
 	}
 }
 
-func (sup *SupervisorService) doSyncTelemetryData() error {
+func (sup *SupervisorService) doSyncTelemetryDataToPublicHandler() error {
+	return sup.doSyncTelemetryData(sup.config.Config.TelemetryConfig.URL)
+}
+
+func (sup *SupervisorService) doSyncTelemetryDataToCustomHandler() error {
+	customURL := sup.config.Config.TelemetryConfig.CustomURL
+	if len(customURL) == 0 {
+		return nil
+	}
+	return sup.doSyncTelemetryData(customURL)
+}
+
+func (sup *SupervisorService) doSyncTelemetryData(destUrl string) error {
 	scannerJwt, err := security.CreateScannerJWT(sup.config.Key, map[string]interface{}{
 		"access": "telemetry",
 	})
@@ -471,26 +499,11 @@ func (sup *SupervisorService) doSyncTelemetryData() error {
 		return err
 	}
 	dataSrc := fmt.Sprintf("http://host.docker.internal:%s/health", config.DefaultHealthPort)
-	sendErr := sup.healthClient.SendReports(
+	return sup.healthClient.SendReports(
 		dataSrc,
-		sup.config.Config.TelemetryConfig.URL,
+		destUrl,
 		scannerJwt,
 	)
-	customURL := sup.config.Config.TelemetryConfig.CustomURL
-	if len(customURL) > 0 {
-		err := sup.healthClient.SendReports(
-			dataSrc,
-			customURL,
-			scannerJwt,
-		)
-		if err != nil && sendErr == nil {
-			return err
-		}
-		if err != nil {
-			sendErr = fmt.Errorf("%v, %v", sendErr, err)
-		}
-	}
-	return sendErr
 }
 
 // complete release info in case runner is old and starts supervisor by providing missing release properties
@@ -580,6 +593,8 @@ func (sup *SupervisorService) Health() health.Reports {
 		},
 		sup.lastTelemetryRequest.GetReport("event.telemetry-sync.time"),
 		sup.lastTelemetryRequestError.GetReport("event.telemetry-sync.error"),
+		sup.lastCustomTelemetryRequest.GetReport("event.custom-telemetry-sync.time"),
+		sup.lastCustomTelemetryRequestError.GetReport("event.custom-telemetry-sync.error"),
 		sup.lastAgentLogsRequest.GetReport("event.agent-logs-sync.time"),
 		sup.lastAgentLogsRequestError.GetReport("event.agent-logs-sync.error"),
 	}
