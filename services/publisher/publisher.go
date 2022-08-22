@@ -340,15 +340,13 @@ func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, 
 		return "", false // do not sacrifice metrics
 
 	case runsBots && len(batch.Metrics) == 0:
-		reportDeadline := lastReportAt.Add(fastReportInterval)
-		if reportDeadline.Before(time.Now()) {
+		if time.Since(lastReportAt) > fastReportInterval {
 			return "", false
 		}
 		return becauseThereAreNoAlerts + " and metrics and fast report deadline has not exceeded yet", true
 
 	case !runsBots:
-		reportDeadline := lastReportAt.Add(slowReportInterval)
-		if reportDeadline.Before(time.Now()) {
+		if time.Since(lastReportAt) > slowReportInterval {
 			return "", false
 		}
 		return "because this node runs no bots and slow report deadline has not exceeded yet", true
