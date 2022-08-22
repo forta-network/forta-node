@@ -336,8 +336,8 @@ func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, 
 	case pub.skipEmpty:
 		return becauseThereAreNoAlerts + " and skipEmpty is enabled", true
 
-	case runsBots && len(batch.Metrics) > 0: // do not sacrifice metrics
-		return "", false
+	case runsBots && len(batch.Metrics) > 0:
+		return "", false // do not sacrifice metrics
 
 	case runsBots && len(batch.Metrics) == 0:
 		reportDeadline := lastReportAt.Add(fastReportInterval)
