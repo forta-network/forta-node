@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ipfs/go-cid"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/forta-network/forta-core-go/ethereum"
@@ -15,6 +16,10 @@ import (
 	"github.com/forta-network/forta-core-go/registry"
 	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/config"
+)
+
+var (
+	errInvalidBot = errors.New("invalid bot")
 )
 
 type RegistryStore interface {
@@ -28,9 +33,11 @@ type registryStore struct {
 	rc  registry.Client
 	cfg config.Config
 
-	lastUpdate time.Time
-	version    string
-	mu         sync.Mutex
+	lastUpdate           time.Time
+	lastCompletedVersion string
+	loadedBots           []*config.AgentConfig
+	invalidBots          []*registry.Agent
+	mu                   sync.Mutex
 }
 
 func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConfig, bool, error) {
@@ -51,40 +58,81 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 		return []*config.AgentConfig{}, true, nil
 	}
 
-	if rs.version != hash.Hash || time.Since(rs.lastUpdate) > 1*time.Hour {
-		if err := rs.rc.PegLatestBlock(); err != nil {
-			return nil, false, err
-		}
-		defer rs.rc.ResetOpts()
-		var agts []*config.AgentConfig
-
-		var failedLoadingAny bool
-		err := rs.rc.ForEachAssignedAgent(scanner, func(a *registry.Agent) error {
-			agtCfg, err := rs.makeAgentConfig(a.AgentID, a.Manifest)
-			if err != nil {
-				failedLoadingAny = true
-				log.WithField("agentId", a.AgentID).WithError(err).Warn("could not parse config for agent")
-				// ignore agent and move on by not returning the error
-				return nil
-			}
-			agts = append(agts, agtCfg)
-			return nil
-		})
-
-		if err != nil {
-			return nil, false, err
-		}
-
-		// failed to load all: not doing this can cause getting stuck with the latest hash and zero agents
-		if len(agts) == 0 && failedLoadingAny {
-			return nil, false, errors.New("loaded zero agents")
-		}
-
-		rs.version = hash.Hash
-		rs.lastUpdate = time.Now()
-		return agts, true, nil
+	shouldUpdate := rs.lastCompletedVersion != hash.Hash || time.Since(rs.lastUpdate) > 1*time.Hour
+	if !shouldUpdate {
+		return nil, false, nil
 	}
-	return nil, false, nil
+
+	if err := rs.rc.PegLatestBlock(); err != nil {
+		return nil, false, err
+	}
+	defer rs.rc.ResetOpts()
+
+	var (
+		loadedBots       []*config.AgentConfig
+		invalidBots      []*registry.Agent
+		failedLoadingAny bool
+	)
+	err = rs.rc.ForEachAssignedAgent(scanner, func(bot *registry.Agent) error {
+		logger := log.WithField("botId", bot.AgentID)
+
+		// if already invalidated, remember it for next time
+		if rs.isInvalidBot(bot) {
+			invalidBots = append(invalidBots, bot)
+			logger.WithError(err).Warn("invalid bot - skipping")
+			return nil
+		}
+		// if already loaded, remember it for next time
+		loadedBot, ok := rs.getLoadedBot(bot)
+		if ok {
+			loadedBots = append(loadedBots, loadedBot)
+			logger.Info("already loaded bot - skipping")
+			return nil
+		}
+
+		// try loading the rest of the unrecognized bots
+		botCfg, err := rs.loadBot(bot.AgentID, bot.Manifest)
+		switch {
+		case err == nil: // yay
+			loadedBots = append(loadedBots, botCfg) // remember for next time
+			logger.Info("successfully loaded bot")
+			return nil
+
+		case errors.Is(err, errInvalidBot):
+			invalidBots = append(invalidBots, bot) // remember for next time
+			logger.WithError(err).Warn("invalid bot - skipping")
+			return nil
+
+		default:
+			failedLoadingAny = true
+			logger.WithError(err).Warn("could not load bot - skipping")
+			// ignore agent and move on by not returning the error
+			// it will not be recognized next time and will be retried above
+			return nil
+		}
+	})
+	if err != nil {
+		return nil, false, err
+	}
+
+	// failed to load all: forget that this attempt existed
+	// not doing this can cause getting stuck with the latest hash and zero agents
+	if len(loadedBots) == 0 && failedLoadingAny {
+		return nil, false, errors.New("loaded zero bots")
+	}
+
+	// remember the bots and the update time next time
+	rs.loadedBots = loadedBots
+	rs.invalidBots = invalidBots
+	rs.lastUpdate = time.Now()
+
+	if failedLoadingAny {
+		log.Warn("failed loading some of the bots - keeping the previous list version")
+	} else {
+		rs.lastCompletedVersion = hash.Hash // remember next time so we don't retry the same list
+	}
+
+	return loadedBots, true, nil
 }
 
 func (rs *registryStore) FindAgentGlobally(agentID string) (*config.AgentConfig, error) {
@@ -92,16 +140,34 @@ func (rs *registryStore) FindAgentGlobally(agentID string) (*config.AgentConfig,
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the latest ref: %v, agentID: %s", err, agentID)
 	}
-	return rs.makeAgentConfig(agentID, agt.Manifest)
+	return rs.loadBot(agentID, agt.Manifest)
 }
 
-func (rs *registryStore) makeAgentConfig(agentID string, ref string) (*config.AgentConfig, error) {
-	if len(ref) == 0 {
-		return nil, nil
+func (rs *registryStore) getLoadedBot(bot *registry.Agent) (*config.AgentConfig, bool) {
+	for _, loadedBot := range rs.loadedBots {
+		if bot.Manifest == loadedBot.Manifest {
+			return loadedBot, true
+		}
 	}
-	var agentData *manifest.SignedAgentManifest
+	return nil, false
+}
 
-	var err error
+func (rs *registryStore) isInvalidBot(bot *registry.Agent) bool {
+	for _, invalidBot := range rs.invalidBots {
+		if bot.Manifest == invalidBot.Manifest {
+			return true
+		}
+	}
+	return false
+}
+
+func (rs *registryStore) loadBot(agentID string, ref string) (*config.AgentConfig, error) {
+	_, err := cid.Parse(ref)
+	if len(ref) == 0 || err != nil {
+		return nil, fmt.Errorf("%w: invalid bot cid '%s'", errInvalidBot, ref)
+	}
+
+	var agentData *manifest.SignedAgentManifest
 	for i := 0; i < 10; i++ {
 		agentData, err = rs.mc.GetAgentManifest(rs.ctx, ref)
 		if err == nil {
@@ -109,17 +175,16 @@ func (rs *registryStore) makeAgentConfig(agentID string, ref string) (*config.Ag
 		}
 	}
 	if err != nil {
-		err = fmt.Errorf("failed to load the agent file using ipfs ref: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to load the bot manifest: %v", err)
 	}
 
 	if agentData.Manifest.ImageReference == nil {
-		return nil, fmt.Errorf("invalid agent image reference, it is nil")
+		return nil, fmt.Errorf("%w: invalid bot image reference, it is nil", errInvalidBot)
 	}
 
 	image, err := utils.ValidateDiscoImageRef(rs.cfg.Registry.ContainerRegistry, *agentData.Manifest.ImageReference)
 	if err != nil {
-		return nil, fmt.Errorf("invalid agent image reference '%s': %v", *agentData.Manifest.ImageReference, err)
+		return nil, fmt.Errorf("%w: invalid bot image reference '%s': %v", errInvalidBot, *agentData.Manifest.ImageReference, err)
 	}
 
 	return &config.AgentConfig{
