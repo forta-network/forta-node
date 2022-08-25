@@ -12,7 +12,7 @@ require (
 	github.com/docker/go-connections v0.4.0
 	github.com/ethereum/go-ethereum v1.10.16
 	github.com/fatih/color v1.13.0
-	github.com/forta-network/forta-core-go v0.0.0-20220822123021-bf41d23d8288
+	github.com/forta-network/forta-core-go v0.0.0-20220825143711-07d1999d7a71
 	github.com/go-playground/validator/v10 v10.9.0
 	github.com/goccy/go-json v0.9.4
 	github.com/golang-jwt/jwt/v4 v4.4.1
