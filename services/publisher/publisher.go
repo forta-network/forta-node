@@ -40,6 +40,9 @@ const (
 	defaultInterval        = time.Second * 15
 	defaultBatchLimit      = 500
 	defaultBatchBufferSize = 100
+
+	fastReportInterval = time.Minute
+	slowReportInterval = time.Minute * 15
 )
 
 // Publisher receives, collects and publishes alerts.
@@ -73,6 +76,11 @@ type Publisher struct {
 	lastBatchSkipReason health.MessageTracker
 	lastBatchPublishErr health.ErrorTracker
 	lastMetricsFlush    health.TimeTracker
+
+	lastReportAt time.Time
+
+	botConfigs  []config.AgentConfig
+	botConfigMu sync.RWMutex
 
 	latestBlockInput   uint64
 	latestBlockInputMu sync.RWMutex
@@ -306,19 +314,45 @@ func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, 
 	if batch.AlertCount > 0 {
 		return "", false
 	}
-	// after this line, alert count is considered as zero but let's check metrics
-	localModeMetricsOnly := pub.cfg.Config.LocalModeConfig.Enable && len(batch.Metrics) > 0
-	if localModeMetricsOnly {
-		return "", false
+	// after this line, alert count is considered as zero
+	const becauseThereAreNoAlerts = "because there are no alerts"
+
+	localModeConfig := &pub.cfg.Config.LocalModeConfig
+	lastReportAt := pub.lastReportAt
+	pub.botConfigMu.RLock()
+	runsBots := len(pub.botConfigs) > 0
+	pub.botConfigMu.RUnlock()
+
+	switch {
+	case localModeConfig.Enable && localModeConfig.IncludeMetrics:
+		if len(batch.Metrics) > 0 {
+			return "", false
+		}
+		return becauseThereAreNoAlerts + " or metrics in local mode", true
+
+	case localModeConfig.Enable && !localModeConfig.IncludeMetrics:
+		return becauseThereAreNoAlerts + " and metrics are skipped by default in local mode", true
+
+	case pub.skipEmpty:
+		return becauseThereAreNoAlerts + " and skipEmpty is enabled", true
+
+	case runsBots && len(batch.Metrics) > 0:
+		return "", false // do not sacrifice metrics
+
+	case runsBots && len(batch.Metrics) == 0:
+		if time.Since(lastReportAt) > fastReportInterval {
+			return "", false
+		}
+		return becauseThereAreNoAlerts + " and metrics and fast report deadline has not exceeded yet", true
+
+	case !runsBots:
+		if time.Since(lastReportAt) > slowReportInterval {
+			return "", false
+		}
+		return "because this node runs no bots and slow report deadline has not exceeded yet", true
 	}
-	const defaultReason = "because there are no alerts"
-	if pub.cfg.Config.LocalModeConfig.Enable {
-		return defaultReason + " or metrics and local mode is enabled", true
-	}
-	if pub.skipEmpty {
-		return defaultReason + " and skipEmpty is enabled", true
-	}
-	// should not skip: there must be a combining reason along with the zero count
+
+	// should not skip: could not find a good reason
 	return "", false
 }
 
@@ -326,6 +360,14 @@ func (pub *Publisher) registerMessageHandlers() {
 	pub.messageClient.Subscribe(messaging.SubjectMetricAgent, messaging.AgentMetricHandler(pub.metricsAggregator.AddAgentMetrics))
 	pub.messageClient.Subscribe(messaging.SubjectScannerBlock, messaging.ScannerHandler(pub.handleScannerBlock))
 	pub.messageClient.Subscribe(messaging.SubjectInspectionDone, messaging.InspectionResultsHandler(pub.handleInspectionResults))
+	pub.messageClient.Subscribe(messaging.SubjectAgentsVersionsLatest, messaging.AgentsHandler(pub.handleAgentVersionsUpdate))
+}
+
+func (pub *Publisher) handleAgentVersionsUpdate(payload messaging.AgentPayload) error {
+	pub.botConfigMu.Lock()
+	pub.botConfigs = payload
+	pub.botConfigMu.Unlock()
+	return nil
 }
 
 func (pub *Publisher) handleScannerBlock(payload messaging.ScannerPayload) error {
@@ -358,6 +400,7 @@ func (pub *Publisher) publishBatches() {
 		err := pub.publishNextBatch(batch)
 		pub.lastBatchPublish.Set()
 		pub.lastBatchPublishErr.Set(err)
+		pub.lastReportAt = time.Now()
 		if err != nil {
 			log.Errorf("failed to publish alert batch: %v", err)
 		}
