@@ -78,7 +78,11 @@ type Publisher struct {
 	lastBatchPublishErr     health.ErrorTracker
 	lastMetricsFlush        health.TimeTracker
 
-	lastReportAt time.Time
+	// these help following single ticker and keep send intervals on track
+	batchTicker          *time.Ticker
+	lastBatchReady       time.Time
+	lastBatchReadyMu     sync.RWMutex
+	lastBatchSendAttempt time.Time
 
 	botConfigs  []config.AgentConfig
 	botConfigMu sync.RWMutex
@@ -190,6 +194,10 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 		pub.lastBatchSkipReason.Set(reason)
 		return false, nil
 	}
+
+	pub.lastBatchReadyMu.RLock()
+	pub.lastBatchSendAttempt = pub.lastBatchReady
+	pub.lastBatchReadyMu.RUnlock()
 
 	if pub.cfg.Config.LocalModeConfig.Enable {
 		scannerJwt, err := security.CreateScannerJWT(pub.cfg.Key, map[string]interface{}{
@@ -319,7 +327,7 @@ func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, 
 	const becauseThereAreNoAlerts = "because there are no alerts"
 
 	localModeConfig := &pub.cfg.Config.LocalModeConfig
-	lastReportAt := pub.lastReportAt
+	lastBatchSendAttempt := pub.lastBatchSendAttempt
 	pub.botConfigMu.RLock()
 	runsBots := len(pub.botConfigs) > 0
 	pub.botConfigMu.RUnlock()
@@ -341,13 +349,13 @@ func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, 
 		return "", false // do not sacrifice metrics
 
 	case runsBots && len(batch.Metrics) == 0:
-		if time.Since(lastReportAt) > fastReportInterval {
+		if time.Since(lastBatchSendAttempt) >= fastReportInterval {
 			return "", false
 		}
 		return becauseThereAreNoAlerts + " and metrics and fast report deadline has not exceeded yet", true
 
 	case !runsBots:
-		if time.Since(lastReportAt) > slowReportInterval {
+		if time.Since(lastBatchSendAttempt) >= slowReportInterval {
 			return "", false
 		}
 		return "because this node runs no bots and slow report deadline has not exceeded yet", true
@@ -402,13 +410,11 @@ func (pub *Publisher) publishBatches() {
 		published, err := pub.publishNextBatch(batch)
 		if published {
 			pub.lastBatchPublish.Set()
-			pub.lastReportAt = time.Now()
 		}
 		pub.lastBatchPublishErr.Set(err)
 		if err != nil {
 			log.Errorf("failed to publish alert batch: %v", err)
 		}
-		time.Sleep(time.Millisecond * 20)
 	}
 }
 
@@ -591,10 +597,11 @@ func (tr *TransactionResults) GetAgentAlerts(agent *protocol.AgentInfo) *protoco
 func (pub *Publisher) prepareLatestBatch() {
 	batch := (*BatchData)(&protocol.AlertBatch{ChainId: uint64(pub.cfg.ChainID)})
 
-	timeoutCh := time.After(pub.batchInterval)
-
-	var done bool
-	var i int
+	var (
+		timedOut  bool
+		batchTime time.Time
+		i         int
+	)
 	for i < pub.batchLimit {
 		select {
 		case notif := <-pub.notifCh:
@@ -635,14 +642,21 @@ func (pub *Publisher) prepareLatestBatch() {
 
 			batch.AppendAlert(notif)
 
-		case <-timeoutCh:
-			done = true
+		case batchTime, timedOut = <-pub.batchTicker.C:
 		}
 
-		if done {
+		if timedOut {
 			break
 		}
 	}
+
+	if !timedOut {
+		batchTime = time.Now()
+		pub.batchTicker.Reset(defaultInterval)
+	}
+	pub.lastBatchReadyMu.Lock()
+	pub.lastBatchReady = batchTime
+	pub.lastBatchReadyMu.Unlock()
 
 	pub.batchCh <- (*protocol.AlertBatch)(batch)
 }
@@ -755,5 +769,7 @@ func initPublisher(ctx context.Context, mc *messaging.Client, alertClient client
 		batchLimit:    batchLimit,
 		notifCh:       make(chan *protocol.NotifyRequest, defaultBatchLimit),
 		batchCh:       make(chan *protocol.AlertBatch, defaultBatchBufferSize),
+
+		batchTicker: time.NewTicker(defaultInterval),
 	}, nil
 }
