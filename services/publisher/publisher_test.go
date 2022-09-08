@@ -95,7 +95,7 @@ func TestShouldSkipPublishing(t *testing.T) {
 		{
 			name: "has alerts",
 			publisher: &Publisher{
-				lastBatchReady: veryRecently,
+				lastBatchSendAttempt: veryRecently,
 			},
 			batch: &protocol.AlertBatch{
 				AlertCount: 2,
@@ -105,8 +105,8 @@ func TestShouldSkipPublishing(t *testing.T) {
 		{
 			name: "has metrics and running bots",
 			publisher: &Publisher{
-				lastBatchReady: veryRecently,
-				botConfigs:     []config.AgentConfig{{}},
+				lastBatchSendAttempt: veryRecently,
+				botConfigs:           []config.AgentConfig{{}},
 			},
 			batch: &protocol.AlertBatch{
 				Metrics: []*protocol.AgentMetrics{{}},
@@ -116,8 +116,8 @@ func TestShouldSkipPublishing(t *testing.T) {
 		{
 			name: "no metrics, running bots, too early",
 			publisher: &Publisher{
-				lastBatchReady: veryRecently,
-				botConfigs:     []config.AgentConfig{{}},
+				lastBatchSendAttempt: veryRecently,
+				botConfigs:           []config.AgentConfig{{}},
 			},
 			batch:               &protocol.AlertBatch{},
 			expectedSkipValue:   true,
@@ -126,8 +126,8 @@ func TestShouldSkipPublishing(t *testing.T) {
 		{
 			name: "no metrics, running bots, not early",
 			publisher: &Publisher{
-				lastBatchReady: time.Now().Add(-fastReportInterval),
-				botConfigs:     []config.AgentConfig{{}},
+				lastBatchSendAttempt: time.Now().Add(-fastReportInterval),
+				botConfigs:           []config.AgentConfig{{}},
 			},
 			batch:             &protocol.AlertBatch{},
 			expectedSkipValue: false,
@@ -135,7 +135,7 @@ func TestShouldSkipPublishing(t *testing.T) {
 		{
 			name: "no bots, too early",
 			publisher: &Publisher{
-				lastBatchReady: veryRecently,
+				lastBatchSendAttempt: veryRecently,
 			},
 			batch:               &protocol.AlertBatch{},
 			expectedSkipValue:   true,
@@ -144,7 +144,7 @@ func TestShouldSkipPublishing(t *testing.T) {
 		{
 			name: "no bots, not early",
 			publisher: &Publisher{
-				lastBatchReady: time.Now().Add(-slowReportInterval), // not recently
+				lastBatchSendAttempt: time.Now().Add(-slowReportInterval), // not recently
 			},
 			batch:             &protocol.AlertBatch{},
 			expectedSkipValue: false,
