@@ -71,11 +71,12 @@ type Publisher struct {
 	notifCh       chan *protocol.NotifyRequest
 	batchCh       chan *protocol.AlertBatch
 
-	lastBatchPublish    health.TimeTracker
-	lastBatchSkip       health.TimeTracker
-	lastBatchSkipReason health.MessageTracker
-	lastBatchPublishErr health.ErrorTracker
-	lastMetricsFlush    health.TimeTracker
+	lastBatchPublish        health.TimeTracker
+	lastBatchPublishAttempt health.TimeTracker
+	lastBatchSkip           health.TimeTracker
+	lastBatchSkipReason     health.MessageTracker
+	lastBatchPublishErr     health.ErrorTracker
+	lastMetricsFlush        health.TimeTracker
 
 	lastReportAt time.Time
 
@@ -120,7 +121,7 @@ func (pub *Publisher) Notify(ctx context.Context, req *protocol.NotifyRequest) (
 	return &protocol.NotifyResponse{}, nil
 }
 
-func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
+func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bool, err error) {
 	// flush only if we are publishing so we can make the best use of aggregated metrics
 	if _, skip := pub.shouldSkipPublishing(batch); !skip {
 		var flushed bool
@@ -161,12 +162,12 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 
 	signedBatch, err := security.SignBatch(pub.cfg.Key, batch)
 	if err != nil {
-		return fmt.Errorf("failed to build envelope: %v", err)
+		return false, fmt.Errorf("failed to build envelope: %v", err)
 	}
 
 	var buf bytes.Buffer
 	if err = json.NewEncoder(&buf).Encode(signedBatch); err != nil {
-		return fmt.Errorf("failed to encode the signed alert: %v", err)
+		return false, fmt.Errorf("failed to encode the signed alert: %v", err)
 	}
 	log.Tracef("alert payload: %s", string(buf.Bytes()))
 
@@ -180,14 +181,14 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		}).Info(reason)
 		pub.lastBatchSkip.Set()
 		pub.lastBatchSkipReason.Set(reason)
-		return nil
+		return false, nil
 	}
 
 	if reason, skip := pub.shouldSkipPublishing(batch); skip {
 		log.WithField("reason", reason).Info("skipping batch")
 		pub.lastBatchSkip.Set()
 		pub.lastBatchSkipReason.Set(reason)
-		return nil
+		return false, nil
 	}
 
 	if pub.cfg.Config.LocalModeConfig.Enable {
@@ -206,7 +207,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		})
 		if err != nil {
 			log.WithError(err).Error("failed to send local mode alerts")
-			return err
+			return false, err
 		}
 		if alertBatch != nil {
 			log.WithFields(log.Fields{
@@ -214,15 +215,15 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 				"metricsCount": len(alertBatch.Metrics),
 			}).Info("successfully sent local mode alerts")
 		}
-		return nil
+		return true, nil
 	}
 
 	cid, err := pub.ipfs.CalculateFileHash(buf.Bytes())
 	if err != nil {
-		return fmt.Errorf("failed to store alert data to ipfs: %v", err)
+		return false, fmt.Errorf("failed to calculate ipfs hash: %v", err)
 	}
 	if err := pub.batchRefStore.Put(cid); err != nil {
-		return fmt.Errorf("failed to write last batch ref: %v", err)
+		return false, fmt.Errorf("failed to write last batch ref: %v", err)
 	}
 
 	logger := log.WithFields(
@@ -255,7 +256,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 	})
 	if err != nil {
 		logger.WithError(err).Error("failed to sign batch summary")
-		return err
+		return false, err
 	}
 
 	scannerJwt, err := security.CreateScannerJWT(pub.cfg.Key, map[string]interface{}{
@@ -264,7 +265,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 
 	if err != nil {
 		logger.WithError(err).Error("failed to sign cid")
-		return err
+		return false, err
 	}
 	resp, err := pub.alertClient.PostBatch(&domain.AlertBatchRequest{
 		Scanner:            pub.cfg.Key.Address.Hex(),
@@ -280,7 +281,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 
 	if err != nil {
 		logger.WithError(err).Error("alert while sending batch")
-		return fmt.Errorf("failed to send the alert tx: %v", err)
+		return false, fmt.Errorf("failed to send the alert tx: %v", err)
 	}
 
 	//TODO: after receipts are returned, make it non-optional
@@ -288,7 +289,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		// store off receipt id
 		if err := pub.lastReceiptStore.Put(resp.ReceiptID); err != nil {
 			logger.WithError(err).Error("failed to marshal receipt")
-			return err
+			return true, err
 		}
 		logger = logger.WithFields(log.Fields{
 			"receiptId": resp.ReceiptID,
@@ -298,7 +299,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 		b, err := json.Marshal(resp.SignedReceipt)
 		if err != nil {
 			logger.WithError(err).Error("failed to marshal receipt (not saving receipt)")
-			return nil
+			return true, nil
 		}
 		logger = logger.WithFields(log.Fields{
 			"receipt": string(b),
@@ -307,7 +308,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) error {
 
 	logger.Info("alert batch")
 
-	return nil
+	return true, nil
 }
 
 func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, bool) {
@@ -397,10 +398,13 @@ func (pub *Publisher) handleInspectionResults(payload *protocol.InspectionResult
 
 func (pub *Publisher) publishBatches() {
 	for batch := range pub.batchCh {
-		err := pub.publishNextBatch(batch)
-		pub.lastBatchPublish.Set()
+		pub.lastBatchPublishAttempt.Set()
+		published, err := pub.publishNextBatch(batch)
+		if published {
+			pub.lastBatchPublish.Set()
+			pub.lastReportAt = time.Now()
+		}
 		pub.lastBatchPublishErr.Set(err)
-		pub.lastReportAt = time.Now()
 		if err != nil {
 			log.Errorf("failed to publish alert batch: %v", err)
 		}
@@ -665,6 +669,7 @@ func (pub *Publisher) Name() string {
 func (pub *Publisher) Health() health.Reports {
 	return health.Reports{
 		pub.lastBatchPublish.GetReport("event.batch-publish.time"),
+		pub.lastBatchPublishAttempt.GetReport("event.batch-publish-attempt.time"),
 		pub.lastBatchPublishErr.GetReport("event.batch-publish.error"),
 		&health.Report{
 			Name:    "event.batch-skip.time",
