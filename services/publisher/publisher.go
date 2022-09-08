@@ -79,10 +79,9 @@ type Publisher struct {
 	lastMetricsFlush        health.TimeTracker
 
 	// these help following single ticker and keep send intervals on track
-	batchTicker          *time.Ticker
-	lastBatchReady       time.Time
-	lastBatchReadyMu     sync.RWMutex
-	lastBatchSendAttempt time.Time
+	batchTicker      *time.Ticker
+	lastBatchReady   time.Time
+	lastBatchReadyMu sync.RWMutex
 
 	botConfigs  []config.AgentConfig
 	botConfigMu sync.RWMutex
@@ -194,10 +193,6 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 		pub.lastBatchSkipReason.Set(reason)
 		return false, nil
 	}
-
-	pub.lastBatchReadyMu.RLock()
-	pub.lastBatchSendAttempt = pub.lastBatchReady
-	pub.lastBatchReadyMu.RUnlock()
 
 	if pub.cfg.Config.LocalModeConfig.Enable {
 		scannerJwt, err := security.CreateScannerJWT(pub.cfg.Key, map[string]interface{}{
@@ -327,7 +322,11 @@ func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, 
 	const becauseThereAreNoAlerts = "because there are no alerts"
 
 	localModeConfig := &pub.cfg.Config.LocalModeConfig
-	lastBatchSendAttempt := pub.lastBatchSendAttempt
+
+	pub.lastBatchReadyMu.RLock()
+	lastBatchReady := pub.lastBatchReady
+	pub.lastBatchReadyMu.RUnlock()
+
 	pub.botConfigMu.RLock()
 	runsBots := len(pub.botConfigs) > 0
 	pub.botConfigMu.RUnlock()
@@ -349,13 +348,13 @@ func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, 
 		return "", false // do not sacrifice metrics
 
 	case runsBots && len(batch.Metrics) == 0:
-		if time.Since(lastBatchSendAttempt) >= fastReportInterval {
+		if time.Since(lastBatchReady) >= fastReportInterval {
 			return "", false
 		}
 		return becauseThereAreNoAlerts + " and metrics and fast report deadline has not exceeded yet", true
 
 	case !runsBots:
-		if time.Since(lastBatchSendAttempt) >= slowReportInterval {
+		if time.Since(lastBatchReady) >= slowReportInterval {
 			return "", false
 		}
 		return "because this node runs no bots and slow report deadline has not exceeded yet", true
