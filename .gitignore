@@ -23,6 +23,7 @@ tests/e2e/.forta*/*
 !tests/e2e/.forta*/.keys
 !tests/e2e/.forta/config.yml
 tests/e2e/.forta-local/config.yml
+tests/e2e/**/*[.evm]
 
 *coverage.*
 !*coverage.sh
