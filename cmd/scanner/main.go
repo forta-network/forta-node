@@ -94,8 +94,11 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 	// detect end block, wait for scanning to finish, trigger exit
 	go func() {
 		err := <-blockErrCh
-		if err != feeds.ErrEndBlockReached {
+		if err == nil {
 			return
+		}
+		if err != feeds.ErrEndBlockReached {
+			log.WithError(err).Panic("unexpected failure in block feed")
 		}
 		log.Info("end block reached - triggering exit")
 		var delay time.Duration
