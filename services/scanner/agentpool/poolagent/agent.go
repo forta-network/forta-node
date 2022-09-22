@@ -231,7 +231,7 @@ func (agent *Agent) processTransactions() {
 			if len(resp.Findings) > MaxFindings {
 				dropped := len(resp.Findings) - MaxFindings
 				droppedMetric := metrics.CreateAgentMetric(agent.config.ID, metrics.MetricFindingsDropped, float64(dropped))
-				agent.msgClient.PublishProto(messaging.SubjectMetricAgent, droppedMetric)
+				agent.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{droppedMetric}})
 				resp.Findings = resp.Findings[:MaxFindings]
 			}
 			var duration time.Duration
@@ -301,7 +301,7 @@ func (agent *Agent) processBlocks() {
 			if len(resp.Findings) > MaxFindings {
 				dropped := len(resp.Findings) - MaxFindings
 				droppedMetric := metrics.CreateAgentMetric(agent.config.ID, metrics.MetricFindingsDropped, float64(dropped))
-				agent.msgClient.PublishProto(messaging.SubjectMetricAgent, droppedMetric)
+				agent.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{droppedMetric}})
 				resp.Findings = resp.Findings[:MaxFindings]
 			}
 			var duration time.Duration
