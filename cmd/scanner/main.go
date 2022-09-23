@@ -97,6 +97,11 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 		if err == nil {
 			return
 		}
+
+		if err == context.Canceled {
+			return
+		}
+
 		if err != feeds.ErrEndBlockReached {
 			log.WithError(err).Panic("unexpected failure in block feed")
 		}
