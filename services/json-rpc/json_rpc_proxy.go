@@ -34,6 +34,7 @@ type JsonRpcProxy struct {
 	msgClient    clients.MessageClient
 
 	agentConfigs  []config.AgentConfig
+	whitelist     []string
 	agentConfigMu sync.RWMutex
 
 	rateLimiter *RateLimiter
@@ -76,7 +77,7 @@ func (p *JsonRpcProxy) Start() error {
 func (p *JsonRpcProxy) metricHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		t := time.Now()
-		agentConfig, foundAgent := p.findAgentFromRemoteAddr(req.RemoteAddr)
+		agentConfig, foundAgent, _ := p.findAgentFromRemoteAddr(req.RemoteAddr)
 		if foundAgent && p.rateLimiter.ExceedsLimit(agentConfig.ID) {
 			writeTooManyReqsErr(w, req)
 			p.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{
@@ -89,18 +90,20 @@ func (p *JsonRpcProxy) metricHandler(h http.Handler) http.Handler {
 
 		if foundAgent {
 			duration := time.Since(t)
-			p.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{
-				Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, 1, 0, duration),
-			})
+			p.msgClient.PublishProto(
+				messaging.SubjectMetricAgent, &protocol.AgentMetricList{
+					Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, 1, 0, duration),
+				},
+			)
 		}
-	})
+	},
+	)
 }
-
-func (p *JsonRpcProxy) findAgentFromRemoteAddr(hostPort string) (*config.AgentConfig, bool) {
+func (p *JsonRpcProxy) findAgentFromRemoteAddr(hostPort string) (*config.AgentConfig, bool, bool) {
 	containers, err := p.dockerClient.GetContainers(p.ctx)
 	if err != nil {
 		log.WithError(err).Error("failed to get the container list")
-		return nil, false
+		return nil, false, false
 	}
 	ipAddr := strings.Split(hostPort, ":")[0]
 
@@ -118,7 +121,7 @@ func (p *JsonRpcProxy) findAgentFromRemoteAddr(hostPort string) (*config.AgentCo
 	}
 	if agentContainer == nil {
 		log.WithField("agentIpAddr", ipAddr).Warn("could not found agent container from ip address")
-		return nil, false
+		return nil, false, false
 	}
 
 	p.agentConfigMu.RLock()
@@ -127,15 +130,32 @@ func (p *JsonRpcProxy) findAgentFromRemoteAddr(hostPort string) (*config.AgentCo
 	containerName := agentContainer.Names[0][1:]
 	for _, agentConfig := range p.agentConfigs {
 		if agentConfig.ContainerName() == containerName {
-			return &agentConfig, true
+			return &agentConfig, true, false
+		}
+		// check for whitelisted containers
+		if contains(containerName, p.whitelist) {
+			return &agentConfig, false, true
 		}
 	}
 
-	log.WithFields(log.Fields{
-		"agentIpAddr":   ipAddr,
-		"containerName": containerName,
-	}).Warn("could not find agent config for container")
-	return nil, false
+	log.WithFields(
+		log.Fields{
+			"agentIpAddr":   ipAddr,
+			"containerName": containerName,
+		},
+	).Warn("could not find agent config for container")
+
+	return nil, false, false
+}
+
+func contains(key string, vals []string) bool {
+	for _, val := range vals {
+		if key == val {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (p *JsonRpcProxy) handleAgentVersionsUpdate(payload messaging.AgentPayload) error {
@@ -180,6 +200,10 @@ func (p *JsonRpcProxy) registerMessageHandlers() {
 	p.msgClient.Subscribe(messaging.SubjectAgentsVersionsLatest, messaging.AgentsHandler(p.handleAgentVersionsUpdate))
 }
 
+var (
+	defaultWhitelist = []string{"forta-json-rpc"}
+)
+
 func NewJsonRpcProxy(ctx context.Context, cfg config.Config) (*JsonRpcProxy, error) {
 	jCfg := cfg.Scan.JsonRpc
 	if len(cfg.JsonRpcProxy.JsonRpc.Url) > 0 {
@@ -205,5 +229,6 @@ func NewJsonRpcProxy(ctx context.Context, cfg config.Config) (*JsonRpcProxy, err
 			rateLimiting.Rate,
 			rateLimiting.Burst,
 		),
+		whitelist: defaultWhitelist,
 	}, nil
 }
