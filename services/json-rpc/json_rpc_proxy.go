@@ -201,7 +201,7 @@ func (p *JsonRpcProxy) registerMessageHandlers() {
 }
 
 var (
-	defaultWhitelist = []string{"forta-json-rpc"}
+	defaultWhitelist = []string{"forta-inspector"}
 )
 
 func NewJsonRpcProxy(ctx context.Context, cfg config.Config) (*JsonRpcProxy, error) {
