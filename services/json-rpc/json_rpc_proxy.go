@@ -56,7 +56,7 @@ func (p *JsonRpcProxy) Start() error {
 	rp.Transport = retry.NewTransport(
 		http.DefaultTransport, retry.Attempts(maxRetries), retry.Timeout(retryDuration),
 		// retry for a minute, every 15 seconds, 4 times
-		retry.ExpBackoff{Max: retryDuration, Base: time.Second * 15, Factor: 2.0},
+		retry.ExpBackoff{Max: retryDuration, Base: time.Second * 10, Factor: 2.0},
 	)
 
 	d := rp.Director
@@ -95,7 +95,7 @@ func (p *JsonRpcProxy) metricHandler(h http.Handler) http.Handler {
 		}
 
 			// handle request with 5xx code retry
-			ctx, cancel := context.WithTimeout(req.Context(), time.Second*30)
+		ctx, cancel := context.WithTimeout(req.Context(), time.Minute*3)
 			defer cancel()
 			h.ServeHTTP(w, req.WithContext(ctx))
 
