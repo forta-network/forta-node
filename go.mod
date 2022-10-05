@@ -34,7 +34,6 @@ require (
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.7.1
-	github.com/urfave/negroni v1.0.0
 	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29
 	golang.org/x/time v0.0.0-20220224211638-0e9765cccd65
 	google.golang.org/grpc v1.46.2
