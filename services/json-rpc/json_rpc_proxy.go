@@ -11,9 +11,6 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
-	"github.com/rs/cors"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/ethereum"
 	"github.com/forta-network/forta-core-go/protocol"
@@ -23,6 +20,9 @@ import (
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/metrics"
+	"github.com/octo/retry"
+	"github.com/rs/cors"
+	log "github.com/sirupsen/logrus"
 )
 
 // JsonRpcProxy proxies requests from agents to json-rpc endpoint
@@ -41,6 +41,9 @@ type JsonRpcProxy struct {
 	lastErr health.ErrorTracker
 }
 
+const maxRetries = 4
+const retryDuration = time.Second * 60
+
 func (p *JsonRpcProxy) Start() error {
 	p.registerMessageHandlers()
 
@@ -49,6 +52,12 @@ func (p *JsonRpcProxy) Start() error {
 		return err
 	}
 	rp := httputil.NewSingleHostReverseProxy(rpcUrl)
+
+	rp.Transport = retry.NewTransport(
+		http.DefaultTransport, retry.Attempts(maxRetries), retry.Timeout(retryDuration),
+		// retry for a minute, every 15 seconds, 4 times
+		retry.ExpBackoff{Max: retryDuration, Base: time.Second * 15, Factor: 2.0},
+	)
 
 	d := rp.Director
 	rp.Director = func(r *http.Request) {
@@ -85,7 +94,10 @@ func (p *JsonRpcProxy) metricHandler(h http.Handler) http.Handler {
 			return
 		}
 
-		h.ServeHTTP(w, req)
+			// handle request with 5xx code retry
+			ctx, cancel := context.WithTimeout(req.Context(), time.Second*30)
+			defer cancel()
+			h.ServeHTTP(w, req.WithContext(ctx))
 
 		if foundAgent {
 			duration := time.Since(t)
