@@ -117,7 +117,8 @@ type RuntimeLimits struct {
 type LocalModeConfig struct {
 	Enable                bool                     `yaml:"enable" json:"enable"`
 	IncludeMetrics        bool                     `yaml:"includeMetrics" json:"includeMetrics"`
-	BotImages             []string                 `yaml:"botImages" json:"botImages" validate:"required_if=Enable true"`
+	BotIDs                []string                 `yaml:"botIds" json:"botIds"`
+	BotImages             []string                 `yaml:"botImages" json:"botImages"`
 	WebhookURL            string                   `yaml:"webhookUrl" json:"webhookUrl"`
 	LogFileName           string                   `yaml:"logFileName" json:"logFileName"`
 	ContainerRegistry     *ContainerRegistryConfig `yaml:"containerRegistry" json:"containerRegistry"`
