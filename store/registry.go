@@ -91,7 +91,7 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 		}
 
 		// try loading the rest of the unrecognized bots
-		botCfg, err := rs.loadBot(bot.AgentID, bot.Manifest)
+		botCfg, err := loadBot(rs.ctx, rs.cfg, rs.mc, bot.AgentID, bot.Manifest)
 		switch {
 		case err == nil: // yay
 			loadedBots = append(loadedBots, botCfg) // remember for next time
@@ -140,7 +140,7 @@ func (rs *registryStore) FindAgentGlobally(agentID string) (*config.AgentConfig,
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the latest ref: %v, agentID: %s", err, agentID)
 	}
-	return rs.loadBot(agentID, agt.Manifest)
+	return loadBot(rs.ctx, rs.cfg, rs.mc, agentID, agt.Manifest)
 }
 
 func (rs *registryStore) getLoadedBot(bot *registry.Agent) (*config.AgentConfig, bool) {
@@ -161,7 +161,7 @@ func (rs *registryStore) isInvalidBot(bot *registry.Agent) bool {
 	return false
 }
 
-func (rs *registryStore) loadBot(agentID string, ref string) (*config.AgentConfig, error) {
+func loadBot(ctx context.Context, cfg config.Config, mc manifest.Client, agentID string, ref string) (*config.AgentConfig, error) {
 	_, err := cid.Parse(ref)
 	if len(ref) == 0 || err != nil {
 		return nil, fmt.Errorf("%w: invalid bot cid '%s'", errInvalidBot, ref)
@@ -169,7 +169,7 @@ func (rs *registryStore) loadBot(agentID string, ref string) (*config.AgentConfi
 
 	var agentData *manifest.SignedAgentManifest
 	for i := 0; i < 10; i++ {
-		agentData, err = rs.mc.GetAgentManifest(rs.ctx, ref)
+		agentData, err = mc.GetAgentManifest(ctx, ref)
 		if err == nil {
 			break
 		}
@@ -182,7 +182,7 @@ func (rs *registryStore) loadBot(agentID string, ref string) (*config.AgentConfi
 		return nil, fmt.Errorf("%w: invalid bot image reference, it is nil", errInvalidBot)
 	}
 
-	image, err := utils.ValidateDiscoImageRef(rs.cfg.Registry.ContainerRegistry, *agentData.Manifest.ImageReference)
+	image, err := utils.ValidateDiscoImageRef(cfg.Registry.ContainerRegistry, *agentData.Manifest.ImageReference)
 	if err != nil {
 		return nil, fmt.Errorf("%w: invalid bot image reference '%s': %v", errInvalidBot, *agentData.Manifest.ImageReference, err)
 	}
@@ -220,6 +220,8 @@ func NewRegistryStore(ctx context.Context, cfg config.Config, ethClient ethereum
 type privateRegistryStore struct {
 	ctx context.Context
 	cfg config.Config
+	rc  registry.Client
+	mc  manifest.Client
 	mu  sync.Mutex
 }
 
@@ -228,6 +230,8 @@ func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]*config.Ag
 	defer rs.mu.Unlock()
 
 	var agentConfigs []*config.AgentConfig
+
+	// load by image references
 	for i, agentImage := range rs.cfg.LocalModeConfig.BotImages {
 		if len(agentImage) == 0 {
 			continue
@@ -236,6 +240,25 @@ func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]*config.Ag
 		agentID := strconv.Itoa(i + 1)
 		agentConfigs = append(agentConfigs, rs.makePrivateModeAgentConfig(agentID, agentImage))
 	}
+
+	// load by bot IDs
+	for _, agentID := range rs.cfg.LocalModeConfig.BotIDs {
+		agt, err := rs.rc.GetAgent(agentID)
+		logger := log.WithFields(log.Fields{
+			"botID": agentID,
+		})
+		if err != nil {
+			logger.WithError(err).Error("failed to get bot from registry")
+			continue
+		}
+		agtCfg, err := loadBot(rs.ctx, rs.cfg, rs.mc, agentID, agt.Manifest)
+		if err != nil {
+			logger.WithError(err).Error("failed to load bot")
+			continue
+		}
+		agentConfigs = append(agentConfigs, agtCfg)
+	}
+
 	return agentConfigs, true, nil
 }
 
@@ -252,9 +275,24 @@ func (rs *privateRegistryStore) makePrivateModeAgentConfig(id string, image stri
 }
 
 func NewPrivateRegistryStore(ctx context.Context, cfg config.Config) (*privateRegistryStore, error) {
+	mc, err := manifest.NewClient(cfg.Registry.IPFS.GatewayURL)
+	if err != nil {
+		return nil, err
+	}
+
+	rc, err := GetRegistryClient(ctx, cfg, registry.ClientConfig{
+		JsonRpcUrl: cfg.Registry.JsonRpc.Url,
+		ENSAddress: cfg.ENSConfig.ContractAddress,
+		Name:       "registry-store",
+	})
+	if err != nil {
+		return nil, err
+	}
 	return &privateRegistryStore{
 		ctx: ctx,
 		cfg: cfg,
+		mc:  mc,
+		rc:  rc,
 	}, nil
 }
 
