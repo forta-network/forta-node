@@ -275,9 +275,24 @@ func (rs *privateRegistryStore) makePrivateModeAgentConfig(id string, image stri
 }
 
 func NewPrivateRegistryStore(ctx context.Context, cfg config.Config) (*privateRegistryStore, error) {
+	mc, err := manifest.NewClient(cfg.Registry.IPFS.GatewayURL)
+	if err != nil {
+		return nil, err
+	}
+
+	rc, err := GetRegistryClient(ctx, cfg, registry.ClientConfig{
+		JsonRpcUrl: cfg.Registry.JsonRpc.Url,
+		ENSAddress: cfg.ENSConfig.ContractAddress,
+		Name:       "registry-store",
+	})
+	if err != nil {
+		return nil, err
+	}
 	return &privateRegistryStore{
 		ctx: ctx,
 		cfg: cfg,
+		mc:  mc,
+		rc:  rc,
 	}, nil
 }
 
