@@ -15,6 +15,7 @@ const (
 	SubjectAgentsStatusStopped  = "agents.status.stopped"
 	SubjectMetricAgent          = "metric.agent"
 	SubjectScannerBlock         = "scanner.block"
+	SubjectScannerAlert         = "scanner.alert"
 	SubjectInspectionDone       = "inspection.done"
 )
 

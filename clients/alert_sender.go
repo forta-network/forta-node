@@ -2,6 +2,7 @@ package clients
 
 import (
 	"context"
+
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol"
@@ -17,6 +18,8 @@ type AgentRoundTrip struct {
 	EvalBlockResponse *protocol.EvaluateBlockResponse
 	EvalTxRequest     *protocol.EvaluateTxRequest
 	EvalTxResponse    *protocol.EvaluateTxResponse
+	EvalAlertRequest  *protocol.EvaluateAlertRequest
+	EvalAlertResponse *protocol.EvaluateAlertResponse
 }
 
 type AlertSender interface {
