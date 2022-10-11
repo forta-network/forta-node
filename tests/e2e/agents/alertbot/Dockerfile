@@ -11,8 +11,11 @@ RUN --mount=type=cache,target=/root/.cache/go go mod download
 
 COPY . /go/app
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /go/app/main /go/app/cmd/node/main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /go/app/main \
+	/go/app/tests/e2e/agents/alertbot/main.go
 
 FROM base
-COPY --from=go-builder /go/app/main /forta-node
-EXPOSE 8089 8090
+COPY --from=go-builder /go/app/main /main
+EXPOSE 50051
+
+ENTRYPOINT [ "/main" ]
