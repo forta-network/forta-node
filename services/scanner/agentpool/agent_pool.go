@@ -38,10 +38,11 @@ type AgentPool struct {
 // NewAgentPool creates a new agent pool.
 func NewAgentPool(ctx context.Context, cfg config.ScannerConfig, msgClient clients.MessageClient, waitBots int) *AgentPool {
 	agentPool := &AgentPool{
-		ctx:          ctx,
-		txResults:    make(chan *scanner.TxResult),
-		blockResults: make(chan *scanner.BlockResult),
-		msgClient:    msgClient,
+		ctx:                ctx,
+		txResults:          make(chan *scanner.TxResult),
+		blockResults:       make(chan *scanner.BlockResult),
+		msgClient:          msgClient,
+		alertSubscriptions: map[string][]string{},
 		dialer: func(ac config.AgentConfig) (clients.AgentClient, error) {
 			client := agentgrpc.NewClient()
 			if err := client.Dial(ac); err != nil {
@@ -444,6 +445,20 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	if len(agentsToStop) > 0 {
 		ap.msgClient.Publish(messaging.SubjectAgentsActionStop, agentsToStop)
 	}
+
+	// create subscription map
+	ap.alertSubscriptions = make(map[string][]string)
+	for _, agent := range ap.agents {
+		alertCfg := agent.AlertConfig()
+		if alertCfg == nil {
+			continue
+		}
+
+		for _, subscription := range alertCfg.Subscriptions {
+			ap.alertSubscriptions[subscription] = append(ap.alertSubscriptions[subscription], agent.Config().ContainerName())
+		}
+	}
+
 	return nil
 }
 
