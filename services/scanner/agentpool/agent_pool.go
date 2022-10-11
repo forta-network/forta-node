@@ -23,14 +23,16 @@ import (
 // AgentPool maintains the pool of agents that the scanner should
 // interact with.
 type AgentPool struct {
-	ctx          context.Context
-	agents       []*poolagent.Agent
-	txResults    chan *scanner.TxResult
-	blockResults chan *scanner.BlockResult
-	msgClient    clients.MessageClient
-	dialer       func(config.AgentConfig) (clients.AgentClient, error)
-	mu           sync.RWMutex
-	botWaitGroup *sync.WaitGroup
+	ctx                context.Context
+	agents             []*poolagent.Agent
+	txResults          chan *scanner.TxResult
+	blockResults       chan *scanner.BlockResult
+	alertResults       chan *scanner.AlertResult
+	msgClient          clients.MessageClient
+	dialer             func(config.AgentConfig) (clients.AgentClient, error)
+	mu                 sync.RWMutex
+	botWaitGroup       *sync.WaitGroup
+	alertSubscriptions map[string][]string
 }
 
 // NewAgentPool creates a new agent pool.
@@ -227,21 +229,106 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 			lg.WithField("agent", agent.Config().ID).Warn("agent block request buffer is full - skipping")
 			metricsList = append(metricsList, metrics.CreateAgentMetric(agent.Config().ID, metrics.MetricBlockDrop, 1))
 		}
-		lg.WithFields(log.Fields{
-			"agent":    agent.Config().ID,
-			"duration": time.Since(startTime),
-		}).Debug("sent tx request to evalBlockCh")
+		lg.WithFields(
+			log.Fields{
+				"agent":    agent.Config().ID,
+				"duration": time.Since(startTime),
+			},
+		).Debug("sent tx request to evalBlockCh")
 	}
 
 	blockNumber, _ := hexutil.DecodeUint64(req.Event.BlockNumber)
-	ap.msgClient.Publish(messaging.SubjectScannerBlock, &messaging.ScannerPayload{
-		LatestBlockInput: blockNumber,
-	})
+	ap.msgClient.Publish(
+		messaging.SubjectScannerBlock, &messaging.ScannerPayload{
+			LatestBlockInput: blockNumber,
+		},
+	)
 
 	metrics.SendAgentMetrics(ap.msgClient, metricsList)
-	lg.WithFields(log.Fields{
-		"duration": time.Since(startTime),
-	}).Debug("Finished SendEvaluateBlockRequest")
+	lg.WithFields(
+		log.Fields{
+			"duration": time.Since(startTime),
+		},
+	).Debug("Finished SendEvaluateBlockRequest")
+}
+
+// SendEvaluateAlertRequest sends the request to all of the active agents which
+// should be processing the alert.
+func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest) {
+	startTime := time.Now()
+	lg := log.WithFields(
+		log.Fields{
+			"component": "pool",
+		},
+	)
+	lg.Debug("SendEvaluateAlertRequest")
+
+	if ap.botWaitGroup != nil {
+		ap.botWaitGroup.Wait()
+	}
+
+	ap.mu.RLock()
+	agents := ap.agents
+	ap.mu.RUnlock()
+
+	encoded, err := agentgrpc.EncodeMessage(req)
+	if err != nil {
+		lg.WithError(err).Error("failed to encode message")
+		return
+	}
+
+	var metricsList []*protocol.AgentMetric
+	for _, agent := range agents {
+		if !agent.IsReady() || !agent.IsAlertAgent() {
+			continue
+		}
+
+		lg.WithFields(
+			log.Fields{
+				"agent":    agent.Config().ID,
+				"duration": time.Since(startTime),
+			},
+		).Debug("sending alert request to evalAlertCh")
+
+		// unblock req send if agent is closed
+		select {
+		case <-agent.Closed():
+			ap.discardAgent(agent)
+		case agent.AlertRequestCh() <- &poolagent.AlertRequest{
+			Original: req,
+			Encoded:  encoded,
+		}:
+		default: // do not try to send if the buffer is full
+			lg.WithField("agent", agent.Config().ID).Warn("agent block request buffer is full - skipping")
+			metricsList = append(metricsList, metrics.CreateAgentMetric(agent.Config().ID, metrics.MetricBlockDrop, 1))
+		}
+		lg.WithFields(
+			log.Fields{
+				"agent":    agent.Config().ID,
+				"duration": time.Since(startTime),
+			},
+		).Debug("sent alert request to evalAlertCh")
+	}
+
+	// TODO: consider using a new message
+	blockNumber, _ := hexutil.DecodeUint64(req.Event.Alert.Id)
+	ap.msgClient.Publish(
+		messaging.SubjectScannerBlock, &messaging.ScannerPayload{
+			LatestBlockInput: blockNumber,
+		},
+	)
+
+	metrics.SendAgentMetrics(ap.msgClient, metricsList)
+	lg.WithFields(
+		log.Fields{
+			"duration": time.Since(startTime),
+		},
+	).Debug("Finished SendEvaluateAlertRequest")
+}
+
+// AlertResults returns the receive-only alert results channel.
+func (ap *AgentPool) AlertResults() <-chan *scanner.AlertResult {
+	return ap.alertResults
 }
 
 func (ap *AgentPool) logAgentChanBuffersLoop() {
