@@ -8,6 +8,7 @@ import (
 
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-node/config"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
@@ -52,8 +53,29 @@ func (as *agentServer) EvaluateTx(ctx context.Context, txRequest *protocol.Evalu
 	return response, nil
 }
 
-func (as *agentServer) EvaluateAlert(ctx context.Context, txRequest *protocol.EvaluateAlertRequest) (*protocol.EvaluateAlertResponse, error) {
+func (as *agentServer) EvaluateAlert(ctx context.Context, alertRequest *protocol.EvaluateAlertRequest) (*protocol.EvaluateAlertResponse, error) {
 	response := &protocol.EvaluateAlertResponse{Status: protocol.ResponseStatus_SUCCESS}
 
+	// alert if Trace Disabled and Mainnet
+	trace := alertRequest.Event.Alert.Metadata["containerTraceSupported"] == "1"
+	isMainnet := alertRequest.Event.Network.ChainId == "1"
+	if trace && isMainnet {
+		response.Findings = append(
+			response.Findings, &protocol.Finding{
+				Protocol:    "1",
+				Severity:    protocol.Finding_CRITICAL,
+				Metadata:    nil,
+				Type:        protocol.Finding_INFORMATION,
+				AlertId:     "mock-alert-id",
+				Name:        "supporting trace",
+				Description: "this is a mainnet node with trace support",
+				EverestId:   "",
+				Private:     false,
+				Addresses:   nil,
+				Indicators:  nil,
+			},
+		)
+	}
+	logrus.WithField("alert", "no trace").Warn(response.Findings)
 	return response, nil
 }
