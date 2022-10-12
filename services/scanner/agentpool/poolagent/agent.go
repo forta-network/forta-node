@@ -40,6 +40,8 @@ type Agent struct {
 	txResults     chan<- *scanner.TxResult
 	blockRequests chan *BlockRequest // never closed - deallocated when agent is discarded
 	blockResults  chan<- *scanner.BlockResult
+	alertRequests chan *AlertRequest // never closed - deallocated when agent is discarded
+	alertResults  chan<- *scanner.AlertResult
 
 	errCounter *errorCounter
 	msgClient  clients.MessageClient
@@ -50,6 +52,32 @@ type Agent struct {
 	closed    chan struct{}
 	closeOnce sync.Once
 	initWait  sync.WaitGroup
+
+	alertConfig *protocol.AlertConfig
+	mu          sync.RWMutex
+}
+
+func (agent *Agent) AlertConfig() *protocol.AlertConfig {
+	agent.mu.RLock()
+	defer agent.mu.RUnlock()
+	
+	return agent.alertConfig
+}
+func (agent *Agent) SetAlertConfig(cfg *protocol.AlertConfig) {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	agent.alertConfig = cfg
+}
+
+func (agent *Agent) IsAlertAgent() bool {
+	agent.mu.RLock()
+	defer agent.mu.RUnlock()
+
+	if agent.alertConfig == nil {
+		return false
+	}
+
+	return len(agent.alertConfig.Subscriptions) > 0
 }
 
 // TxRequest contains the original request data and the encoded message.
@@ -61,6 +89,12 @@ type TxRequest struct {
 // BlockRequest contains the original request data and the encoded message.
 type BlockRequest struct {
 	Original *protocol.EvaluateBlockRequest
+	Encoded  *grpc.PreparedMsg
+}
+
+// AlertRequest contains the original request data and the encoded message.
+type AlertRequest struct {
+	Original *protocol.EvaluateAlertRequest
 	Encoded  *grpc.PreparedMsg
 }
 
@@ -118,22 +152,31 @@ func (agent *Agent) BlockRequestCh() chan<- *BlockRequest {
 	return agent.blockRequests
 }
 
+// AlertRequestCh returns the alert request channel safely.
+func (agent *Agent) AlertRequestCh() chan<- *AlertRequest {
+	return agent.alertRequests
+}
+
 // Close implements io.Closer.
 func (agent *Agent) Close() error {
-	agent.closeOnce.Do(func() {
-		close(agent.closed) // never close this anywhere else
-		if agent.client != nil {
-			agent.client.Close()
-		}
-	})
+	agent.closeOnce.Do(
+		func() {
+			close(agent.closed) // never close this anywhere else
+			if agent.client != nil {
+				agent.client.Close()
+			}
+		},
+	)
 	return nil
 }
 
 // SetReady sets the agent ready.
 func (agent *Agent) SetReady() {
-	agent.readyOnce.Do(func() {
-		close(agent.ready) // never close this anywhere else
-	})
+	agent.readyOnce.Do(
+		func() {
+			close(agent.ready) // never close this anywhere else
+		},
+	)
 }
 
 // Ready returns the ready channel.
@@ -178,6 +221,7 @@ func (agent *Agent) StartProcessing() {
 
 	go agent.processTransactions()
 	go agent.processBlocks()
+	go agent.processAlerts()
 }
 
 func (agent *Agent) initialize() {
@@ -189,10 +233,12 @@ func (agent *Agent) initialize() {
 
 	ctx, cancel := context.WithTimeout(agent.ctx, DefaultAgentInitializeTimeout)
 	defer cancel()
-	_, err := agent.client.Initialize(ctx, &protocol.InitializeRequest{
-		AgentId:   agent.config.ID,
-		ProxyHost: config.DockerJSONRPCProxyContainerName,
-	})
+	initializeResponse, err := agent.client.Initialize(
+		ctx, &protocol.InitializeRequest{
+			AgentId:   agent.config.ID,
+			ProxyHost: config.DockerJSONRPCProxyContainerName,
+		},
+	)
 	if status.Code(err) == codes.Unimplemented {
 		logger.WithError(err).Info("initialize() method not implemented in bot - safe to ignore")
 		return
@@ -201,15 +247,22 @@ func (agent *Agent) initialize() {
 		logger.WithError(err).Warn("bot initialization failed")
 		return
 	}
+
+	if initializeResponse != nil {
+		agent.SetAlertConfig(initializeResponse.AlertConfig)
+	}
+
 	logger.Info("bot initialization suceeded")
 }
 
 func (agent *Agent) processTransactions() {
-	lg := log.WithFields(log.Fields{
-		"agent":     agent.config.ID,
-		"component": "agent",
-		"evaluate":  "transaction",
-	})
+	lg := log.WithFields(
+		log.Fields{
+			"agent":     agent.config.ID,
+			"component": "agent",
+			"evaluate":  "transaction",
+		},
+	)
 
 	agent.initWait.Wait()
 
@@ -336,6 +389,70 @@ func (agent *Agent) processBlocks() {
 	}
 }
 
+func (agent *Agent) processAlerts() {
+	lg := log.WithFields(
+		log.Fields{
+			"agent":     agent.config.ID,
+			"component": "agent",
+			"evaluate":  "block",
+		},
+	)
+
+	agent.initWait.Wait()
+
+	for request := range agent.alertRequests {
+		startTime := time.Now()
+		if agent.IsClosed() {
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(agent.ctx, AgentTimeout)
+		lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
+		resp := new(protocol.EvaluateAlertResponse)
+		requestTime := time.Now().UTC()
+		err := agent.client.Invoke(ctx, agentgrpc.MethodEvaluateAlert, request.Encoded, resp)
+		responseTime := time.Now().UTC()
+		cancel()
+		if err == nil {
+			// truncate findings
+			if len(resp.Findings) > MaxFindings {
+				dropped := len(resp.Findings) - MaxFindings
+				droppedMetric := metrics.CreateAgentMetric(agent.config.ID, metrics.MetricFindingsDropped, float64(dropped))
+				agent.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{droppedMetric}})
+				resp.Findings = resp.Findings[:MaxFindings]
+			}
+			var duration time.Duration
+			resp.Timestamp, resp.LatencyMs, duration = calculateResponseTime(&startTime)
+			lg.WithField("duration", duration).Debugf("request successful")
+
+			if resp.Metadata == nil {
+				resp.Metadata = make(map[string]string)
+			}
+			resp.Metadata["imageHash"] = agent.config.ImageHash()
+
+			ts := domain.TrackingTimestampsFromMessage(request.Original.Event.Alert.Timestamps)
+			ts.BotRequest = requestTime
+			ts.BotResponse = responseTime
+
+			agent.alertResults <- &scanner.AlertResult{
+				AgentConfig: agent.config,
+				Request:     request.Original,
+				Response:    resp,
+				Timestamps:  ts,
+			}
+			lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
+			continue
+		}
+		lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking agent")
+		if agent.errCounter.TooManyErrs(err) {
+			lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down agent")
+			agent.Close()
+			agent.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{agent.config})
+			return
+		}
+	}
+}
+
 func calculateResponseTime(startTime *time.Time) (timestamp string, latencyMs uint32, duration time.Duration) {
 	now := time.Now().UTC()
 	duration = now.Sub(*startTime)
@@ -360,4 +477,17 @@ func (agent *Agent) ShouldProcessBlock(blockNumberHex string) bool {
 	}
 
 	return isAtLeastStartBlock && isAtMostStopBlock
+}
+
+// ShouldProcessAlert tells if the agent should process the alert.
+func (agent *Agent) ShouldProcessAlert(botID string) bool {
+	if agent.alertConfig == nil {
+		return false
+	}
+	for _, subscription := range agent.alertConfig.Subscriptions {
+		if subscription == botID {
+			return true
+		}
+	}
+	return false
 }
