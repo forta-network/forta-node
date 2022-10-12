@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// AlertStreamService pulls TX info from providers and emits to channel
+// AlertStreamService pulls alert info from providers and emits to channel
 type AlertStreamService struct {
 	cfg         AlertStreamServiceConfig
 	ctx         context.Context
@@ -53,7 +53,7 @@ func (t *AlertStreamService) Start() error {
 		if err := t.alertFeed.ForEachAlert(t.handleAlert); err != nil {
 			logger := log.WithError(err)
 			if err != context.Canceled {
-				logger.Panic("tx feed error")
+				logger.Panic("alert feed error")
 			}
 			logger.Info("alert feed stopped")
 		}
@@ -68,7 +68,7 @@ func (t *AlertStreamService) Stop() error {
 			for {
 				select {
 				case a := <-c:
-					log.WithFields(log.Fields{"tx": a.Alert.Alert.Id}).Info("gracefully draining block")
+					log.WithFields(log.Fields{"alert": a.Alert.Alert.Id}).Info("gracefully draining alert")
 				default:
 					close(c)
 					return

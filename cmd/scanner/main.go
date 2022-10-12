@@ -137,14 +137,14 @@ func initAlertStream(ctx context.Context, msgClient *messaging.Client, cfg confi
 	}
 
 	// subscribe to alert feed, so we can detect block end and trigger exit
-	blockErrCh := alertFeed.Subscribe(
+	alertErrChannel := alertFeed.Subscribe(
 		func(evt *domain.AlertEvent) error {
 			return nil
 		},
 	)
 	// detect end block, wait for scanning to finish, trigger exit
 	go func() {
-		err := <-blockErrCh
+		err := <-alertErrChannel
 		if err == nil {
 			return
 		}

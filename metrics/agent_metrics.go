@@ -104,6 +104,25 @@ func GetTxMetrics(agt config.AgentConfig, resp *protocol.EvaluateTxResponse, tim
 	return createMetrics(agt.ID, resp.Timestamp, metrics)
 }
 
+func GetAlertMetrics(agt config.AgentConfig, resp *protocol.EvaluateAlertResponse, times *domain.TrackingTimestamps) []*protocol.AgentMetric {
+	panic("unimplemented")
+	metrics := make(map[string]float64)
+
+	metrics[MetricTxRequest] = 1
+	metrics[MetricFinding] = float64(len(resp.Findings))
+	metrics[MetricTxLatency] = float64(resp.LatencyMs)
+	metrics[MetricTxBlockAge] = durationMs(times.Block, times.BotRequest)
+	metrics[MetricTxEventAge] = durationMs(times.Feed, times.BotRequest)
+
+	if resp.Status == protocol.ResponseStatus_ERROR {
+		metrics[MetricTxError] = 1
+	} else if resp.Status == protocol.ResponseStatus_SUCCESS {
+		metrics[MetricTxSuccess] = 1
+	}
+
+	return createMetrics(agt.ID, resp.Timestamp, metrics)
+}
+
 func GetJSONRPCMetrics(agt config.AgentConfig, at time.Time, success, throttled int, latencyMs time.Duration) []*protocol.AgentMetric {
 	values := make(map[string]float64)
 	if latencyMs > 0 {

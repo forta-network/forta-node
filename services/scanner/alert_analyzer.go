@@ -19,7 +19,7 @@ import (
 	"github.com/forta-network/forta-node/clients"
 )
 
-// AlertAnalyzerService reads TX info, calls agents, and emits results
+// AlertAnalyzerService reads alert info, calls agents, and emits results
 type AlertAnalyzerService struct {
 	ctx           context.Context
 	cfg           AlertAnalyzerServiceConfig
@@ -42,7 +42,7 @@ func (aas *AlertAnalyzerService) publishMetrics(result *AlertResult) {
 }
 
 func (aas *AlertAnalyzerService) findingToAlert(result *AlertResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
-	alertID := alerthash.ForBlockAlert(
+	alertID := alerthash.ForAlertBotAlert(
 		&alerthash.Inputs{
 			Alert:   result.Request.Event,
 			Finding: f,
@@ -65,7 +65,7 @@ func (aas *AlertAnalyzerService) findingToAlert(result *AlertResult, ts time.Tim
 
 	alertType := protocol.AlertType_PRIVATE
 	if !f.Private && !result.Response.Private {
-		alertType = protocol.AlertType_BLOCK
+		alertType = protocol.AlertType_ALERT
 	}
 	return &protocol.Alert{
 		Id:         alertID,
