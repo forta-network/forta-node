@@ -290,7 +290,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		health.NewService(
 			ctx, "", healthutils.DefaultHealthServerErrHandler, health.CheckerFrom(
 				summarizeReports,
-				ethClient, traceClient, alertFeed, blockFeed, txStream, txAnalyzer, blockAnalyzer, agentPool, registryService,
+				ethClient, traceClient, alertFeed, blockFeed, txStream, txAnalyzer, blockAnalyzer, alertAnalyzer, agentPool, registryService,
 				publisherSvc,
 			),
 		),

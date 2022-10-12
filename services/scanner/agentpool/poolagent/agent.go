@@ -60,7 +60,7 @@ type Agent struct {
 func (agent *Agent) AlertConfig() *protocol.AlertConfig {
 	agent.mu.RLock()
 	defer agent.mu.RUnlock()
-	
+
 	return agent.alertConfig
 }
 func (agent *Agent) SetAlertConfig(cfg *protocol.AlertConfig) {
@@ -99,7 +99,7 @@ type AlertRequest struct {
 }
 
 // New creates a new agent.
-func New(ctx context.Context, agentCfg config.AgentConfig, msgClient clients.MessageClient, txResults chan<- *scanner.TxResult, blockResults chan<- *scanner.BlockResult) *Agent {
+func New(ctx context.Context, agentCfg config.AgentConfig, msgClient clients.MessageClient, txResults chan<- *scanner.TxResult, blockResults chan<- *scanner.BlockResult, alertResults chan<- *scanner.AlertResult) *Agent {
 	return &Agent{
 		ctx:           ctx,
 		config:        agentCfg,
@@ -107,6 +107,8 @@ func New(ctx context.Context, agentCfg config.AgentConfig, msgClient clients.Mes
 		txResults:     txResults,
 		blockRequests: make(chan *BlockRequest, DefaultBufferSize),
 		blockResults:  blockResults,
+		alertRequests: make(chan *AlertRequest, DefaultBufferSize),
+		alertResults:  alertResults,
 		errCounter:    NewErrorCounter(3, isCriticalErr),
 		msgClient:     msgClient,
 		ready:         make(chan struct{}),

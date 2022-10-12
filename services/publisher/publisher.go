@@ -620,7 +620,7 @@ func (pub *Publisher) prepareLatestBatch() {
 			var blockNum string
 			if notif.EvalBlockRequest != nil {
 				blockNum = notif.EvalBlockRequest.Event.BlockNumber
-			} else {
+			} else if notif.EvalTxRequest != nil {
 				blockNum = notif.EvalTxRequest.Event.Block.BlockNumber
 			}
 

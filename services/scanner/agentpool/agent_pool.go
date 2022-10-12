@@ -41,6 +41,7 @@ func NewAgentPool(ctx context.Context, cfg config.ScannerConfig, msgClient clien
 		ctx:                ctx,
 		txResults:          make(chan *scanner.TxResult),
 		blockResults:       make(chan *scanner.BlockResult),
+		alertResults:       make(chan *scanner.AlertResult),
 		msgClient:          msgClient,
 		alertSubscriptions: map[string][]string{},
 		dialer: func(ac config.AgentConfig) (clients.AgentClient, error) {
@@ -253,7 +254,7 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 	).Debug("Finished SendEvaluateBlockRequest")
 }
 
-// SendEvaluateAlertRequest sends the request to all of the active agents which
+// SendEvaluateAlertRequest sends the request to all the active agents which
 // should be processing the alert.
 func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest) {
 	startTime := time.Now()
@@ -300,7 +301,7 @@ func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest
 			Encoded:  encoded,
 		}:
 		default: // do not try to send if the buffer is full
-			lg.WithField("agent", agent.Config().ID).Warn("agent block request buffer is full - skipping")
+			lg.WithField("agent", agent.Config().ID).Warn("agent alert request buffer is full - skipping")
 			metricsList = append(metricsList, metrics.CreateAgentMetric(agent.Config().ID, metrics.MetricBlockDrop, 1))
 		}
 		lg.WithFields(
@@ -365,14 +366,14 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 			found = found || (agent.Config().ContainerName() == agentCfg.ContainerName())
 		}
 		if !found {
-			newAgents = append(newAgents, poolagent.New(ap.ctx, agentCfg, ap.msgClient, ap.txResults, ap.blockResults))
+			newAgents = append(newAgents, poolagent.New(ap.ctx, agentCfg, ap.msgClient, ap.txResults, ap.blockResults, ap.alertResults))
 			agentsToRun = append(agentsToRun, agentCfg)
 			log.WithField("agent", agentCfg.ID).Info("will trigger start")
 		}
 	}
 
 	// Find the missing agents in the latest versions and send a "stop" message.
-	// Otherwise, add to the new agents list so we keep on running.
+	// Otherwise, add to the new agents list, so we keep on running.
 	var agentsToStop []config.AgentConfig
 	for _, agent := range ap.agents {
 		var found bool

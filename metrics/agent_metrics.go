@@ -32,6 +32,11 @@ const (
 	MetricJSONRPCSuccess   = "jsonrpc.success"
 	MetricJSONRPCThrottled = "jsonrpc.throttled"
 	MetricFindingsDropped  = "findings.dropped"
+	MetricAlertRequest     = "alert.request"
+	MetricAlertLatency     = "alert.latency"
+	MetricAlertError       = "alert.error"
+	MetricAlertSuccess     = "alert.success"
+	MetricAlertDrop        = "alert.drop"
 )
 
 func SendAgentMetrics(client clients.MessageClient, ms []*protocol.AgentMetric) {
@@ -105,19 +110,16 @@ func GetTxMetrics(agt config.AgentConfig, resp *protocol.EvaluateTxResponse, tim
 }
 
 func GetAlertMetrics(agt config.AgentConfig, resp *protocol.EvaluateAlertResponse, times *domain.TrackingTimestamps) []*protocol.AgentMetric {
-	panic("unimplemented")
 	metrics := make(map[string]float64)
 
-	metrics[MetricTxRequest] = 1
+	metrics[MetricAlertRequest] = 1
 	metrics[MetricFinding] = float64(len(resp.Findings))
-	metrics[MetricTxLatency] = float64(resp.LatencyMs)
-	metrics[MetricTxBlockAge] = durationMs(times.Block, times.BotRequest)
-	metrics[MetricTxEventAge] = durationMs(times.Feed, times.BotRequest)
+	metrics[MetricAlertLatency] = float64(resp.LatencyMs)
 
 	if resp.Status == protocol.ResponseStatus_ERROR {
-		metrics[MetricTxError] = 1
+		metrics[MetricAlertError] = 1
 	} else if resp.Status == protocol.ResponseStatus_SUCCESS {
-		metrics[MetricTxSuccess] = 1
+		metrics[MetricAlertSuccess] = 1
 	}
 
 	return createMetrics(agt.ID, resp.Timestamp, metrics)
