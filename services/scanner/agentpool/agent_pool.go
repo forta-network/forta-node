@@ -311,14 +311,6 @@ func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest
 		).Debug("sent alert request to evalAlertCh")
 	}
 
-	// TODO: consider using a new message
-	blockNumber, _ := hexutil.DecodeUint64(req.Event.Alert.Id)
-	ap.msgClient.Publish(
-		messaging.SubjectScannerBlock, &messaging.ScannerPayload{
-			LatestBlockInput: blockNumber,
-		},
-	)
-
 	metrics.SendAgentMetrics(ap.msgClient, metricsList)
 	lg.WithFields(
 		log.Fields{
