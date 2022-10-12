@@ -280,7 +280,7 @@ func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest
 
 	var metricsList []*protocol.AgentMetric
 	for _, agent := range agents {
-		if !agent.IsReady() || !agent.IsAlertAgent() {
+		if !agent.IsReady() || !agent.ShouldProcessAlert(req.Event.Alert.Agent.Id) {
 			continue
 		}
 
@@ -418,16 +418,34 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	// If an agent was added before and just started to run, we should mark as ready.
 	var agentsToStop []config.AgentConfig
 	var agentsReady []config.AgentConfig
+	var newSubscriptions []messaging.Subscription
+	var removedSubscriptions []messaging.Subscription
 
 	for _, agentCfg := range payload {
 		for _, agent := range ap.agents {
 			if agent.Config().ContainerName() == agentCfg.ContainerName() {
+				if agent.IsAlertAgent() {
+					for _, subscription := range agent.AlertConfig().Subscriptions {
+						newSubscriptions = append(newSubscriptions, messaging.Subscription{Src: agent.Config().ID, Dst: subscription})
+					}
+				}
+
+				if agent.IsReady() {
+					continue
+				}
+
 				c, err := ap.dialer(agent.Config())
 				if err != nil {
 					log.WithField("agent", agent.Config().ID).WithError(err).Error("handleStatusRunning: error while dialing")
 					agentsToStop = append(agentsToStop, agent.Config())
+					if agent.IsAlertAgent() {
+						for _, subscription := range agent.AlertConfig().Subscriptions {
+							removedSubscriptions = append(removedSubscriptions, messaging.Subscription{Src: agentCfg.ID, Dst: subscription})
+						}
+					}
 					continue
 				}
+
 				agent.SetClient(c)
 				agent.SetReady()
 				agent.StartProcessing()
@@ -445,8 +463,14 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	if len(agentsToStop) > 0 {
 		ap.msgClient.Publish(messaging.SubjectAgentsActionStop, agentsToStop)
 	}
+	if len(newSubscriptions) > 0 {
+		ap.msgClient.Publish(messaging.SubjectAgentsAlertSubscribe, newSubscriptions)
+	}
+	if len(removedSubscriptions) > 0 {
+		ap.msgClient.Publish(messaging.SubjectAgentsAlertUnsubscribe, removedSubscriptions)
+	}
 
-	// create subscription map
+	// update subscription map
 	ap.alertSubscriptions = make(map[string][]string)
 	for _, agent := range ap.agents {
 		alertCfg := agent.AlertConfig()

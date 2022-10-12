@@ -6,6 +6,8 @@ import (
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/feeds"
+	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/clients/messaging"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -15,11 +17,19 @@ type AlertStreamService struct {
 	ctx         context.Context
 	alertOutput chan *domain.AlertEvent
 	alertFeed   feeds.AlertFeed
+	msgClient   clients.MessageClient
 
+	subscribeChan     chan string
+	unSubscribeChan   chan string
 	lastAlertActivity health.TimeTracker
 }
 
 type AlertStreamServiceConfig struct {
+}
+
+func (t *AlertStreamService) registerMessageHandlers() {
+	t.msgClient.Subscribe(messaging.SubjectAgentsAlertSubscribe, messaging.SubscriptionHandler(t.handleMessageSubscribe))
+	t.msgClient.Subscribe(messaging.SubjectAgentsAlertUnsubscribe, messaging.SubscriptionHandler(t.handleMessageUnsubscribe))
 }
 
 func (t *AlertStreamService) ReadOnlyAlertStream() <-chan *domain.AlertEvent {
@@ -38,13 +48,14 @@ func (t *AlertStreamService) handleAlert(evt *domain.AlertEvent) error {
 }
 
 func (t *AlertStreamService) Start() error {
+	t.registerMessageHandlers()
 	go func() {
 		if err := t.alertFeed.ForEachAlert(t.handleAlert); err != nil {
 			logger := log.WithError(err)
 			if err != context.Canceled {
 				logger.Panic("tx feed error")
 			}
-			logger.Info("tx feed stopped")
+			logger.Info("alert feed stopped")
 		}
 	}()
 	return nil
@@ -79,12 +90,29 @@ func (t *AlertStreamService) Health() health.Reports {
 	}
 }
 
-func NewAlertStreamService(ctx context.Context, alertFeed feeds.AlertFeed, cfg AlertStreamServiceConfig) (*AlertStreamService, error) {
+func (t *AlertStreamService) handleMessageSubscribe(payload messaging.SubscriptionPayload) error {
+	for _, cfg := range payload {
+		t.alertFeed.AddSubscription(cfg.Dst, cfg.Src)
+	}
+
+	return nil
+}
+
+func (t *AlertStreamService) handleMessageUnsubscribe(payload messaging.SubscriptionPayload) error {
+	for _, cfg := range payload {
+		t.alertFeed.RemoveSubscription(cfg.Dst, cfg.Src)
+	}
+
+	return nil
+}
+
+func NewAlertStreamService(ctx context.Context, alertFeed feeds.AlertFeed, msgClient clients.MessageClient, cfg AlertStreamServiceConfig) (*AlertStreamService, error) {
 	alertOutput := make(chan *domain.AlertEvent)
 
 	return &AlertStreamService{
 		cfg:         cfg,
 		ctx:         ctx,
+		msgClient:   msgClient,
 		alertOutput: alertOutput,
 		alertFeed:   alertFeed,
 	}, nil

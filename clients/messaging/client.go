@@ -51,6 +51,7 @@ func NewClient(name, natsURL string) *Client {
 
 // AgentsHandler handles agents.* subjects.
 type AgentsHandler func(AgentPayload) error
+type SubscriptionHandler func(SubscriptionPayload) error
 type AgentMetricHandler func(*protocol.AgentMetricList) error
 type InspectionResultsHandler func(results *protocol.InspectionResults) error
 type ScannerHandler func(ScannerPayload) error
@@ -59,54 +60,63 @@ type ScannerHandler func(ScannerPayload) error
 func (client *Client) Subscribe(subject string, handler interface{}) {
 	// TODO: Configure redelivery options somehow.
 	logger := client.logger.WithField("subject", subject)
-	_, err := client.nc.Subscribe(subject, func(m *nats.Msg) {
-		logger.Debugf("received: %s", string(m.Data))
+	_, err := client.nc.Subscribe(
+		subject, func(m *nats.Msg) {
+			logger.Debugf("received: %s", string(m.Data))
 
-		var err error
-		switch h := handler.(type) {
-		case AgentsHandler:
-			var payload AgentPayload
-			err = json.Unmarshal(m.Data, &payload)
+			var err error
+			switch h := handler.(type) {
+			case AgentsHandler:
+				var payload AgentPayload
+				err = json.Unmarshal(m.Data, &payload)
+				if err != nil {
+					break
+				}
+				err = h(payload)
+
+			case AgentMetricHandler:
+				var payload protocol.AgentMetricList
+				err = proto.Unmarshal(m.Data, &payload)
+				if err != nil {
+					break
+				}
+				err = h(&payload)
+
+			case InspectionResultsHandler:
+				var payload protocol.InspectionResults
+				err = proto.Unmarshal(m.Data, &payload)
+				if err != nil {
+					break
+				}
+				err = h(&payload)
+
+			case ScannerHandler:
+				var payload ScannerPayload
+				err = json.Unmarshal(m.Data, &payload)
+				if err != nil {
+					break
+				}
+				err = h(payload)
+			case SubscriptionHandler:
+				var payload SubscriptionPayload
+				err = json.Unmarshal(m.Data, &payload)
+				if err != nil {
+					break
+				}
+				err = h(payload)
+
+			default:
+				logger.Panicf("no handler found")
+			}
+
 			if err != nil {
-				break
+				if err := m.Nak(); err != nil {
+					logger.Errorf("failed to send nak: %v", err)
+				}
+				logger.Errorf("failed to handle msg: %v", err)
 			}
-			err = h(payload)
-
-		case AgentMetricHandler:
-			var payload protocol.AgentMetricList
-			err = proto.Unmarshal(m.Data, &payload)
-			if err != nil {
-				break
-			}
-			err = h(&payload)
-
-		case InspectionResultsHandler:
-			var payload protocol.InspectionResults
-			err = proto.Unmarshal(m.Data, &payload)
-			if err != nil {
-				break
-			}
-			err = h(&payload)
-
-		case ScannerHandler:
-			var payload ScannerPayload
-			err = json.Unmarshal(m.Data, &payload)
-			if err != nil {
-				break
-			}
-			err = h(payload)
-
-		default:
-			logger.Panicf("no handler found")
-		}
-
-		if err != nil {
-			if err := m.Nak(); err != nil {
-				logger.Errorf("failed to send nak: %v", err)
-			}
-			logger.Errorf("failed to handle msg: %v", err)
-		}
-	})
+		},
+	)
 	if err != nil {
 		logger.Panicf("failed to subscribe: %v", err)
 	}
