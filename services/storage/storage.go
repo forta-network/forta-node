@@ -6,13 +6,12 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"net/http"
 	"path"
 	"sort"
 
 	"github.com/forta-network/forta-core-go/protocol"
+	"github.com/forta-network/forta-node/clients/ipfsclient"
 	"github.com/forta-network/forta-node/config"
-	"github.com/forta-network/forta-node/services/storage/content"
 	"github.com/ipfs/go-cid"
 	ipfsapi "github.com/ipfs/go-ipfs-api"
 	log "github.com/sirupsen/logrus"
@@ -25,6 +24,7 @@ const defaultListLimit = 1000
 
 // Storage persists node content.
 type Storage struct {
+	ctx    context.Context
 	ipfs   IPFSClient
 	server *grpc.Server
 
@@ -32,9 +32,9 @@ type Storage struct {
 }
 
 // New creates a new storage service.
-func NewStorage(ipfsURL string) (*Storage, error) {
+func NewStorage(ctx context.Context, ipfsURL string) (*Storage, error) {
 	storage := &Storage{
-		ipfs:   ipfsapi.NewShellWithClient(ipfsURL, http.DefaultClient),
+		ipfs:   ipfsclient.New(ipfsURL),
 		server: grpc.NewServer(),
 	}
 	protocol.RegisterStorageServer(storage.server, storage)
@@ -52,6 +52,8 @@ func (storage *Storage) Start() error {
 		err := storage.server.Serve(lis)
 		log.WithError(err).Info("storage server stopped")
 	}()
+
+	go storage.collectGarbage(storage.ctx)
 
 	return nil
 }
@@ -83,8 +85,8 @@ func (storage *Storage) Put(ctx context.Context, req *protocol.PutRequest) (*pro
 	// 	return nil, err
 	// }
 
-	contentPath := content.NewContentPath(req.User, req.Kind)
-	contentID, err := storage.ipfs.Add(bytes.NewBuffer(req.Bytes), toFiles(contentPath))
+	contentPath := NewContentPath(req.User, req.Kind)
+	contentID, err := storage.ipfs.AddToFiles(bytes.NewBuffer(req.Bytes), contentPath)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +157,7 @@ func (storage *Storage) List(ctx context.Context, req *protocol.ListRequest) (*p
 		req.Limit = defaultListLimit
 	}
 
-	contentDir := content.ContentDir(req.User, req.Kind)
+	contentDir := ContentDir(req.User, req.Kind)
 	list, err := storage.ipfs.FilesLs(ctx, contentDir, ipfsapi.FilesLs.Stat(true))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to list the directory '%s': %v", contentDir, err)

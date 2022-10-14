@@ -1,4 +1,4 @@
-package content
+package storage
 
 import (
 	"path"
@@ -6,8 +6,24 @@ import (
 	"time"
 )
 
+// Content kinds
+const (
+	KindBatchReceipt = "batchReceipt"
+)
+
+// ContentLimit returns the limit for the doc count of a specific type.
+func ContentLimit(kind string) int {
+	switch kind {
+	case KindBatchReceipt:
+		return 10000
+
+	default:
+		return 10000
+	}
+}
+
 // DefaultBasePath is the base path for all Forta storage content.
-const DefaultBasePath = "/forta_storage"
+const DefaultBasePath = "/forta"
 
 // RepoDir constructs the repository dir path for a user.
 func RepoDir(user string) string {

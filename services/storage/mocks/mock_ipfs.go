@@ -36,6 +36,41 @@ func (m *MockIPFSClient) EXPECT() *MockIPFSClientMockRecorder {
 	return m.recorder
 }
 
+// Add mocks base method.
+func (m *MockIPFSClient) Add(r io.Reader, options ...shell.AddOpts) (string, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{r}
+	for _, a := range options {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Add", varargs...)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Add indicates an expected call of Add.
+func (mr *MockIPFSClientMockRecorder) Add(r interface{}, options ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{r}, options...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockIPFSClient)(nil).Add), varargs...)
+}
+
+// Cat mocks base method.
+func (m *MockIPFSClient) Cat(path string) (io.ReadCloser, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Cat", path)
+	ret0, _ := ret[0].(io.ReadCloser)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Cat indicates an expected call of Cat.
+func (mr *MockIPFSClientMockRecorder) Cat(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Cat", reflect.TypeOf((*MockIPFSClient)(nil).Cat), path)
+}
+
 // FilesCp mocks base method.
 func (m *MockIPFSClient) FilesCp(ctx context.Context, src, dest string) error {
 	m.ctrl.T.Helper()
