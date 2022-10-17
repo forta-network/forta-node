@@ -27,7 +27,7 @@ type AgentPool struct {
 	agents             []*poolagent.Agent
 	txResults          chan *scanner.TxResult
 	blockResults       chan *scanner.BlockResult
-	alertResults       chan *scanner.AlertResult
+	metaAlertResults   chan *scanner.MetaAlertResult
 	msgClient          clients.MessageClient
 	dialer             func(config.AgentConfig) (clients.AgentClient, error)
 	mu                 sync.RWMutex
@@ -41,7 +41,7 @@ func NewAgentPool(ctx context.Context, cfg config.ScannerConfig, msgClient clien
 		ctx:                ctx,
 		txResults:          make(chan *scanner.TxResult),
 		blockResults:       make(chan *scanner.BlockResult),
-		alertResults:       make(chan *scanner.AlertResult),
+		metaAlertResults:   make(chan *scanner.MetaAlertResult),
 		msgClient:          msgClient,
 		alertSubscriptions: map[string][]string{},
 		dialer: func(ac config.AgentConfig) (clients.AgentClient, error) {
@@ -125,10 +125,12 @@ func (ap *AgentPool) discardAgent(discarded *poolagent.Agent) {
 // should be processing the block.
 func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 	startTime := time.Now()
-	lg := log.WithFields(log.Fields{
-		"tx":        req.Event.Transaction.Hash,
-		"component": "pool",
-	})
+	lg := log.WithFields(
+		log.Fields{
+			"tx":        req.Event.Transaction.Hash,
+			"component": "pool",
+		},
+	)
 	lg.Debug("SendEvaluateTxRequest")
 
 	if ap.botWaitGroup != nil {
@@ -149,10 +151,12 @@ func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 		if !agent.IsReady() || !agent.ShouldProcessBlock(req.Event.Block.BlockNumber) {
 			continue
 		}
-		lg.WithFields(log.Fields{
-			"agent":    agent.Config().ID,
-			"duration": time.Since(startTime),
-		}).Debug("sending tx request to evalTxCh")
+		lg.WithFields(
+			log.Fields{
+				"agent":    agent.Config().ID,
+				"duration": time.Since(startTime),
+			},
+		).Debug("sending tx request to evalTxCh")
 
 		// unblock req send and discard agent if agent is closed
 
@@ -167,16 +171,20 @@ func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 			lg.WithField("agent", agent.Config().ID).Debug("agent tx request buffer is full - skipping")
 			metricsList = append(metricsList, metrics.CreateAgentMetric(agent.Config().ID, metrics.MetricTxDrop, 1))
 		}
-		lg.WithFields(log.Fields{
-			"agent":    agent.Config().ID,
-			"duration": time.Since(startTime),
-		}).Debug("sent tx request to evalTxCh")
+		lg.WithFields(
+			log.Fields{
+				"agent":    agent.Config().ID,
+				"duration": time.Since(startTime),
+			},
+		).Debug("sent tx request to evalTxCh")
 	}
 	metrics.SendAgentMetrics(ap.msgClient, metricsList)
 
-	lg.WithFields(log.Fields{
-		"duration": time.Since(startTime),
-	}).Debug("Finished SendEvaluateTxRequest")
+	lg.WithFields(
+		log.Fields{
+			"duration": time.Since(startTime),
+		},
+	).Debug("Finished SendEvaluateTxRequest")
 }
 
 // TxResults returns the receive-only tx results channel.
@@ -188,10 +196,12 @@ func (ap *AgentPool) TxResults() <-chan *scanner.TxResult {
 // should be processing the block.
 func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest) {
 	startTime := time.Now()
-	lg := log.WithFields(log.Fields{
-		"block":     req.Event.BlockNumber,
-		"component": "pool",
-	})
+	lg := log.WithFields(
+		log.Fields{
+			"block":     req.Event.BlockNumber,
+			"component": "pool",
+		},
+	)
 	lg.Debug("SendEvaluateBlockRequest")
 
 	if ap.botWaitGroup != nil {
@@ -214,10 +224,12 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 			continue
 		}
 
-		lg.WithFields(log.Fields{
-			"agent":    agent.Config().ID,
-			"duration": time.Since(startTime),
-		}).Debug("sending block request to evalBlockCh")
+		lg.WithFields(
+			log.Fields{
+				"agent":    agent.Config().ID,
+				"duration": time.Since(startTime),
+			},
+		).Debug("sending block request to evalBlockCh")
 
 		// unblock req send if agent is closed
 		select {
@@ -296,7 +308,7 @@ func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest
 		select {
 		case <-agent.Closed():
 			ap.discardAgent(agent)
-		case agent.AlertRequestCh() <- &poolagent.AlertRequest{
+		case agent.AlertRequestCh() <- &poolagent.MetaAlertRequest{
 			Original: req,
 			Encoded:  encoded,
 		}:
@@ -321,8 +333,8 @@ func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest
 }
 
 // AlertResults returns the receive-only alert results channel.
-func (ap *AgentPool) AlertResults() <-chan *scanner.AlertResult {
-	return ap.alertResults
+func (ap *AgentPool) AlertResults() <-chan *scanner.MetaAlertResult {
+	return ap.metaAlertResults
 }
 
 func (ap *AgentPool) logAgentChanBuffersLoop() {
@@ -351,7 +363,6 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
 
-	log.Debug("handleAgentVersionsUpdate")
 	latestVersions := payload
 
 	// The agents list which we completely replace with the old ones.
@@ -366,7 +377,7 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 			found = found || (agent.Config().ContainerName() == agentCfg.ContainerName())
 		}
 		if !found {
-			newAgents = append(newAgents, poolagent.New(ap.ctx, agentCfg, ap.msgClient, ap.txResults, ap.blockResults, ap.alertResults))
+			newAgents = append(newAgents, poolagent.New(ap.ctx, agentCfg, ap.msgClient, ap.txResults, ap.blockResults, ap.metaAlertResults))
 			agentsToRun = append(agentsToRun, agentCfg)
 			log.WithField("agent", agentCfg.ID).Info("will trigger start")
 		}
@@ -407,7 +418,6 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
 
-	log.Debug("handleStatusRunning")
 	// If an agent was added before and just started to run, we should mark as ready.
 	var agentsToStop []config.AgentConfig
 	var agentsReady []config.AgentConfig
@@ -417,12 +427,7 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	for _, agentCfg := range payload {
 		for _, agent := range ap.agents {
 			if agent.Config().ContainerName() == agentCfg.ContainerName() {
-				if agent.IsAlertAgent() {
-					for _, subscription := range agent.AlertConfig().Subscriptions {
-						newSubscriptions = append(newSubscriptions, messaging.Subscription{Src: agent.Config().ID, Dst: subscription})
-					}
-				}
-
+				logger := log.WithField("agent", agent.Config().ID)
 				if agent.IsReady() {
 					continue
 				}
@@ -442,7 +447,15 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 				agent.SetClient(c)
 				agent.SetReady()
 				agent.StartProcessing()
-				log.WithField("agent", agent.Config().ID).WithField("image", agent.Config().Image).Info("attached")
+				agent.WaitInitialization()
+
+				if agent.IsAlertAgent() {
+					for _, subscription := range agent.AlertConfig().Subscriptions {
+						newSubscriptions = append(newSubscriptions, messaging.Subscription{Src: agent.Config().ID, Dst: subscription})
+					}
+				}
+
+				logger.WithField("image", agent.Config().Image).Info("attached")
 				agentsReady = append(agentsReady, agent.Config())
 			}
 		}
@@ -483,7 +496,6 @@ func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
 
-	log.Debug("handleStatusStopped")
 	var newAgents []*poolagent.Agent
 	for _, agent := range ap.agents {
 		var stopped bool

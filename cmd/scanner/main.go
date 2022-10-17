@@ -74,23 +74,27 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 		}
 	}
 
-	blockFeed, err := feeds.NewBlockFeed(ctx, ethClient, traceClient, feeds.BlockFeedConfig{
-		ChainID:             chainID,
-		Tracing:             cfg.Trace.Enabled,
-		RateLimit:           rateLimit,
-		SkipBlocksOlderThan: maxAgePtr,
-		Offset:              settings.GetBlockOffset(cfg.ChainID),
-		Start:               startBlock,
-		End:                 stopBlock,
-	})
+	blockFeed, err := feeds.NewBlockFeed(
+		ctx, ethClient, traceClient, feeds.BlockFeedConfig{
+			ChainID:             chainID,
+			Tracing:             cfg.Trace.Enabled,
+			RateLimit:           rateLimit,
+			SkipBlocksOlderThan: maxAgePtr,
+			Offset:              settings.GetBlockOffset(cfg.ChainID),
+			Start:               startBlock,
+			End:                 stopBlock,
+		},
+	)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// subscribe to block feed so we can detect block end and trigger exit
-	blockErrCh := blockFeed.Subscribe(func(evt *domain.BlockEvent) error {
-		return nil
-	})
+	blockErrCh := blockFeed.Subscribe(
+		func(evt *domain.BlockEvent) error {
+			return nil
+		},
+	)
 	// detect end block, wait for scanning to finish, trigger exit
 	go func() {
 		err := <-blockErrCh
@@ -113,11 +117,13 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 		services.TriggerExit(delay)
 	}()
 
-	txStream, err := scanner.NewTxStreamService(ctx, ethClient, blockFeed, scanner.TxStreamServiceConfig{
-		JsonRpcConfig:       cfg.Scan.JsonRpc,
-		TraceJsonRpcConfig:  cfg.Trace.JsonRpc,
-		SkipBlocksOlderThan: maxAgePtr,
-	})
+	txStream, err := scanner.NewTxStreamService(
+		ctx, ethClient, blockFeed, scanner.TxStreamServiceConfig{
+			JsonRpcConfig:       cfg.Scan.JsonRpc,
+			TraceJsonRpcConfig:  cfg.Trace.JsonRpc,
+			SkipBlocksOlderThan: maxAgePtr,
+		},
+	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create the tx stream service: %v", err)
 	}
@@ -125,7 +131,7 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 	return txStream, blockFeed, nil
 }
 
-func initAlertStream(ctx context.Context, msgClient *messaging.Client, cfg config.Config) (*scanner.AlertStreamService, feeds.AlertFeed, error) {
+func initAlertStream(ctx context.Context, msgClient *messaging.Client, cfg config.Config) (*scanner.MetaAlertStreamService, feeds.AlertFeed, error) {
 	alertFeed, err := feeds.NewAlertFeed(
 		ctx, feeds.AlertFeedConfig{
 			Offset: settings.GetBlockOffset(cfg.ChainID),
@@ -160,8 +166,8 @@ func initAlertStream(ctx context.Context, msgClient *messaging.Client, cfg confi
 		services.TriggerExit(delay)
 	}()
 
-	txStream, err := scanner.NewAlertStreamService(
-		ctx, alertFeed, msgClient, scanner.AlertStreamServiceConfig{
+	txStream, err := scanner.NewMetaAlertStreamService(
+		ctx, alertFeed, msgClient, scanner.MetaAlertStreamServiceConfig{
 
 		},
 	)
@@ -173,25 +179,30 @@ func initAlertStream(ctx context.Context, msgClient *messaging.Client, cfg confi
 }
 
 func initTxAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.TxStreamService, ap *agentpool.AgentPool, msgClient clients.MessageClient) (*scanner.TxAnalyzerService, error) {
-	return scanner.NewTxAnalyzerService(ctx, scanner.TxAnalyzerServiceConfig{
-		TxChannel:   stream.ReadOnlyTxStream(),
-		AlertSender: as,
-		AgentPool:   ap,
-		MsgClient:   msgClient,
-	})
+	return scanner.NewTxAnalyzerService(
+		ctx, scanner.TxAnalyzerServiceConfig{
+			TxChannel:   stream.ReadOnlyTxStream(),
+			AlertSender: as,
+			AgentPool:   ap,
+			MsgClient:   msgClient,
+		},
+	)
 }
 
 func initBlockAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.TxStreamService, ap *agentpool.AgentPool, msgClient clients.MessageClient) (*scanner.BlockAnalyzerService, error) {
-	return scanner.NewBlockAnalyzerService(ctx, scanner.BlockAnalyzerServiceConfig{
-		BlockChannel: stream.ReadOnlyBlockStream(),
-		AlertSender:  as,
-		AgentPool:    ap,
-		MsgClient:    msgClient,
-	})
+	return scanner.NewBlockAnalyzerService(
+		ctx, scanner.BlockAnalyzerServiceConfig{
+			BlockChannel: stream.ReadOnlyBlockStream(),
+			AlertSender:  as,
+			AgentPool:    ap,
+			MsgClient:    msgClient,
+		},
+	)
+}
 
-func initAlertAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.AlertStreamService, ap *agentpool.AgentPool, msgClient clients.MessageClient) (*scanner.AlertAnalyzerService, error) {
-	return scanner.NewAlertAnalyzerService(
-		ctx, scanner.AlertAnalyzerServiceConfig{
+func initMetaAlertAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.MetaAlertStreamService, ap *agentpool.AgentPool, msgClient clients.MessageClient) (*scanner.MetaAlertAnalyzerService, error) {
+	return scanner.NewMetaAlertAnalyzerService(
+		ctx, scanner.MetaAlertAnalyzerServiceConfig{
 			AlertChannel: stream.ReadOnlyAlertStream(),
 			AlertSender:  as,
 			AgentPool:    ap,
@@ -201,9 +212,11 @@ func initAlertAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertS
 }
 
 func initAlertSender(ctx context.Context, key *keystore.Key, pubClient clients.PublishClient) (clients.AlertSender, error) {
-	return clients.NewAlertSender(ctx, pubClient, clients.AlertSenderConfig{
-		Key: key,
-	})
+	return clients.NewAlertSender(
+		ctx, pubClient, clients.AlertSenderConfig{
+			Key: key,
+		},
+	)
 }
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
@@ -217,7 +230,6 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	cfg.Publish.IPFS.APIURL = utils.ConvertToDockerHostURL(cfg.Publish.IPFS.APIURL)
 	cfg.Publish.IPFS.GatewayURL = utils.ConvertToDockerHostURL(cfg.Publish.IPFS.GatewayURL)
 	cfg.LocalModeConfig.WebhookURL = utils.ConvertToDockerHostURL(cfg.LocalModeConfig.WebhookURL)
-
 	msgClient := messaging.NewClient("scanner", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 
 	key, err := security.LoadKey(config.DefaultContainerKeyDirPath)
@@ -276,10 +288,11 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 
-	alertAnalyzer, err := initAlertAnalyzer(ctx, cfg, as, alertStream, agentPool, msgClient)
+	alertAnalyzer, err := initMetaAlertAnalyzer(ctx, cfg, as, alertStream, agentPool, msgClient)
 	if err != nil {
 		return nil, err
 	}
+
 	// Start the main block feed so all transaction feeds can start consuming.
 	if !cfg.Scan.DisableAutostart {
 		blockFeed.Start()

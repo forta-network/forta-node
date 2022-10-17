@@ -36,12 +36,12 @@ type Agent struct {
 	ctx    context.Context
 	config config.AgentConfig
 
-	txRequests    chan *TxRequest // never closed - deallocated when agent is discarded
-	txResults     chan<- *scanner.TxResult
-	blockRequests chan *BlockRequest // never closed - deallocated when agent is discarded
-	blockResults  chan<- *scanner.BlockResult
-	alertRequests chan *AlertRequest // never closed - deallocated when agent is discarded
-	alertResults  chan<- *scanner.AlertResult
+	txRequests        chan *TxRequest // never closed - deallocated when agent is discarded
+	txResults         chan<- *scanner.TxResult
+	blockRequests     chan *BlockRequest // never closed - deallocated when agent is discarded
+	blockResults      chan<- *scanner.BlockResult
+	metaAlertRequests chan *MetaAlertRequest // never closed - deallocated when agent is discarded
+	metaAlertResults  chan<- *scanner.MetaAlertResult
 
 	errCounter *errorCounter
 	msgClient  clients.MessageClient
@@ -92,27 +92,27 @@ type BlockRequest struct {
 	Encoded  *grpc.PreparedMsg
 }
 
-// AlertRequest contains the original request data and the encoded message.
-type AlertRequest struct {
+// MetaAlertRequest contains the original request data and the encoded message.
+type MetaAlertRequest struct {
 	Original *protocol.EvaluateAlertRequest
 	Encoded  *grpc.PreparedMsg
 }
 
 // New creates a new agent.
-func New(ctx context.Context, agentCfg config.AgentConfig, msgClient clients.MessageClient, txResults chan<- *scanner.TxResult, blockResults chan<- *scanner.BlockResult, alertResults chan<- *scanner.AlertResult) *Agent {
+func New(ctx context.Context, agentCfg config.AgentConfig, msgClient clients.MessageClient, txResults chan<- *scanner.TxResult, blockResults chan<- *scanner.BlockResult, alertResults chan<- *scanner.MetaAlertResult) *Agent {
 	return &Agent{
-		ctx:           ctx,
-		config:        agentCfg,
-		txRequests:    make(chan *TxRequest, DefaultBufferSize),
-		txResults:     txResults,
-		blockRequests: make(chan *BlockRequest, DefaultBufferSize),
-		blockResults:  blockResults,
-		alertRequests: make(chan *AlertRequest, DefaultBufferSize),
-		alertResults:  alertResults,
-		errCounter:    NewErrorCounter(3, isCriticalErr),
-		msgClient:     msgClient,
-		ready:         make(chan struct{}),
-		closed:        make(chan struct{}),
+		ctx:               ctx,
+		config:            agentCfg,
+		txRequests:        make(chan *TxRequest, DefaultBufferSize),
+		txResults:         txResults,
+		blockRequests:     make(chan *BlockRequest, DefaultBufferSize),
+		blockResults:      blockResults,
+		metaAlertRequests: make(chan *MetaAlertRequest, DefaultBufferSize),
+		metaAlertResults:  alertResults,
+		errCounter:        NewErrorCounter(3, isCriticalErr),
+		msgClient:         msgClient,
+		ready:             make(chan struct{}),
+		closed:            make(chan struct{}),
 	}
 }
 
@@ -125,13 +125,15 @@ func isCriticalErr(err error) bool {
 
 // LogStatus logs the status of the agent.
 func (agent *Agent) LogStatus() {
-	log.WithFields(log.Fields{
-		"agent":       agent.config.ID,
-		"blockBuffer": len(agent.blockRequests),
-		"txBuffer":    len(agent.txRequests),
-		"ready":       agent.IsReady(),
-		"closed":      agent.IsClosed(),
-	}).Debug("agent status")
+	log.WithFields(
+		log.Fields{
+			"agent":       agent.config.ID,
+			"blockBuffer": len(agent.blockRequests),
+			"txBuffer":    len(agent.txRequests),
+			"ready":       agent.IsReady(),
+			"closed":      agent.IsClosed(),
+		},
+	).Debug("agent status")
 }
 
 // TxBufferIsFull tells if an agent input buffer is full.
@@ -155,8 +157,8 @@ func (agent *Agent) BlockRequestCh() chan<- *BlockRequest {
 }
 
 // AlertRequestCh returns the alert request channel safely.
-func (agent *Agent) AlertRequestCh() chan<- *AlertRequest {
-	return agent.alertRequests
+func (agent *Agent) AlertRequestCh() chan<- *MetaAlertRequest {
+	return agent.metaAlertRequests
 }
 
 // Close implements io.Closer.
@@ -223,15 +225,17 @@ func (agent *Agent) StartProcessing() {
 
 	go agent.processTransactions()
 	go agent.processBlocks()
-	go agent.processAlerts()
+	go agent.processMetaAlerts()
 }
 
 func (agent *Agent) initialize() {
 	defer agent.initWait.Done()
 
-	logger := log.WithFields(log.Fields{
-		"agent": agent.config.ID,
-	})
+	logger := log.WithFields(
+		log.Fields{
+			"agent": agent.config.ID,
+		},
+	)
 
 	ctx, cancel := context.WithTimeout(agent.ctx, DefaultAgentInitializeTimeout)
 	defer cancel()
@@ -251,10 +255,20 @@ func (agent *Agent) initialize() {
 	}
 
 	if initializeResponse != nil {
+		if initializeResponse.AlertConfig == nil {
+			logger.Info("no alert bot")
+		} else {
+			logger.Info("set alert config", initializeResponse.AlertConfig.Subscriptions)
+		}
+
 		agent.SetAlertConfig(initializeResponse.AlertConfig)
 	}
 
 	logger.Info("bot initialization suceeded")
+}
+
+func (agent *Agent) WaitInitialization() {
+	agent.initWait.Wait()
 }
 
 func (agent *Agent) processTransactions() {
@@ -316,25 +330,31 @@ func (agent *Agent) processTransactions() {
 			lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down agent")
 			agent.Close()
 			agent.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{agent.config})
-			agent.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{
-				Metrics: []*protocol.AgentMetric{{
-					AgentId:   agent.config.ID,
-					Timestamp: time.Now().Format(time.RFC3339),
-					Name:      metrics.MetricStop,
-					Value:     1,
-				}},
-			})
+			agent.msgClient.PublishProto(
+				messaging.SubjectMetricAgent, &protocol.AgentMetricList{
+					Metrics: []*protocol.AgentMetric{
+						{
+							AgentId:   agent.config.ID,
+							Timestamp: time.Now().Format(time.RFC3339),
+							Name:      metrics.MetricStop,
+							Value:     1,
+						},
+					},
+				},
+			)
 			return
 		}
 	}
 }
 
 func (agent *Agent) processBlocks() {
-	lg := log.WithFields(log.Fields{
-		"agent":     agent.config.ID,
-		"component": "agent",
-		"evaluate":  "block",
-	})
+	lg := log.WithFields(
+		log.Fields{
+			"agent":     agent.config.ID,
+			"component": "agent",
+			"evaluate":  "block",
+		},
+	)
 
 	agent.initWait.Wait()
 
@@ -391,18 +411,18 @@ func (agent *Agent) processBlocks() {
 	}
 }
 
-func (agent *Agent) processAlerts() {
+func (agent *Agent) processMetaAlerts() {
 	lg := log.WithFields(
 		log.Fields{
 			"agent":     agent.config.ID,
 			"component": "agent",
-			"evaluate":  "block",
+			"evaluate":  "alert",
 		},
 	)
 
 	agent.initWait.Wait()
 
-	for request := range agent.alertRequests {
+	for request := range agent.metaAlertRequests {
 		startTime := time.Now()
 		if agent.IsClosed() {
 			return
@@ -436,7 +456,7 @@ func (agent *Agent) processAlerts() {
 			ts.BotRequest = requestTime
 			ts.BotResponse = responseTime
 
-			agent.alertResults <- &scanner.AlertResult{
+			agent.metaAlertResults <- &scanner.MetaAlertResult{
 				AgentConfig: agent.config,
 				Request:     request.Original,
 				Response:    resp,
