@@ -293,7 +293,7 @@ func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest
 
 	var metricsList []*protocol.AgentMetric
 	for _, agent := range agents {
-		if !agent.IsReady() || !agent.ShouldProcessAlert(req.Event.Alert.Agent.Id) {
+		if !agent.IsReady() || !agent.ShouldProcessAlert(req.Event.Alert.Source.Bot.Id) {
 			continue
 		}
 

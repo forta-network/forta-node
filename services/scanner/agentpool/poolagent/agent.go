@@ -452,7 +452,7 @@ func (agent *Agent) processMetaAlerts() {
 			}
 			resp.Metadata["imageHash"] = agent.config.ImageHash()
 
-			ts := domain.TrackingTimestampsFromMessage(request.Original.Event.Alert.Timestamps)
+			ts := domain.TrackingTimestampsFromMessage(request.Original.Event.Timestamps)
 			ts.BotRequest = requestTime
 			ts.BotResponse = responseTime
 

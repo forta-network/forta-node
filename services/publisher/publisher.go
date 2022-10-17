@@ -474,6 +474,7 @@ func (bd *BatchData) GetPrivateAlerts(notif *protocol.NotifyRequest) *protocol.A
 func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 	isBlockAlert := notif.EvalBlockRequest != nil
 	isTxAlert := notif.EvalTxRequest != nil
+	isMetaAlertAlert := notif.EvalAlertRequest != nil
 
 	var isPrivate bool
 
@@ -513,13 +514,14 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 			txRes := (*BlockResults)(blockRes).GetTransactionResults(notif.EvalTxRequest.Event)
 			agentAlerts = (*TransactionResults)(txRes).GetAgentAlerts(notif.AgentInfo)
 		}
-	} else {
+	} else if isMetaAlertAlert {
 		// TODO REMOVE THIS BEFORE PRODUCTION
-		blockNum := notif.EvalAlertRequest.Event.Source.Block.Number
-		bd.AddBatchAgent(notif.AgentInfo, blockNum, notif.EvalAlertRequest.Event.Source.TransactionHash)
-		metaAlertRes := bd.GetMetaAlertResults(notif.EvalAlertRequest.Event.Source.Block.Hash, blockNum, notif.EvalAlertRequest.Event.Source.Block.Timestamp)
+		blockNum := notif.EvalAlertRequest.Event.Alert.Source.Block.Number
+		bd.AddBatchAgent(notif.AgentInfo, blockNum, notif.EvalAlertRequest.Event.Alert.Source.TransactionHash)
+		blockRes := bd.GetBlockResults(notif.EvalAlertRequest.Event.Alert.Source.Block.Hash, blockNum, notif.EvalAlertRequest.Event.Alert.Source.Block.Timestamp)
 		if hasAlert {
-			agentAlerts = (*MetaAlertResults)(metaAlertRes).GetAgentAlerts(notif.AgentInfo)
+			metaRes := (*BlockResults)(blockRes).GetMetaAlertResults(notif.EvalAlertRequest.Event)
+			agentAlerts = (*MetaAlertResults)(metaRes).GetAgentAlerts(notif.AgentInfo)
 		}
 	}
 
@@ -585,28 +587,20 @@ func (bd *BatchData) GetBlockResults(blockHash string, blockNumber uint64, block
 }
 
 // GetMetaAlertResults returns an existing or a new aggregation object for the block.
-func (bd *BatchData) GetMetaAlertResults(blockHash string, blockNumber uint64, blockTimestamp string) *protocol.MetaAlertResults {
-	for _, blockRes := range bd.MetaAlertResults {
-		if blockRes.Alert.Source.Block.Number == blockNumber {
+func (br *BlockResults) GetMetaAlertResults(metaAlert *protocol.AlertEvent) *protocol.MetaAlertResults {
+	for _, blockRes := range br.MetaAlerts {
+		if blockRes.AlertEvent.Alert.Hash == metaAlert.Alert.Hash {
 			return blockRes
 		}
 	}
 	// TODO fill this data
-	br := &protocol.MetaAlertResults{
-		Alert: &protocol.AlertEvent{
-			Source: &protocol.AlertEvent_Source{
-				Block: &protocol.AlertEvent_Block{
-					Number:    blockNumber,
-					Hash:      blockHash,
-					Timestamp: blockTimestamp,
-				},
-			},
-		},
+	mr := &protocol.MetaAlertResults{
+		AlertEvent: metaAlert,
 	}
 
-	bd.MetaAlertResults = append(bd.MetaAlertResults, br)
+	br.MetaAlerts = append(br.MetaAlerts, mr)
 
-	return br
+	return mr
 }
 
 // GetTransactionResults returns an existing or a new aggregation object for the transaction.
@@ -694,9 +688,8 @@ func (pub *Publisher) prepareLatestBatch() {
 				blockNum = notif.EvalBlockRequest.Event.BlockNumber
 			} else if notif.EvalTxRequest != nil {
 				blockNum = notif.EvalTxRequest.Event.Block.BlockNumber
-			} else {
-				// TODO NEVER CARRY THIS TO PRODUCTION
-				blockNum = "0x0"
+			} else if notif.EvalAlertRequest != nil {
+				blockNum = hexutil.EncodeUint64(notif.EvalAlertRequest.Event.Alert.Source.Block.Number)
 			}
 
 			notifBlockNum, err := hexutil.DecodeUint64(blockNum)

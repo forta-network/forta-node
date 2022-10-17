@@ -42,7 +42,7 @@ func (t *MetaAlertStreamService) handleAlert(evt *domain.AlertEvent) error {
 		return nil
 	default:
 	}
-	log.Infof("new alert incoming %s", evt.Alert.Alert.Agent.Id)
+	log.Infof("new alert incoming %s", evt.Event.Alert.Source.Bot.Id)
 	t.alertOutput <- evt
 	t.lastAlertActivity.Set()
 	return nil
@@ -69,7 +69,7 @@ func (t *MetaAlertStreamService) Stop() error {
 			for {
 				select {
 				case a := <-c:
-					log.WithFields(log.Fields{"alert": a.Alert.Alert.Id}).Info("gracefully draining alert")
+					log.WithFields(log.Fields{"alert": a.Event.Alert.Source.Bot.Id}).Info("gracefully draining alert")
 				default:
 					close(c)
 					return

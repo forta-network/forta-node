@@ -2,9 +2,10 @@ package scanner
 
 import (
 	"context"
-	"strconv"
+	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol/alerthash"
@@ -54,10 +55,7 @@ func (aas *MetaAlertAnalyzerService) findingToAlert(result *MetaAlertResult, ts 
 		},
 	)
 
-	chainId, err := utils.HexToBigInt(result.Request.Event.Network.ChainId)
-	if err != nil {
-		return nil, err
-	}
+	chainId := big.NewInt(int64(result.Request.Event.Alert.Source.Block.ChainId))
 	tags := map[string]string{
 		"agentImage": result.AgentConfig.Image,
 		"agentId":    result.AgentConfig.ID,
@@ -113,10 +111,10 @@ func (aas *MetaAlertAnalyzerService) Start() error {
 					log.WithError(err).Error("failed to transform finding to alert")
 					continue
 				}
-				// TODO: reconsider using block number for signing because alerts don't have block numbers for now
-				blockNum := strconv.FormatUint(result.Request.Event.Source.Block.Number, 10)
+				blockNum := hexutil.EncodeUint64(result.Request.Event.Alert.Source.Block.Number)
+				chainId := hexutil.EncodeUint64(result.Request.Event.Alert.Source.Block.ChainId)
 				if err := aas.cfg.AlertSender.SignAlertAndNotify(
-					rt, alert, result.Request.Event.Network.ChainId, blockNum, result.Timestamps,
+					rt, alert, chainId, blockNum, result.Timestamps,
 				); err != nil {
 					log.WithError(err).Panic("failed sign alert and notify")
 				}
