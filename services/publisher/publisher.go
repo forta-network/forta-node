@@ -201,7 +201,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 	pub.lastBatchSendAttempt = pub.lastBatchReady
 	pub.lastBatchReadyMu.RUnlock()
 
-	if !pub.cfg.Config.LocalModeConfig.Enable {
+	if pub.cfg.Config.LocalModeConfig.Enable {
 		scannerJwt, err := security.CreateScannerJWT(
 			pub.cfg.Key, map[string]interface{}{
 				"localMode": "true",
@@ -455,8 +455,8 @@ type TransactionResults protocol.TransactionResults
 // BlockResults contains the results for a block.
 type BlockResults protocol.BlockResults
 
-// MetaAlertResults contains the results for a block.
-type MetaAlertResults protocol.MetaAlertResults
+// CombinationAlertResults contains the results for a block.
+type CombinationAlertResults protocol.CombinationAlertResults
 
 // BatchData is a parent wrapper that contains all batch info.
 type BatchData protocol.AlertBatch
@@ -479,7 +479,7 @@ func (bd *BatchData) GetPrivateAlerts(notif *protocol.NotifyRequest) *protocol.A
 func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 	isBlockAlert := notif.EvalBlockRequest != nil
 	isTxAlert := notif.EvalTxRequest != nil
-	isMetaAlertAlert := notif.EvalAlertRequest != nil
+	isCombinerAlertAlert := notif.EvalAlertRequest != nil
 
 	var isPrivate bool
 
@@ -519,14 +519,14 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 			txRes := (*BlockResults)(blockRes).GetTransactionResults(notif.EvalTxRequest.Event)
 			agentAlerts = (*TransactionResults)(txRes).GetAgentAlerts(notif.AgentInfo)
 		}
-	} else if isMetaAlertAlert {
+	} else if isCombinerAlertAlert {
 		// TODO REMOVE THIS BEFORE PRODUCTION
 		blockNum := notif.EvalAlertRequest.Event.Alert.Source.Block.Number
 		bd.AddBatchAgent(notif.AgentInfo, blockNum, notif.EvalAlertRequest.Event.Alert.Source.TransactionHash)
 		blockRes := bd.GetBlockResults(notif.EvalAlertRequest.Event.Alert.Source.Block.Hash, blockNum, notif.EvalAlertRequest.Event.Alert.Source.Block.Timestamp)
 		if hasAlert {
-			metaRes := (*BlockResults)(blockRes).GetMetaAlertResults(notif.EvalAlertRequest.Event)
-			agentAlerts = (*MetaAlertResults)(metaRes).GetAgentAlerts(notif.AgentInfo)
+			metaRes := (*BlockResults)(blockRes).GetCombinationAlertResults(notif.EvalAlertRequest.Event)
+			agentAlerts = (*CombinationAlertResults)(metaRes).GetAgentAlerts(notif.AgentInfo)
 		}
 	}
 
@@ -591,19 +591,19 @@ func (bd *BatchData) GetBlockResults(blockHash string, blockNumber uint64, block
 	return br
 }
 
-// GetMetaAlertResults returns an existing or a new aggregation object for the block.
-func (br *BlockResults) GetMetaAlertResults(metaAlert *protocol.AlertEvent) *protocol.MetaAlertResults {
-	for _, blockRes := range br.MetaAlerts {
-		if blockRes.AlertEvent.Alert.Hash == metaAlert.Alert.Hash {
+// GetCombinationAlertResults returns an existing or a new aggregation object for the block.
+func (br *BlockResults) GetCombinationAlertResults(combinationAlert *protocol.AlertEvent) *protocol.CombinationAlertResults {
+	for _, blockRes := range br.CombinationAlerts {
+		if blockRes.AlertEvent.Alert.Hash == combinationAlert.Alert.Hash {
 			return blockRes
 		}
 	}
 	// TODO fill this data
-	mr := &protocol.MetaAlertResults{
-		AlertEvent: metaAlert,
+	mr := &protocol.CombinationAlertResults{
+		AlertEvent: combinationAlert,
 	}
 
-	br.MetaAlerts = append(br.MetaAlerts, mr)
+	br.CombinationAlerts = append(br.CombinationAlerts, mr)
 
 	return mr
 }
@@ -623,7 +623,7 @@ func (br *BlockResults) GetTransactionResults(tx *protocol.TransactionEvent) *pr
 }
 
 // GetAgentAlerts returns an existing or a new aggregation object for the agent alerts.
-func (mar *MetaAlertResults) GetAgentAlerts(agent *protocol.AgentInfo) *protocol.AgentAlerts {
+func (mar *CombinationAlertResults) GetAgentAlerts(agent *protocol.AgentInfo) *protocol.AgentAlerts {
 	for _, agentAlerts := range mar.Results {
 		if agentAlerts.AgentManifest == agent.Manifest {
 			return agentAlerts

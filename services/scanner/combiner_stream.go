@@ -11,9 +11,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// MetaAlertStreamService pulls alert info from providers and emits to channel
-type MetaAlertStreamService struct {
-	cfg         MetaAlertStreamServiceConfig
+// CombinerAlertStreamService pulls alert info from providers and emits to channel
+type CombinerAlertStreamService struct {
+	cfg         CombinerAlertStreamServiceConfig
 	ctx         context.Context
 	alertOutput chan *domain.AlertEvent
 	alertFeed   feeds.AlertFeed
@@ -24,19 +24,19 @@ type MetaAlertStreamService struct {
 	lastAlertActivity health.TimeTracker
 }
 
-type MetaAlertStreamServiceConfig struct {
+type CombinerAlertStreamServiceConfig struct {
 }
 
-func (t *MetaAlertStreamService) registerMessageHandlers() {
+func (t *CombinerAlertStreamService) registerMessageHandlers() {
 	t.msgClient.Subscribe(messaging.SubjectAgentsAlertSubscribe, messaging.SubscriptionHandler(t.handleMessageSubscribe))
 	t.msgClient.Subscribe(messaging.SubjectAgentsAlertUnsubscribe, messaging.SubscriptionHandler(t.handleMessageUnsubscribe))
 }
 
-func (t *MetaAlertStreamService) ReadOnlyAlertStream() <-chan *domain.AlertEvent {
+func (t *CombinerAlertStreamService) ReadOnlyAlertStream() <-chan *domain.AlertEvent {
 	return t.alertOutput
 }
 
-func (t *MetaAlertStreamService) handleAlert(evt *domain.AlertEvent) error {
+func (t *CombinerAlertStreamService) handleAlert(evt *domain.AlertEvent) error {
 	select {
 	case <-t.ctx.Done():
 		return nil
@@ -48,7 +48,7 @@ func (t *MetaAlertStreamService) handleAlert(evt *domain.AlertEvent) error {
 	return nil
 }
 
-func (t *MetaAlertStreamService) Start() error {
+func (t *CombinerAlertStreamService) Start() error {
 	t.registerMessageHandlers()
 	go func() {
 		if err := t.alertFeed.ForEachAlert(t.handleAlert); err != nil {
@@ -62,7 +62,7 @@ func (t *MetaAlertStreamService) Start() error {
 	return nil
 }
 
-func (t *MetaAlertStreamService) Stop() error {
+func (t *CombinerAlertStreamService) Stop() error {
 	if t.alertOutput != nil {
 		// drain and close block channel
 		func(c chan *domain.AlertEvent) {
@@ -80,18 +80,18 @@ func (t *MetaAlertStreamService) Stop() error {
 	return nil
 }
 
-func (t *MetaAlertStreamService) Name() string {
+func (t *CombinerAlertStreamService) Name() string {
 	return "alert-stream"
 }
 
 // Health implements health.Reporter interface.
-func (t *MetaAlertStreamService) Health() health.Reports {
+func (t *CombinerAlertStreamService) Health() health.Reports {
 	return health.Reports{
 		t.lastAlertActivity.GetReport("event.alert.time"),
 	}
 }
 
-func (t *MetaAlertStreamService) handleMessageSubscribe(payload messaging.SubscriptionPayload) error {
+func (t *CombinerAlertStreamService) handleMessageSubscribe(payload messaging.SubscriptionPayload) error {
 	for _, cfg := range payload {
 		t.alertFeed.AddSubscription(cfg.Dst, cfg.Src)
 	}
@@ -99,7 +99,7 @@ func (t *MetaAlertStreamService) handleMessageSubscribe(payload messaging.Subscr
 	return nil
 }
 
-func (t *MetaAlertStreamService) handleMessageUnsubscribe(payload messaging.SubscriptionPayload) error {
+func (t *CombinerAlertStreamService) handleMessageUnsubscribe(payload messaging.SubscriptionPayload) error {
 	for _, cfg := range payload {
 		t.alertFeed.RemoveSubscription(cfg.Dst, cfg.Src)
 	}
@@ -107,10 +107,10 @@ func (t *MetaAlertStreamService) handleMessageUnsubscribe(payload messaging.Subs
 	return nil
 }
 
-func NewMetaAlertStreamService(ctx context.Context, alertFeed feeds.AlertFeed, msgClient clients.MessageClient, cfg MetaAlertStreamServiceConfig) (*MetaAlertStreamService, error) {
+func NewCombinerAlertStreamService(ctx context.Context, alertFeed feeds.AlertFeed, msgClient clients.MessageClient, cfg CombinerAlertStreamServiceConfig) (*CombinerAlertStreamService, error) {
 	alertOutput := make(chan *domain.AlertEvent)
 
-	return &MetaAlertStreamService{
+	return &CombinerAlertStreamService{
 		cfg:         cfg,
 		ctx:         ctx,
 		msgClient:   msgClient,

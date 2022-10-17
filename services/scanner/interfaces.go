@@ -22,8 +22,8 @@ type BlockResult struct {
 	Timestamps  *domain.TrackingTimestamps
 }
 
-// MetaAlertResult contains request and response data.
-type MetaAlertResult struct {
+// CombinationAlertResult contains request and response data.
+type CombinationAlertResult struct {
 	AgentConfig config.AgentConfig
 	Request     *protocol.EvaluateAlertRequest
 	Response    *protocol.EvaluateAlertResponse
@@ -38,5 +38,5 @@ type AgentPool interface {
 	SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest)
 	BlockResults() <-chan *BlockResult
 	SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest)
-	AlertResults() <-chan *MetaAlertResult
+	CombinationAlertResults() <-chan *CombinationAlertResult
 }

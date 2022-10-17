@@ -131,9 +131,9 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 	return txStream, blockFeed, nil
 }
 
-func initAlertStream(ctx context.Context, msgClient *messaging.Client, cfg config.Config) (*scanner.MetaAlertStreamService, feeds.AlertFeed, error) {
-	alertFeed, err := feeds.NewAlertFeed(
-		ctx, feeds.AlertFeedConfig{
+func initAlertStream(ctx context.Context, msgClient *messaging.Client, cfg config.Config) (*scanner.CombinerAlertStreamService, feeds.AlertFeed, error) {
+	alertFeed, err := feeds.NewCombinerFeed(
+		ctx, feeds.CombinerFeedConfig{
 			Offset: settings.GetBlockOffset(cfg.ChainID),
 			APIUrl: cfg.Scan.AlertAPIURL,
 		},
@@ -142,34 +142,8 @@ func initAlertStream(ctx context.Context, msgClient *messaging.Client, cfg confi
 		return nil, nil, err
 	}
 
-	// subscribe to alert feed, so we can detect block end and trigger exit
-	alertErrChannel := alertFeed.Subscribe(
-		func(evt *domain.AlertEvent) error {
-			return nil
-		},
-	)
-	// detect end block, wait for scanning to finish, trigger exit
-	go func() {
-		err := <-alertErrChannel
-		if err == nil {
-			return
-		}
-
-		if err == context.Canceled {
-			return
-		}
-
-		var delay time.Duration
-		if cfg.LocalModeConfig.Enable {
-			delay = time.Duration(cfg.LocalModeConfig.RuntimeLimits.StopTimeoutSeconds) * time.Second
-		}
-		services.TriggerExit(delay)
-	}()
-
-	txStream, err := scanner.NewMetaAlertStreamService(
-		ctx, alertFeed, msgClient, scanner.MetaAlertStreamServiceConfig{
-
-		},
+	txStream, err := scanner.NewCombinerAlertStreamService(
+		ctx, alertFeed, msgClient, scanner.CombinerAlertStreamServiceConfig{},
 	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create the tx stream service: %v", err)
@@ -200,9 +174,9 @@ func initBlockAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertS
 	)
 }
 
-func initMetaAlertAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.MetaAlertStreamService, ap *agentpool.AgentPool, msgClient clients.MessageClient) (*scanner.MetaAlertAnalyzerService, error) {
-	return scanner.NewMetaAlertAnalyzerService(
-		ctx, scanner.MetaAlertAnalyzerServiceConfig{
+func initCombinerAlertAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.CombinerAlertStreamService, ap *agentpool.AgentPool, msgClient clients.MessageClient) (*scanner.CombinerAlertAnalyzerService, error) {
+	return scanner.NewCombinerAlertAnalyzerService(
+		ctx, scanner.CombinerAlertAnalyzerServiceConfig{
 			AlertChannel: stream.ReadOnlyAlertStream(),
 			AlertSender:  as,
 			AgentPool:    ap,
@@ -288,7 +262,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 
-	alertAnalyzer, err := initMetaAlertAnalyzer(ctx, cfg, as, alertStream, agentPool, msgClient)
+	alertAnalyzer, err := initCombinerAlertAnalyzer(ctx, cfg, as, alertStream, agentPool, msgClient)
 	if err != nil {
 		return nil, err
 	}

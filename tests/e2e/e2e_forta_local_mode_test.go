@@ -253,16 +253,16 @@ func (s *Suite) runLocalModeAlertHandler(webhookURL, logFileName string, readAle
 	s.r.NotEmpty(webhookAlerts.Metrics)
 
 	var (
-		metaAlert *models.Alert
+		combinationAlert *models.Alert
 	)
 
 	for _, alert := range webhookAlerts.Alerts {
 		if alert.AlertID == alerttestbotalertid.TraceSupportAlertId {
-			metaAlert = alert
+			combinationAlert = alert
 		}
 	}
 
-	s.r.NotNil(metaAlert)
+	s.r.NotNil(combinationAlert)
 
 	s.r.NoError(err)
 

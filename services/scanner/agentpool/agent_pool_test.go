@@ -19,9 +19,10 @@ import (
 )
 
 const (
-	testAgentID    = "test-agent"
-	testRequestID  = "test-request-id"
-	testResponseID = "test-response-id"
+	testAgentID           = "test-agent"
+	testRequestID         = "test-request-id"
+	testResponseID        = "test-response-id"
+	testCombinerSourceBot = "test-combiner-source"
 )
 
 // TestSuite runs the test suite.
@@ -47,11 +48,11 @@ func (s *Suite) SetupTest() {
 	s.msgClient = mock_clients.NewMockMessageClient(gomock.NewController(s.T()))
 	s.agentClient = mock_clients.NewMockAgentClient(gomock.NewController(s.T()))
 	s.ap = &AgentPool{
-		ctx:              context.Background(),
-		txResults:        make(chan *scanner.TxResult),
-		blockResults:     make(chan *scanner.BlockResult),
-		metaAlertResults: make(chan *scanner.MetaAlertResult),
-		msgClient:        s.msgClient,
+		ctx:                     context.Background(),
+		txResults:               make(chan *scanner.TxResult),
+		blockResults:            make(chan *scanner.BlockResult),
+		combinationAlertResults: make(chan *scanner.CombinationAlertResult),
+		msgClient:               s.msgClient,
 		dialer: func(agentCfg config.AgentConfig) (clients.AgentClient, error) {
 			return s.agentClient, nil
 		},
@@ -104,12 +105,12 @@ func (s *Suite) TestStartProcessStop() {
 		Event: &protocol.AlertEvent{
 			Alert: &protocol.AlertEvent_Alert{
 				Hash:   "123123",
-				Source: &protocol.AlertEvent_Alert_Source{Bot: &protocol.AlertEvent_Alert_Bot{Id: "0xbot"}},
+				Source: &protocol.AlertEvent_Alert_Source{Bot: &protocol.AlertEvent_Alert_Bot{Id: testCombinerSourceBot}},
 			},
 		},
 	}
-	s.ap.alertSubscriptions = map[string][]string{"0xbot": {testAgentID}}
-
+	// save combiner subscription
+	s.ap.combinerAlertSubscriptions = map[string][]string{testCombinerSourceBot: {agentConfig.ContainerName()}}
 	alertResp := &protocol.EvaluateAlertResponse{Metadata: map[string]string{"imageHash": ""}}
 
 	// test tx handling
@@ -131,14 +132,14 @@ func (s *Suite) TestStartProcessStop() {
 	blockResult := <-s.ap.BlockResults()
 	blockResp.Timestamp = blockResult.Response.Timestamp // bypass - hard to match
 
-	// test meta alert handling
+	// test combine alert handling
 	s.agentClient.EXPECT().Invoke(
 		gomock.Any(), agentgrpc.MethodEvaluateAlert,
 		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateAlertResponse{}),
 	).Return(nil)
 	s.msgClient.EXPECT().Publish(messaging.SubjectScannerAlert, gomock.Any())
 	s.ap.SendEvaluateAlertRequest(alertReq)
-	alertResult := <-s.ap.AlertResults()
+	alertResult := <-s.ap.CombinationAlertResults()
 	alertResp.Timestamp = alertResult.Response.Timestamp // bypass - hard to match
 
 	s.r.Equal(txReq, txResult.Request)

@@ -23,27 +23,28 @@ import (
 // AgentPool maintains the pool of agents that the scanner should
 // interact with.
 type AgentPool struct {
-	ctx                context.Context
-	agents             []*poolagent.Agent
-	txResults          chan *scanner.TxResult
-	blockResults       chan *scanner.BlockResult
-	metaAlertResults   chan *scanner.MetaAlertResult
-	msgClient          clients.MessageClient
-	dialer             func(config.AgentConfig) (clients.AgentClient, error)
-	mu                 sync.RWMutex
-	botWaitGroup       *sync.WaitGroup
-	alertSubscriptions map[string][]string
+	ctx                     context.Context
+	agents                  []*poolagent.Agent
+	txResults               chan *scanner.TxResult
+	blockResults            chan *scanner.BlockResult
+	combinationAlertResults chan *scanner.CombinationAlertResult
+	msgClient               clients.MessageClient
+	dialer                  func(config.AgentConfig) (clients.AgentClient, error)
+	mu                      sync.RWMutex
+	botWaitGroup            *sync.WaitGroup
+	// combinerAlertSubscriptions keeps track of alert feed pairs. [subscribed alert's source bot id] -> []local bot ids
+	combinerAlertSubscriptions map[string][]string
 }
 
 // NewAgentPool creates a new agent pool.
-func NewAgentPool(ctx context.Context, cfg config.ScannerConfig, msgClient clients.MessageClient, waitBots int) *AgentPool {
+func NewAgentPool(ctx context.Context, _ config.ScannerConfig, msgClient clients.MessageClient, waitBots int) *AgentPool {
 	agentPool := &AgentPool{
-		ctx:                ctx,
-		txResults:          make(chan *scanner.TxResult),
-		blockResults:       make(chan *scanner.BlockResult),
-		metaAlertResults:   make(chan *scanner.MetaAlertResult),
-		msgClient:          msgClient,
-		alertSubscriptions: map[string][]string{},
+		ctx:                        ctx,
+		txResults:                  make(chan *scanner.TxResult),
+		blockResults:               make(chan *scanner.BlockResult),
+		combinationAlertResults:    make(chan *scanner.CombinationAlertResult),
+		msgClient:                  msgClient,
+		combinerAlertSubscriptions: map[string][]string{},
 		dialer: func(ac config.AgentConfig) (clients.AgentClient, error) {
 			client := agentgrpc.NewClient()
 			if err := client.Dial(ac); err != nil {
@@ -298,7 +299,7 @@ func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest
 
 	var metricsList []*protocol.AgentMetric
 	for _, agent := range agents {
-		if !agent.IsReady() || !ap.IsBotSubscribedTo(req.Event.Alert.Source.Bot.Id, agent.Config().ID) {
+		if !agent.IsReady() || !ap.IsBotSubscribedTo(req.Event.Alert.Source.Bot.Id, agent.Config().ContainerName()) {
 			continue
 		}
 
@@ -313,7 +314,7 @@ func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest
 		select {
 		case <-agent.Closed():
 			ap.discardAgent(agent)
-		case agent.AlertRequestCh() <- &poolagent.MetaAlertRequest{
+		case agent.AlertRequestCh() <- &poolagent.CombinerAlertRequest{
 			Original: req,
 			Encoded:  encoded,
 		}:
@@ -338,9 +339,9 @@ func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest
 	).Debug("Finished SendEvaluateAlertRequest")
 }
 
-// AlertResults returns the receive-only alert results channel.
-func (ap *AgentPool) AlertResults() <-chan *scanner.MetaAlertResult {
-	return ap.metaAlertResults
+// CombinationAlertResults returns the receive-only alert results channel.
+func (ap *AgentPool) CombinationAlertResults() <-chan *scanner.CombinationAlertResult {
+	return ap.combinationAlertResults
 }
 
 func (ap *AgentPool) logAgentChanBuffersLoop() {
@@ -366,13 +367,14 @@ func (ap *AgentPool) BlockResults() <-chan *scanner.BlockResult {
 }
 
 func (ap *AgentPool) IsBotSubscribedTo(src, dst string) bool {
-	for _, s := range ap.alertSubscriptions[src] {
+	for _, s := range ap.combinerAlertSubscriptions[src] {
 		if s == dst {
 			return true
 		}
 	}
 	return false
 }
+
 func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) error {
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
@@ -391,7 +393,7 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 			found = found || (agent.Config().ContainerName() == agentCfg.ContainerName())
 		}
 		if !found {
-			newAgents = append(newAgents, poolagent.New(ap.ctx, agentCfg, ap.msgClient, ap.txResults, ap.blockResults, ap.metaAlertResults))
+			newAgents = append(newAgents, poolagent.New(ap.ctx, agentCfg, ap.msgClient, ap.txResults, ap.blockResults, ap.combinationAlertResults))
 			agentsToRun = append(agentsToRun, agentCfg)
 			log.WithField("agent", agentCfg.ID).Info("will trigger start")
 		}
@@ -491,7 +493,7 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	}
 
 	// update subscription map
-	ap.alertSubscriptions = make(map[string][]string)
+	ap.combinerAlertSubscriptions = make(map[string][]string)
 	for _, agent := range ap.agents {
 		alertCfg := agent.AlertConfig()
 		if alertCfg == nil {
@@ -499,7 +501,7 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 		}
 
 		for _, subscription := range alertCfg.Subscriptions {
-			ap.alertSubscriptions[subscription] = append(ap.alertSubscriptions[subscription], agent.Config().ContainerName())
+			ap.combinerAlertSubscriptions[subscription] = append(ap.combinerAlertSubscriptions[subscription], agent.Config().ContainerName())
 		}
 	}
 

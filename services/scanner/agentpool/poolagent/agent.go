@@ -36,12 +36,12 @@ type Agent struct {
 	ctx    context.Context
 	config config.AgentConfig
 
-	txRequests        chan *TxRequest // never closed - deallocated when agent is discarded
-	txResults         chan<- *scanner.TxResult
-	blockRequests     chan *BlockRequest // never closed - deallocated when agent is discarded
-	blockResults      chan<- *scanner.BlockResult
-	metaAlertRequests chan *MetaAlertRequest // never closed - deallocated when agent is discarded
-	metaAlertResults  chan<- *scanner.MetaAlertResult
+	txRequests              chan *TxRequest // never closed - deallocated when agent is discarded
+	txResults               chan<- *scanner.TxResult
+	blockRequests           chan *BlockRequest // never closed - deallocated when agent is discarded
+	blockResults            chan<- *scanner.BlockResult
+	combinerAlertRequests   chan *CombinerAlertRequest // never closed - deallocated when agent is discarded
+	CombinationAlertResults chan<- *scanner.CombinationAlertResult
 
 	errCounter *errorCounter
 	msgClient  clients.MessageClient
@@ -92,27 +92,27 @@ type BlockRequest struct {
 	Encoded  *grpc.PreparedMsg
 }
 
-// MetaAlertRequest contains the original request data and the encoded message.
-type MetaAlertRequest struct {
+// CombinerAlertRequest contains the original request data and the encoded message.
+type CombinerAlertRequest struct {
 	Original *protocol.EvaluateAlertRequest
 	Encoded  *grpc.PreparedMsg
 }
 
 // New creates a new agent.
-func New(ctx context.Context, agentCfg config.AgentConfig, msgClient clients.MessageClient, txResults chan<- *scanner.TxResult, blockResults chan<- *scanner.BlockResult, alertResults chan<- *scanner.MetaAlertResult) *Agent {
+func New(ctx context.Context, agentCfg config.AgentConfig, msgClient clients.MessageClient, txResults chan<- *scanner.TxResult, blockResults chan<- *scanner.BlockResult, alertResults chan<- *scanner.CombinationAlertResult) *Agent {
 	return &Agent{
-		ctx:               ctx,
-		config:            agentCfg,
-		txRequests:        make(chan *TxRequest, DefaultBufferSize),
-		txResults:         txResults,
-		blockRequests:     make(chan *BlockRequest, DefaultBufferSize),
-		blockResults:      blockResults,
-		metaAlertRequests: make(chan *MetaAlertRequest, DefaultBufferSize),
-		metaAlertResults:  alertResults,
-		errCounter:        NewErrorCounter(3, isCriticalErr),
-		msgClient:         msgClient,
-		ready:             make(chan struct{}),
-		closed:            make(chan struct{}),
+		ctx:                     ctx,
+		config:                  agentCfg,
+		txRequests:              make(chan *TxRequest, DefaultBufferSize),
+		txResults:               txResults,
+		blockRequests:           make(chan *BlockRequest, DefaultBufferSize),
+		blockResults:            blockResults,
+		combinerAlertRequests:   make(chan *CombinerAlertRequest, DefaultBufferSize),
+		CombinationAlertResults: alertResults,
+		errCounter:              NewErrorCounter(3, isCriticalErr),
+		msgClient:               msgClient,
+		ready:                   make(chan struct{}),
+		closed:                  make(chan struct{}),
 	}
 }
 
@@ -157,8 +157,8 @@ func (agent *Agent) BlockRequestCh() chan<- *BlockRequest {
 }
 
 // AlertRequestCh returns the alert request channel safely.
-func (agent *Agent) AlertRequestCh() chan<- *MetaAlertRequest {
-	return agent.metaAlertRequests
+func (agent *Agent) AlertRequestCh() chan<- *CombinerAlertRequest {
+	return agent.combinerAlertRequests
 }
 
 // Close implements io.Closer.
@@ -225,7 +225,7 @@ func (agent *Agent) StartProcessing() {
 
 	go agent.processTransactions()
 	go agent.processBlocks()
-	go agent.processMetaAlerts()
+	go agent.processCombinationAlerts()
 }
 
 func (agent *Agent) initialize() {
@@ -405,7 +405,7 @@ func (agent *Agent) processBlocks() {
 	}
 }
 
-func (agent *Agent) processMetaAlerts() {
+func (agent *Agent) processCombinationAlerts() {
 	lg := log.WithFields(
 		log.Fields{
 			"agent":     agent.config.ID,
@@ -416,7 +416,7 @@ func (agent *Agent) processMetaAlerts() {
 
 	agent.initWait.Wait()
 
-	for request := range agent.metaAlertRequests {
+	for request := range agent.combinerAlertRequests {
 		startTime := time.Now()
 		if agent.IsClosed() {
 			return
@@ -450,7 +450,7 @@ func (agent *Agent) processMetaAlerts() {
 			ts.BotRequest = requestTime
 			ts.BotResponse = responseTime
 
-			agent.metaAlertResults <- &scanner.MetaAlertResult{
+			agent.CombinationAlertResults <- &scanner.CombinationAlertResult{
 				AgentConfig: agent.config,
 				Request:     request.Original,
 				Response:    resp,

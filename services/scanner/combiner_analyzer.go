@@ -21,29 +21,29 @@ import (
 	"github.com/forta-network/forta-node/clients"
 )
 
-// MetaAlertAnalyzerService reads alert info, calls agents, and emits results
-type MetaAlertAnalyzerService struct {
+// CombinerAlertAnalyzerService reads alert info, calls agents, and emits results
+type CombinerAlertAnalyzerService struct {
 	ctx           context.Context
-	cfg           MetaAlertAnalyzerServiceConfig
+	cfg           CombinerAlertAnalyzerServiceConfig
 	publisherNode protocol.PublisherNodeClient
 
 	lastInputActivity  health.TimeTracker
 	lastOutputActivity health.TimeTracker
 }
 
-type MetaAlertAnalyzerServiceConfig struct {
+type CombinerAlertAnalyzerServiceConfig struct {
 	AlertChannel <-chan *domain.AlertEvent
 	AlertSender  clients.AlertSender
 	AgentPool    AgentPool
 	MsgClient    clients.MessageClient
 }
 
-func (aas *MetaAlertAnalyzerService) publishMetrics(result *MetaAlertResult) {
+func (aas *CombinerAlertAnalyzerService) publishMetrics(result *CombinationAlertResult) {
 	m := metrics.GetAlertMetrics(result.AgentConfig, result.Response, result.Timestamps)
 	aas.cfg.MsgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: m})
 }
 
-func (aas *MetaAlertAnalyzerService) findingToAlert(result *MetaAlertResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
+func (aas *CombinerAlertAnalyzerService) findingToAlert(result *CombinationAlertResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
 	alertID := alerthash.ForAlertBotAlert(
 		&alerthash.Inputs{
 			Alert:   result.Request.Event,
@@ -77,10 +77,10 @@ func (aas *MetaAlertAnalyzerService) findingToAlert(result *MetaAlertResult, ts 
 	}, nil
 }
 
-func (aas *MetaAlertAnalyzerService) Start() error {
+func (aas *CombinerAlertAnalyzerService) Start() error {
 	// Gear 2: receive result from agent
 	go func() {
-		for result := range aas.cfg.AgentPool.AlertResults() {
+		for result := range aas.cfg.AgentPool.CombinationAlertResults() {
 			ts := time.Now().UTC()
 
 			m := jsonpb.Marshaler{}
@@ -150,24 +150,24 @@ func (aas *MetaAlertAnalyzerService) Start() error {
 	return nil
 }
 
-func (aas *MetaAlertAnalyzerService) Stop() error {
+func (aas *CombinerAlertAnalyzerService) Stop() error {
 	return nil
 }
 
-func (aas *MetaAlertAnalyzerService) Name() string {
+func (aas *CombinerAlertAnalyzerService) Name() string {
 	return "alert-analyzer"
 }
 
 // Health implements the health.Reporter interface.
-func (aas *MetaAlertAnalyzerService) Health() health.Reports {
+func (aas *CombinerAlertAnalyzerService) Health() health.Reports {
 	return health.Reports{
 		aas.lastInputActivity.GetReport("event.input.time"),
 		aas.lastOutputActivity.GetReport("event.output.time"),
 	}
 }
 
-func NewMetaAlertAnalyzerService(ctx context.Context, cfg MetaAlertAnalyzerServiceConfig) (*MetaAlertAnalyzerService, error) {
-	return &MetaAlertAnalyzerService{
+func NewCombinerAlertAnalyzerService(ctx context.Context, cfg CombinerAlertAnalyzerServiceConfig) (*CombinerAlertAnalyzerService, error) {
+	return &CombinerAlertAnalyzerService{
 		cfg: cfg,
 		ctx: ctx,
 	}, nil
