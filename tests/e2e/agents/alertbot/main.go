@@ -8,6 +8,7 @@ import (
 
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/tests/e2e/agents/alertbot/alerttestbotalertid"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
@@ -66,7 +67,7 @@ func (as *agentServer) EvaluateAlert(ctx context.Context, alertRequest *protocol
 				Severity:    protocol.Finding_CRITICAL,
 				Metadata:    nil,
 				Type:        protocol.Finding_INFORMATION,
-				AlertId:     "mock-alert-id",
+				AlertId:     alerttestbotalertid.TraceSupportAlertId,
 				Name:        "supporting trace",
 				Description: "this is a mainnet node with trace support",
 				EverestId:   "",
@@ -76,6 +77,25 @@ func (as *agentServer) EvaluateAlert(ctx context.Context, alertRequest *protocol
 			},
 		)
 	}
-	logrus.WithField("alert", "no trace").Warn(response.Findings)
+	if !trace && isMainnet {
+		response.Findings = append(
+			response.Findings, &protocol.Finding{
+				Protocol:    "1",
+				Severity:    protocol.Finding_CRITICAL,
+				Metadata:    nil,
+				Type:        protocol.Finding_INFORMATION,
+				AlertId:     alerttestbotalertid.NoTraceSupportAlertId,
+				Name:        "not supporting trace",
+				Description: "this is a mainnet node without trace support",
+				EverestId:   "",
+				Private:     false,
+				Addresses:   nil,
+				Indicators:  nil,
+			},
+		)
+	}
+
+	logrus.WithField("alert", "trace check").Warn(response.Findings)
+
 	return response, nil
 }
