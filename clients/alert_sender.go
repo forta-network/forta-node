@@ -53,27 +53,35 @@ func (a *alertSender) SignAlertAndNotify(rt *AgentRoundTrip, alert *protocol.Ale
 	}
 	signedAlert.ChainId = chainID
 	signedAlert.BlockNumber = blockNumber
-	_, err = a.pClient.Notify(a.ctx, &protocol.NotifyRequest{
-		SignedAlert:       signedAlert,
-		EvalBlockRequest:  rt.EvalBlockRequest,
-		EvalBlockResponse: rt.EvalBlockResponse,
-		EvalTxRequest:     rt.EvalTxRequest,
-		EvalTxResponse:    rt.EvalTxResponse,
-		AgentInfo:         rt.AgentConfig.ToAgentInfo(),
-		Timestamps:        ts.ToMessage(),
-	})
+	_, err = a.pClient.Notify(
+		a.ctx, &protocol.NotifyRequest{
+			SignedAlert:       signedAlert,
+			EvalBlockRequest:  rt.EvalBlockRequest,
+			EvalBlockResponse: rt.EvalBlockResponse,
+			EvalTxRequest:     rt.EvalTxRequest,
+			EvalTxResponse:    rt.EvalTxResponse,
+			EvalAlertRequest:  rt.EvalAlertRequest,
+			EvalAlertResponse: rt.EvalAlertResponse,
+			AgentInfo:         rt.AgentConfig.ToAgentInfo(),
+			Timestamps:        ts.ToMessage(),
+		},
+	)
 	return err
 }
 
 func (a *alertSender) NotifyWithoutAlert(rt *AgentRoundTrip, ts *domain.TrackingTimestamps) error {
-	_, err := a.pClient.Notify(a.ctx, &protocol.NotifyRequest{
-		EvalBlockRequest:  rt.EvalBlockRequest,
-		EvalBlockResponse: rt.EvalBlockResponse,
-		EvalTxRequest:     rt.EvalTxRequest,
-		EvalTxResponse:    rt.EvalTxResponse,
-		AgentInfo:         rt.AgentConfig.ToAgentInfo(),
-		Timestamps:        ts.ToMessage(),
-	})
+	_, err := a.pClient.Notify(
+		a.ctx, &protocol.NotifyRequest{
+			EvalBlockRequest:  rt.EvalBlockRequest,
+			EvalBlockResponse: rt.EvalBlockResponse,
+			EvalAlertRequest:  rt.EvalAlertRequest,
+			EvalAlertResponse: rt.EvalAlertResponse,
+			EvalTxRequest:     rt.EvalTxRequest,
+			EvalTxResponse:    rt.EvalTxResponse,
+			AgentInfo:         rt.AgentConfig.ToAgentInfo(),
+			Timestamps:        ts.ToMessage(),
+		},
+	)
 	return err
 }
 

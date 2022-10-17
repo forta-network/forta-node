@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/forta-network/forta-core-go/clients/health"
@@ -19,29 +20,29 @@ import (
 	"github.com/forta-network/forta-node/clients"
 )
 
-// AlertAnalyzerService reads alert info, calls agents, and emits results
-type AlertAnalyzerService struct {
+// MetaAlertAnalyzerService reads alert info, calls agents, and emits results
+type MetaAlertAnalyzerService struct {
 	ctx           context.Context
-	cfg           AlertAnalyzerServiceConfig
+	cfg           MetaAlertAnalyzerServiceConfig
 	publisherNode protocol.PublisherNodeClient
 
 	lastInputActivity  health.TimeTracker
 	lastOutputActivity health.TimeTracker
 }
 
-type AlertAnalyzerServiceConfig struct {
+type MetaAlertAnalyzerServiceConfig struct {
 	AlertChannel <-chan *domain.AlertEvent
 	AlertSender  clients.AlertSender
 	AgentPool    AgentPool
 	MsgClient    clients.MessageClient
 }
 
-func (aas *AlertAnalyzerService) publishMetrics(result *AlertResult) {
+func (aas *MetaAlertAnalyzerService) publishMetrics(result *MetaAlertResult) {
 	m := metrics.GetAlertMetrics(result.AgentConfig, result.Response, result.Timestamps)
 	aas.cfg.MsgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: m})
 }
 
-func (aas *AlertAnalyzerService) findingToAlert(result *AlertResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
+func (aas *MetaAlertAnalyzerService) findingToAlert(result *MetaAlertResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
 	alertID := alerthash.ForAlertBotAlert(
 		&alerthash.Inputs{
 			Alert:   result.Request.Event,
@@ -78,7 +79,7 @@ func (aas *AlertAnalyzerService) findingToAlert(result *AlertResult, ts time.Tim
 	}, nil
 }
 
-func (aas *AlertAnalyzerService) Start() error {
+func (aas *MetaAlertAnalyzerService) Start() error {
 	// Gear 2: receive result from agent
 	go func() {
 		for result := range aas.cfg.AgentPool.AlertResults() {
@@ -113,8 +114,9 @@ func (aas *AlertAnalyzerService) Start() error {
 					continue
 				}
 				// TODO: reconsider using block number for signing because alerts don't have block numbers for now
+				blockNum := strconv.FormatUint(result.Request.Event.Source.Block.Number, 10)
 				if err := aas.cfg.AlertSender.SignAlertAndNotify(
-					rt, alert, result.Request.Event.Network.ChainId, "", result.Timestamps,
+					rt, alert, result.Request.Event.Network.ChainId, blockNum, result.Timestamps,
 				); err != nil {
 					log.WithError(err).Panic("failed sign alert and notify")
 				}
@@ -150,24 +152,24 @@ func (aas *AlertAnalyzerService) Start() error {
 	return nil
 }
 
-func (aas *AlertAnalyzerService) Stop() error {
+func (aas *MetaAlertAnalyzerService) Stop() error {
 	return nil
 }
 
-func (aas *AlertAnalyzerService) Name() string {
+func (aas *MetaAlertAnalyzerService) Name() string {
 	return "alert-analyzer"
 }
 
 // Health implements the health.Reporter interface.
-func (aas *AlertAnalyzerService) Health() health.Reports {
+func (aas *MetaAlertAnalyzerService) Health() health.Reports {
 	return health.Reports{
 		aas.lastInputActivity.GetReport("event.input.time"),
 		aas.lastOutputActivity.GetReport("event.output.time"),
 	}
 }
 
-func NewAlertAnalyzerService(ctx context.Context, cfg AlertAnalyzerServiceConfig) (*AlertAnalyzerService, error) {
-	return &AlertAnalyzerService{
+func NewMetaAlertAnalyzerService(ctx context.Context, cfg MetaAlertAnalyzerServiceConfig) (*MetaAlertAnalyzerService, error) {
+	return &MetaAlertAnalyzerService{
 		cfg: cfg,
 		ctx: ctx,
 	}, nil
