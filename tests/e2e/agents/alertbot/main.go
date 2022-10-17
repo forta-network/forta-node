@@ -38,6 +38,7 @@ var (
 )
 
 func (as *agentServer) Initialize(context.Context, *protocol.InitializeRequest) (*protocol.InitializeResponse, error) {
+	logrus.Infof("requesting to subscribe bot alerts: %s", alertSubscriptions)
 	return &protocol.InitializeResponse{
 		Status: protocol.ResponseStatus_SUCCESS,
 		AlertConfig: &protocol.AlertConfig{
@@ -57,43 +58,21 @@ func (as *agentServer) EvaluateTx(ctx context.Context, txRequest *protocol.Evalu
 func (as *agentServer) EvaluateAlert(ctx context.Context, alertRequest *protocol.EvaluateAlertRequest) (*protocol.EvaluateAlertResponse, error) {
 	response := &protocol.EvaluateAlertResponse{Status: protocol.ResponseStatus_SUCCESS}
 
-	// alert if Trace Disabled and Mainnet
-	trace := alertRequest.Event.Alert.Metadata["containerTraceSupported"] == "1"
-	isMainnet := alertRequest.Event.Network.ChainId == "1"
-	if trace && isMainnet {
-		response.Findings = append(
-			response.Findings, &protocol.Finding{
-				Protocol:    "1",
-				Severity:    protocol.Finding_CRITICAL,
-				Metadata:    nil,
-				Type:        protocol.Finding_INFORMATION,
-				AlertId:     alerttestbotalertid.TraceSupportAlertId,
-				Name:        "supporting trace",
-				Description: "this is a mainnet node with trace support",
-				EverestId:   "",
-				Private:     false,
-				Addresses:   nil,
-				Indicators:  nil,
-			},
-		)
-	}
-	if !trace && isMainnet {
-		response.Findings = append(
-			response.Findings, &protocol.Finding{
-				Protocol:    "1",
-				Severity:    protocol.Finding_CRITICAL,
-				Metadata:    nil,
-				Type:        protocol.Finding_INFORMATION,
-				AlertId:     alerttestbotalertid.NoTraceSupportAlertId,
-				Name:        "not supporting trace",
-				Description: "this is a mainnet node without trace support",
-				EverestId:   "",
-				Private:     false,
-				Addresses:   nil,
-				Indicators:  nil,
-			},
-		)
-	}
+	response.Findings = append(
+		response.Findings, &protocol.Finding{
+			Protocol:    "1",
+			Severity:    protocol.Finding_CRITICAL,
+			Metadata:    nil,
+			Type:        protocol.Finding_INFORMATION,
+			AlertId:     alerttestbotalertid.TraceSupportAlertId,
+			Name:        "Check Trace Support",
+			Description: alertRequest.Event.Alert.Metadata["containerTraceSupported"],
+			EverestId:   "",
+			Private:     false,
+			Addresses:   nil,
+			Indicators:  nil,
+		},
+	)
 
 	logrus.WithField("alert", "trace check").Warn(response.Findings)
 
