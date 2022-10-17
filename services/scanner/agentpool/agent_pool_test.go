@@ -47,10 +47,11 @@ func (s *Suite) SetupTest() {
 	s.msgClient = mock_clients.NewMockMessageClient(gomock.NewController(s.T()))
 	s.agentClient = mock_clients.NewMockAgentClient(gomock.NewController(s.T()))
 	s.ap = &AgentPool{
-		ctx:          context.Background(),
-		txResults:    make(chan *scanner.TxResult),
-		blockResults: make(chan *scanner.BlockResult),
-		msgClient:    s.msgClient,
+		ctx:              context.Background(),
+		txResults:        make(chan *scanner.TxResult),
+		blockResults:     make(chan *scanner.BlockResult),
+		metaAlertResults: make(chan *scanner.MetaAlertResult),
+		msgClient:        s.msgClient,
 		dialer: func(agentCfg config.AgentConfig) (clients.AgentClient, error) {
 			return s.agentClient, nil
 		},
@@ -99,7 +100,19 @@ func (s *Suite) TestStartProcessStop() {
 	txResp := &protocol.EvaluateTxResponse{Metadata: map[string]string{"imageHash": ""}}
 	blockReq := &protocol.EvaluateBlockRequest{Event: &protocol.BlockEvent{BlockNumber: "123123"}}
 	blockResp := &protocol.EvaluateBlockResponse{Metadata: map[string]string{"imageHash": ""}}
+	alertReq := &protocol.EvaluateAlertRequest{
+		Event: &protocol.AlertEvent{
+			Alert: &protocol.AlertEvent_Alert{
+				Hash:   "123123",
+				Source: &protocol.AlertEvent_Alert_Source{Bot: &protocol.AlertEvent_Alert_Bot{Id: "0xbot"}},
+			},
+		},
+	}
+	s.ap.alertSubscriptions = map[string][]string{"0xbot": {testAgentID}}
 
+	alertResp := &protocol.EvaluateAlertResponse{Metadata: map[string]string{"imageHash": ""}}
+
+	// test tx handling
 	s.agentClient.EXPECT().Invoke(
 		gomock.Any(), agentgrpc.MethodEvaluateTx,
 		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateTxResponse{}),
@@ -108,6 +121,7 @@ func (s *Suite) TestStartProcessStop() {
 	txResult := <-s.ap.TxResults()
 	txResp.Timestamp = txResult.Response.Timestamp // bypass - hard to match
 
+	// test block handling
 	s.agentClient.EXPECT().Invoke(
 		gomock.Any(), agentgrpc.MethodEvaluateBlock,
 		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateBlockResponse{}),
@@ -117,10 +131,22 @@ func (s *Suite) TestStartProcessStop() {
 	blockResult := <-s.ap.BlockResults()
 	blockResp.Timestamp = blockResult.Response.Timestamp // bypass - hard to match
 
+	// test meta alert handling
+	s.agentClient.EXPECT().Invoke(
+		gomock.Any(), agentgrpc.MethodEvaluateAlert,
+		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateAlertResponse{}),
+	).Return(nil)
+	s.msgClient.EXPECT().Publish(messaging.SubjectScannerAlert, gomock.Any())
+	s.ap.SendEvaluateAlertRequest(alertReq)
+	alertResult := <-s.ap.AlertResults()
+	alertResp.Timestamp = alertResult.Response.Timestamp // bypass - hard to match
+
 	s.r.Equal(txReq, txResult.Request)
 	s.r.Equal(txResp, txResult.Response)
 	s.r.Equal(blockReq, blockResult.Request)
 	s.r.Equal(blockResp, blockResult.Response)
+	s.r.Equal(alertReq, alertResult.Request)
+	s.r.Equal(alertResp, alertResult.Response)
 
 	// Given that the agent is running
 	// When an empty agent list is received

@@ -255,16 +255,10 @@ func (agent *Agent) initialize() {
 	}
 
 	if initializeResponse != nil {
-		if initializeResponse.AlertConfig == nil {
-			logger.Info("no alert bot")
-		} else {
-			logger.Info("set alert config", initializeResponse.AlertConfig.Subscriptions)
-		}
-
 		agent.SetAlertConfig(initializeResponse.AlertConfig)
 	}
 
-	logger.Info("bot initialization suceeded")
+	logger.Info("bot initialization succeeded")
 }
 
 func (agent *Agent) WaitInitialization() {
@@ -499,17 +493,4 @@ func (agent *Agent) ShouldProcessBlock(blockNumberHex string) bool {
 	}
 
 	return isAtLeastStartBlock && isAtMostStopBlock
-}
-
-// ShouldProcessAlert tells if the agent should process the alert.
-func (agent *Agent) ShouldProcessAlert(botID string) bool {
-	if agent.alertConfig == nil {
-		return false
-	}
-	for _, subscription := range agent.alertConfig.Subscriptions {
-		if subscription == botID {
-			return true
-		}
-	}
-	return false
 }

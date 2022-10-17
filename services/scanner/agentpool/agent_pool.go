@@ -277,6 +277,11 @@ func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest
 	)
 	lg.Debug("SendEvaluateAlertRequest")
 
+	if req.Event.Alert == nil || req.Event.Alert.Source == nil || req.Event.Alert.Source.Bot == nil {
+		lg.Warn("bad request")
+		return
+	}
+
 	if ap.botWaitGroup != nil {
 		ap.botWaitGroup.Wait()
 	}
@@ -293,7 +298,7 @@ func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest
 
 	var metricsList []*protocol.AgentMetric
 	for _, agent := range agents {
-		if !agent.IsReady() || !agent.ShouldProcessAlert(req.Event.Alert.Source.Bot.Id) {
+		if !agent.IsReady() || !ap.IsBotSubscribedTo(req.Event.Alert.Source.Bot.Id, agent.Config().ID) {
 			continue
 		}
 
@@ -324,6 +329,7 @@ func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest
 		).Debug("sent alert request to evalAlertCh")
 	}
 
+	ap.msgClient.Publish(messaging.SubjectScannerAlert, &messaging.ScannerPayload{})
 	metrics.SendAgentMetrics(ap.msgClient, metricsList)
 	lg.WithFields(
 		log.Fields{
@@ -359,6 +365,14 @@ func (ap *AgentPool) BlockResults() <-chan *scanner.BlockResult {
 	return ap.blockResults
 }
 
+func (ap *AgentPool) IsBotSubscribedTo(src, dst string) bool {
+	for _, s := range ap.alertSubscriptions[src] {
+		if s == dst {
+			return true
+		}
+	}
+	return false
+}
 func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) error {
 	ap.mu.Lock()
 	defer ap.mu.Unlock()

@@ -201,7 +201,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 	pub.lastBatchSendAttempt = pub.lastBatchReady
 	pub.lastBatchReadyMu.RUnlock()
 
-	if pub.cfg.Config.LocalModeConfig.Enable {
+	if !pub.cfg.Config.LocalModeConfig.Enable {
 		scannerJwt, err := security.CreateScannerJWT(
 			pub.cfg.Key, map[string]interface{}{
 				"localMode": "true",
@@ -386,6 +386,7 @@ func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, 
 func (pub *Publisher) registerMessageHandlers() {
 	pub.messageClient.Subscribe(messaging.SubjectMetricAgent, messaging.AgentMetricHandler(pub.metricsAggregator.AddAgentMetrics))
 	pub.messageClient.Subscribe(messaging.SubjectScannerBlock, messaging.ScannerHandler(pub.handleScannerBlock))
+	pub.messageClient.Subscribe(messaging.SubjectScannerAlert, messaging.ScannerHandler(pub.handleScannerAlert))
 	pub.messageClient.Subscribe(messaging.SubjectInspectionDone, messaging.InspectionResultsHandler(pub.handleInspectionResults))
 	pub.messageClient.Subscribe(messaging.SubjectAgentsVersionsLatest, messaging.AgentsHandler(pub.handleAgentVersionsUpdate))
 }
@@ -413,6 +414,10 @@ func (pub *Publisher) handleScannerBlock(payload messaging.ScannerPayload) error
 	}
 	logger.Info("received scanner update")
 	pub.latestBlockInput = payload.LatestBlockInput
+	return nil
+}
+
+func (pub *Publisher) handleScannerAlert(payload messaging.ScannerPayload) error {
 	return nil
 }
 
