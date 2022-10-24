@@ -8,7 +8,7 @@ import (
 
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-node/config"
-	"github.com/forta-network/forta-node/tests/e2e/agents/alertbot/alerttestbotalertid"
+	"github.com/forta-network/forta-node/tests/e2e/agents/combinerbot/combinerbotalertid"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
@@ -34,7 +34,7 @@ type agentServer struct {
 
 var (
 	// alertSubscriptions subscribes to police bot alerts
-	alertSubscriptions = []string{"0xe66d22cdcfe0b7e03cbd01e554727fa760aa4170e3d565b7c5a2547f587225ad"}
+	alertSubscriptions = []string{"0x5e13c2f3a97c292695b598090056ba5d52f9dcc7790bcdaa8b6cd87c1a1ebc0f"}
 )
 
 func (as *agentServer) Initialize(context.Context, *protocol.InitializeRequest) (*protocol.InitializeResponse, error) {
@@ -54,23 +54,31 @@ func (as *agentServer) EvaluateTx(ctx context.Context, txRequest *protocol.Evalu
 
 	return response, nil
 }
+func (as *agentServer) EvaluateBlock(ctx context.Context, txRequest *protocol.EvaluateBlockRequest) (*protocol.EvaluateBlockResponse, error) {
+	response := &protocol.EvaluateBlockResponse{
+		Status: protocol.ResponseStatus_SUCCESS,
+	}
+
+	return response, nil
+}
 
 func (as *agentServer) EvaluateAlert(ctx context.Context, alertRequest *protocol.EvaluateAlertRequest) (*protocol.EvaluateAlertResponse, error) {
 	response := &protocol.EvaluateAlertResponse{Status: protocol.ResponseStatus_SUCCESS}
 
 	response.Findings = append(
 		response.Findings, &protocol.Finding{
-			Protocol:    "1",
-			Severity:    protocol.Finding_CRITICAL,
-			Metadata:    nil,
-			Type:        protocol.Finding_INFORMATION,
-			AlertId:     alerttestbotalertid.TraceSupportAlertId,
-			Name:        "Check Trace Support",
-			Description: alertRequest.Event.Alert.Metadata["containerTraceSupported"],
-			EverestId:   "",
-			Private:     false,
-			Addresses:   nil,
-			Indicators:  nil,
+			Protocol:      "1",
+			Severity:      protocol.Finding_CRITICAL,
+			Metadata:      nil,
+			Type:          protocol.Finding_INFORMATION,
+			AlertId:       combinerbotalertid.CombinationAlertID,
+			Name:          "Combination Alert",
+			Description:   alertRequest.Event.Alert.Hash,
+			EverestId:     "",
+			Private:       false,
+			Addresses:     nil,
+			Indicators:    nil,
+			RelatedAlerts: alertSubscriptions,
 		},
 	)
 

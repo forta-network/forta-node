@@ -10,7 +10,7 @@ import (
 
 	"github.com/forta-network/forta-core-go/clients/webhook/client/models"
 	"github.com/forta-network/forta-core-go/security"
-	"github.com/forta-network/forta-node/tests/e2e/agents/alertbot/alerttestbotalertid"
+	"github.com/forta-network/forta-node/tests/e2e/agents/combinerbot/combinerbotalertid"
 	"github.com/forta-network/forta-node/tests/e2e/agents/txdetectoragent/testbotalertid"
 )
 
@@ -257,7 +257,7 @@ func (s *Suite) runLocalModeAlertHandler(webhookURL, logFileName string, readAle
 	)
 
 	for _, alert := range webhookAlerts.Alerts {
-		if alert.AlertID == alerttestbotalertid.TraceSupportAlertId {
+		if alert.AlertID == combinerbotalertid.CombinationAlertID {
 			combinationAlert = alert
 		}
 	}
