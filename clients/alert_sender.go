@@ -13,13 +13,13 @@ import (
 
 // AgentRoundTrip contains
 type AgentRoundTrip struct {
-	AgentConfig       config.AgentConfig
-	EvalBlockRequest  *protocol.EvaluateBlockRequest
-	EvalBlockResponse *protocol.EvaluateBlockResponse
-	EvalTxRequest     *protocol.EvaluateTxRequest
-	EvalTxResponse    *protocol.EvaluateTxResponse
-	EvalAlertRequest  *protocol.EvaluateAlertRequest
-	EvalAlertResponse *protocol.EvaluateAlertResponse
+	AgentConfig             config.AgentConfig
+	EvalBlockRequest        *protocol.EvaluateBlockRequest
+	EvalBlockResponse       *protocol.EvaluateBlockResponse
+	EvalTxRequest           *protocol.EvaluateTxRequest
+	EvalTxResponse          *protocol.EvaluateTxResponse
+	EvalCombinationRequest  *protocol.EvaluateCombinationRequest
+	EvalCombinationResponse *protocol.EvaluateCombinationResponse
 }
 
 type AlertSender interface {
@@ -55,15 +55,15 @@ func (a *alertSender) SignAlertAndNotify(rt *AgentRoundTrip, alert *protocol.Ale
 	signedAlert.BlockNumber = blockNumber
 	_, err = a.pClient.Notify(
 		a.ctx, &protocol.NotifyRequest{
-			SignedAlert:       signedAlert,
-			EvalBlockRequest:  rt.EvalBlockRequest,
-			EvalBlockResponse: rt.EvalBlockResponse,
-			EvalTxRequest:     rt.EvalTxRequest,
-			EvalTxResponse:    rt.EvalTxResponse,
-			EvalAlertRequest:  rt.EvalAlertRequest,
-			EvalAlertResponse: rt.EvalAlertResponse,
-			AgentInfo:         rt.AgentConfig.ToAgentInfo(),
-			Timestamps:        ts.ToMessage(),
+			SignedAlert:             signedAlert,
+			EvalBlockRequest:        rt.EvalBlockRequest,
+			EvalBlockResponse:       rt.EvalBlockResponse,
+			EvalTxRequest:           rt.EvalTxRequest,
+			EvalTxResponse:          rt.EvalTxResponse,
+			EvalCombinationRequest:  rt.EvalCombinationRequest,
+			EvalCombinationResponse: rt.EvalCombinationResponse,
+			AgentInfo:               rt.AgentConfig.ToAgentInfo(),
+			Timestamps:              ts.ToMessage(),
 		},
 	)
 	return err
@@ -72,14 +72,14 @@ func (a *alertSender) SignAlertAndNotify(rt *AgentRoundTrip, alert *protocol.Ale
 func (a *alertSender) NotifyWithoutAlert(rt *AgentRoundTrip, ts *domain.TrackingTimestamps) error {
 	_, err := a.pClient.Notify(
 		a.ctx, &protocol.NotifyRequest{
-			EvalBlockRequest:  rt.EvalBlockRequest,
-			EvalBlockResponse: rt.EvalBlockResponse,
-			EvalAlertRequest:  rt.EvalAlertRequest,
-			EvalAlertResponse: rt.EvalAlertResponse,
-			EvalTxRequest:     rt.EvalTxRequest,
-			EvalTxResponse:    rt.EvalTxResponse,
-			AgentInfo:         rt.AgentConfig.ToAgentInfo(),
-			Timestamps:        ts.ToMessage(),
+			EvalBlockRequest:        rt.EvalBlockRequest,
+			EvalBlockResponse:       rt.EvalBlockResponse,
+			EvalCombinationRequest:  rt.EvalCombinationRequest,
+			EvalCombinationResponse: rt.EvalCombinationResponse,
+			EvalTxRequest:           rt.EvalTxRequest,
+			EvalTxResponse:          rt.EvalTxResponse,
+			AgentInfo:               rt.AgentConfig.ToAgentInfo(),
+			Timestamps:              ts.ToMessage(),
 		},
 	)
 	return err

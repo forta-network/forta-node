@@ -39,7 +39,7 @@ type CombinerAlertAnalyzerServiceConfig struct {
 }
 
 func (aas *CombinerAlertAnalyzerService) publishMetrics(result *CombinationAlertResult) {
-	m := metrics.GetAlertMetrics(result.AgentConfig, result.Response, result.Timestamps)
+	m := metrics.GetCombinerMetrics(result.AgentConfig, result.Response, result.Timestamps)
 	aas.cfg.MsgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: m})
 }
 
@@ -92,9 +92,9 @@ func (aas *CombinerAlertAnalyzerService) Start() error {
 			log.Debugf(resStr)
 
 			rt := &clients.AgentRoundTrip{
-				AgentConfig:       result.AgentConfig,
-				EvalAlertRequest:  result.Request,
-				EvalAlertResponse: result.Response,
+				AgentConfig:             result.AgentConfig,
+				EvalCombinationRequest:  result.Request,
+				EvalCombinationResponse: result.Response,
 			}
 
 			if len(result.Response.Findings) == 0 {
@@ -138,10 +138,10 @@ func (aas *CombinerAlertAnalyzerService) Start() error {
 
 			// create a request
 			requestId := uuid.Must(uuid.NewUUID())
-			request := &protocol.EvaluateAlertRequest{RequestId: requestId.String(), Event: alertEvt}
+			request := &protocol.EvaluateCombinationRequest{RequestId: requestId.String(), Event: alertEvt}
 
 			// forward to the pool
-			aas.cfg.AgentPool.SendEvaluateAlertRequest(request)
+			aas.cfg.AgentPool.SendEvaluateCombinationRequest(request)
 
 			aas.lastInputActivity.Set()
 		}

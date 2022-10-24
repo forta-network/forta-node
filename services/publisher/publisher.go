@@ -479,7 +479,7 @@ func (bd *BatchData) GetPrivateAlerts(notif *protocol.NotifyRequest) *protocol.A
 func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 	isBlockAlert := notif.EvalBlockRequest != nil
 	isTxAlert := notif.EvalTxRequest != nil
-	isCombinerAlertAlert := notif.EvalAlertRequest != nil
+	isCombinationAlert := notif.EvalCombinationRequest != nil
 
 	var isPrivate bool
 
@@ -519,13 +519,13 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 			txRes := (*BlockResults)(blockRes).GetTransactionResults(notif.EvalTxRequest.Event)
 			agentAlerts = (*TransactionResults)(txRes).GetAgentAlerts(notif.AgentInfo)
 		}
-	} else if isCombinerAlertAlert {
+	} else if isCombinationAlert {
 		// TODO REMOVE THIS BEFORE PRODUCTION
-		blockNum := notif.EvalAlertRequest.Event.Alert.Source.Block.Number
-		bd.AddBatchAgent(notif.AgentInfo, blockNum, notif.EvalAlertRequest.Event.Alert.Source.TransactionHash)
-		blockRes := bd.GetBlockResults(notif.EvalAlertRequest.Event.Alert.Source.Block.Hash, blockNum, notif.EvalAlertRequest.Event.Alert.Source.Block.Timestamp)
+		blockNum := notif.EvalCombinationRequest.Event.Alert.Source.Block.Number
+		bd.AddBatchAgent(notif.AgentInfo, blockNum, notif.EvalCombinationRequest.Event.Alert.Source.TransactionHash)
+		blockRes := bd.GetBlockResults(notif.EvalCombinationRequest.Event.Alert.Source.Block.Hash, blockNum, notif.EvalCombinationRequest.Event.Alert.Source.Block.Timestamp)
 		if hasAlert {
-			metaRes := (*BlockResults)(blockRes).GetCombinationAlertResults(notif.EvalAlertRequest.Event)
+			metaRes := (*BlockResults)(blockRes).GetCombinationAlertResults(notif.EvalCombinationRequest.Event)
 			agentAlerts = (*CombinationAlertResults)(metaRes).GetAgentAlerts(notif.AgentInfo)
 		}
 	}
@@ -693,8 +693,8 @@ func (pub *Publisher) prepareLatestBatch() {
 				blockNum = notif.EvalBlockRequest.Event.BlockNumber
 			} else if notif.EvalTxRequest != nil {
 				blockNum = notif.EvalTxRequest.Event.Block.BlockNumber
-			} else if notif.EvalAlertRequest != nil {
-				blockNum = hexutil.EncodeUint64(notif.EvalAlertRequest.Event.Alert.Source.Block.Number)
+			} else if notif.EvalCombinationRequest != nil {
+				blockNum = hexutil.EncodeUint64(notif.EvalCombinationRequest.Event.Alert.Source.Block.Number)
 			}
 
 			notifBlockNum, err := hexutil.DecodeUint64(blockNum)

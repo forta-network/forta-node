@@ -101,7 +101,7 @@ func (s *Suite) TestStartProcessStop() {
 	txResp := &protocol.EvaluateTxResponse{Metadata: map[string]string{"imageHash": ""}}
 	blockReq := &protocol.EvaluateBlockRequest{Event: &protocol.BlockEvent{BlockNumber: "123123"}}
 	blockResp := &protocol.EvaluateBlockResponse{Metadata: map[string]string{"imageHash": ""}}
-	alertReq := &protocol.EvaluateAlertRequest{
+	combinerReq := &protocol.EvaluateCombinationRequest{
 		Event: &protocol.AlertEvent{
 			Alert: &protocol.AlertEvent_Alert{
 				Hash:   "123123",
@@ -111,7 +111,7 @@ func (s *Suite) TestStartProcessStop() {
 	}
 	// save combiner subscription
 	s.ap.combinerAlertSubscriptions = map[string][]string{testCombinerSourceBot: {agentConfig.ContainerName()}}
-	alertResp := &protocol.EvaluateAlertResponse{Metadata: map[string]string{"imageHash": ""}}
+	combinerResp := &protocol.EvaluateCombinationResponse{Metadata: map[string]string{"imageHash": ""}}
 
 	// test tx handling
 	s.agentClient.EXPECT().Invoke(
@@ -135,19 +135,19 @@ func (s *Suite) TestStartProcessStop() {
 	// test combine alert handling
 	s.agentClient.EXPECT().Invoke(
 		gomock.Any(), agentgrpc.MethodEvaluateAlert,
-		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateAlertResponse{}),
+		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateCombinationResponse{}),
 	).Return(nil)
 	s.msgClient.EXPECT().Publish(messaging.SubjectScannerAlert, gomock.Any())
-	s.ap.SendEvaluateAlertRequest(alertReq)
+	s.ap.SendEvaluateCombinationRequest(combinerReq)
 	alertResult := <-s.ap.CombinationAlertResults()
-	alertResp.Timestamp = alertResult.Response.Timestamp // bypass - hard to match
+	combinerResp.Timestamp = alertResult.Response.Timestamp // bypass - hard to match
 
 	s.r.Equal(txReq, txResult.Request)
 	s.r.Equal(txResp, txResult.Response)
 	s.r.Equal(blockReq, blockResult.Request)
 	s.r.Equal(blockResp, blockResult.Response)
-	s.r.Equal(alertReq, alertResult.Request)
-	s.r.Equal(alertResp, alertResult.Response)
+	s.r.Equal(combinerReq, alertResult.Request)
+	s.r.Equal(combinerResp, alertResult.Response)
 
 	// Given that the agent is running
 	// When an empty agent list is received

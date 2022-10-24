@@ -39,12 +39,12 @@ type Agent struct {
 	ctx    context.Context
 	config config.AgentConfig
 
-	txRequests              chan *TxRequest // never closed - deallocated when agent is discarded
-	txResults               chan<- *scanner.TxResult
-	blockRequests           chan *BlockRequest // never closed - deallocated when agent is discarded
-	blockResults            chan<- *scanner.BlockResult
-	combinerAlertRequests   chan *CombinerAlertRequest // never closed - deallocated when agent is discarded
-	CombinationAlertResults chan<- *scanner.CombinationAlertResult
+	txRequests          chan *TxRequest // never closed - deallocated when agent is discarded
+	txResults           chan<- *scanner.TxResult
+	blockRequests       chan *BlockRequest // never closed - deallocated when agent is discarded
+	blockResults        chan<- *scanner.BlockResult
+	combinationRequests chan *CombinationRequest // never closed - deallocated when agent is discarded
+	combinationResults  chan<- *scanner.CombinationAlertResult
 
 	errCounter *errorCounter
 	msgClient  clients.MessageClient
@@ -95,27 +95,27 @@ type BlockRequest struct {
 	Encoded  *grpc.PreparedMsg
 }
 
-// CombinerAlertRequest contains the original request data and the encoded message.
-type CombinerAlertRequest struct {
-	Original *protocol.EvaluateAlertRequest
+// CombinationRequest contains the original request data and the encoded message.
+type CombinationRequest struct {
+	Original *protocol.EvaluateCombinationRequest
 	Encoded  *grpc.PreparedMsg
 }
 
 // New creates a new agent.
 func New(ctx context.Context, agentCfg config.AgentConfig, msgClient clients.MessageClient, txResults chan<- *scanner.TxResult, blockResults chan<- *scanner.BlockResult, alertResults chan<- *scanner.CombinationAlertResult) *Agent {
 	return &Agent{
-		ctx:                     ctx,
-		config:                  agentCfg,
-		txRequests:              make(chan *TxRequest, DefaultBufferSize),
-		txResults:               txResults,
-		blockRequests:           make(chan *BlockRequest, DefaultBufferSize),
-		blockResults:            blockResults,
-		combinerAlertRequests:   make(chan *CombinerAlertRequest, DefaultBufferSize),
-		CombinationAlertResults: alertResults,
-		errCounter:              NewErrorCounter(3, isCriticalErr),
-		msgClient:               msgClient,
-		ready:                   make(chan struct{}),
-		closed:                  make(chan struct{}),
+		ctx:                 ctx,
+		config:              agentCfg,
+		txRequests:          make(chan *TxRequest, DefaultBufferSize),
+		txResults:           txResults,
+		blockRequests:       make(chan *BlockRequest, DefaultBufferSize),
+		blockResults:        blockResults,
+		combinationRequests: make(chan *CombinationRequest, DefaultBufferSize),
+		combinationResults:  alertResults,
+		errCounter:          NewErrorCounter(3, isCriticalErr),
+		msgClient:           msgClient,
+		ready:               make(chan struct{}),
+		closed:              make(chan struct{}),
 	}
 }
 
@@ -159,9 +159,9 @@ func (agent *Agent) BlockRequestCh() chan<- *BlockRequest {
 	return agent.blockRequests
 }
 
-// AlertRequestCh returns the alert request channel safely.
-func (agent *Agent) AlertRequestCh() chan<- *CombinerAlertRequest {
-	return agent.combinerAlertRequests
+// CombinationRequestCh returns the alert request channel safely.
+func (agent *Agent) CombinationRequestCh() chan<- *CombinationRequest {
+	return agent.combinationRequests
 }
 
 // Close implements io.Closer.
@@ -419,7 +419,7 @@ func (agent *Agent) processCombinationAlerts() {
 
 	agent.initWait.Wait()
 
-	for request := range agent.combinerAlertRequests {
+	for request := range agent.combinationRequests {
 		startTime := time.Now()
 		if agent.IsClosed() {
 			return
@@ -427,14 +427,14 @@ func (agent *Agent) processCombinationAlerts() {
 
 		ctx, cancel := context.WithTimeout(agent.ctx, AgentTimeout)
 		lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
-		resp := new(protocol.EvaluateAlertResponse)
+		resp := new(protocol.EvaluateCombinationResponse)
 		requestTime := time.Now().UTC()
 		err := agent.client.Invoke(ctx, agentgrpc.MethodEvaluateAlert, request.Encoded, resp)
 		responseTime := time.Now().UTC()
 		cancel()
 
 		// validate response
-		if vErr := validateEvaluateAlertResponse(resp); vErr != nil {
+		if vErr := validateEvaluateCombinationResponse(resp); vErr != nil {
 			continue
 		}
 
@@ -459,7 +459,7 @@ func (agent *Agent) processCombinationAlerts() {
 			ts.BotRequest = requestTime
 			ts.BotResponse = responseTime
 
-			agent.CombinationAlertResults <- &scanner.CombinationAlertResult{
+			agent.combinationResults <- &scanner.CombinationAlertResult{
 				AgentConfig: agent.config,
 				Request:     request.Original,
 				Response:    resp,
@@ -478,7 +478,7 @@ func (agent *Agent) processCombinationAlerts() {
 	}
 }
 
-func validateEvaluateAlertResponse(resp *protocol.EvaluateAlertResponse) (err error) {
+func validateEvaluateCombinationResponse(resp *protocol.EvaluateCombinationResponse) (err error) {
 	for _, finding := range resp.Findings {
 		if err = validateFinding(finding); err != nil {
 			return err

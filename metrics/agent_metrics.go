@@ -32,18 +32,20 @@ const (
 	MetricJSONRPCSuccess   = "jsonrpc.success"
 	MetricJSONRPCThrottled = "jsonrpc.throttled"
 	MetricFindingsDropped  = "findings.dropped"
-	MetricAlertRequest     = "alert.request"
-	MetricAlertLatency     = "alert.latency"
-	MetricAlertError       = "alert.error"
-	MetricAlertSuccess     = "alert.success"
+	MetricCombinerRequest  = "combiner.request"
+	MetricCombinerLatency  = "combiner.latency"
+	MetricCombinerError    = "combiner.error"
+	MetricCombinerSuccess  = "combiner.success"
 	MetricAlertDrop        = "alert.drop"
 )
 
 func SendAgentMetrics(client clients.MessageClient, ms []*protocol.AgentMetric) {
 	if len(ms) > 0 {
-		client.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{
-			Metrics: ms,
-		})
+		client.PublishProto(
+			messaging.SubjectMetricAgent, &protocol.AgentMetricList{
+				Metrics: ms,
+			},
+		)
 	}
 }
 
@@ -109,17 +111,17 @@ func GetTxMetrics(agt config.AgentConfig, resp *protocol.EvaluateTxResponse, tim
 	return createMetrics(agt.ID, resp.Timestamp, metrics)
 }
 
-func GetAlertMetrics(agt config.AgentConfig, resp *protocol.EvaluateAlertResponse, times *domain.TrackingTimestamps) []*protocol.AgentMetric {
+func GetCombinerMetrics(agt config.AgentConfig, resp *protocol.EvaluateCombinationResponse, times *domain.TrackingTimestamps) []*protocol.AgentMetric {
 	metrics := make(map[string]float64)
 
-	metrics[MetricAlertRequest] = 1
+	metrics[MetricCombinerRequest] = 1
 	metrics[MetricFinding] = float64(len(resp.Findings))
-	metrics[MetricAlertLatency] = float64(resp.LatencyMs)
+	metrics[MetricCombinerLatency] = float64(resp.LatencyMs)
 
 	if resp.Status == protocol.ResponseStatus_ERROR {
-		metrics[MetricAlertError] = 1
+		metrics[MetricCombinerError] = 1
 	} else if resp.Status == protocol.ResponseStatus_SUCCESS {
-		metrics[MetricAlertSuccess] = 1
+		metrics[MetricCombinerSuccess] = 1
 	}
 
 	return createMetrics(agt.ID, resp.Timestamp, metrics)

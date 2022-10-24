@@ -483,26 +483,6 @@ func (mr *MockAgentClientMockRecorder) Dial(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dial", reflect.TypeOf((*MockAgentClient)(nil).Dial), arg0)
 }
 
-// EvaluateAlert mocks base method.
-func (m *MockAgentClient) EvaluateAlert(ctx context.Context, in *protocol.EvaluateAlertRequest, opts ...grpc.CallOption) (*protocol.EvaluateAlertResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, in}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "EvaluateAlert", varargs...)
-	ret0, _ := ret[0].(*protocol.EvaluateAlertResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// EvaluateAlert indicates an expected call of EvaluateAlert.
-func (mr *MockAgentClientMockRecorder) EvaluateAlert(ctx, in interface{}, opts ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, in}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EvaluateAlert", reflect.TypeOf((*MockAgentClient)(nil).EvaluateAlert), varargs...)
-}
-
 // EvaluateBlock mocks base method.
 func (m *MockAgentClient) EvaluateBlock(ctx context.Context, in *protocol.EvaluateBlockRequest, opts ...grpc.CallOption) (*protocol.EvaluateBlockResponse, error) {
 	m.ctrl.T.Helper()
@@ -521,6 +501,26 @@ func (mr *MockAgentClientMockRecorder) EvaluateBlock(ctx, in interface{}, opts .
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, in}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EvaluateBlock", reflect.TypeOf((*MockAgentClient)(nil).EvaluateBlock), varargs...)
+}
+
+// EvaluateCombination mocks base method.
+func (m *MockAgentClient) EvaluateCombination(ctx context.Context, in *protocol.EvaluateCombinationRequest, opts ...grpc.CallOption) (*protocol.EvaluateCombinationResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "EvaluateCombination", varargs...)
+	ret0, _ := ret[0].(*protocol.EvaluateCombinationResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EvaluateCombination indicates an expected call of EvaluateCombination.
+func (mr *MockAgentClientMockRecorder) EvaluateCombination(ctx, in interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EvaluateCombination", reflect.TypeOf((*MockAgentClient)(nil).EvaluateCombination), varargs...)
 }
 
 // EvaluateTx mocks base method.
