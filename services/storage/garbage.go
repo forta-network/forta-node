@@ -4,10 +4,8 @@ import (
 	"context"
 	"fmt"
 	"path"
-	"sort"
 	"time"
 
-	ipfsapi "github.com/ipfs/go-ipfs-api"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -26,35 +24,10 @@ func (storage *Storage) collectGarbage(ctx context.Context) {
 	}
 }
 
-type userInfo struct {
-	User         string
-	ContentKinds []string
-}
-
 func (storage *Storage) doCollectGarbage(ctx context.Context) error {
-	// just attempt creating the base dir to avoid unnecessary errors
-	storage.ipfs.FilesMkdir(ctx, DefaultBasePath, ipfsapi.FilesMkdir.Parents(true))
-
-	list, err := storage.ipfs.FilesLs(ctx, DefaultBasePath)
+	users, err := storage.getUsers(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to list the base storage path: %v", err)
-	}
-
-	var users []*userInfo
-	for _, stat := range list {
-		userName := stat.Name
-		contentList, err := storage.ipfs.FilesLs(ctx, path.Join(DefaultBasePath, userName))
-		if err != nil {
-			return fmt.Errorf("failed to get the content kinds for user '%s': %v", userName, err)
-		}
-		var contentKinds []string
-		for _, kind := range contentList {
-			contentKinds = append(contentKinds, kind.Name)
-		}
-		users = append(users, &userInfo{
-			User:         userName,
-			ContentKinds: contentKinds,
-		})
+		return err
 	}
 
 	for _, user := range users {
@@ -81,22 +54,17 @@ func (storage *Storage) gcContents(ctx context.Context, user, kind string) error
 		"kind": kind,
 		"dir":  contentDir,
 	})
-	list, err := storage.ipfs.FilesLs(ctx, contentDir, ipfsapi.FilesLs.Stat(true))
-	if err != nil {
-		return fmt.Errorf("error while listing '%s': %v", contentDir, err)
-	}
-	// ensure it's sorted in alphabetical order (ascending)
-	sort.Slice(list, func(i, j int) bool {
-		return sort.StringsAreSorted([]string{list[i].Name, list[j].Name})
-	})
-	limit := ContentLimit(kind)
 
-	var oldEntries []*ipfsapi.MfsLsEntry
-	oldCount := len(list) - limit
-	if oldCount > 0 {
-		logger.WithField("old", oldCount).Info("detected old entries - will remove")
-		oldEntries = list[:len(list)-limit]
+	_, oldEntries, err := storage.getContentInDir(ctx, user, kind)
+	if err != nil {
+		return err
 	}
+	oldCount := len(oldEntries)
+	if oldCount == 0 {
+		return nil
+	}
+	logger.WithField("old", oldCount).Info("detected old entries - will remove")
+
 	for _, oldEntry := range oldEntries {
 		contentPath := path.Join(contentDir, oldEntry.Name)
 		contentLogger := log.WithFields(log.Fields{

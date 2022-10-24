@@ -8,9 +8,12 @@ import (
 	"net"
 	"path"
 	"sort"
+	"strings"
 
+	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-node/clients/ipfsclient"
+	"github.com/forta-network/forta-node/clients/ipfsrouter"
 	"github.com/forta-network/forta-node/config"
 	"github.com/ipfs/go-cid"
 	ipfsapi "github.com/ipfs/go-ipfs-api"
@@ -26,15 +29,17 @@ const defaultListLimit = 1000
 type Storage struct {
 	ctx    context.Context
 	ipfs   IPFSClient
+	router IPFSRouter
 	server *grpc.Server
 
 	protocol.UnimplementedStorageServer
 }
 
 // New creates a new storage service.
-func NewStorage(ctx context.Context, ipfsURL string) (*Storage, error) {
+func NewStorage(ctx context.Context, ipfsURL, routerURL string) (*Storage, error) {
 	storage := &Storage{
 		ipfs:   ipfsclient.New(ipfsURL),
+		router: ipfsrouter.NewClient(routerURL),
 		server: grpc.NewServer(),
 	}
 	protocol.RegisterStorageServer(storage.server, storage)
@@ -43,6 +48,9 @@ func NewStorage(ctx context.Context, ipfsURL string) (*Storage, error) {
 
 // Start starts the service.
 func (storage *Storage) Start() error {
+	// just attempt creating the base dir to avoid unnecessary errors
+	storage.ipfs.FilesMkdir(storage.ctx, DefaultBasePath, ipfsapi.FilesMkdir.Parents(true))
+
 	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%s", config.DefaultStoragePort))
 	if err != nil {
 		return err
@@ -67,6 +75,11 @@ func (storage *Storage) Stop() error {
 // Name returns the name of the service.
 func (storage *Storage) Name() string {
 	return "storage"
+}
+
+// Health implements the health.Reporter interface.
+func (storage *Storage) Health() health.Reports {
+	return nil
 }
 
 // Put puts given content to IPFS MFS.
@@ -186,4 +199,82 @@ func (storage *Storage) List(ctx context.Context, req *protocol.ListRequest) (*p
 	}
 
 	return &resp, nil
+}
+
+// Provider returns the provider info.
+func (storage *Storage) Provider(ctx context.Context, req *protocol.ProviderRequest) (*protocol.ProviderResponse, error) {
+	idResp, err := storage.ipfs.ID()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get the id: %v", err)
+	}
+	return &protocol.ProviderResponse{
+		Provider: &protocol.Provider{
+			Id: idResp.ID,
+		},
+	}, nil
+}
+
+type userInfo struct {
+	User         string
+	ContentKinds []string
+}
+
+func (user *userInfo) HasContent(kind string) bool {
+	for _, storedKind := range user.ContentKinds {
+		if kind == storedKind {
+			return true
+		}
+	}
+	return false
+}
+
+func (storage *Storage) getUsers(ctx context.Context) ([]*userInfo, error) {
+	list, err := storage.ipfs.FilesLs(ctx, DefaultBasePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list the base storage path: %v", err)
+	}
+
+	var users []*userInfo
+	for _, stat := range list {
+		userName := strings.Trim(stat.Name, "/")
+		contentList, err := storage.ipfs.FilesLs(ctx, path.Join(DefaultBasePath, userName))
+		if err != nil {
+			return nil, fmt.Errorf("failed to get the content kinds for user '%s': %v", userName, err)
+		}
+		var contentKinds []string
+		for _, kind := range contentList {
+			contentKinds = append(contentKinds, strings.Trim(kind.Name, "/"))
+		}
+		users = append(users, &userInfo{
+			User:         userName,
+			ContentKinds: contentKinds,
+		})
+	}
+
+	return users, nil
+}
+
+func (storage *Storage) getContentInDir(ctx context.Context, user, kind string) ([]*ipfsapi.MfsLsEntry, []*ipfsapi.MfsLsEntry, error) {
+	contentDir := ContentDir(user, kind)
+	list, err := storage.ipfs.FilesLs(ctx, contentDir, ipfsapi.FilesLs.Stat(true))
+	if err != nil {
+		return nil, nil, fmt.Errorf("error while listing '%s': %v", contentDir, err)
+	}
+	// ensure it's sorted in alphabetical order (ascending)
+	sort.Slice(list, func(i, j int) bool {
+		return sort.StringsAreSorted([]string{list[i].Name, list[j].Name})
+	})
+	limit := ContentLimit(kind)
+
+	var (
+		newestEntries = list
+		oldEntries    []*ipfsapi.MfsLsEntry
+	)
+	oldCount := len(list) - limit
+	if oldCount > 0 {
+		cut := len(list) - limit
+		list = list[cut:]
+		oldEntries = list[:cut]
+	}
+	return newestEntries, oldEntries, nil
 }

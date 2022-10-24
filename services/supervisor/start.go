@@ -48,13 +48,14 @@ type SupervisorService struct {
 	maxLogSize  string
 	maxLogFiles int
 
-	scannerContainer   *clients.DockerContainer
-	inspectorContainer *clients.DockerContainer
-	jsonRpcContainer   *clients.DockerContainer
-	containers         []*Container
-	mu                 sync.RWMutex
+	scannerContainer     *clients.DockerContainer
+	inspectorContainer   *clients.DockerContainer
+	jsonRpcContainer     *clients.DockerContainer
+	jwtProviderContainer *clients.DockerContainer
+	storageContainer     *clients.DockerContainer
+	containers           []*Container
+	mu                   sync.RWMutex
 
-	jwtProviderContainer            *clients.DockerContainer
 	lastRun                         health.TimeTracker
 	lastStop                        health.TimeTracker
 	lastTelemetryRequest            health.TimeTracker
@@ -164,11 +165,11 @@ func (sup *SupervisorService) start() error {
 
 	ipfsContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerIpfsContainerName,
-		Image: "ipfs/go-ipfs:v0.12.2",
+		Image: "ipfs/kubo:v0.16.0",
 		Ports: map[string]string{
 			"5001": "5001",
 		},
-		NetworkID:   natsNetworkID,
+		NetworkID:   nodeNetworkID,
 		MaxLogFiles: sup.maxLogFiles,
 		MaxLogSize:  sup.maxLogSize,
 	})
@@ -321,8 +322,39 @@ func (sup *SupervisorService) start() error {
 			Files: map[string][]byte{
 				"passphrase": []byte(sup.config.Passphrase),
 			},
+			DialHost:       true,
+			NetworkID:      nodeNetworkID,
+			LinkNetworkIDs: []string{natsNetworkID},
+			MaxLogFiles:    sup.maxLogFiles,
+			MaxLogSize:     sup.maxLogSize,
+		},
+	)
+	if err != nil {
+		return err
+	}
+	sup.addContainerUnsafe(sup.jwtProviderContainer)
+
+	sup.storageContainer, err = sup.client.StartContainer(
+		sup.ctx, clients.DockerContainerConfig{
+			Name:  config.DockerStorageContainerName,
+			Image: commonNodeImage,
+			Cmd:   []string{config.DefaultFortaNodeBinaryPath, "storage"},
+			Env: map[string]string{
+				config.EnvReleaseInfo: releaseInfo.String(),
+			},
+			Volumes: map[string]string{
+				// give access to host docker
+				"/var/run/docker.sock": "/var/run/docker.sock",
+				hostFortaDir:           config.DefaultContainerFortaDirPath,
+			},
+			Ports: map[string]string{
+				"": config.DefaultHealthPort, // random host port
+			},
+			Files: map[string][]byte{
+				"passphrase": []byte(sup.config.Passphrase),
+			},
 			DialHost:    true,
-			NetworkID:   natsNetworkID,
+			NetworkID:   nodeNetworkID,
 			MaxLogFiles: sup.maxLogFiles,
 			MaxLogSize:  sup.maxLogSize,
 		},
@@ -330,7 +362,7 @@ func (sup *SupervisorService) start() error {
 	if err != nil {
 		return err
 	}
-	sup.addContainerUnsafe(sup.jwtProviderContainer)
+	sup.addContainerUnsafe(sup.storageContainer)
 
 	return nil
 }

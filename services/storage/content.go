@@ -8,6 +8,8 @@ import (
 
 // Content kinds
 const (
+	BloomLimit = 10000
+
 	KindBatchReceipt = "batchReceipt"
 )
 
@@ -40,4 +42,9 @@ func NewContentPath(user string, kind string) string {
 	ts := time.Now().UnixNano()
 	tsStr := strconv.FormatInt(ts, 10)
 	return path.Join(ContentDir(user, kind), tsStr)
+}
+
+// BloomPath constructs the bloom filter path for a user.
+func BloomPath(user string) string {
+	return path.Join(RepoDir(user), "bloom")
 }

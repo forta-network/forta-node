@@ -132,6 +132,11 @@ type InspectionConfig struct {
 	InspectAtStartup  bool `yaml:"inspectAtStartup" json:"inspectAtStartup" default:"true"`
 }
 
+type StorageConfig struct {
+	Provide string `yaml:"provide" json:"provide" default:"https://ipfs-router.forta.network/provide"`
+	Reframe string `yaml:"reframe" json:"reframe" default:"https://ipfs-router.forta.network/reframe"`
+}
+
 type Config struct {
 	// runtime values
 
@@ -158,6 +163,7 @@ type Config struct {
 	AgentLogsConfig  AgentLogsConfig    `yaml:"agentLogs" json:"agentLogs"`
 	LocalModeConfig  LocalModeConfig    `yaml:"localMode" json:"localMode"`
 	InspectionConfig InspectionConfig   `yaml:"inspection" json:"inspection"`
+	StorageConfig    StorageConfig      `yaml:"storage" json:"storage"`
 }
 
 func (cfg *Config) ConfigFilePath() string {

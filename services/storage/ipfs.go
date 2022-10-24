@@ -23,4 +23,11 @@ type IPFSClient interface {
 	FilesMv(ctx context.Context, src string, dest string) error
 
 	RepoGC(context.Context) error
+
+	ID(peer ...string) (*ipfsapi.IdOutput, error)
+}
+
+// IPFSRouter implements the IPFS router server methods.
+type IPFSRouter interface {
+	Provide(ctx context.Context, scanner, peerID, bloomFilter string) error
 }

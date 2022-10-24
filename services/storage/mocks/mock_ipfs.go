@@ -36,24 +36,24 @@ func (m *MockIPFSClient) EXPECT() *MockIPFSClientMockRecorder {
 	return m.recorder
 }
 
-// Add mocks base method.
-func (m *MockIPFSClient) Add(r io.Reader, options ...shell.AddOpts) (string, error) {
+// AddToFiles mocks base method.
+func (m *MockIPFSClient) AddToFiles(r io.Reader, path string, options ...shell.AddOpts) (string, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{r}
+	varargs := []interface{}{r, path}
 	for _, a := range options {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "Add", varargs...)
+	ret := m.ctrl.Call(m, "AddToFiles", varargs...)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Add indicates an expected call of Add.
-func (mr *MockIPFSClientMockRecorder) Add(r interface{}, options ...interface{}) *gomock.Call {
+// AddToFiles indicates an expected call of AddToFiles.
+func (mr *MockIPFSClientMockRecorder) AddToFiles(r, path interface{}, options ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{r}, options...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockIPFSClient)(nil).Add), varargs...)
+	varargs := append([]interface{}{r, path}, options...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddToFiles", reflect.TypeOf((*MockIPFSClient)(nil).AddToFiles), varargs...)
 }
 
 // Cat mocks base method.
@@ -209,4 +209,88 @@ func (mr *MockIPFSClientMockRecorder) FilesWrite(ctx, path, data interface{}, op
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, path, data}, options...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FilesWrite", reflect.TypeOf((*MockIPFSClient)(nil).FilesWrite), varargs...)
+}
+
+// ID mocks base method.
+func (m *MockIPFSClient) ID(peer ...string) (*shell.IdOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range peer {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ID", varargs...)
+	ret0, _ := ret[0].(*shell.IdOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ID indicates an expected call of ID.
+func (mr *MockIPFSClientMockRecorder) ID(peer ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ID", reflect.TypeOf((*MockIPFSClient)(nil).ID), peer...)
+}
+
+// RepoGC mocks base method.
+func (m *MockIPFSClient) RepoGC(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RepoGC", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RepoGC indicates an expected call of RepoGC.
+func (mr *MockIPFSClientMockRecorder) RepoGC(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RepoGC", reflect.TypeOf((*MockIPFSClient)(nil).RepoGC), arg0)
+}
+
+// Unpin mocks base method.
+func (m *MockIPFSClient) Unpin(path string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Unpin", path)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Unpin indicates an expected call of Unpin.
+func (mr *MockIPFSClientMockRecorder) Unpin(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unpin", reflect.TypeOf((*MockIPFSClient)(nil).Unpin), path)
+}
+
+// MockIPFSRouter is a mock of IPFSRouter interface.
+type MockIPFSRouter struct {
+	ctrl     *gomock.Controller
+	recorder *MockIPFSRouterMockRecorder
+}
+
+// MockIPFSRouterMockRecorder is the mock recorder for MockIPFSRouter.
+type MockIPFSRouterMockRecorder struct {
+	mock *MockIPFSRouter
+}
+
+// NewMockIPFSRouter creates a new mock instance.
+func NewMockIPFSRouter(ctrl *gomock.Controller) *MockIPFSRouter {
+	mock := &MockIPFSRouter{ctrl: ctrl}
+	mock.recorder = &MockIPFSRouterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockIPFSRouter) EXPECT() *MockIPFSRouterMockRecorder {
+	return m.recorder
+}
+
+// Provide mocks base method.
+func (m *MockIPFSRouter) Provide(ctx context.Context, scanner, peerID, bloomFilter string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Provide", ctx, scanner, peerID, bloomFilter)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Provide indicates an expected call of Provide.
+func (mr *MockIPFSRouterMockRecorder) Provide(ctx, scanner, peerID, bloomFilter interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Provide", reflect.TypeOf((*MockIPFSRouter)(nil).Provide), ctx, scanner, peerID, bloomFilter)
 }
