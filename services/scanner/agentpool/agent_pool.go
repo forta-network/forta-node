@@ -367,6 +367,9 @@ func (ap *AgentPool) BlockResults() <-chan *scanner.BlockResult {
 }
 
 func (ap *AgentPool) IsBotSubscribedTo(src, dst string) bool {
+	ap.mu.RLock()
+	defer ap.mu.RUnlock()
+
 	for _, s := range ap.combinerAlertSubscriptions[src] {
 		if s == dst {
 			return true

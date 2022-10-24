@@ -42,7 +42,7 @@ func (t *CombinerAlertStreamService) handleAlert(evt *domain.AlertEvent) error {
 		return nil
 	default:
 	}
-	log.Infof("new alert incoming %s", evt.Event.Alert.Source.Bot.Id)
+	log.Infof("streaming new alert subscription %s", evt.Event.Alert.Source.Bot.Id)
 	t.alertOutput <- evt
 	t.lastAlertActivity.Set()
 	return nil
