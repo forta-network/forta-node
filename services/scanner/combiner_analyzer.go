@@ -44,7 +44,7 @@ func (aas *CombinerAlertAnalyzerService) publishMetrics(result *CombinationAlert
 }
 
 func (aas *CombinerAlertAnalyzerService) findingToAlert(result *CombinationAlertResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
-	alertID := alerthash.ForAlertBotAlert(
+	alertID := alerthash.ForCombinationAlert(
 		&alerthash.Inputs{
 			Alert:   result.Request.Event,
 			Finding: f,

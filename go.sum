@@ -374,6 +374,12 @@ github.com/flynn/noise v1.0.0/go.mod h1:xbMo+0i6+IGbYdJhF31t2eR1BIU0CYc12+BNAKwU
 github.com/fogleman/gg v1.2.1-0.20190220221249-0403632d5b90/go.mod h1:R/bRT+9gY/C5z7JzPU0zXsXHKM4/ayA+zqcVNZzPa1k=
 github.com/forta-network/forta-core-go v0.0.0-20221017173108-55ccbbbc9f2f h1:i4QMxv6K8xaYmmsCqa1MMpwyodm70e8tXQKINv/MY0Q=
 github.com/forta-network/forta-core-go v0.0.0-20221017173108-55ccbbbc9f2f/go.mod h1:jMfvzdM5tmZMJ33crKQCyFFr9dhOOuSkoXCo0vfbU9Y=
+github.com/forta-network/forta-core-go v0.0.0-20221021071131-9caa40afddf3 h1:wRQJJhywPK7Hve74LJjhGfby/1EvKJ+BoTqRo1fcLnw=
+github.com/forta-network/forta-core-go v0.0.0-20221021071131-9caa40afddf3/go.mod h1:jMfvzdM5tmZMJ33crKQCyFFr9dhOOuSkoXCo0vfbU9Y=
+github.com/forta-network/forta-core-go v0.0.0-20221024070851-df562fecadf6 h1:X+pB+4LRS0upslvUGolwWyjYpRNlLrk5I/LBTN+sosk=
+github.com/forta-network/forta-core-go v0.0.0-20221024070851-df562fecadf6/go.mod h1:jMfvzdM5tmZMJ33crKQCyFFr9dhOOuSkoXCo0vfbU9Y=
+github.com/forta-network/forta-core-go v0.0.0-20221024073515-19cc5f5d5c13 h1:VDvB6Ns6LBB73Zquj9OyTQM2S4ZfOcpA5D12mdQNTzM=
+github.com/forta-network/forta-core-go v0.0.0-20221024073515-19cc5f5d5c13/go.mod h1:jMfvzdM5tmZMJ33crKQCyFFr9dhOOuSkoXCo0vfbU9Y=
 github.com/fortytw2/leaktest v1.3.0/go.mod h1:jDsjWgpAGjm2CA7WthBh/CdZYEPF31XHquHwclZch5g=
 github.com/francoispqt/gojay v1.2.13 h1:d2m3sFjloqoIUQU3TsHBgj6qg/BVGlTBeHDUmyJnXKk=
 github.com/francoispqt/gojay v1.2.13/go.mod h1:ehT5mTG4ua4581f1++1WLG0vPdaA9HaiDsoyrBGkyDY=

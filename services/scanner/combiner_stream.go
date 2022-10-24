@@ -81,7 +81,7 @@ func (t *CombinerAlertStreamService) Stop() error {
 }
 
 func (t *CombinerAlertStreamService) Name() string {
-	return "alert-stream"
+	return "combiner-alert-stream"
 }
 
 // Health implements health.Reporter interface.

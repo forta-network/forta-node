@@ -2,9 +2,12 @@ package poolagent
 
 import (
 	"context"
+	"fmt"
+	"regexp"
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/forta-network/forta-core-go/domain"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -429,6 +432,12 @@ func (agent *Agent) processCombinationAlerts() {
 		err := agent.client.Invoke(ctx, agentgrpc.MethodEvaluateAlert, request.Encoded, resp)
 		responseTime := time.Now().UTC()
 		cancel()
+
+		// validate response
+		if vErr := validateEvaluateAlertResponse(resp); vErr != nil {
+			continue
+		}
+
 		if err == nil {
 			// truncate findings
 			if len(resp.Findings) > MaxFindings {
@@ -467,6 +476,37 @@ func (agent *Agent) processCombinationAlerts() {
 			return
 		}
 	}
+}
+
+func validateEvaluateAlertResponse(resp *protocol.EvaluateAlertResponse) (err error) {
+	for _, finding := range resp.Findings {
+		if err = validateFinding(finding); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateFinding(finding *protocol.Finding) error {
+	for _, alert := range finding.RelatedAlerts {
+		if !checkValidKeccak256(alert) {
+			return fmt.Errorf("bad related alert string: %s", alert)
+		}
+	}
+	for _, address := range finding.Addresses {
+		if !common.IsHexAddress(address) {
+			return fmt.Errorf("bad address string: %s", address)
+		}
+	}
+
+	return nil
+}
+
+var _regexKeccak256 = regexp.MustCompile("^0x[a-f0-9]{64}$")
+
+func checkValidKeccak256(hash string) bool {
+	return _regexKeccak256.Match([]byte(hash))
 }
 
 func calculateResponseTime(startTime *time.Time) (timestamp string, latencyMs uint32, duration time.Duration) {
