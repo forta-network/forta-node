@@ -69,7 +69,7 @@ func (t *CombinerAlertStreamService) Stop() error {
 			for {
 				select {
 				case a := <-c:
-					log.WithFields(log.Fields{"alert": a.Event.Alert.Source.Bot.Id}).Info("gracefully draining alert")
+					log.WithFields(log.Fields{"subscription": a.Event.Alert.Source.Bot.Id}).Info("gracefully draining combination")
 				default:
 					close(c)
 					return

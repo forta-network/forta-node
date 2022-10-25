@@ -134,7 +134,7 @@ func (s *Suite) TestStartProcessStop() {
 
 	// test combine alert handling
 	s.agentClient.EXPECT().Invoke(
-		gomock.Any(), agentgrpc.MethodEvaluateAlert,
+		gomock.Any(), agentgrpc.MethodEvaluateCombination,
 		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateCombinationResponse{}),
 	).Return(nil)
 	s.msgClient.EXPECT().Publish(messaging.SubjectScannerAlert, gomock.Any())

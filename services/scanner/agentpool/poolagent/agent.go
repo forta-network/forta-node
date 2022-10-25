@@ -413,7 +413,7 @@ func (agent *Agent) processCombinationAlerts() {
 		log.Fields{
 			"agent":     agent.config.ID,
 			"component": "agent",
-			"evaluate":  "alert",
+			"evaluate":  "combination",
 		},
 	)
 
@@ -429,7 +429,7 @@ func (agent *Agent) processCombinationAlerts() {
 		lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
 		resp := new(protocol.EvaluateCombinationResponse)
 		requestTime := time.Now().UTC()
-		err := agent.client.Invoke(ctx, agentgrpc.MethodEvaluateAlert, request.Encoded, resp)
+		err := agent.client.Invoke(ctx, agentgrpc.MethodEvaluateCombination, request.Encoded, resp)
 		responseTime := time.Now().UTC()
 		cancel()
 
