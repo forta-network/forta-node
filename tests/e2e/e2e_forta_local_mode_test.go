@@ -185,7 +185,7 @@ func (s *Suite) runLocalMode(webhookURL, logFileName string, readAlertsFunc func
 	)
 	var webhookAlerts models.AlertBatch
 	s.r.NoError(json.Unmarshal(b, &webhookAlerts))
-	s.r.Len(webhookAlerts.Alerts, 3)
+	s.r.Len(webhookAlerts.Alerts, 2)
 	s.r.NotEmpty(webhookAlerts.Metrics)
 
 	var (

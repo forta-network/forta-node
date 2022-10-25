@@ -39,7 +39,7 @@ type agentServer struct {
 
 var (
 	// alertSubscriptions subscribes to police bot alerts
-	alertSubscriptions = []string{"0x5e13c2f3a97c292695b598090056ba5d52f9dcc7790bcdaa8b6cd87c1a1ebc0f"}
+	alertSubscriptions = []string{"0x77281ae942ee1fe141d0652e9dad7d001761552f906fb1684b2812603de31049"}
 )
 
 func (as *agentServer) Initialize(context.Context, *protocol.InitializeRequest) (*protocol.InitializeResponse, error) {
