@@ -5,7 +5,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol/alerthash"
@@ -111,10 +110,8 @@ func (aas *CombinerAlertAnalyzerService) Start() error {
 					log.WithError(err).Error("failed to transform finding to alert")
 					continue
 				}
-				blockNum := hexutil.EncodeUint64(result.Request.Event.Alert.Source.Block.Number)
-				chainId := hexutil.EncodeUint64(result.Request.Event.Alert.Source.Block.ChainId)
 				if err := aas.cfg.AlertSender.SignAlertAndNotify(
-					rt, alert, chainId, blockNum, result.Timestamps,
+					rt, alert, "", "", result.Timestamps,
 				); err != nil {
 					log.WithError(err).Panic("failed sign alert and notify")
 				}

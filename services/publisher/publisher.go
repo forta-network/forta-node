@@ -506,14 +506,14 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 		}
 	} else if isBlockAlert {
 		blockNum := hexutil.MustDecodeUint64(notif.EvalBlockRequest.Event.BlockNumber)
-		bd.AddBatchAgent(notif.AgentInfo, blockNum, "")
+		bd.AddBatchAgent(notif.AgentInfo, blockNum, "", "")
 		blockRes := bd.GetBlockResults(notif.EvalBlockRequest.Event.BlockHash, blockNum, notif.EvalBlockRequest.Event.Block.Timestamp)
 		if hasAlert {
 			agentAlerts = (*BlockResults)(blockRes).GetAgentAlerts(notif.AgentInfo)
 		}
 	} else if isTxAlert {
 		blockNum := hexutil.MustDecodeUint64(notif.EvalTxRequest.Event.Block.BlockNumber)
-		bd.AddBatchAgent(notif.AgentInfo, blockNum, notif.EvalTxRequest.Event.Receipt.TransactionHash)
+		bd.AddBatchAgent(notif.AgentInfo, blockNum, notif.EvalTxRequest.Event.Receipt.TransactionHash, "")
 		blockRes := bd.GetBlockResults(notif.EvalTxRequest.Event.Block.BlockHash, blockNum, notif.EvalTxRequest.Event.Block.BlockTimestamp)
 		if hasAlert {
 			txRes := (*BlockResults)(blockRes).GetTransactionResults(notif.EvalTxRequest.Event)
@@ -521,11 +521,9 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 		}
 	} else if isCombinationAlert {
 		// TODO REMOVE THIS BEFORE PRODUCTION
-		blockNum := notif.EvalCombinationRequest.Event.Alert.Source.Block.Number
-		bd.AddBatchAgent(notif.AgentInfo, blockNum, notif.EvalCombinationRequest.Event.Alert.Source.TransactionHash)
-		blockRes := bd.GetBlockResults(notif.EvalCombinationRequest.Event.Alert.Source.Block.Hash, blockNum, notif.EvalCombinationRequest.Event.Alert.Source.Block.Timestamp)
+		bd.AddBatchAgent(notif.AgentInfo, 0, "", notif.EvalCombinationRequest.Event.Alert.Hash)
 		if hasAlert {
-			metaRes := (*BlockResults)(blockRes).GetCombinationAlertResults(notif.EvalCombinationRequest.Event)
+			metaRes := bd.GetCombinationAlertResults(notif.EvalCombinationRequest.Event)
 			agentAlerts = (*CombinationAlertResults)(metaRes).GetAgentAlerts(notif.AgentInfo)
 		}
 	}
@@ -540,7 +538,7 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 
 // AddBatchAgent includes the agent info in the batch so we know that this agent really
 // processed a specific block or a tx hash.
-func (bd *BatchData) AddBatchAgent(agent *protocol.AgentInfo, blockNumber uint64, txHash string) {
+func (bd *BatchData) AddBatchAgent(agent *protocol.AgentInfo, blockNumber uint64, txHash string, subscription string) {
 	var batchAgent *protocol.BatchAgent
 	for _, ba := range bd.Agents {
 		if ba.Info.Manifest == agent.Manifest {
@@ -554,23 +552,39 @@ func (bd *BatchData) AddBatchAgent(agent *protocol.AgentInfo, blockNumber uint64
 		}
 		bd.Agents = append(bd.Agents, batchAgent)
 	}
-	if blockNumber == 0 {
-		log.Error("zero block number while adding batch agent")
+	if blockNumber != 0 {
+		var alreadyAddedBlockNum bool
+		for _, addedBlockNum := range batchAgent.Blocks {
+			if addedBlockNum == blockNumber {
+				alreadyAddedBlockNum = true
+				break
+			}
+		}
+		if !alreadyAddedBlockNum {
+			batchAgent.Blocks = append(batchAgent.Blocks, blockNumber)
+		}
+		if len(txHash) > 0 {
+			batchAgent.Transactions = append(batchAgent.Transactions, txHash)
+		}
 		return
 	}
-	var alreadyAddedBlockNum bool
-	for _, addedBlockNum := range batchAgent.Blocks {
-		if addedBlockNum == blockNumber {
-			alreadyAddedBlockNum = true
-			break
+
+	if subscription != "" {
+		var alreadyAddedCombinationAlert bool
+		for _, addedAlertSubscription := range batchAgent.Combinations {
+			if addedAlertSubscription == subscription {
+				alreadyAddedCombinationAlert = true
+				break
+			}
 		}
+
+		if !alreadyAddedCombinationAlert {
+			batchAgent.Combinations = append(batchAgent.Combinations, subscription)
+		}
+		return
 	}
-	if !alreadyAddedBlockNum {
-		batchAgent.Blocks = append(batchAgent.Blocks, blockNumber)
-	}
-	if len(txHash) > 0 {
-		batchAgent.Transactions = append(batchAgent.Transactions, txHash)
-	}
+
+	log.Error("no block number or combination while adding batch agent")
 }
 
 // GetBlockResults returns an existing or a new aggregation object for the block.
@@ -592,8 +606,8 @@ func (bd *BatchData) GetBlockResults(blockHash string, blockNumber uint64, block
 }
 
 // GetCombinationAlertResults returns an existing or a new aggregation object for the block.
-func (br *BlockResults) GetCombinationAlertResults(combinationAlert *protocol.AlertEvent) *protocol.CombinationAlertResults {
-	for _, blockRes := range br.CombinationAlerts {
+func (bd *BatchData) GetCombinationAlertResults(combinationAlert *protocol.AlertEvent) *protocol.CombinationAlertResults {
+	for _, blockRes := range bd.CombinationAlerts {
 		if blockRes.AlertEvent.Alert.Hash == combinationAlert.Alert.Hash {
 			return blockRes
 		}
@@ -603,7 +617,7 @@ func (br *BlockResults) GetCombinationAlertResults(combinationAlert *protocol.Al
 		AlertEvent: combinationAlert,
 	}
 
-	br.CombinationAlerts = append(br.CombinationAlerts, mr)
+	bd.CombinationAlerts = append(bd.CombinationAlerts, mr)
 
 	return mr
 }
