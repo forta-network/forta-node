@@ -20,7 +20,7 @@ docker tag "$AGENT_IMAGE_FULL_NAME" "$AGENT_IMAGE_SHORT_NAME"
 
 # build test alert bot image
 DOCKER_BUILDKIT=1 docker build --network host -t "$ALERT_AGENT_IMAGE_FULL_NAME" -f \
-    "$TEST_DIR/agents/alertbot/Dockerfile" .
+    "$TEST_DIR/agents/combinerbot/Dockerfile" .
 docker tag "$ALERT_AGENT_IMAGE_FULL_NAME" "$ALERT_AGENT_IMAGE_SHORT_NAME"
 
 AGENT_IMAGE_REF=$("$SCRIPTS_DIR/docker-push.sh" "$REGISTRY" "$AGENT_IMAGE_FULL_NAME")
