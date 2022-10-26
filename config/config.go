@@ -113,6 +113,8 @@ type RuntimeLimits struct {
 	StartBlock         uint64 `yaml:"startBlock" json:"startBlock"`
 	StopBlock          uint64 `yaml:"stopBlock" json:"stopBlock" validate:"omitempty,gtfield=StartBlock"`
 	StopTimeoutSeconds int    `yaml:"stopTimeoutSeconds" json:"stopTimeoutSeconds" default:"30"`
+	StartCombiner      uint64 `yaml:"startCombiner" json:"startCombiner"`
+	StopCombiner       uint64 `yaml:"stopCombiner" json:"stopCombiner"`
 }
 
 type LocalModeConfig struct {

@@ -63,7 +63,7 @@ func (aas *CombinerAlertAnalyzerService) findingToAlert(result *CombinationAlert
 
 	alertType := protocol.AlertType_PRIVATE
 	if !f.Private && !result.Response.Private {
-		alertType = protocol.AlertType_ALERT
+		alertType = protocol.AlertType_COMBINATION
 	}
 	return &protocol.Alert{
 		Id:         alertID,

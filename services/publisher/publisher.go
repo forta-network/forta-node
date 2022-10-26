@@ -521,9 +521,9 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 		}
 	} else if isCombinationAlert {
 		// TODO REMOVE THIS BEFORE PRODUCTION
-		bd.AddBatchAgent(notif.AgentInfo, 0, "", notif.EvalCombinationRequest.Event.Alert.Hash)
+		bd.AddBatchAgent(notif.AgentInfo, 0, "", notif.EvalCombinationRequest.Event.Alert.Source.Bot.Id)
+		metaRes := bd.GetCombinationAlertResults(notif.EvalCombinationRequest.Event)
 		if hasAlert {
-			metaRes := bd.GetCombinationAlertResults(notif.EvalCombinationRequest.Event)
 			agentAlerts = (*CombinationAlertResults)(metaRes).GetAgentAlerts(notif.AgentInfo)
 		}
 	}

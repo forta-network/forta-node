@@ -136,20 +136,56 @@ func initAlertStream(ctx context.Context, msgClient *messaging.Client, cfg confi
 		ctx, feeds.CombinerFeedConfig{
 			Offset: settings.GetBlockOffset(cfg.ChainID),
 			APIUrl: cfg.Scan.AlertAPIURL,
+			Start:  cfg.LocalModeConfig.RuntimeLimits.StartCombiner,
+			End:    cfg.LocalModeConfig.RuntimeLimits.StopCombiner,
+
 		},
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	txStream, err := scanner.NewCombinerAlertStreamService(
-		ctx, alertFeed, msgClient, scanner.CombinerAlertStreamServiceConfig{},
+	combinerStream, err := scanner.NewCombinerAlertStreamService(
+		ctx, alertFeed, msgClient, scanner.CombinerAlertStreamServiceConfig{
+			Start: cfg.LocalModeConfig.RuntimeLimits.StartCombiner,
+			End:   cfg.LocalModeConfig.RuntimeLimits.StopCombiner,
+		},
 	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create the tx stream service: %v", err)
 	}
 
-	return txStream, alertFeed, nil
+	// subscribe to combiner feed so we can detect combiner stop and trigger exit
+	combinerErrCh := alertFeed.RegisterHandler(
+		func(evt *domain.AlertEvent) error {
+			return nil
+		},
+	)
+
+	// detect end time, wait for scanning to finish, trigger exit
+	go func() {
+		err := <-combinerErrCh
+		if err == nil {
+			return
+		}
+
+		if err == context.Canceled {
+			return
+		}
+
+		if err != feeds.ErrCombinerStopReached {
+			log.WithError(err).Panic("unexpected failure in block feed")
+		}
+		log.Info("combiner stop reached - triggering exit")
+
+		var delay time.Duration
+		if cfg.LocalModeConfig.Enable {
+			delay = time.Duration(cfg.LocalModeConfig.RuntimeLimits.StopTimeoutSeconds) * time.Second
+		}
+		services.TriggerExit(delay)
+	}()
+
+	return combinerStream, alertFeed, nil
 }
 
 func initTxAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.TxStreamService, ap *agentpool.AgentPool, msgClient clients.MessageClient) (*scanner.TxAnalyzerService, error) {
@@ -270,7 +306,6 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	// Start the main block feed so all transaction feeds can start consuming.
 	if !cfg.Scan.DisableAutostart {
 		blockFeed.Start()
-		alertFeed.Start()
 	}
 
 	svcs := []services.Service{

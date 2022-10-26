@@ -25,6 +25,8 @@ type CombinerAlertStreamService struct {
 }
 
 type CombinerAlertStreamServiceConfig struct {
+	Start uint64
+	End   uint64
 }
 
 func (t *CombinerAlertStreamService) registerMessageHandlers() {
@@ -51,13 +53,8 @@ func (t *CombinerAlertStreamService) handleAlert(evt *domain.AlertEvent) error {
 func (t *CombinerAlertStreamService) Start() error {
 	t.registerMessageHandlers()
 	go func() {
-		if err := t.alertFeed.ForEachAlert(t.handleAlert); err != nil {
-			logger := log.WithError(err)
-			if err != context.Canceled {
-				logger.Panic("alert feed error")
-			}
-			logger.Info("alert feed stopped")
-		}
+		t.alertFeed.RegisterHandler(t.handleAlert)
+		t.alertFeed.StartRange(t.cfg.Start, t.cfg.End, 0)
 	}()
 	return nil
 }
