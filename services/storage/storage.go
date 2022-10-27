@@ -142,7 +142,7 @@ func (storage *Storage) Get(ctx context.Context, req *protocol.GetRequest) (*pro
 		_, err = storage.ipfs.FilesStat(ctx, contentRef)
 	}
 	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "content not found: %s")
+		return nil, status.Errorf(codes.NotFound, "content not found: %s", contentRef)
 	}
 
 	var r io.ReadCloser

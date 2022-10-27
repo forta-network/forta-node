@@ -164,9 +164,7 @@ func (sup *SupervisorService) start() error {
 		return fmt.Errorf("failed to attach supervisor container to nats network: %v", err)
 	}
 
-	if err := prepareIpfsDir(); err != nil {
-		return err
-	}
+	prepareIpfsDir()
 	ipfsContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerIpfsContainerName,
 		Image: "ipfs/kubo:v0.16.0",

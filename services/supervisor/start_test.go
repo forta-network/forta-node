@@ -115,6 +115,13 @@ func (s *Suite) SetupTest() {
 	s.dockerClient.EXPECT().StartContainer(
 		service.ctx, (configMatcher)(
 			clients.DockerContainerConfig{
+				Name: config.DockerStorageContainerName,
+			},
+		),
+	).Return(&clients.DockerContainer{}, nil)
+	s.dockerClient.EXPECT().StartContainer(
+		service.ctx, (configMatcher)(
+			clients.DockerContainerConfig{
 				Name: config.DockerNatsContainerName,
 			},
 		),
