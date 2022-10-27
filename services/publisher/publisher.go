@@ -299,7 +299,6 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 		return false, fmt.Errorf("failed to send the alert tx: %v", err)
 	}
 
-	//TODO: after receipts are returned, make it non-optional
 	if resp.SignedReceipt != nil {
 		// store off receipt id
 		if err := pub.lastReceiptStore.Put(resp.ReceiptID); err != nil {
@@ -340,6 +339,10 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 }
 
 func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, bool) {
+	if pub.cfg.PublisherConfig.AlwaysPublish {
+		return "", false
+	}
+
 	if batch.AlertCount > 0 {
 		return "", false
 	}

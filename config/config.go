@@ -67,10 +67,11 @@ type BatchConfig struct {
 }
 
 type PublisherConfig struct {
-	SkipPublish bool        `yaml:"skipPublish" json:"skipPublish" default:"false"`
-	APIURL      string      `yaml:"apiUrl" json:"apiUrl" default:"https://alerts.forta.network" validate:"url"`
-	IPFS        IPFSConfig  `yaml:"ipfs" json:"ipfs" validate:"required_unless=SkipPublish true"`
-	Batch       BatchConfig `yaml:"batch" json:"batch"`
+	SkipPublish   bool        `yaml:"skipPublish" json:"skipPublish" default:"false"`
+	AlwaysPublish bool        `yaml:"alwaysPublish" json:"alwaysPublish" default:"false"`
+	APIURL        string      `yaml:"apiUrl" json:"apiUrl" default:"https://alerts.forta.network" validate:"url"`
+	IPFS          IPFSConfig  `yaml:"ipfs" json:"ipfs" validate:"required_unless=SkipPublish true"`
+	Batch         BatchConfig `yaml:"batch" json:"batch"`
 }
 
 type ResourcesConfig struct {

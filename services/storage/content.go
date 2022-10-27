@@ -17,10 +17,10 @@ const (
 func ContentLimit(kind string) int {
 	switch kind {
 	case KindBatchReceipt:
-		return 10000
+		return BloomLimit
 
 	default:
-		return 10000
+		return BloomLimit
 	}
 }
 

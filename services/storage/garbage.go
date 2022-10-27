@@ -10,7 +10,7 @@ import (
 )
 
 func (storage *Storage) collectGarbage(ctx context.Context) {
-	ticker := time.NewTicker(time.Minute * 5)
+	ticker := time.NewTicker(time.Minute * 30)
 	for {
 		select {
 		case <-ctx.Done():

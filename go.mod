@@ -22,6 +22,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/ipfs/go-cid v0.3.2
 	github.com/ipfs/go-ipfs-api v0.3.0
+	github.com/libp2p/go-libp2p v0.23.2
 	github.com/nats-io/nats-server/v2 v2.3.2 // indirect
 	github.com/nats-io/nats.go v1.11.1-0.20210623165838-4b75fc59ae30
 	github.com/opencontainers/go-digest v1.0.0 // indirect

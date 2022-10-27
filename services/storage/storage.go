@@ -38,6 +38,7 @@ type Storage struct {
 // New creates a new storage service.
 func NewStorage(ctx context.Context, ipfsURL, routerURL string) (*Storage, error) {
 	storage := &Storage{
+		ctx:    ctx,
 		ipfs:   ipfsclient.New(ipfsURL),
 		router: ipfsrouter.NewClient(routerURL),
 		server: grpc.NewServer(),
@@ -61,6 +62,7 @@ func (storage *Storage) Start() error {
 		log.WithError(err).Info("storage server stopped")
 	}()
 
+	go storage.provideContent(storage.ctx)
 	go storage.collectGarbage(storage.ctx)
 
 	return nil
@@ -99,6 +101,7 @@ func (storage *Storage) Put(ctx context.Context, req *protocol.PutRequest) (*pro
 	// }
 
 	contentPath := NewContentPath(req.User, req.Kind)
+	storage.ipfs.FilesMkdir(ctx, ContentDir(req.User, req.Kind), ipfsapi.FilesMkdir.Parents(true))
 	contentID, err := storage.ipfs.AddToFiles(bytes.NewBuffer(req.Bytes), contentPath)
 	if err != nil {
 		return nil, err
@@ -243,8 +246,13 @@ func (storage *Storage) getUsers(ctx context.Context) ([]*userInfo, error) {
 		}
 		var contentKinds []string
 		for _, kind := range contentList {
-			contentKinds = append(contentKinds, strings.Trim(kind.Name, "/"))
+			contentKind := strings.Trim(kind.Name, "/")
+			if contentKind == "bloom" {
+				continue
+			}
+			contentKinds = append(contentKinds, contentKind)
 		}
+		log.WithField("user", userName).WithField("kinds", strings.Join(contentKinds, ",")).Debug("detected kinds")
 		users = append(users, &userInfo{
 			User:         userName,
 			ContentKinds: contentKinds,
@@ -272,9 +280,8 @@ func (storage *Storage) getContentInDir(ctx context.Context, user, kind string) 
 	)
 	oldCount := len(list) - limit
 	if oldCount > 0 {
-		cut := len(list) - limit
-		list = list[cut:]
-		oldEntries = list[:cut]
+		newestEntries = list[oldCount:]
+		oldEntries = list[:oldCount]
 	}
 	return newestEntries, oldEntries, nil
 }

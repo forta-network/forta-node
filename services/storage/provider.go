@@ -30,7 +30,7 @@ func (storage *Storage) provideContent(ctx context.Context) {
 			if err := storage.doProvideContent(context.Background()); err != nil {
 				log.WithError(err).Error("error while providing content")
 			} else {
-				log.Info("successfully provided content refs")
+				log.Info("finished providing content refs")
 			}
 		}
 	}
@@ -52,6 +52,8 @@ func (storage *Storage) doProvideContent(ctx context.Context) error {
 }
 
 func (storage *Storage) prepareAndSendBloom(ctx context.Context, user *userInfo) error {
+	logger := log.WithField("user", user.User)
+
 	var allEntries []*ipfsapi.MfsLsEntry
 	// prioritize some content over other
 	for _, kind := range []string{
@@ -72,12 +74,14 @@ func (storage *Storage) prepareAndSendBloom(ctx context.Context, user *userInfo)
 		}
 	}
 	if len(allEntries) == 0 {
-		log.WithField("user", user.User).Info("no entries found - skipping provide call")
+		logger.Info("no entries found - skipping provide call")
 		return nil
 	}
 
 	filter := boom.NewBloomFilter(provideContentLimit, provideBloomFalsePositiveRate)
+	logger.WithField("count", len(allEntries)).Debug("adding entries to bloom filter")
 	for _, entry := range allEntries {
+		logger.WithField("cid", entry.Hash).Trace("adding to bloom filter")
 		filter.Add([]byte(entry.Hash))
 	}
 	var buf bytes.Buffer
@@ -91,7 +95,7 @@ func (storage *Storage) prepareAndSendBloom(ctx context.Context, user *userInfo)
 	if err == nil {
 		prevBloom, _ := io.ReadAll(r)
 		if string(prevBloom) == bloomEncoded {
-			log.WithField("user", user.User).Info("bloom filter remains the same - skipping provide call")
+			logger.Info("bloom filter remains the same - skipping provide call")
 			return nil
 		}
 	}

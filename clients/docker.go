@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path"
 	"strings"
 	"time"
 
@@ -240,13 +241,21 @@ func withTcp(port string) string {
 	return fmt.Sprintf("%s/tcp", port)
 }
 
-// copyFile copies content bytes into container at /filename
-func copyFile(cli *client.Client, ctx context.Context, filename string, content []byte, containerId string) error {
+// copyFile copies content bytes into container at given file path.
+func copyFile(cli *client.Client, ctx context.Context, filePath string, content []byte, containerId string) error {
+	if len(filePath) == 0 {
+		return errors.New("zero length file path")
+	}
+	if filePath[0] != '/' {
+		filePath = "/" + filePath
+	}
+	dir, file := path.Split(filePath)
+
 	var buf bytes.Buffer
 	tw := tar.NewWriter(&buf)
 	err := tw.WriteHeader(&tar.Header{
-		Name: filename,
-		Mode: 0400,
+		Name: file,
+		Mode: 0777,
 		Size: int64(len(content)),
 	})
 	if err != nil {
@@ -260,7 +269,7 @@ func copyFile(cli *client.Client, ctx context.Context, filename string, content 
 	if err != nil {
 		return err
 	}
-	return cli.CopyToContainer(ctx, containerId, "/", &buf, types.CopyToContainerOptions{})
+	return cli.CopyToContainer(ctx, containerId, dir, &buf, types.CopyToContainerOptions{})
 }
 
 // GetContainers returns all of the containers.
