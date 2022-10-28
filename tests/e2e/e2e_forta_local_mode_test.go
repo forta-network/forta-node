@@ -111,11 +111,9 @@ const localModeDir = ".forta-local"
 
 func (s *Suite) TestLocalModeWithWebhookClient() {
 	webhookURL := "http://localhost:9090/batch/webhook"
-	s.runLocalMode(
-		webhookURL, "", func() ([]byte, bool) {
-			return s.alertServer.GetAlert("webhook")
-		},
-	)
+	s.runLocalMode(webhookURL, "", func() ([]byte, bool) {
+		return s.alertServer.GetAlert("webhook")
+	})
 }
 
 func (s *Suite) TestLocalModeWithWebhookLogger() {
@@ -123,13 +121,11 @@ func (s *Suite) TestLocalModeWithWebhookLogger() {
 	logFileName := "test-log-file"
 	logFilePath := path.Join(localModeDir, "logs", logFileName)
 	_ = os.RemoveAll(logFilePath)
-	s.runLocalMode(
-		webhookURL, logFileName, func() ([]byte, bool) {
-			b, err := ioutil.ReadFile(logFilePath)
-			b = []byte(strings.TrimSpace(string(b)))
-			return b, err == nil && len(b) > 0
-		},
-	)
+	s.runLocalMode(webhookURL, logFileName, func() ([]byte, bool) {
+		b, err := ioutil.ReadFile(logFilePath)
+		b = []byte(strings.TrimSpace(string(b)))
+		return b, err == nil && len(b) > 0
+	})
 }
 
 func (s *Suite) TestLocalModeAlertHandlingWithWebhookLogger() {
@@ -177,12 +173,10 @@ func (s *Suite) runLocalMode(webhookURL, logFileName string, readAlertsFunc func
 	s.expectUpIn(smallTimeout, "forta-agent")
 
 	var b []byte
-	s.expectIn(
-		smallTimeout, func() (ok bool) {
-			b, ok = readAlertsFunc()
-			return
-		},
-	)
+	s.expectIn(smallTimeout, func() (ok bool) {
+		b, ok = readAlertsFunc()
+		return
+	})
 	var webhookAlerts models.AlertBatch
 	s.r.NoError(json.Unmarshal(b, &webhookAlerts))
 	s.r.Len(webhookAlerts.Alerts, 2)

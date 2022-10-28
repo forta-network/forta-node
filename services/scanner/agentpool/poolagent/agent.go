@@ -128,15 +128,13 @@ func isCriticalErr(err error) bool {
 
 // LogStatus logs the status of the agent.
 func (agent *Agent) LogStatus() {
-	log.WithFields(
-		log.Fields{
-			"agent":       agent.config.ID,
-			"blockBuffer": len(agent.blockRequests),
-			"txBuffer":    len(agent.txRequests),
-			"ready":       agent.IsReady(),
-			"closed":      agent.IsClosed(),
-		},
-	).Debug("agent status")
+	log.WithFields(log.Fields{
+		"agent":       agent.config.ID,
+		"blockBuffer": len(agent.blockRequests),
+		"txBuffer":    len(agent.txRequests),
+		"ready":       agent.IsReady(),
+		"closed":      agent.IsClosed(),
+	}).Debug("agent status")
 }
 
 // TxBufferIsFull tells if an agent input buffer is full.
@@ -166,24 +164,20 @@ func (agent *Agent) CombinationRequestCh() chan<- *CombinationRequest {
 
 // Close implements io.Closer.
 func (agent *Agent) Close() error {
-	agent.closeOnce.Do(
-		func() {
-			close(agent.closed) // never close this anywhere else
-			if agent.client != nil {
-				agent.client.Close()
-			}
-		},
-	)
+	agent.closeOnce.Do(func() {
+		close(agent.closed) // never close this anywhere else
+		if agent.client != nil {
+			agent.client.Close()
+		}
+	})
 	return nil
 }
 
 // SetReady sets the agent ready.
 func (agent *Agent) SetReady() {
-	agent.readyOnce.Do(
-		func() {
-			close(agent.ready) // never close this anywhere else
-		},
-	)
+	agent.readyOnce.Do(func() {
+		close(agent.ready) // never close this anywhere else
+	})
 }
 
 // Ready returns the ready channel.
@@ -234,11 +228,9 @@ func (agent *Agent) StartProcessing() {
 func (agent *Agent) initialize() {
 	defer agent.initWait.Done()
 
-	logger := log.WithFields(
-		log.Fields{
-			"agent": agent.config.ID,
-		},
-	)
+	logger := log.WithFields(log.Fields{
+		"agent": agent.config.ID,
+	})
 
 	ctx, cancel := context.WithTimeout(agent.ctx, DefaultAgentInitializeTimeout)
 	defer cancel()
@@ -269,13 +261,11 @@ func (agent *Agent) WaitInitialization() {
 }
 
 func (agent *Agent) processTransactions() {
-	lg := log.WithFields(
-		log.Fields{
-			"agent":     agent.config.ID,
-			"component": "agent",
-			"evaluate":  "transaction",
-		},
-	)
+	lg := log.WithFields(log.Fields{
+		"agent":     agent.config.ID,
+		"component": "agent",
+		"evaluate":  "transaction",
+	})
 
 	agent.initWait.Wait()
 
@@ -327,31 +317,27 @@ func (agent *Agent) processTransactions() {
 			lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down agent")
 			agent.Close()
 			agent.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{agent.config})
-			agent.msgClient.PublishProto(
-				messaging.SubjectMetricAgent, &protocol.AgentMetricList{
-					Metrics: []*protocol.AgentMetric{
-						{
-							AgentId:   agent.config.ID,
-							Timestamp: time.Now().Format(time.RFC3339),
-							Name:      metrics.MetricStop,
-							Value:     1,
-						},
+			agent.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{
+				Metrics: []*protocol.AgentMetric{
+					{
+						AgentId:   agent.config.ID,
+						Timestamp: time.Now().Format(time.RFC3339),
+						Name:      metrics.MetricStop,
+						Value:     1,
 					},
 				},
-			)
+			})
 			return
 		}
 	}
 }
 
 func (agent *Agent) processBlocks() {
-	lg := log.WithFields(
-		log.Fields{
-			"agent":     agent.config.ID,
-			"component": "agent",
-			"evaluate":  "block",
-		},
-	)
+	lg := log.WithFields(log.Fields{
+		"agent":     agent.config.ID,
+		"component": "agent",
+		"evaluate":  "block",
+	})
 
 	agent.initWait.Wait()
 

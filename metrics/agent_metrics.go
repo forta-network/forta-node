@@ -41,11 +41,9 @@ const (
 
 func SendAgentMetrics(client clients.MessageClient, ms []*protocol.AgentMetric) {
 	if len(ms) > 0 {
-		client.PublishProto(
-			messaging.SubjectMetricAgent, &protocol.AgentMetricList{
-				Metrics: ms,
-			},
-		)
+		client.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{
+			Metrics: ms,
+		})
 	}
 }
 

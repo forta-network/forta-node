@@ -74,26 +74,24 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 		}
 	}
 
-	blockFeed, err := feeds.NewBlockFeed(
-		ctx, ethClient, traceClient, feeds.BlockFeedConfig{
-			ChainID:             chainID,
-			Tracing:             cfg.Trace.Enabled,
-			RateLimit:           rateLimit,
-			SkipBlocksOlderThan: maxAgePtr,
-			Offset:              settings.GetBlockOffset(cfg.ChainID),
-			Start:               startBlock,
-			End:                 stopBlock,
-		},
+	blockFeed, err := feeds.NewBlockFeed(ctx, ethClient, traceClient, feeds.BlockFeedConfig{
+		ChainID:             chainID,
+		Tracing:             cfg.Trace.Enabled,
+		RateLimit:           rateLimit,
+		SkipBlocksOlderThan: maxAgePtr,
+		Offset:              settings.GetBlockOffset(cfg.ChainID),
+		Start:               startBlock,
+		End:                 stopBlock,
+	},
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// subscribe to block feed so we can detect block end and trigger exit
-	blockErrCh := blockFeed.Subscribe(
-		func(evt *domain.BlockEvent) error {
-			return nil
-		},
+	blockErrCh := blockFeed.Subscribe(func(evt *domain.BlockEvent) error {
+		return nil
+	},
 	)
 	// detect end block, wait for scanning to finish, trigger exit
 	go func() {
@@ -117,12 +115,11 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 		services.TriggerExit(delay)
 	}()
 
-	txStream, err := scanner.NewTxStreamService(
-		ctx, ethClient, blockFeed, scanner.TxStreamServiceConfig{
-			JsonRpcConfig:       cfg.Scan.JsonRpc,
-			TraceJsonRpcConfig:  cfg.Trace.JsonRpc,
-			SkipBlocksOlderThan: maxAgePtr,
-		},
+	txStream, err := scanner.NewTxStreamService(ctx, ethClient, blockFeed, scanner.TxStreamServiceConfig{
+		JsonRpcConfig:       cfg.Scan.JsonRpc,
+		TraceJsonRpcConfig:  cfg.Trace.JsonRpc,
+		SkipBlocksOlderThan: maxAgePtr,
+	},
 	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create the tx stream service: %v", err)
@@ -187,24 +184,22 @@ func initCombinationStream(ctx context.Context, msgClient *messaging.Client, cfg
 }
 
 func initTxAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.TxStreamService, ap *agentpool.AgentPool, msgClient clients.MessageClient) (*scanner.TxAnalyzerService, error) {
-	return scanner.NewTxAnalyzerService(
-		ctx, scanner.TxAnalyzerServiceConfig{
-			TxChannel:   stream.ReadOnlyTxStream(),
-			AlertSender: as,
-			AgentPool:   ap,
-			MsgClient:   msgClient,
-		},
+	return scanner.NewTxAnalyzerService(ctx, scanner.TxAnalyzerServiceConfig{
+		TxChannel:   stream.ReadOnlyTxStream(),
+		AlertSender: as,
+		AgentPool:   ap,
+		MsgClient:   msgClient,
+	},
 	)
 }
 
 func initBlockAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.TxStreamService, ap *agentpool.AgentPool, msgClient clients.MessageClient) (*scanner.BlockAnalyzerService, error) {
-	return scanner.NewBlockAnalyzerService(
-		ctx, scanner.BlockAnalyzerServiceConfig{
-			BlockChannel: stream.ReadOnlyBlockStream(),
-			AlertSender:  as,
-			AgentPool:    ap,
-			MsgClient:    msgClient,
-		},
+	return scanner.NewBlockAnalyzerService(ctx, scanner.BlockAnalyzerServiceConfig{
+		BlockChannel: stream.ReadOnlyBlockStream(),
+		AlertSender:  as,
+		AgentPool:    ap,
+		MsgClient:    msgClient,
+	},
 	)
 }
 
@@ -220,10 +215,9 @@ func initCombinerAlertAnalyzer(ctx context.Context, cfg config.Config, as client
 }
 
 func initAlertSender(ctx context.Context, key *keystore.Key, pubClient clients.PublishClient) (clients.AlertSender, error) {
-	return clients.NewAlertSender(
-		ctx, pubClient, clients.AlertSenderConfig{
-			Key: key,
-		},
+	return clients.NewAlertSender(ctx, pubClient, clients.AlertSenderConfig{
+		Key: key,
+	},
 	)
 }
 
@@ -307,13 +301,11 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	}
 
 	svcs := []services.Service{
-		health.NewService(
-			ctx, "", healthutils.DefaultHealthServerErrHandler, health.CheckerFrom(
-				summarizeReports,
-				ethClient, traceClient, combinationFeed, blockFeed, txStream, txAnalyzer, blockAnalyzer, combinationAnalyzer, agentPool, registryService,
-				publisherSvc,
-			),
-		),
+		health.NewService(ctx, "", healthutils.DefaultHealthServerErrHandler, health.CheckerFrom(
+			summarizeReports,
+			ethClient, traceClient, combinationFeed, blockFeed, txStream, txAnalyzer, blockAnalyzer, combinationAnalyzer, agentPool, registryService,
+			publisherSvc,
+		)),
 		txStream,
 		txAnalyzer,
 		blockAnalyzer,

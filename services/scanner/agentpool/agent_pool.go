@@ -126,12 +126,10 @@ func (ap *AgentPool) discardAgent(discarded *poolagent.Agent) {
 // should be processing the block.
 func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 	startTime := time.Now()
-	lg := log.WithFields(
-		log.Fields{
-			"tx":        req.Event.Transaction.Hash,
-			"component": "pool",
-		},
-	)
+	lg := log.WithFields(log.Fields{
+		"tx":        req.Event.Transaction.Hash,
+		"component": "pool",
+	})
 	lg.Debug("SendEvaluateTxRequest")
 
 	if ap.botWaitGroup != nil {
@@ -152,12 +150,10 @@ func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 		if !agent.IsReady() || !agent.ShouldProcessBlock(req.Event.Block.BlockNumber) {
 			continue
 		}
-		lg.WithFields(
-			log.Fields{
-				"agent":    agent.Config().ID,
-				"duration": time.Since(startTime),
-			},
-		).Debug("sending tx request to evalTxCh")
+		lg.WithFields(log.Fields{
+			"agent":    agent.Config().ID,
+			"duration": time.Since(startTime),
+		}).Debug("sending tx request to evalTxCh")
 
 		// unblock req send and discard agent if agent is closed
 
@@ -172,19 +168,16 @@ func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 			lg.WithField("agent", agent.Config().ID).Debug("agent tx request buffer is full - skipping")
 			metricsList = append(metricsList, metrics.CreateAgentMetric(agent.Config().ID, metrics.MetricTxDrop, 1))
 		}
-		lg.WithFields(
-			log.Fields{
-				"agent":    agent.Config().ID,
-				"duration": time.Since(startTime),
-			},
-		).Debug("sent tx request to evalTxCh")
+		lg.WithFields(log.Fields{
+			"agent":    agent.Config().ID,
+			"duration": time.Since(startTime),
+		}).Debug("sent tx request to evalTxCh")
 	}
 	metrics.SendAgentMetrics(ap.msgClient, metricsList)
 
-	lg.WithFields(
-		log.Fields{
-			"duration": time.Since(startTime),
-		},
+	lg.WithFields(log.Fields{
+		"duration": time.Since(startTime),
+	},
 	).Debug("Finished SendEvaluateTxRequest")
 }
 
@@ -197,12 +190,10 @@ func (ap *AgentPool) TxResults() <-chan *scanner.TxResult {
 // should be processing the block.
 func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest) {
 	startTime := time.Now()
-	lg := log.WithFields(
-		log.Fields{
-			"block":     req.Event.BlockNumber,
-			"component": "pool",
-		},
-	)
+	lg := log.WithFields(log.Fields{
+		"block":     req.Event.BlockNumber,
+		"component": "pool",
+	})
 	lg.Debug("SendEvaluateBlockRequest")
 
 	if ap.botWaitGroup != nil {
@@ -253,18 +244,14 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 	}
 
 	blockNumber, _ := hexutil.DecodeUint64(req.Event.BlockNumber)
-	ap.msgClient.Publish(
-		messaging.SubjectScannerBlock, &messaging.ScannerPayload{
-			LatestBlockInput: blockNumber,
-		},
-	)
+	ap.msgClient.Publish(messaging.SubjectScannerBlock, &messaging.ScannerPayload{
+		LatestBlockInput: blockNumber,
+	})
 
 	metrics.SendAgentMetrics(ap.msgClient, metricsList)
-	lg.WithFields(
-		log.Fields{
-			"duration": time.Since(startTime),
-		},
-	).Debug("Finished SendEvaluateBlockRequest")
+	lg.WithFields(log.Fields{
+		"duration": time.Since(startTime),
+	}).Debug("Finished SendEvaluateBlockRequest")
 }
 
 // SendEvaluateCombinationRequest sends the request to all the active agents which
@@ -303,12 +290,10 @@ func (ap *AgentPool) SendEvaluateCombinationRequest(req *protocol.EvaluateCombin
 			continue
 		}
 
-		lg.WithFields(
-			log.Fields{
-				"agent":    agent.Config().ID,
-				"duration": time.Since(startTime),
-			},
-		).Debug("sending alert request to evalAlertCh")
+		lg.WithFields(log.Fields{
+			"agent":    agent.Config().ID,
+			"duration": time.Since(startTime),
+		}).Debug("sending alert request to evalAlertCh")
 
 		// unblock req send if agent is closed
 		select {
@@ -322,21 +307,17 @@ func (ap *AgentPool) SendEvaluateCombinationRequest(req *protocol.EvaluateCombin
 			lg.WithField("agent", agent.Config().ID).Warn("agent alert request buffer is full - skipping")
 			metricsList = append(metricsList, metrics.CreateAgentMetric(agent.Config().ID, metrics.MetricBlockDrop, 1))
 		}
-		lg.WithFields(
-			log.Fields{
-				"agent":    agent.Config().ID,
-				"duration": time.Since(startTime),
-			},
-		).Debug("sent alert request to evalAlertCh")
+		lg.WithFields(log.Fields{
+			"agent":    agent.Config().ID,
+			"duration": time.Since(startTime),
+		}).Debug("sent alert request to evalAlertCh")
 	}
 
 	ap.msgClient.Publish(messaging.SubjectScannerAlert, &messaging.ScannerPayload{})
 	metrics.SendAgentMetrics(ap.msgClient, metricsList)
-	lg.WithFields(
-		log.Fields{
-			"duration": time.Since(startTime),
-		},
-	).Debug("Finished SendEvaluateCombinationRequest")
+	lg.WithFields(log.Fields{
+		"duration": time.Since(startTime),
+	}).Debug("Finished SendEvaluateCombinationRequest")
 }
 
 // CombinationAlertResults returns the receive-only alert results channel.

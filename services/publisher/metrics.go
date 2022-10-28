@@ -137,11 +137,9 @@ func (ama *AgentMetricsAggregator) TryFlush() ([]*protocol.AgentMetrics, bool) {
 type allAgentMetrics []*metricsBucket
 
 func (allMetrics allAgentMetrics) Fix() {
-	sort.Slice(
-		allMetrics, func(i, j int) bool {
-			return allMetrics[i].Time.Before(allMetrics[j].Time)
-		},
-	)
+	sort.Slice(allMetrics, func(i, j int) bool {
+		return allMetrics[i].Time.Before(allMetrics[j].Time)
+	})
 	allMetrics.PrepareMetrics()
 }
 
@@ -189,11 +187,9 @@ func calcP95(data []uint32) float64 {
 
 	k := len(data)
 	k95, _ := decimal.NewFromInt32(int32(k)).Mul(decimal.NewFromFloat32(0.95)).Floor().BigFloat().Int64()
-	sort.Slice(
-		data, func(i, j int) bool {
-			return data[i] < data[j]
-		},
-	)
+	sort.Slice(data, func(i, j int) bool {
+		return data[i] < data[j]
+	})
 	return float64(data[k95-1])
 }
 
