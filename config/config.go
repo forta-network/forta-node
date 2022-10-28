@@ -135,6 +135,10 @@ type InspectionConfig struct {
 	InspectAtStartup  bool `yaml:"inspectAtStartup" json:"inspectAtStartup" default:"true"`
 }
 
+type CombinerConfig struct {
+	AlertAPIURL string `yaml:"apiUrl" json:"apiUrl" default:"https://api.forta.network/graphql" validate:"url"`
+}
+
 type Config struct {
 	// runtime values
 
@@ -161,6 +165,7 @@ type Config struct {
 	AgentLogsConfig  AgentLogsConfig    `yaml:"agentLogs" json:"agentLogs"`
 	LocalModeConfig  LocalModeConfig    `yaml:"localMode" json:"localMode"`
 	InspectionConfig InspectionConfig   `yaml:"inspection" json:"inspection"`
+	CombinerConfig   CombinerConfig     `yaml:"combinerConfig" json:"combinerConfig"`
 }
 
 func (cfg *Config) ConfigFilePath() string {

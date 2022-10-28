@@ -45,8 +45,8 @@ func (aas *CombinerAlertAnalyzerService) publishMetrics(result *CombinationAlert
 func (aas *CombinerAlertAnalyzerService) findingToAlert(result *CombinationAlertResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
 	alertID := alerthash.ForCombinationAlert(
 		&alerthash.Inputs{
-			Alert:   result.Request.Event,
-			Finding: f,
+			AlertEvent: result.Request.Event,
+			Finding:    f,
 			BotInfo: alerthash.BotInfo{
 				BotImage: result.AgentConfig.Image,
 				BotID:    result.AgentConfig.ID,
@@ -152,7 +152,7 @@ func (aas *CombinerAlertAnalyzerService) Stop() error {
 }
 
 func (aas *CombinerAlertAnalyzerService) Name() string {
-	return "alert-analyzer"
+	return "combiner-alert-analyzer"
 }
 
 // Health implements the health.Reporter interface.

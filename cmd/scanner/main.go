@@ -131,14 +131,12 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 	return txStream, blockFeed, nil
 }
 
-func initAlertStream(ctx context.Context, msgClient *messaging.Client, cfg config.Config) (*scanner.CombinerAlertStreamService, feeds.AlertFeed, error) {
-	alertFeed, err := feeds.NewCombinerFeed(
+func initCombinationStream(ctx context.Context, msgClient *messaging.Client, cfg config.Config) (*scanner.CombinerAlertStreamService, feeds.AlertFeed, error) {
+	combinerFeed, err := feeds.NewCombinerFeed(
 		ctx, feeds.CombinerFeedConfig{
-			Offset: settings.GetBlockOffset(cfg.ChainID),
-			APIUrl: cfg.Scan.AlertAPIURL,
+			APIUrl: cfg.CombinerConfig.AlertAPIURL,
 			Start:  cfg.LocalModeConfig.RuntimeLimits.StartCombiner,
 			End:    cfg.LocalModeConfig.RuntimeLimits.StopCombiner,
-
 		},
 	)
 	if err != nil {
@@ -146,7 +144,7 @@ func initAlertStream(ctx context.Context, msgClient *messaging.Client, cfg confi
 	}
 
 	combinerStream, err := scanner.NewCombinerAlertStreamService(
-		ctx, alertFeed, msgClient, scanner.CombinerAlertStreamServiceConfig{
+		ctx, combinerFeed, msgClient, scanner.CombinerAlertStreamServiceConfig{
 			Start: cfg.LocalModeConfig.RuntimeLimits.StartCombiner,
 			End:   cfg.LocalModeConfig.RuntimeLimits.StopCombiner,
 		},
@@ -156,7 +154,7 @@ func initAlertStream(ctx context.Context, msgClient *messaging.Client, cfg confi
 	}
 
 	// subscribe to combiner feed so we can detect combiner stop and trigger exit
-	combinerErrCh := alertFeed.RegisterHandler(
+	combinerErrCh := combinerFeed.RegisterHandler(
 		func(evt *domain.AlertEvent) error {
 			return nil
 		},
@@ -185,7 +183,7 @@ func initAlertStream(ctx context.Context, msgClient *messaging.Client, cfg confi
 		services.TriggerExit(delay)
 	}()
 
-	return combinerStream, alertFeed, nil
+	return combinerStream, combinerFeed, nil
 }
 
 func initTxAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.TxStreamService, ap *agentpool.AgentPool, msgClient clients.MessageClient) (*scanner.TxAnalyzerService, error) {
@@ -272,7 +270,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 
-	alertStream, alertFeed, err := initAlertStream(ctx, msgClient, cfg)
+	combinationStream, combinationFeed, err := initCombinationStream(ctx, msgClient, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -298,7 +296,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 
-	alertAnalyzer, err := initCombinerAlertAnalyzer(ctx, cfg, as, alertStream, agentPool, msgClient)
+	combinationAnalyzer, err := initCombinerAlertAnalyzer(ctx, cfg, as, combinationStream, agentPool, msgClient)
 	if err != nil {
 		return nil, err
 	}
@@ -312,15 +310,15 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		health.NewService(
 			ctx, "", healthutils.DefaultHealthServerErrHandler, health.CheckerFrom(
 				summarizeReports,
-				ethClient, traceClient, alertFeed, blockFeed, txStream, txAnalyzer, blockAnalyzer, alertAnalyzer, agentPool, registryService,
+				ethClient, traceClient, combinationFeed, blockFeed, txStream, txAnalyzer, blockAnalyzer, combinationAnalyzer, agentPool, registryService,
 				publisherSvc,
 			),
 		),
 		txStream,
 		txAnalyzer,
 		blockAnalyzer,
-		alertStream,
-		alertAnalyzer,
+		combinationStream,
+		combinationAnalyzer,
 		scanner.NewScannerAPI(ctx, blockFeed),
 		scanner.NewTxLogger(ctx),
 		publisherSvc,
