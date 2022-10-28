@@ -177,8 +177,7 @@ func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 
 	lg.WithFields(log.Fields{
 		"duration": time.Since(startTime),
-	},
-	).Debug("Finished SendEvaluateTxRequest")
+	}).Debug("Finished SendEvaluateTxRequest")
 }
 
 // TxResults returns the receive-only tx results channel.
@@ -216,12 +215,10 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 			continue
 		}
 
-		lg.WithFields(
-			log.Fields{
-				"agent":    agent.Config().ID,
-				"duration": time.Since(startTime),
-			},
-		).Debug("sending block request to evalBlockCh")
+		lg.WithFields(log.Fields{
+			"agent":    agent.Config().ID,
+			"duration": time.Since(startTime),
+		}).Debug("sending block request to evalBlockCh")
 
 		// unblock req send if agent is closed
 		select {
@@ -258,11 +255,9 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 // should be processing the alert.
 func (ap *AgentPool) SendEvaluateCombinationRequest(req *protocol.EvaluateCombinationRequest) {
 	startTime := time.Now()
-	lg := log.WithFields(
-		log.Fields{
-			"component": "pool",
-		},
-	)
+	lg := log.WithFields(log.Fields{
+		"component": "pool",
+	})
 	lg.Debug("SendEvaluateCombinationRequest")
 
 	if req.Event.Alert == nil || req.Event.Alert.Source == nil || req.Event.Alert.Source.Bot == nil {

@@ -234,12 +234,11 @@ func (agent *Agent) initialize() {
 
 	ctx, cancel := context.WithTimeout(agent.ctx, DefaultAgentInitializeTimeout)
 	defer cancel()
-	initializeResponse, err := agent.client.Initialize(
-		ctx, &protocol.InitializeRequest{
-			AgentId:   agent.config.ID,
-			ProxyHost: config.DockerJSONRPCProxyContainerName,
-		},
-	)
+	initializeResponse, err := agent.client.Initialize(ctx, &protocol.InitializeRequest{
+		AgentId:   agent.config.ID,
+		ProxyHost: config.DockerJSONRPCProxyContainerName,
+	})
+
 	if status.Code(err) == codes.Unimplemented {
 		logger.WithError(err).Info("initialize() method not implemented in bot - safe to ignore")
 		return

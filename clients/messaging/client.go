@@ -114,8 +114,7 @@ func (client *Client) Subscribe(subject string, handler interface{}) {
 			}
 			logger.Errorf("failed to handle msg: %v", err)
 		}
-	},
-	)
+	})
 	if err != nil {
 		logger.Panicf("failed to subscribe: %v", err)
 	}

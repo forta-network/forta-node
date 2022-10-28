@@ -29,4 +29,4 @@ ALERT_AGENT_IMAGE_REF=$("$SCRIPTS_DIR/docker-push.sh" "$REGISTRY" "$ALERT_AGENT_
 IMAGE_REFS_DIR="$TEST_DIR/.imagerefs"
 mkdir -p "$IMAGE_REFS_DIR"
 echo "$AGENT_IMAGE_REF" > "$IMAGE_REFS_DIR/agent"
-echo "$ALERT_AGENT_IMAGE_REF" > "$IMAGE_REFS_DIR/agent"
+echo "$ALERT_AGENT_IMAGE_REF" > "$IMAGE_REFS_DIR/combinerbot"

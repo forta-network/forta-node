@@ -82,8 +82,7 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 		Offset:              settings.GetBlockOffset(cfg.ChainID),
 		Start:               startBlock,
 		End:                 stopBlock,
-	},
-	)
+	})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -91,8 +90,7 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 	// subscribe to block feed so we can detect block end and trigger exit
 	blockErrCh := blockFeed.Subscribe(func(evt *domain.BlockEvent) error {
 		return nil
-	},
-	)
+	})
 	// detect end block, wait for scanning to finish, trigger exit
 	go func() {
 		err := <-blockErrCh
@@ -119,8 +117,7 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 		JsonRpcConfig:       cfg.Scan.JsonRpc,
 		TraceJsonRpcConfig:  cfg.Trace.JsonRpc,
 		SkipBlocksOlderThan: maxAgePtr,
-	},
-	)
+	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create the tx stream service: %v", err)
 	}
@@ -189,8 +186,7 @@ func initTxAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSend
 		AlertSender: as,
 		AgentPool:   ap,
 		MsgClient:   msgClient,
-	},
-	)
+	})
 }
 
 func initBlockAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.TxStreamService, ap *agentpool.AgentPool, msgClient clients.MessageClient) (*scanner.BlockAnalyzerService, error) {
@@ -199,8 +195,7 @@ func initBlockAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertS
 		AlertSender:  as,
 		AgentPool:    ap,
 		MsgClient:    msgClient,
-	},
-	)
+	})
 }
 
 func initCombinerAlertAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.CombinerAlertStreamService, ap *agentpool.AgentPool, msgClient clients.MessageClient) (*scanner.CombinerAlertAnalyzerService, error) {
@@ -217,8 +212,7 @@ func initCombinerAlertAnalyzer(ctx context.Context, cfg config.Config, as client
 func initAlertSender(ctx context.Context, key *keystore.Key, pubClient clients.PublishClient) (clients.AlertSender, error) {
 	return clients.NewAlertSender(ctx, pubClient, clients.AlertSenderConfig{
 		Key: key,
-	},
-	)
+	})
 }
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
