@@ -418,52 +418,61 @@ func (agent *Agent) processCombinationAlerts() {
 		responseTime := time.Now().UTC()
 		cancel()
 
+		if err != nil {
+			lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking agent")
+			if agent.errCounter.TooManyErrs(err) {
+				lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down agent")
+				agent.Close()
+				agent.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{agent.config})
+				return
+			}
+		}
+
 		// validate response
 		if vErr := validateEvaluateCombinationResponse(resp); vErr != nil {
+			lg.WithField("request", request.Original.RequestId).WithError(vErr).Error("evaluate combination response validation failed")
 			continue
 		}
 
-		if err == nil {
-			// truncate findings
-			if len(resp.Findings) > MaxFindings {
-				dropped := len(resp.Findings) - MaxFindings
-				droppedMetric := metrics.CreateAgentMetric(agent.config.ID, metrics.MetricFindingsDropped, float64(dropped))
-				agent.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{droppedMetric}})
-				resp.Findings = resp.Findings[:MaxFindings]
-			}
-			var duration time.Duration
-			resp.Timestamp, resp.LatencyMs, duration = calculateResponseTime(&startTime)
-			lg.WithField("duration", duration).Debugf("request successful")
-
-			if resp.Metadata == nil {
-				resp.Metadata = make(map[string]string)
-			}
-			resp.Metadata["imageHash"] = agent.config.ImageHash()
-
-			ts := domain.TrackingTimestampsFromMessage(request.Original.Event.Timestamps)
-			ts.BotRequest = requestTime
-			ts.BotResponse = responseTime
-
-			agent.combinationResults <- &scanner.CombinationAlertResult{
-				AgentConfig: agent.config,
-				Request:     request.Original,
-				Response:    resp,
-				Timestamps:  ts,
-			}
-			lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
-			continue
+		// truncate findings
+		if len(resp.Findings) > MaxFindings {
+			dropped := len(resp.Findings) - MaxFindings
+			droppedMetric := metrics.CreateAgentMetric(agent.config.ID, metrics.MetricFindingsDropped, float64(dropped))
+			agent.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{droppedMetric}})
+			resp.Findings = resp.Findings[:MaxFindings]
 		}
-		lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking agent")
-		if agent.errCounter.TooManyErrs(err) {
-			lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down agent")
-			agent.Close()
-			agent.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{agent.config})
-			return
+
+		var duration time.Duration
+		resp.Timestamp, resp.LatencyMs, duration = calculateResponseTime(&startTime)
+		lg.WithField("duration", duration).Debugf("request successful")
+
+		if resp.Metadata == nil {
+			resp.Metadata = make(map[string]string)
 		}
+
+		resp.Metadata["imageHash"] = agent.config.ImageHash()
+
+		ts := domain.TrackingTimestampsFromMessage(request.Original.Event.Timestamps)
+		ts.BotRequest = requestTime
+		ts.BotResponse = responseTime
+
+		agent.combinationResults <- &scanner.CombinationAlertResult{
+			AgentConfig: agent.config,
+			Request:     request.Original,
+			Response:    resp,
+			Timestamps:  ts,
+		}
+
+		lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
+		continue
 	}
 }
 
 func validateEvaluateCombinationResponse(resp *protocol.EvaluateCombinationResponse) (err error) {
+	if resp == nil {
+		return fmt.Errorf("nil response")
+	}
+
 	for _, finding := range resp.Findings {
 		if err = validateFinding(finding); err != nil {
 			return err
@@ -474,6 +483,9 @@ func validateEvaluateCombinationResponse(resp *protocol.EvaluateCombinationRespo
 }
 
 func validateFinding(finding *protocol.Finding) error {
+	if finding == nil {
+		return fmt.Errorf("nil finding")
+	}
 	for _, alert := range finding.RelatedAlerts {
 		if !checkValidKeccak256(alert) {
 			return fmt.Errorf("bad related alert string: %s", alert)
