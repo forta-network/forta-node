@@ -1,8 +1,9 @@
 package metrics
 
 import (
-	"github.com/forta-network/forta-core-go/domain"
 	"time"
+
+	"github.com/forta-network/forta-core-go/domain"
 
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-node/clients"
@@ -36,7 +37,7 @@ const (
 	MetricCombinerLatency  = "combiner.latency"
 	MetricCombinerError    = "combiner.error"
 	MetricCombinerSuccess  = "combiner.success"
-	MetricAlertDrop        = "alert.drop"
+	MetricCombinerDrop     = "combiner.drop"
 )
 
 func SendAgentMetrics(client clients.MessageClient, ms []*protocol.AgentMetric) {

@@ -110,7 +110,7 @@ func (s *Suite) TestStartProcessStop() {
 		},
 	}
 	// save combiner subscription
-	s.ap.combinerAlertSubscriptions = map[string][]string{testCombinerSourceBot: {agentConfig.ContainerName()}}
+	s.ap.combinerFeedSubscriptions = map[string][]string{testCombinerSourceBot: {agentConfig.ContainerName()}}
 	combinerResp := &protocol.EvaluateCombinationResponse{Metadata: map[string]string{"imageHash": ""}}
 
 	// test tx handling

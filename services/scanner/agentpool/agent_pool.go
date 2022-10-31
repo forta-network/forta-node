@@ -32,19 +32,21 @@ type AgentPool struct {
 	dialer                  func(config.AgentConfig) (clients.AgentClient, error)
 	mu                      sync.RWMutex
 	botWaitGroup            *sync.WaitGroup
-	// combinerAlertSubscriptions keeps track of alert feed pairs. [subscribed alert's source bot id] -> []local bot ids
-	combinerAlertSubscriptions map[string][]string
+
+	// combinerFeedSubscriptions keeps track of alert feed pairs. [subscribed alert's source bot id] -> []local bot ids
+	// subscribee: []subscribers
+	combinerFeedSubscriptions map[string][]string
 }
 
 // NewAgentPool creates a new agent pool.
 func NewAgentPool(ctx context.Context, _ config.ScannerConfig, msgClient clients.MessageClient, waitBots int) *AgentPool {
 	agentPool := &AgentPool{
-		ctx:                        ctx,
-		txResults:                  make(chan *scanner.TxResult),
-		blockResults:               make(chan *scanner.BlockResult),
-		combinationAlertResults:    make(chan *scanner.CombinationAlertResult),
-		msgClient:                  msgClient,
-		combinerAlertSubscriptions: map[string][]string{},
+		ctx:                       ctx,
+		txResults:                 make(chan *scanner.TxResult),
+		blockResults:              make(chan *scanner.BlockResult),
+		combinationAlertResults:   make(chan *scanner.CombinationAlertResult),
+		msgClient:                 msgClient,
+		combinerFeedSubscriptions: map[string][]string{},
 		dialer: func(ac config.AgentConfig) (clients.AgentClient, error) {
 			client := agentgrpc.NewClient()
 			if err := client.Dial(ac); err != nil {
@@ -346,7 +348,7 @@ func (ap *AgentPool) IsBotSubscribedTo(src, dst string) bool {
 	ap.mu.RLock()
 	defer ap.mu.RUnlock()
 
-	for _, s := range ap.combinerAlertSubscriptions[src] {
+	for _, s := range ap.combinerFeedSubscriptions[src] {
 		if s == dst {
 			return true
 		}
@@ -472,7 +474,7 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	}
 
 	// update subscription map
-	ap.combinerAlertSubscriptions = make(map[string][]string)
+	ap.combinerFeedSubscriptions = make(map[string][]string)
 	for _, agent := range ap.agents {
 		alertCfg := agent.AlertConfig()
 		if alertCfg == nil {
@@ -480,7 +482,7 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 		}
 
 		for _, subscription := range alertCfg.Subscriptions {
-			ap.combinerAlertSubscriptions[subscription] = append(ap.combinerAlertSubscriptions[subscription], agent.Config().ContainerName())
+			ap.combinerFeedSubscriptions[subscription] = append(ap.combinerFeedSubscriptions[subscription], agent.Config().ContainerName())
 		}
 	}
 
