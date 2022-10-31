@@ -418,8 +418,8 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	// If an agent was added before and just started to run, we should mark as ready.
 	var agentsToStop []config.AgentConfig
 	var agentsReady []config.AgentConfig
-	var newSubscriptions []messaging.Subscription
-	var removedSubscriptions []messaging.Subscription
+	var newSubscriptions []messaging.CombinerBotSubscription
+	var removedSubscriptions []messaging.CombinerBotSubscription
 
 	for _, agentCfg := range payload {
 		for _, agent := range ap.agents {
@@ -433,9 +433,9 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 				if err != nil {
 					log.WithField("agent", agent.Config().ID).WithError(err).Error("handleStatusRunning: error while dialing")
 					agentsToStop = append(agentsToStop, agent.Config())
-					if agent.IsAlertAgent() {
+					if agent.IsCombinerBot() {
 						for _, subscription := range agent.AlertConfig().Subscriptions {
-							removedSubscriptions = append(removedSubscriptions, messaging.Subscription{Src: agentCfg.ID, Dst: subscription})
+							removedSubscriptions = append(removedSubscriptions, messaging.CombinerBotSubscription{Subscriber: agentCfg.ID, Subscription: subscription})
 						}
 					}
 					continue
@@ -446,9 +446,9 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 				agent.StartProcessing()
 				agent.WaitInitialization()
 
-				if agent.IsAlertAgent() {
+				if agent.IsCombinerBot() {
 					for _, subscription := range agent.AlertConfig().Subscriptions {
-						newSubscriptions = append(newSubscriptions, messaging.Subscription{Src: agent.Config().ID, Dst: subscription})
+						newSubscriptions = append(newSubscriptions, messaging.CombinerBotSubscription{Subscriber: agent.Config().ID, Subscription: subscription})
 					}
 				}
 

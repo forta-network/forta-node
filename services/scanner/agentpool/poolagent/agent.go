@@ -72,7 +72,7 @@ func (agent *Agent) SetAlertConfig(cfg *protocol.AlertConfig) {
 	agent.alertConfig = cfg
 }
 
-func (agent *Agent) IsAlertAgent() bool {
+func (agent *Agent) IsCombinerBot() bool {
 	agent.mu.RLock()
 	defer agent.mu.RUnlock()
 

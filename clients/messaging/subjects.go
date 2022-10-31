@@ -27,11 +27,11 @@ type AgentPayload []config.AgentConfig
 // AgentMetricPayload is the message payload for metrics.
 type AgentMetricPayload *protocol.AgentMetricList
 
-type Subscription struct {
-	Src string
-	Dst string
+type CombinerBotSubscription struct {
+	Subscriber   string
+	Subscription *protocol.CombinerBotSubscription
 }
-type SubscriptionPayload []Subscription
+type SubscriptionPayload []CombinerBotSubscription
 
 // ScannerPayload is the message payload for general scanner info.
 type ScannerPayload struct {
