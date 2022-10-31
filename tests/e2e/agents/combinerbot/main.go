@@ -38,8 +38,13 @@ type agentServer struct {
 }
 
 var (
+	subscription = "0x5e13c2f3a97c292695b598090056ba5d52f9dcc7790bcdaa8b6cd87c1a1ebc0f"
 	// alertSubscriptions subscribes to police bot alerts
-	alertSubscriptions = []string{"0x5e13c2f3a97c292695b598090056ba5d52f9dcc7790bcdaa8b6cd87c1a1ebc0f"}
+	alertSubscriptions = []*protocol.CombinerBotSubscription{
+		{
+			BotId: subscription,
+		},
+	}
 )
 
 func (as *agentServer) Initialize(context.Context, *protocol.InitializeRequest) (*protocol.InitializeResponse, error) {
@@ -84,7 +89,7 @@ func (as *agentServer) EvaluateCombination(ctx context.Context, request *protoco
 				Private:       false,
 				Addresses:     nil,
 				Indicators:    nil,
-				RelatedAlerts: alertSubscriptions,
+				RelatedAlerts: []string{subscription},
 			},
 		)
 	default:

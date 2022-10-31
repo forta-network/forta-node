@@ -482,7 +482,11 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 		}
 
 		for _, subscription := range alertCfg.Subscriptions {
-			ap.combinerFeedSubscriptions[subscription] = append(ap.combinerFeedSubscriptions[subscription], agent.Config().ContainerName())
+			ap.combinerFeedSubscriptions[subscription.String()] = append(
+				ap.
+					combinerFeedSubscriptions[subscription.String()],
+				agent.Config().ContainerName(),
+			)
 		}
 	}
 
