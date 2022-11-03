@@ -2,7 +2,7 @@
 
 FROM alpine AS base
 
-FROM golang:1.16.4-alpine AS go-builder
+FROM golang:1.19-alpine AS go-builder
 
 RUN apk add --no-cache bash gcc g++
 
