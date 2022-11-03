@@ -735,7 +735,7 @@ func NewPublisher(ctx context.Context, cfg config.Config) (*Publisher, error) {
 
 	apiClient := alertapi.NewClient(cfg.Publish.APIURL)
 
-	storageClient, err := storagegrpc.Dial(fmt.Sprintf("%s:%s", config.DockerStorageContainerName, config.DefaultStoragePort))
+	storageClient, err := storagegrpc.DialContext(ctx, fmt.Sprintf("%s:%s", config.DockerStorageContainerName, config.DefaultStoragePort))
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial the storage client: %v", err)
 	}

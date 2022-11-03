@@ -1,6 +1,7 @@
 package storagegrpc
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -18,13 +19,14 @@ func NewClient() *Client {
 }
 
 // Dial dials an agent using the config.
-func Dial(serverURL string) (protocol.StorageClient, error) {
+func DialContext(ctx context.Context, serverURL string) (protocol.StorageClient, error) {
 	var (
 		conn *grpc.ClientConn
 		err  error
 	)
 	for i := 0; i < 10; i++ {
-		conn, err = grpc.Dial(
+		conn, err = grpc.DialContext(
+			ctx,
 			serverURL,
 			grpc.WithInsecure(),
 			grpc.WithBlock(),
