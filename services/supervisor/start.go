@@ -223,6 +223,40 @@ ipfs config Datastore.StorageMax '1GB'
 	}
 	sup.registerMessageHandlers()
 
+	sup.storageContainer, err = sup.client.StartContainer(
+		sup.ctx, clients.DockerContainerConfig{
+			Name:  config.DockerStorageContainerName,
+			Image: commonNodeImage,
+			Cmd:   []string{config.DefaultFortaNodeBinaryPath, "storage"},
+			Env: map[string]string{
+				config.EnvReleaseInfo: releaseInfo.String(),
+			},
+			Volumes: map[string]string{
+				// give access to host docker
+				"/var/run/docker.sock": "/var/run/docker.sock",
+				hostFortaDir:           config.DefaultContainerFortaDirPath,
+			},
+			Ports: map[string]string{
+				"": config.DefaultHealthPort, // random host port
+			},
+			Files: map[string][]byte{
+				"passphrase": []byte(sup.config.Passphrase),
+			},
+			DialHost:    true,
+			NetworkID:   nodeNetworkID,
+			MaxLogFiles: sup.maxLogFiles,
+			MaxLogSize:  sup.maxLogSize,
+		},
+	)
+	if err != nil {
+		return err
+	}
+	sup.addContainerUnsafe(sup.storageContainer)
+
+	if err := sup.client.WaitContainerStart(sup.ctx, sup.storageContainer.ID); err != nil {
+		return fmt.Errorf("failed while waiting for the storage container to start: %v", err)
+	}
+
 	sup.jsonRpcContainer, err = sup.client.StartContainer(
 		sup.ctx, clients.DockerContainerConfig{
 			Name:  config.DockerJSONRPCProxyContainerName,
@@ -351,36 +385,6 @@ ipfs config Datastore.StorageMax '1GB'
 		return err
 	}
 	sup.addContainerUnsafe(sup.jwtProviderContainer)
-
-	sup.storageContainer, err = sup.client.StartContainer(
-		sup.ctx, clients.DockerContainerConfig{
-			Name:  config.DockerStorageContainerName,
-			Image: commonNodeImage,
-			Cmd:   []string{config.DefaultFortaNodeBinaryPath, "storage"},
-			Env: map[string]string{
-				config.EnvReleaseInfo: releaseInfo.String(),
-			},
-			Volumes: map[string]string{
-				// give access to host docker
-				"/var/run/docker.sock": "/var/run/docker.sock",
-				hostFortaDir:           config.DefaultContainerFortaDirPath,
-			},
-			Ports: map[string]string{
-				"": config.DefaultHealthPort, // random host port
-			},
-			Files: map[string][]byte{
-				"passphrase": []byte(sup.config.Passphrase),
-			},
-			DialHost:    true,
-			NetworkID:   nodeNetworkID,
-			MaxLogFiles: sup.maxLogFiles,
-			MaxLogSize:  sup.maxLogSize,
-		},
-	)
-	if err != nil {
-		return err
-	}
-	sup.addContainerUnsafe(sup.storageContainer)
 
 	return nil
 }
