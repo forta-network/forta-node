@@ -25,6 +25,11 @@ func DialContext(ctx context.Context, serverURL string) (protocol.StorageClient,
 		err  error
 	)
 	for i := 0; i < 10; i++ {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
 		conn, err = grpc.DialContext(
 			ctx,
 			serverURL,
