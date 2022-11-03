@@ -51,7 +51,7 @@ func (t *CombinerAlertStreamService) handleAlert(evt *domain.AlertEvent) error {
 			"alert":      evt.Event.Alert.Hash,
 		},
 	).Debug("streaming new alert subscription")
-	
+
 	t.alertOutput <- evt
 	t.lastAlertActivity.Set()
 	return nil

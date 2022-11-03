@@ -205,25 +205,15 @@ func (s *Suite) runLocalMode(webhookURL, logFileName string, readAlertsFunc func
 }
 
 func (s *Suite) runLocalModeAlertHandler(webhookURL, logFileName string, readAlertsFunc func() ([]byte, bool)) {
-	// get the start block number
-	startBlockNumber, err := s.ethClient.BlockNumber(s.ctx)
-	s.r.NoError(err)
-
-	// send a transaction and let a block be mined
-	s.sendExploiterTx()
-
-	// get the stop block number
-	lastBlockNumber, err := s.ethClient.BlockNumber(s.ctx)
-	s.r.NoError(err)
-	stopBlockNumber := lastBlockNumber + 1
-
 	// change the config accordingly so we scan the block that includes the tx
 	configFilePath := path.Join(localModeDir, "config.yml")
 	_ = os.RemoveAll(configFilePath)
 	s.r.NoError(
 		ioutil.WriteFile(
 			configFilePath,
-			[]byte(fmt.Sprintf(localModeAlertConfig, webhookURL, logFileName, startBlockNumber, stopBlockNumber)),
+			[]byte(fmt.Sprintf(
+				localModeAlertConfig, webhookURL, logFileName, 0, 0,
+			)),
 			0777,
 		),
 	)
@@ -257,8 +247,6 @@ func (s *Suite) runLocalModeAlertHandler(webhookURL, logFileName string, readAle
 	}
 
 	s.r.NotNil(combinationAlert)
-
-	s.r.NoError(err)
 
 	s.T().Log(string(b))
 }

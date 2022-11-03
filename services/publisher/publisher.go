@@ -493,6 +493,8 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 				isPrivate = notif.EvalBlockResponse.Private
 			} else if notif.EvalTxResponse != nil {
 				isPrivate = notif.EvalTxResponse.Private
+			} else if notif.EvalCombinationResponse.Private {
+				isPrivate = notif.EvalCombinationResponse.Private
 			}
 		}
 	}
