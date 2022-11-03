@@ -255,7 +255,7 @@ func copyFile(cli *client.Client, ctx context.Context, filePath string, content 
 	tw := tar.NewWriter(&buf)
 	err := tw.WriteHeader(&tar.Header{
 		Name: file,
-		Mode: 0777,
+		Mode: 0666,
 		Size: int64(len(content)),
 	})
 	if err != nil {
