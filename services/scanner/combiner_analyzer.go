@@ -93,8 +93,8 @@ func (aas *CombinerAlertAnalyzerService) Start() error {
 
 			rt := &clients.AgentRoundTrip{
 				AgentConfig:             result.AgentConfig,
-				EvalCombinationRequest:  result.Request,
-				EvalCombinationResponse: result.Response,
+				EvalAlertRequest:  result.Request,
+				EvalAlertResponse: result.Response,
 			}
 
 			if len(result.Response.Findings) == 0 {
@@ -136,10 +136,10 @@ func (aas *CombinerAlertAnalyzerService) Start() error {
 
 			// create a request
 			requestId := uuid.Must(uuid.NewUUID())
-			request := &protocol.EvaluateCombinationRequest{RequestId: requestId.String(), Event: alertEvt}
+			request := &protocol.EvaluateAlertRequest{RequestId: requestId.String(), Event: alertEvt}
 
 			// forward to the pool
-			aas.cfg.AgentPool.SendEvaluateCombinationRequest(request)
+			aas.cfg.AgentPool.SendEvaluateAlertRequest(request)
 
 			aas.lastInputActivity.Set()
 		}

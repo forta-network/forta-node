@@ -71,8 +71,8 @@ func (as *agentServer) EvaluateBlock(ctx context.Context, txRequest *protocol.Ev
 
 	return response, nil
 }
-func (as *agentServer) EvaluateCombination(ctx context.Context, request *protocol.EvaluateCombinationRequest) (*protocol.EvaluateCombinationResponse, error) {
-	response := &protocol.EvaluateCombinationResponse{Status: protocol.ResponseStatus_SUCCESS}
+func (as *agentServer) EvaluateAlert(ctx context.Context, request *protocol.EvaluateAlertRequest) (*protocol.EvaluateAlertResponse, error) {
+	response := &protocol.EvaluateAlertResponse{Status: protocol.ResponseStatus_SUCCESS}
 
 	select {
 	case <-as.ticker.C:

@@ -89,8 +89,8 @@ func TestBatchData_AppendPrivateAlert_Combination(t *testing.T) {
 	}
 	nr := &protocol.NotifyRequest{
 		SignedAlert:      alert,
-		EvalCombinationRequest: &protocol.EvaluateCombinationRequest{},
-		EvalCombinationResponse: &protocol.EvaluateCombinationResponse{
+		EvalAlertRequest: &protocol.EvaluateAlertRequest{},
+		EvalAlertResponse: &protocol.EvaluateAlertResponse{
 			Private: true,
 		},
 		AgentInfo: &protocol.AgentInfo{

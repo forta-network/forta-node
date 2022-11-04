@@ -101,7 +101,7 @@ func (s *Suite) TestStartProcessStop() {
 	txResp := &protocol.EvaluateTxResponse{Metadata: map[string]string{"imageHash": ""}}
 	blockReq := &protocol.EvaluateBlockRequest{Event: &protocol.BlockEvent{BlockNumber: "123123"}}
 	blockResp := &protocol.EvaluateBlockResponse{Metadata: map[string]string{"imageHash": ""}}
-	combinerReq := &protocol.EvaluateCombinationRequest{
+	combinerReq := &protocol.EvaluateAlertRequest{
 		Event: &protocol.AlertEvent{
 			Alert: &protocol.AlertEvent_Alert{
 				Hash:   "123123",
@@ -111,7 +111,7 @@ func (s *Suite) TestStartProcessStop() {
 	}
 	// save combiner subscription
 	s.ap.combinerFeedSubscriptions = map[string][]string{testCombinerSourceBot: {agentConfig.ContainerName()}}
-	combinerResp := &protocol.EvaluateCombinationResponse{Metadata: map[string]string{"imageHash": ""}}
+	combinerResp := &protocol.EvaluateAlertResponse{Metadata: map[string]string{"imageHash": ""}}
 
 	// test tx handling
 	s.agentClient.EXPECT().Invoke(
@@ -134,11 +134,11 @@ func (s *Suite) TestStartProcessStop() {
 
 	// test combine alert handling
 	s.agentClient.EXPECT().Invoke(
-		gomock.Any(), agentgrpc.MethodEvaluateCombination,
-		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateCombinationResponse{}),
+		gomock.Any(), agentgrpc.MethodEvaluateAlert,
+		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateAlertResponse{}),
 	).Return(nil)
 	s.msgClient.EXPECT().Publish(messaging.SubjectScannerAlert, gomock.Any())
-	s.ap.SendEvaluateCombinationRequest(combinerReq)
+	s.ap.SendEvaluateAlertRequest(combinerReq)
 	alertResult := <-s.ap.CombinationAlertResults()
 	combinerResp.Timestamp = alertResult.Response.Timestamp // bypass - hard to match
 

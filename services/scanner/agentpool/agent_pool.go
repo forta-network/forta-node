@@ -253,14 +253,14 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 	}).Debug("Finished SendEvaluateBlockRequest")
 }
 
-// SendEvaluateCombinationRequest sends the request to all the active agents which
+// SendEvaluateAlertRequest sends the request to all the active agents which
 // should be processing the alert.
-func (ap *AgentPool) SendEvaluateCombinationRequest(req *protocol.EvaluateCombinationRequest) {
+func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest) {
 	startTime := time.Now()
 	lg := log.WithFields(log.Fields{
 		"component": "pool",
 	})
-	lg.Debug("SendEvaluateCombinationRequest")
+	lg.Debug("SendEvaluateAlertRequest")
 
 	if req.Event.Alert == nil || req.Event.Alert.Source == nil || req.Event.Alert.Source.Bot == nil {
 		lg.Warn("bad request")
@@ -314,7 +314,7 @@ func (ap *AgentPool) SendEvaluateCombinationRequest(req *protocol.EvaluateCombin
 	metrics.SendAgentMetrics(ap.msgClient, metricsList)
 	lg.WithFields(log.Fields{
 		"duration": time.Since(startTime),
-	}).Debug("Finished SendEvaluateCombinationRequest")
+	}).Debug("Finished SendEvaluateAlertRequest")
 }
 
 // CombinationAlertResults returns the receive-only alert results channel.

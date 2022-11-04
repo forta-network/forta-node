@@ -22,7 +22,7 @@ const (
 	MethodInitialize          Method = "/network.forta.Agent/Initialize"
 	MethodEvaluateTx          Method = "/network.forta.Agent/EvaluateTx"
 	MethodEvaluateBlock       Method = "/network.forta.Agent/EvaluateBlock"
-	MethodEvaluateCombination Method = "/network.forta.Agent/EvaluateCombination"
+	MethodEvaluateAlert Method = "/network.forta.Agent/EvaluateAlert"
 )
 
 // Client allows us to communicate with an agent.

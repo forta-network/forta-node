@@ -18,8 +18,8 @@ type AgentRoundTrip struct {
 	EvalBlockResponse       *protocol.EvaluateBlockResponse
 	EvalTxRequest           *protocol.EvaluateTxRequest
 	EvalTxResponse          *protocol.EvaluateTxResponse
-	EvalCombinationRequest  *protocol.EvaluateCombinationRequest
-	EvalCombinationResponse *protocol.EvaluateCombinationResponse
+	EvalAlertRequest  *protocol.EvaluateAlertRequest
+	EvalAlertResponse *protocol.EvaluateAlertResponse
 }
 
 type AlertSender interface {
@@ -60,8 +60,8 @@ func (a *alertSender) SignAlertAndNotify(rt *AgentRoundTrip, alert *protocol.Ale
 			EvalBlockResponse:       rt.EvalBlockResponse,
 			EvalTxRequest:           rt.EvalTxRequest,
 			EvalTxResponse:          rt.EvalTxResponse,
-			EvalCombinationRequest:  rt.EvalCombinationRequest,
-			EvalCombinationResponse: rt.EvalCombinationResponse,
+			EvalAlertRequest:  rt.EvalAlertRequest,
+			EvalAlertResponse: rt.EvalAlertResponse,
 			AgentInfo:               rt.AgentConfig.ToAgentInfo(),
 			Timestamps:              ts.ToMessage(),
 		},
@@ -74,8 +74,8 @@ func (a *alertSender) NotifyWithoutAlert(rt *AgentRoundTrip, ts *domain.Tracking
 		a.ctx, &protocol.NotifyRequest{
 			EvalBlockRequest:        rt.EvalBlockRequest,
 			EvalBlockResponse:       rt.EvalBlockResponse,
-			EvalCombinationRequest:  rt.EvalCombinationRequest,
-			EvalCombinationResponse: rt.EvalCombinationResponse,
+			EvalAlertRequest:  rt.EvalAlertRequest,
+			EvalAlertResponse: rt.EvalAlertResponse,
 			EvalTxRequest:           rt.EvalTxRequest,
 			EvalTxResponse:          rt.EvalTxResponse,
 			AgentInfo:               rt.AgentConfig.ToAgentInfo(),

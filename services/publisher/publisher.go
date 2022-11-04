@@ -479,7 +479,7 @@ func (bd *BatchData) GetPrivateAlerts(notif *protocol.NotifyRequest) *protocol.A
 func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 	isBlockAlert := notif.EvalBlockRequest != nil
 	isTxAlert := notif.EvalTxRequest != nil
-	isCombinationAlert := notif.EvalCombinationRequest != nil
+	isCombinationAlert := notif.EvalAlertRequest != nil
 
 	var isPrivate bool
 
@@ -493,8 +493,8 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 				isPrivate = notif.EvalBlockResponse.Private
 			} else if notif.EvalTxResponse != nil {
 				isPrivate = notif.EvalTxResponse.Private
-			} else if notif.EvalCombinationResponse.Private {
-				isPrivate = notif.EvalCombinationResponse.Private
+			} else if notif.EvalAlertResponse.Private {
+				isPrivate = notif.EvalAlertResponse.Private
 			}
 		}
 	}
@@ -523,8 +523,8 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 		}
 	} else if isCombinationAlert {
 		// TODO REMOVE THIS BEFORE PRODUCTION
-		bd.AddBatchAgent(notif.AgentInfo, 0, "", notif.EvalCombinationRequest.Event.Alert.Source.Bot.Id)
-		metaRes := bd.GetCombinationAlertResults(notif.EvalCombinationRequest.Event)
+		bd.AddBatchAgent(notif.AgentInfo, 0, "", notif.EvalAlertRequest.Event.Alert.Source.Bot.Id)
+		metaRes := bd.GetCombinationAlertResults(notif.EvalAlertRequest.Event)
 		if hasAlert {
 			agentAlerts = (*CombinationAlertResults)(metaRes).GetAgentAlerts(notif.AgentInfo)
 		}
@@ -709,8 +709,8 @@ func (pub *Publisher) prepareLatestBatch() {
 				blockNum = notif.EvalBlockRequest.Event.BlockNumber
 			} else if notif.EvalTxRequest != nil {
 				blockNum = notif.EvalTxRequest.Event.Block.BlockNumber
-			} else if notif.EvalCombinationRequest != nil {
-				blockNum = hexutil.EncodeUint64(notif.EvalCombinationRequest.Event.Alert.Source.Block.Number)
+			} else if notif.EvalAlertRequest != nil {
+				blockNum = hexutil.EncodeUint64(notif.EvalAlertRequest.Event.Alert.Source.Block.Number)
 			}
 
 			notifBlockNum, err := hexutil.DecodeUint64(blockNum)

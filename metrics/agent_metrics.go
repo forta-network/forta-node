@@ -110,7 +110,7 @@ func GetTxMetrics(agt config.AgentConfig, resp *protocol.EvaluateTxResponse, tim
 	return createMetrics(agt.ID, resp.Timestamp, metrics)
 }
 
-func GetCombinerMetrics(agt config.AgentConfig, resp *protocol.EvaluateCombinationResponse, times *domain.TrackingTimestamps) []*protocol.AgentMetric {
+func GetCombinerMetrics(agt config.AgentConfig, resp *protocol.EvaluateAlertResponse, times *domain.TrackingTimestamps) []*protocol.AgentMetric {
 	metrics := make(map[string]float64)
 
 	metrics[MetricCombinerRequest] = 1

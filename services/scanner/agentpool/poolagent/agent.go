@@ -97,7 +97,7 @@ type BlockRequest struct {
 
 // CombinationRequest contains the original request data and the encoded message.
 type CombinationRequest struct {
-	Original *protocol.EvaluateCombinationRequest
+	Original *protocol.EvaluateAlertRequest
 	Encoded  *grpc.PreparedMsg
 }
 
@@ -412,9 +412,9 @@ func (agent *Agent) processCombinationAlerts() {
 
 		ctx, cancel := context.WithTimeout(agent.ctx, AgentTimeout)
 		lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
-		resp := new(protocol.EvaluateCombinationResponse)
+		resp := new(protocol.EvaluateAlertResponse)
 		requestTime := time.Now().UTC()
-		err := agent.client.Invoke(ctx, agentgrpc.MethodEvaluateCombination, request.Encoded, resp)
+		err := agent.client.Invoke(ctx, agentgrpc.MethodEvaluateAlert, request.Encoded, resp)
 		responseTime := time.Now().UTC()
 		cancel()
 
@@ -429,7 +429,7 @@ func (agent *Agent) processCombinationAlerts() {
 		}
 
 		// validate response
-		if vErr := validateEvaluateCombinationResponse(resp); vErr != nil {
+		if vErr := validateEvaluateAlertResponse(resp); vErr != nil {
 			lg.WithField("request", request.Original.RequestId).WithError(vErr).Error("evaluate combination response validation failed")
 			continue
 		}
@@ -468,7 +468,7 @@ func (agent *Agent) processCombinationAlerts() {
 	}
 }
 
-func validateEvaluateCombinationResponse(resp *protocol.EvaluateCombinationResponse) (err error) {
+func validateEvaluateAlertResponse(resp *protocol.EvaluateAlertResponse) (err error) {
 	if resp == nil {
 		return fmt.Errorf("nil response")
 	}
