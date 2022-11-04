@@ -38,15 +38,15 @@
   },
   "Addresses": {
     "Swarm": [
-      "/ip4/0.0.0.0/tcp/4001",
-      "/ip6/::/tcp/4001",
-      "/ip4/0.0.0.0/udp/4001/quic",
-      "/ip6/::/udp/4001/quic"
+      "/ip4/0.0.0.0/tcp/4002",
+      "/ip6/::/tcp/4002",
+      "/ip4/0.0.0.0/udp/4002/quic",
+      "/ip6/::/udp/4002/quic"
     ],
     "Announce": [],
     "NoAnnounce": [],
-    "API": "/ip4/0.0.0.0/tcp/5001",
-    "Gateway": "/ip4/0.0.0.0/tcp/8080"
+    "API": "/ip4/0.0.0.0/tcp/5002",
+    "Gateway": "/ip4/0.0.0.0/tcp/8181"
   },
   "Mounts": {
     "IPFS": "/ipfs",
