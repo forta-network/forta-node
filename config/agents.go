@@ -18,6 +18,7 @@ type AgentConfig struct {
 	IsLocal    bool    `yaml:"isLocal" json:"isLocal"`
 	StartBlock *uint64 `yaml:"startBlock" json:"startBlock,omitempty"`
 	StopBlock  *uint64 `yaml:"stopBlock" json:"stopBlock,omitempty"`
+	AlertConfig *protocol.AlertConfig
 }
 
 // ToAgentInfo transforms the agent config to the agent info.

@@ -56,7 +56,6 @@ type Agent struct {
 	closeOnce sync.Once
 	initWait  sync.WaitGroup
 
-	alertConfig *protocol.AlertConfig
 	mu          sync.RWMutex
 }
 
@@ -64,23 +63,24 @@ func (agent *Agent) AlertConfig() *protocol.AlertConfig {
 	agent.mu.RLock()
 	defer agent.mu.RUnlock()
 
-	return agent.alertConfig
+	return agent.config.AlertConfig
 }
 func (agent *Agent) SetAlertConfig(cfg *protocol.AlertConfig) {
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
-	agent.alertConfig = cfg
+
+	agent.config.AlertConfig = cfg
 }
 
 func (agent *Agent) IsCombinerBot() bool {
 	agent.mu.RLock()
 	defer agent.mu.RUnlock()
 
-	if agent.alertConfig == nil {
+	if agent.config.AlertConfig == nil {
 		return false
 	}
 
-	return len(agent.alertConfig.Subscriptions) > 0
+	return len(agent.config.AlertConfig.Subscriptions) > 0
 }
 
 // TxRequest contains the original request data and the encoded message.
@@ -530,4 +530,22 @@ func (agent *Agent) ShouldProcessBlock(blockNumberHex string) bool {
 	}
 
 	return isAtLeastStartBlock && isAtMostStopBlock
+}
+
+func (agent *Agent) SubscribedTo(event *protocol.AlertEvent) bool {
+	if agent.config.AlertConfig == nil {
+		return false
+	}
+	for _, subscription := range agent.config.AlertConfig.Subscriptions {
+		// bot is subscribed to the bot id
+		subscribedToBot := subscription.BotId == "" || subscription.BotId == event.Alert.Source.Bot.Id
+		// bot is subscribed to the alert id
+		subscribedToAlert := subscription.AlertId == "" || subscription.AlertId == event.Alert.AlertId
+
+		if subscribedToBot && subscribedToAlert {
+			return true
+		}
+	}
+
+	return false
 }

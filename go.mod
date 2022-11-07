@@ -2,7 +2,7 @@ module github.com/forta-network/forta-node
 
 go 1.19
 
-require github.com/forta-network/forta-core-go v0.0.0-20221104112634-433bd4e17d80
+require github.com/forta-network/forta-core-go v0.0.0-20221107092951-8c9499ee8763
 
 require (
 	github.com/creasty/defaults v1.6.0

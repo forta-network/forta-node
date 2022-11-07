@@ -325,6 +325,8 @@ github.com/flynn/noise v1.0.0/go.mod h1:xbMo+0i6+IGbYdJhF31t2eR1BIU0CYc12+BNAKwU
 github.com/fogleman/gg v1.2.1-0.20190220221249-0403632d5b90/go.mod h1:R/bRT+9gY/C5z7JzPU0zXsXHKM4/ayA+zqcVNZzPa1k=
 github.com/forta-network/forta-core-go v0.0.0-20221104112634-433bd4e17d80 h1:1m97+lud+i8gGr1fPOF9XMgXWDZfkb76YOcTZ7N8LNw=
 github.com/forta-network/forta-core-go v0.0.0-20221104112634-433bd4e17d80/go.mod h1:iSBw53DuxlRdyVLttbtSCIdbX1wF4zZGyFvczDznasM=
+github.com/forta-network/forta-core-go v0.0.0-20221107092951-8c9499ee8763 h1:AupFa6UzVdVePYFoLyTM/R3JpCYgQzszyYO9Jtr7wH8=
+github.com/forta-network/forta-core-go v0.0.0-20221107092951-8c9499ee8763/go.mod h1:iSBw53DuxlRdyVLttbtSCIdbX1wF4zZGyFvczDznasM=
 github.com/fortytw2/leaktest v1.3.0/go.mod h1:jDsjWgpAGjm2CA7WthBh/CdZYEPF31XHquHwclZch5g=
 github.com/francoispqt/gojay v1.2.13 h1:d2m3sFjloqoIUQU3TsHBgj6qg/BVGlTBeHDUmyJnXKk=
 github.com/francoispqt/gojay v1.2.13/go.mod h1:ehT5mTG4ua4581f1++1WLG0vPdaA9HaiDsoyrBGkyDY=
