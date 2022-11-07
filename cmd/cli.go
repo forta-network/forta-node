@@ -115,7 +115,7 @@ publishes alerts about them`,
 
 	cmdFortaRegister = &cobra.Command{
 		Use:   "register",
-		Short: "register your scan node to enable it for scanning (requires MATIC in your scan node address)",
+		Short: "generate a signature to register your scan node to a pool",
 		RunE:  withInitialized(withValidConfig(handleFortaRegister)),
 	}
 
@@ -193,8 +193,8 @@ func init() {
 	cmdFortaStatus.Flags().String("show", StatusShowSummary, "filter statuses to show: summary (default), important, all")
 
 	// forta register
-	cmdFortaRegister.Flags().String("owner-address", "", "Ethereum wallet address of the scanner owner")
-	cmdFortaRegister.MarkFlagRequired("owner-address")
+	cmdFortaRegister.Flags().String("pool-id", "", "scanner pool ID in hex format")
+	cmdFortaRegister.MarkFlagRequired("pool-id")
 	cmdFortaRegister.MarkFlagRequired("passphrase")
 
 	// forta enable

@@ -12,8 +12,7 @@ require (
 	github.com/docker/go-connections v0.4.0
 	github.com/ethereum/go-ethereum v1.10.16
 	github.com/fatih/color v1.13.0
-	github.com/forta-network/forta-core-go v0.0.0-20220825143711-07d1999d7a71
-	github.com/forta-network/forta-core-go-new-contracts v0.0.0-00010101000000-000000000000
+	github.com/forta-network/forta-core-go v0.0.0-20221107123635-50c16838a3e2
 	github.com/go-playground/validator/v10 v10.9.0
 	github.com/goccy/go-json v0.9.4
 	github.com/golang-jwt/jwt/v4 v4.4.1
@@ -39,5 +38,3 @@ require (
 	google.golang.org/grpc v1.46.2
 	gopkg.in/yaml.v3 v3.0.0
 )
-
-replace github.com/forta-network/forta-core-go-new-contracts => github.com/forta-network/forta-core-go v0.0.0-20220913120650-32c76ba3ba93

@@ -2,25 +2,28 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"math/big"
 	"strings"
+	"time"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/fatih/color"
 	"github.com/forta-network/forta-core-go/registry"
 	"github.com/forta-network/forta-core-go/security"
+	"github.com/forta-network/forta-core-go/security/eip712"
 	"github.com/forta-network/forta-node/store"
 	"github.com/spf13/cobra"
 )
 
 func handleFortaRegister(cmd *cobra.Command, args []string) error {
-	ownerAddressStr, err := cmd.Flags().GetString("owner-address")
+	poolIDStr, err := cmd.Flags().GetString("pool-id")
 	if err != nil {
 		return err
 	}
-	if !common.IsHexAddress(ownerAddressStr) {
-		return errors.New("invalid owner address provided")
+	poolID, err := hexutil.DecodeBig(poolIDStr)
+	if err != nil {
+		return fmt.Errorf("failed to decode pool ID: %v", err)
 	}
 
 	scannerKey, err := security.LoadKeyWithPassphrase(cfg.KeyDirPath, cfg.Passphrase)
@@ -28,11 +31,6 @@ func handleFortaRegister(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load scanner key: %v", err)
 	}
 	scannerPrivateKey := scannerKey.PrivateKey
-	scannerAddressStr := scannerKey.Address.Hex()
-
-	if strings.EqualFold(scannerAddressStr, ownerAddressStr) {
-		redBold("Scanner and owner cannot be the same identity! Please provide a different wallet address of your own.\n")
-	}
 
 	registry, err := store.GetRegistryClient(context.Background(), cfg, registry.ClientConfig{
 		JsonRpcUrl: cfg.Registry.JsonRpc.Url,
@@ -44,18 +42,24 @@ func handleFortaRegister(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create registry client: %v", err)
 	}
 
-	color.Yellow(fmt.Sprintf("Sending a transaction to register your scan node to chain %d...\n", cfg.ChainID))
-
-	txHash, err := registry.RegisterScanner(ownerAddressStr, int64(cfg.ChainID), "")
-	if err != nil && strings.Contains(err.Error(), "insufficient funds") {
-		yellowBold("This action requires Polygon (Mainnet) MATIC. Have you funded your address %s yet?\n", scannerAddressStr)
-	}
+	sig, err := registry.GenerateScannerRegistrationSignature(&eip712.ScannerNodeRegistration{
+		Scanner:       scannerKey.Address,
+		ScannerPoolId: poolID,
+		ChainId:       big.NewInt(int64(cfg.ChainID)),
+		Metadata:      "",
+		Timestamp:     big.NewInt(time.Now().Unix()),
+	})
 	if err != nil {
-		return fmt.Errorf("failed to send the transaction: %v", err)
+		return fmt.Errorf("failed to generate registration signature: %v", err)
 	}
 
-	greenBold("Successfully sent the transaction!\n\n")
-	whiteBold("Please ensure that https://polygonscan.com/tx/%s succeeds before you do 'forta run'. This can take a while depending on the network load.\n", txHash)
+	encodedSig, err := security.EncodeEthereumSignature(sig)
+	if err != nil {
+		return fmt.Errorf("failed to encode registration signature: %v", err)
+	}
+
+	whiteBold("Please use the registration signature below on https://app.forta.network as soon as possible!\n\n")
+	color.New(color.FgYellow).Println(encodedSig)
 
 	return nil
 }
