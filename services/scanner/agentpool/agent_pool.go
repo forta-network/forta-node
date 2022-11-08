@@ -32,10 +32,6 @@ type AgentPool struct {
 	dialer                  func(config.AgentConfig) (clients.AgentClient, error)
 	mu                      sync.RWMutex
 	botWaitGroup            *sync.WaitGroup
-
-	// combinerFeedSubscriptions keeps track of alert feed pairs. [subscribed alert's source bot id] -> []local bot ids
-	// subscribee: []subscribers
-	combinerFeedSubscriptions map[string][]string
 }
 
 // NewAgentPool creates a new agent pool.
@@ -46,7 +42,6 @@ func NewAgentPool(ctx context.Context, _ config.ScannerConfig, msgClient clients
 		blockResults:              make(chan *scanner.BlockResult),
 		combinationAlertResults:   make(chan *scanner.CombinationAlertResult),
 		msgClient:                 msgClient,
-		combinerFeedSubscriptions: map[string][]string{},
 		dialer: func(ac config.AgentConfig) (clients.AgentClient, error) {
 			client := agentgrpc.NewClient()
 			if err := client.Dial(ac); err != nil {
@@ -283,7 +278,7 @@ func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest
 
 	var metricsList []*protocol.AgentMetric
 	for _, agent := range agents {
-		if !agent.IsReady() || !agent.SubscribedTo(req.Event) {
+		if !agent.IsReady() || !agent.ShouldProcessAlert(req.Event) {
 			continue
 		}
 
@@ -342,18 +337,6 @@ func (ap *AgentPool) logAgentStatuses() {
 // BlockResults returns the receive-only tx results channel.
 func (ap *AgentPool) BlockResults() <-chan *scanner.BlockResult {
 	return ap.blockResults
-}
-
-func (ap *AgentPool) IsBotSubscribedTo(src, dst string) bool {
-	ap.mu.RLock()
-	defer ap.mu.RUnlock()
-
-	for _, s := range ap.combinerFeedSubscriptions[src] {
-		if s == dst {
-			return true
-		}
-	}
-	return false
 }
 
 func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) error {
@@ -471,23 +454,6 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	}
 	if len(removedSubscriptions) > 0 {
 		ap.msgClient.Publish(messaging.SubjectAgentsAlertUnsubscribe, removedSubscriptions)
-	}
-
-	// update subscription map
-	ap.combinerFeedSubscriptions = make(map[string][]string)
-	for _, agent := range ap.agents {
-		alertCfg := agent.AlertConfig()
-		if alertCfg == nil {
-			continue
-		}
-
-		for _, subscription := range alertCfg.Subscriptions {
-			ap.combinerFeedSubscriptions[subscription.BotId] = append(
-				ap.
-					combinerFeedSubscriptions[subscription.BotId],
-				agent.Config().ContainerName(),
-			)
-		}
 	}
 
 	return nil

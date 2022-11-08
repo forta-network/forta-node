@@ -532,7 +532,7 @@ func (agent *Agent) ShouldProcessBlock(blockNumberHex string) bool {
 	return isAtLeastStartBlock && isAtMostStopBlock
 }
 
-func (agent *Agent) SubscribedTo(event *protocol.AlertEvent) bool {
+func (agent *Agent) ShouldProcessAlert(event *protocol.AlertEvent) bool {
 	if agent.config.AlertConfig == nil {
 		return false
 	}
