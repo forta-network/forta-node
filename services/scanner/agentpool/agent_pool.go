@@ -435,7 +435,7 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 					agentsToStop = append(agentsToStop, agent.Config())
 					if agent.IsCombinerBot() {
 						for _, subscription := range agent.AlertConfig().Subscriptions {
-							removedSubscriptions = append(removedSubscriptions, messaging.CombinerBotSubscription{Subscriber: agentCfg.ID, Subscription: subscription})
+							removedSubscriptions = append(removedSubscriptions, messaging.CombinerBotSubscription{Subscription: subscription})
 						}
 					}
 					continue
@@ -448,7 +448,7 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 
 				if agent.IsCombinerBot() {
 					for _, subscription := range agent.AlertConfig().Subscriptions {
-						newSubscriptions = append(newSubscriptions, messaging.CombinerBotSubscription{Subscriber: agent.Config().ID, Subscription: subscription})
+						newSubscriptions = append(newSubscriptions, messaging.CombinerBotSubscription{Subscription: subscription})
 					}
 				}
 

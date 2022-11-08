@@ -28,7 +28,6 @@ type AgentPayload []config.AgentConfig
 type AgentMetricPayload *protocol.AgentMetricList
 
 type CombinerBotSubscription struct {
-	Subscriber   string
 	Subscription *protocol.CombinerBotSubscription
 }
 type SubscriptionPayload []CombinerBotSubscription

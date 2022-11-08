@@ -97,6 +97,9 @@ func (t *CombinerAlertStreamService) Health() health.Reports {
 
 func (t *CombinerAlertStreamService) handleMessageSubscribe(payload messaging.SubscriptionPayload) error {
 	for _, cfg := range payload {
+		if payload == nil {
+			continue
+		}
 		t.alertFeed.AddSubscription(cfg.Subscription)
 	}
 
@@ -105,6 +108,10 @@ func (t *CombinerAlertStreamService) handleMessageSubscribe(payload messaging.Su
 
 func (t *CombinerAlertStreamService) handleMessageUnsubscribe(payload messaging.SubscriptionPayload) error {
 	for _, cfg := range payload {
+		if payload == nil {
+			continue
+		}
+
 		t.alertFeed.RemoveSubscription(cfg.Subscription)
 	}
 
