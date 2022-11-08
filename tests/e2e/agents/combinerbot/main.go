@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"time"
 
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-node/config"
@@ -21,11 +20,8 @@ func main() {
 	}
 	server := grpc.NewServer()
 
-	t := time.NewTicker(time.Minute)
 	protocol.RegisterAgentServer(
-		server, &agentServer{
-			ticker: t,
-		},
+		server, &agentServer{},
 	)
 
 	log.Println("Starting agent server...")
@@ -34,7 +30,6 @@ func main() {
 
 type agentServer struct {
 	protocol.UnimplementedAgentServer
-	ticker *time.Ticker
 }
 
 var (
@@ -74,27 +69,22 @@ func (as *agentServer) EvaluateBlock(ctx context.Context, txRequest *protocol.Ev
 func (as *agentServer) EvaluateAlert(ctx context.Context, request *protocol.EvaluateAlertRequest) (*protocol.EvaluateAlertResponse, error) {
 	response := &protocol.EvaluateAlertResponse{Status: protocol.ResponseStatus_SUCCESS}
 
-	select {
-	case <-as.ticker.C:
-		response.Findings = append(
-			response.Findings, &protocol.Finding{
-				Protocol:      "1",
-				Severity:      protocol.Finding_CRITICAL,
-				Metadata:      nil,
-				Type:          protocol.Finding_INFORMATION,
-				AlertId:       combinerbotalertid.CombinationAlertID,
-				Name:          "Combination Alert",
-				Description:   request.Event.Alert.Hash,
-				EverestId:     "",
-				Private:       false,
-				Addresses:     nil,
-				Indicators:    nil,
-				RelatedAlerts: []string{subscription},
-			},
-		)
-	default:
-
-	}
+	response.Findings = append(
+		response.Findings, &protocol.Finding{
+			Protocol:      "1",
+			Severity:      protocol.Finding_CRITICAL,
+			Metadata:      nil,
+			Type:          protocol.Finding_INFORMATION,
+			AlertId:       combinerbotalertid.CombinationAlertID,
+			Name:          "Combination Alert",
+			Description:   request.Event.Alert.Hash,
+			EverestId:     "",
+			Private:       false,
+			Addresses:     nil,
+			Indicators:    nil,
+			RelatedAlerts: []string{subscription},
+		},
+	)
 
 	logrus.WithField("alert", "combiner alert").Warn(response.Findings)
 
