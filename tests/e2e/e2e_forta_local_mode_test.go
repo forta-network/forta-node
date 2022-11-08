@@ -20,6 +20,7 @@ registry:
   checkIntervalSeconds: 1
   jsonRpc:
     url: http://localhost:8545
+  containerRegistry: localhost:1970
 
 publish:
   batch:
@@ -66,6 +67,8 @@ registry:
   checkIntervalSeconds: 1
   jsonRpc:
     url: http://localhost:8545
+  containerRegistry: localhost:1970
+
 
 publish:
   batch:

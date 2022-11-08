@@ -1,0 +1,37 @@
+name: E2E Test
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    branches: [master]
+
+env:
+  DEFAULT_DEV_VERSION: v0.0.1
+
+jobs:
+  go:
+    name: Go
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup
+        id: setup
+        uses: ./.github/actions/setup
+      - name: Validate and test Go code
+        id: go
+        uses: ./.github/actions/go
+
+  e2e:
+    name: E2E Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup
+        id: setup
+        uses: ./.github/actions/setup
+      - name: E2E Test
+        id: e2e
+        uses: ./.github/actions/e2e
