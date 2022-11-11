@@ -42,8 +42,8 @@ func (t *TxAnalyzerService) publishMetrics(result *TxResult) {
 func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
 	alertID := alerthash.ForTransactionAlert(
 		&alerthash.Inputs{
-			Transaction: result.Request.Event,
-			Finding:     f,
+			TransactionEvent: result.Request.Event,
+			Finding:          f,
 			BotInfo: alerthash.BotInfo{
 				BotImage: result.AgentConfig.Image,
 				BotID:    result.AgentConfig.ID,

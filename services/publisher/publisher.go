@@ -183,12 +183,14 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 
 	if pub.skipPublish {
 		const reason = "skipping batch, because skipPublish is enabled"
-		log.WithFields(log.Fields{
-			"blockStart":  batch.BlockStart,
-			"blockEnd":    batch.BlockEnd,
-			"alertCount":  batch.AlertCount,
-			"maxSeverity": batch.MaxSeverity.String(),
-		}).Info(reason)
+		log.WithFields(
+			log.Fields{
+				"blockStart":  batch.BlockStart,
+				"blockEnd":    batch.BlockEnd,
+				"alertCount":  batch.AlertCount,
+				"maxSeverity": batch.MaxSeverity.String(),
+			},
+		).Info(reason)
 		pub.lastBatchSkip.Set()
 		pub.lastBatchSkipReason.Set(reason)
 		return false, nil
@@ -206,28 +208,34 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 	pub.lastBatchReadyMu.RUnlock()
 
 	if pub.cfg.Config.LocalModeConfig.Enable {
-		scannerJwt, err := security.CreateScannerJWT(pub.cfg.Key, map[string]interface{}{
-			"localMode": "true",
-		})
+		scannerJwt, err := security.CreateScannerJWT(
+			pub.cfg.Key, map[string]interface{}{
+				"localMode": "true",
+			},
+		)
 		alertBatch := transform.ToWebhookAlertBatch(batch)
 		if !pub.cfg.Config.LocalModeConfig.IncludeMetrics {
 			log.Debug("excluding metrics due to local mode config")
 			alertBatch.Metrics = nil
 		}
-		_, err = pub.localAlertClient.SendAlerts(&operations.SendAlertsParams{
-			Context:       context.Background(),
-			Payload:       alertBatch,
-			Authorization: utils.StringPtr(fmt.Sprintf("Bearer %s", scannerJwt)),
-		})
+		_, err = pub.localAlertClient.SendAlerts(
+			&operations.SendAlertsParams{
+				Context:       context.Background(),
+				Payload:       alertBatch,
+				Authorization: utils.StringPtr(fmt.Sprintf("Bearer %s", scannerJwt)),
+			},
+		)
 		if err != nil {
 			log.WithError(err).Error("failed to send local mode alerts")
 			return false, err
 		}
 		if alertBatch != nil {
-			log.WithFields(log.Fields{
-				"alertCount":   len(alertBatch.Alerts),
-				"metricsCount": len(alertBatch.Metrics),
-			}).Info("successfully sent local mode alerts")
+			log.WithFields(
+				log.Fields{
+					"alertCount":   len(alertBatch.Alerts),
+					"metricsCount": len(alertBatch.Metrics),
+				},
+			).Info("successfully sent local mode alerts")
 		}
 		return true, nil
 	}
@@ -257,30 +265,35 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 		lastReceipt = lr
 	}
 
-	signedBatchSummary, err := security.SignBatchSummary(pub.cfg.Key, &protocol.BatchSummary{
-		Batch:            cid,
-		ChainId:          batch.ChainId,
-		BlockStart:       batch.BlockStart,
-		BlockEnd:         batch.BlockEnd,
-		AlertCount:       batch.AlertCount,
-		ScannerVersion:   batch.ScannerVersion,
-		PreviousReceipt:  lastReceipt,
-		LatestBlockInput: batch.LatestBlockInput,
-		Timestamp:        time.Now().UTC().Format(time.RFC3339),
-	})
+	signedBatchSummary, err := security.SignBatchSummary(
+		pub.cfg.Key, &protocol.BatchSummary{
+			Batch:            cid,
+			ChainId:          batch.ChainId,
+			BlockStart:       batch.BlockStart,
+			BlockEnd:         batch.BlockEnd,
+			AlertCount:       batch.AlertCount,
+			ScannerVersion:   batch.ScannerVersion,
+			PreviousReceipt:  lastReceipt,
+			LatestBlockInput: batch.LatestBlockInput,
+			Timestamp:        time.Now().UTC().Format(time.RFC3339),
+		},
+	)
 	if err != nil {
 		logger.WithError(err).Error("failed to sign batch summary")
 		return false, err
 	}
 
-	scannerJwt, err := security.CreateScannerJWT(pub.cfg.Key, map[string]interface{}{
-		"batch": cid,
-	})
+	scannerJwt, err := security.CreateScannerJWT(
+		pub.cfg.Key, map[string]interface{}{
+			"batch": cid,
+		},
+	)
 
 	if err != nil {
 		logger.WithError(err).Error("failed to sign cid")
 		return false, err
 	}
+
 	scannerAddr := pub.cfg.Key.Address.Hex()
 	resp, err := pub.alertClient.PostBatch(&domain.AlertBatchRequest{
 		Scanner:            scannerAddr,
@@ -305,9 +318,11 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 			logger.WithError(err).Error("failed to marshal receipt")
 			return true, err
 		}
-		logger = logger.WithFields(log.Fields{
-			"receiptId": resp.ReceiptID,
-		})
+		logger = logger.WithFields(
+			log.Fields{
+				"receiptId": resp.ReceiptID,
+			},
+		)
 
 		// if for some reason receipt can't marshal, log and move on
 		b, err := json.Marshal(resp.SignedReceipt)
@@ -391,6 +406,7 @@ func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, 
 func (pub *Publisher) registerMessageHandlers() {
 	pub.messageClient.Subscribe(messaging.SubjectMetricAgent, messaging.AgentMetricHandler(pub.metricsAggregator.AddAgentMetrics))
 	pub.messageClient.Subscribe(messaging.SubjectScannerBlock, messaging.ScannerHandler(pub.handleScannerBlock))
+	pub.messageClient.Subscribe(messaging.SubjectScannerAlert, messaging.ScannerHandler(pub.handleScannerAlert))
 	pub.messageClient.Subscribe(messaging.SubjectInspectionDone, messaging.InspectionResultsHandler(pub.handleInspectionResults))
 	pub.messageClient.Subscribe(messaging.SubjectAgentsVersionsLatest, messaging.AgentsHandler(pub.handleAgentVersionsUpdate))
 }
@@ -406,16 +422,22 @@ func (pub *Publisher) handleScannerBlock(payload messaging.ScannerPayload) error
 	pub.latestBlockInputMu.Lock()
 	defer pub.latestBlockInputMu.Unlock()
 
-	logger := log.WithFields(log.Fields{
-		"newLatestBlockInput":  payload.LatestBlockInput,
-		"prevLatestBlockInput": pub.latestBlockInput,
-	})
+	logger := log.WithFields(
+		log.Fields{
+			"newLatestBlockInput":  payload.LatestBlockInput,
+			"prevLatestBlockInput": pub.latestBlockInput,
+		},
+	)
 	if payload.LatestBlockInput < pub.latestBlockInput {
 		logger.Warn("skipping scanner update (lower than previous)")
 		return nil
 	}
 	logger.Info("received scanner update")
 	pub.latestBlockInput = payload.LatestBlockInput
+	return nil
+}
+
+func (pub *Publisher) handleScannerAlert(payload messaging.ScannerPayload) error {
 	return nil
 }
 
@@ -453,6 +475,9 @@ type TransactionResults protocol.TransactionResults
 // BlockResults contains the results for a block.
 type BlockResults protocol.BlockResults
 
+// CombinationAlertResults contains the results for a block.
+type CombinationAlertResults protocol.CombinationAlertResults
+
 // BatchData is a parent wrapper that contains all batch info.
 type BatchData protocol.AlertBatch
 
@@ -473,6 +498,8 @@ func (bd *BatchData) GetPrivateAlerts(notif *protocol.NotifyRequest) *protocol.A
 // AppendAlert adds the alert to the relevant list.
 func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 	isBlockAlert := notif.EvalBlockRequest != nil
+	isTxAlert := notif.EvalTxRequest != nil
+	isCombinationAlert := notif.EvalAlertRequest != nil
 
 	var isPrivate bool
 
@@ -486,6 +513,8 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 				isPrivate = notif.EvalBlockResponse.Private
 			} else if notif.EvalTxResponse != nil {
 				isPrivate = notif.EvalTxResponse.Private
+			} else if notif.EvalAlertResponse.Private {
+				isPrivate = notif.EvalAlertResponse.Private
 			}
 		}
 	}
@@ -499,18 +528,25 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 		}
 	} else if isBlockAlert {
 		blockNum := hexutil.MustDecodeUint64(notif.EvalBlockRequest.Event.BlockNumber)
-		bd.AddBatchAgent(notif.AgentInfo, blockNum, "")
+		bd.AddBatchAgent(notif.AgentInfo, blockNum, "", "")
 		blockRes := bd.GetBlockResults(notif.EvalBlockRequest.Event.BlockHash, blockNum, notif.EvalBlockRequest.Event.Block.Timestamp)
 		if hasAlert {
 			agentAlerts = (*BlockResults)(blockRes).GetAgentAlerts(notif.AgentInfo)
 		}
-	} else {
+	} else if isTxAlert {
 		blockNum := hexutil.MustDecodeUint64(notif.EvalTxRequest.Event.Block.BlockNumber)
-		bd.AddBatchAgent(notif.AgentInfo, blockNum, notif.EvalTxRequest.Event.Receipt.TransactionHash)
+		bd.AddBatchAgent(notif.AgentInfo, blockNum, notif.EvalTxRequest.Event.Receipt.TransactionHash, "")
 		blockRes := bd.GetBlockResults(notif.EvalTxRequest.Event.Block.BlockHash, blockNum, notif.EvalTxRequest.Event.Block.BlockTimestamp)
 		if hasAlert {
 			txRes := (*BlockResults)(blockRes).GetTransactionResults(notif.EvalTxRequest.Event)
 			agentAlerts = (*TransactionResults)(txRes).GetAgentAlerts(notif.AgentInfo)
+		}
+	} else if isCombinationAlert {
+		// TODO REMOVE THIS BEFORE PRODUCTION
+		bd.AddBatchAgent(notif.AgentInfo, 0, "", notif.EvalAlertRequest.Event.Alert.Source.Bot.Id)
+		metaRes := bd.GetCombinationAlertResults(notif.EvalAlertRequest.Event)
+		if hasAlert {
+			agentAlerts = (*CombinationAlertResults)(metaRes).GetAgentAlerts(notif.AgentInfo)
 		}
 	}
 
@@ -524,7 +560,7 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 
 // AddBatchAgent includes the agent info in the batch so we know that this agent really
 // processed a specific block or a tx hash.
-func (bd *BatchData) AddBatchAgent(agent *protocol.AgentInfo, blockNumber uint64, txHash string) {
+func (bd *BatchData) AddBatchAgent(agent *protocol.AgentInfo, blockNumber uint64, txHash string, subscription string) {
 	var batchAgent *protocol.BatchAgent
 	for _, ba := range bd.Agents {
 		if ba.Info.Manifest == agent.Manifest {
@@ -538,23 +574,39 @@ func (bd *BatchData) AddBatchAgent(agent *protocol.AgentInfo, blockNumber uint64
 		}
 		bd.Agents = append(bd.Agents, batchAgent)
 	}
-	if blockNumber == 0 {
-		log.Error("zero block number while adding batch agent")
+	if blockNumber != 0 {
+		var alreadyAddedBlockNum bool
+		for _, addedBlockNum := range batchAgent.Blocks {
+			if addedBlockNum == blockNumber {
+				alreadyAddedBlockNum = true
+				break
+			}
+		}
+		if !alreadyAddedBlockNum {
+			batchAgent.Blocks = append(batchAgent.Blocks, blockNumber)
+		}
+		if len(txHash) > 0 {
+			batchAgent.Transactions = append(batchAgent.Transactions, txHash)
+		}
 		return
 	}
-	var alreadyAddedBlockNum bool
-	for _, addedBlockNum := range batchAgent.Blocks {
-		if addedBlockNum == blockNumber {
-			alreadyAddedBlockNum = true
-			break
+
+	if subscription != "" {
+		var alreadyAddedCombinationAlert bool
+		for _, addedAlertSubscription := range batchAgent.Combinations {
+			if addedAlertSubscription == subscription {
+				alreadyAddedCombinationAlert = true
+				break
+			}
 		}
+
+		if !alreadyAddedCombinationAlert {
+			batchAgent.Combinations = append(batchAgent.Combinations, subscription)
+		}
+		return
 	}
-	if !alreadyAddedBlockNum {
-		batchAgent.Blocks = append(batchAgent.Blocks, blockNumber)
-	}
-	if len(txHash) > 0 {
-		batchAgent.Transactions = append(batchAgent.Transactions, txHash)
-	}
+
+	log.Error("no block number or combination while adding batch agent")
 }
 
 // GetBlockResults returns an existing or a new aggregation object for the block.
@@ -575,6 +627,23 @@ func (bd *BatchData) GetBlockResults(blockHash string, blockNumber uint64, block
 	return br
 }
 
+// GetCombinationAlertResults returns an existing or a new aggregation object for the block.
+func (bd *BatchData) GetCombinationAlertResults(combinationAlert *protocol.AlertEvent) *protocol.CombinationAlertResults {
+	for _, blockRes := range bd.CombinationAlerts {
+		if blockRes.AlertEvent.Alert.Hash == combinationAlert.Alert.Hash {
+			return blockRes
+		}
+	}
+	// TODO fill this data
+	mr := &protocol.CombinationAlertResults{
+		AlertEvent: combinationAlert,
+	}
+
+	bd.CombinationAlerts = append(bd.CombinationAlerts, mr)
+
+	return mr
+}
+
 // GetTransactionResults returns an existing or a new aggregation object for the transaction.
 func (br *BlockResults) GetTransactionResults(tx *protocol.TransactionEvent) *protocol.TransactionResults {
 	for _, txRes := range br.Transactions {
@@ -587,6 +656,21 @@ func (br *BlockResults) GetTransactionResults(tx *protocol.TransactionEvent) *pr
 	}
 	br.Transactions = append(br.Transactions, tr)
 	return tr
+}
+
+// GetAgentAlerts returns an existing or a new aggregation object for the agent alerts.
+func (mar *CombinationAlertResults) GetAgentAlerts(agent *protocol.AgentInfo) *protocol.AgentAlerts {
+	for _, agentAlerts := range mar.Results {
+		if agentAlerts.AgentManifest == agent.Manifest {
+			return agentAlerts
+		}
+	}
+	aa := &protocol.AgentAlerts{
+		AgentManifest: agent.Manifest,
+	}
+	mar.Results = append(mar.Results, aa)
+
+	return aa
 }
 
 // GetAgentAlerts returns an existing or a new aggregation object for the agent alerts.
@@ -643,8 +727,10 @@ func (pub *Publisher) prepareLatestBatch() {
 			var blockNum string
 			if notif.EvalBlockRequest != nil {
 				blockNum = notif.EvalBlockRequest.Event.BlockNumber
-			} else {
+			} else if notif.EvalTxRequest != nil {
 				blockNum = notif.EvalTxRequest.Event.Block.BlockNumber
+			} else if notif.EvalAlertRequest != nil {
+				blockNum = hexutil.EncodeUint64(notif.EvalAlertRequest.Event.Alert.Source.Block.Number)
 			}
 
 			notifBlockNum, err := hexutil.DecodeUint64(blockNum)

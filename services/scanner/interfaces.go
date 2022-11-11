@@ -22,11 +22,21 @@ type BlockResult struct {
 	Timestamps  *domain.TrackingTimestamps
 }
 
-// AgentPool contains all of the agents which we can forward the block and tx requests
+// CombinationAlertResult contains request and response data.
+type CombinationAlertResult struct {
+	AgentConfig config.AgentConfig
+	Request     *protocol.EvaluateAlertRequest
+	Response    *protocol.EvaluateAlertResponse
+	Timestamps  *domain.TrackingTimestamps
+}
+
+// AgentPool contains all the agents which we can forward the alert, block and tx requests
 // to and receive the results from.
 type AgentPool interface {
 	SendEvaluateTxRequest(req *protocol.EvaluateTxRequest)
 	TxResults() <-chan *TxResult
 	SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest)
 	BlockResults() <-chan *BlockResult
+	SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest)
+	CombinationAlertResults() <-chan *CombinationAlertResult
 }

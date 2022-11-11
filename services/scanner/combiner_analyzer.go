@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"context"
+	"math/big"
 	"time"
 
 	"github.com/forta-network/forta-core-go/clients/health"
@@ -19,32 +20,32 @@ import (
 	"github.com/forta-network/forta-node/clients"
 )
 
-// BlockAnalyzerService reads TX info, calls agents, and emits results
-type BlockAnalyzerService struct {
+// CombinerAlertAnalyzerService reads alert info, calls agents, and emits results
+type CombinerAlertAnalyzerService struct {
 	ctx           context.Context
-	cfg           BlockAnalyzerServiceConfig
+	cfg           CombinerAlertAnalyzerServiceConfig
 	publisherNode protocol.PublisherNodeClient
 
 	lastInputActivity  health.TimeTracker
 	lastOutputActivity health.TimeTracker
 }
 
-type BlockAnalyzerServiceConfig struct {
-	BlockChannel <-chan *domain.BlockEvent
+type CombinerAlertAnalyzerServiceConfig struct {
+	AlertChannel <-chan *domain.AlertEvent
 	AlertSender  clients.AlertSender
 	AgentPool    AgentPool
 	MsgClient    clients.MessageClient
 }
 
-func (t *BlockAnalyzerService) publishMetrics(result *BlockResult) {
-	m := metrics.GetBlockMetrics(result.AgentConfig, result.Response, result.Timestamps)
-	t.cfg.MsgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: m})
+func (aas *CombinerAlertAnalyzerService) publishMetrics(result *CombinationAlertResult) {
+	m := metrics.GetCombinerMetrics(result.AgentConfig, result.Response, result.Timestamps)
+	aas.cfg.MsgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: m})
 }
 
-func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
-	alertID := alerthash.ForBlockAlert(
+func (aas *CombinerAlertAnalyzerService) findingToAlert(result *CombinationAlertResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
+	alertID := alerthash.ForCombinationAlert(
 		&alerthash.Inputs{
-			BlockEvent: result.Request.Event,
+			AlertEvent: result.Request.Event,
 			Finding:    f,
 			BotInfo: alerthash.BotInfo{
 				BotImage: result.AgentConfig.Image,
@@ -52,14 +53,8 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 			},
 		},
 	)
-	blockNumber, err := utils.HexToBigInt(result.Request.Event.BlockNumber)
-	if err != nil {
-		return nil, err
-	}
-	chainId, err := utils.HexToBigInt(result.Request.Event.Network.ChainId)
-	if err != nil {
-		return nil, err
-	}
+
+	chainId := big.NewInt(int64(result.Request.Event.Alert.Source.Block.ChainId))
 	tags := map[string]string{
 		"agentImage": result.AgentConfig.Image,
 		"agentId":    result.AgentConfig.ID,
@@ -68,10 +63,9 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 
 	alertType := protocol.AlertType_PRIVATE
 	if !f.Private && !result.Response.Private {
-		alertType = protocol.AlertType_BLOCK
-		tags["blockHash"] = result.Request.Event.BlockHash
-		tags["blockNumber"] = blockNumber.String()
+		alertType = protocol.AlertType_COMBINATION
 	}
+
 	return &protocol.Alert{
 		Id:         alertID,
 		Finding:    f,
@@ -83,10 +77,10 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 	}, nil
 }
 
-func (t *BlockAnalyzerService) Start() error {
+func (aas *CombinerAlertAnalyzerService) Start() error {
 	// Gear 2: receive result from agent
 	go func() {
-		for result := range t.cfg.AgentPool.BlockResults() {
+		for result := range aas.cfg.AgentPool.CombinationAlertResults() {
 			ts := time.Now().UTC()
 
 			m := jsonpb.Marshaler{}
@@ -98,13 +92,13 @@ func (t *BlockAnalyzerService) Start() error {
 			log.Debugf(resStr)
 
 			rt := &clients.AgentRoundTrip{
-				AgentConfig:       result.AgentConfig,
-				EvalBlockRequest:  result.Request,
-				EvalBlockResponse: result.Response,
+				AgentConfig:             result.AgentConfig,
+				EvalAlertRequest:  result.Request,
+				EvalAlertResponse: result.Response,
 			}
 
 			if len(result.Response.Findings) == 0 {
-				if err := t.cfg.AlertSender.NotifyWithoutAlert(
+				if err := aas.cfg.AlertSender.NotifyWithoutAlert(
 					rt, result.Timestamps,
 				); err != nil {
 					log.WithError(err).Panic("failed to notify without alert")
@@ -112,66 +106,66 @@ func (t *BlockAnalyzerService) Start() error {
 			}
 
 			for _, f := range result.Response.Findings {
-				alert, err := t.findingToAlert(result, ts, f)
+				alert, err := aas.findingToAlert(result, ts, f)
 				if err != nil {
 					log.WithError(err).Error("failed to transform finding to alert")
 					continue
 				}
-				if err := t.cfg.AlertSender.SignAlertAndNotify(
-					rt, alert, result.Request.Event.Network.ChainId, result.Request.Event.BlockNumber, result.Timestamps,
+				if err := aas.cfg.AlertSender.SignAlertAndNotify(
+					rt, alert, "", "", result.Timestamps,
 				); err != nil {
 					log.WithError(err).Panic("failed sign alert and notify")
 				}
 			}
-			t.publishMetrics(result)
+			aas.publishMetrics(result)
 
-			t.lastOutputActivity.Set()
+			aas.lastOutputActivity.Set()
 		}
 	}()
 
-	// Gear 1: loops over blocks and distributes to all agents
+	// Gear 1: loops over alerts and distributes to all agents
 	go func() {
-		// for each block
-		for block := range t.cfg.BlockChannel {
+		// for each alert
+		for alert := range aas.cfg.AlertChannel {
 			// convert to message
-			blockEvt, err := block.ToMessage()
+			alertEvt, err := alert.ToMessage()
 			if err != nil {
-				log.WithError(err).Error("error converting block event to message (skipping)")
+				log.WithError(err).Error("error converting alert event to message (skipping)")
 				continue
 			}
 
 			// create a request
 			requestId := uuid.Must(uuid.NewUUID())
-			request := &protocol.EvaluateBlockRequest{RequestId: requestId.String(), Event: blockEvt}
+			request := &protocol.EvaluateAlertRequest{RequestId: requestId.String(), Event: alertEvt}
 
 			// forward to the pool
-			t.cfg.AgentPool.SendEvaluateBlockRequest(request)
+			aas.cfg.AgentPool.SendEvaluateAlertRequest(request)
 
-			t.lastInputActivity.Set()
+			aas.lastInputActivity.Set()
 		}
 	}()
 
 	return nil
 }
 
-func (t *BlockAnalyzerService) Stop() error {
+func (aas *CombinerAlertAnalyzerService) Stop() error {
 	return nil
 }
 
-func (t *BlockAnalyzerService) Name() string {
-	return "block-analyzer"
+func (aas *CombinerAlertAnalyzerService) Name() string {
+	return "combiner-alert-analyzer"
 }
 
 // Health implements the health.Reporter interface.
-func (t *BlockAnalyzerService) Health() health.Reports {
+func (aas *CombinerAlertAnalyzerService) Health() health.Reports {
 	return health.Reports{
-		t.lastInputActivity.GetReport("event.input.time"),
-		t.lastOutputActivity.GetReport("event.output.time"),
+		aas.lastInputActivity.GetReport("event.input.time"),
+		aas.lastOutputActivity.GetReport("event.output.time"),
 	}
 }
 
-func NewBlockAnalyzerService(ctx context.Context, cfg BlockAnalyzerServiceConfig) (*BlockAnalyzerService, error) {
-	return &BlockAnalyzerService{
+func NewCombinerAlertAnalyzerService(ctx context.Context, cfg CombinerAlertAnalyzerServiceConfig) (*CombinerAlertAnalyzerService, error) {
+	return &CombinerAlertAnalyzerService{
 		cfg: cfg,
 		ctx: ctx,
 	}, nil
