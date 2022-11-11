@@ -3,9 +3,6 @@ name: E2E Test
 on:
   workflow_dispatch:
 
-env:
-  DEFAULT_DEV_VERSION: v0.0.1
-
 jobs:
   go:
     name: Go
