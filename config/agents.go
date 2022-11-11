@@ -12,12 +12,12 @@ const (
 )
 
 type AgentConfig struct {
-	ID         string  `yaml:"id" json:"id"`
-	Image      string  `yaml:"image" json:"image"`
-	Manifest   string  `yaml:"manifest" json:"manifest"`
-	IsLocal    bool    `yaml:"isLocal" json:"isLocal"`
-	StartBlock *uint64 `yaml:"startBlock" json:"startBlock,omitempty"`
-	StopBlock  *uint64 `yaml:"stopBlock" json:"stopBlock,omitempty"`
+	ID          string  `yaml:"id" json:"id"`
+	Image       string  `yaml:"image" json:"image"`
+	Manifest    string  `yaml:"manifest" json:"manifest"`
+	IsLocal     bool    `yaml:"isLocal" json:"isLocal"`
+	StartBlock  *uint64 `yaml:"startBlock" json:"startBlock,omitempty"`
+	StopBlock   *uint64 `yaml:"stopBlock" json:"stopBlock,omitempty"`
 	AlertConfig *protocol.AlertConfig
 }
 
@@ -47,4 +47,3 @@ func (ac AgentConfig) ContainerName() string {
 func (ac AgentConfig) GrpcPort() string {
 	return AgentGrpcPort
 }
-

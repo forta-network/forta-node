@@ -68,10 +68,11 @@ type BatchConfig struct {
 }
 
 type PublisherConfig struct {
-	SkipPublish bool        `yaml:"skipPublish" json:"skipPublish" default:"false"`
-	APIURL      string      `yaml:"apiUrl" json:"apiUrl" default:"https://alerts.forta.network" validate:"url"`
-	IPFS        IPFSConfig  `yaml:"ipfs" json:"ipfs" validate:"required_unless=SkipPublish true"`
-	Batch       BatchConfig `yaml:"batch" json:"batch"`
+	SkipPublish   bool        `yaml:"skipPublish" json:"skipPublish" default:"false"`
+	AlwaysPublish bool        `yaml:"alwaysPublish" json:"alwaysPublish" default:"false"`
+	APIURL        string      `yaml:"apiUrl" json:"apiUrl" default:"https://alerts.forta.network" validate:"url"`
+	IPFS          IPFSConfig  `yaml:"ipfs" json:"ipfs" validate:"required_unless=SkipPublish true"`
+	Batch         BatchConfig `yaml:"batch" json:"batch"`
 }
 
 type ResourcesConfig struct {
@@ -135,8 +136,13 @@ type InspectionConfig struct {
 	InspectAtStartup  bool `yaml:"inspectAtStartup" json:"inspectAtStartup" default:"true"`
 }
 
+type StorageConfig struct {
+	Provide string `yaml:"provide" json:"provide" default:"https://ipfs-router.forta.network/provide"`
+	Reframe string `yaml:"reframe" json:"reframe" default:"https://ipfs-router.forta.network/reframe"`
+}
+
 type CombinerConfig struct {
-	AlertAPIURL string `yaml:"apiUrl" json:"apiUrl" default:"https://api.forta.network/graphql" validate:"url"`
+	AlertAPIURL string `yaml:"alertApiUrl" json:"alertApiUrl" default:"https://api.forta.network/graphql" validate:"url"`
 }
 
 type Config struct {
@@ -165,7 +171,8 @@ type Config struct {
 	AgentLogsConfig  AgentLogsConfig    `yaml:"agentLogs" json:"agentLogs"`
 	LocalModeConfig  LocalModeConfig    `yaml:"localMode" json:"localMode"`
 	InspectionConfig InspectionConfig   `yaml:"inspection" json:"inspection"`
-	CombinerConfig   CombinerConfig     `yaml:"combinerConfig" json:"combinerConfig"`
+	StorageConfig    StorageConfig      `yaml:"storage" json:"storage"`
+	CombinerConfig   CombinerConfig     `yaml:"combiner" json:"combiner"`
 }
 
 func (cfg *Config) ConfigFilePath() string {

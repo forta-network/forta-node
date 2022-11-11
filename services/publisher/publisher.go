@@ -28,8 +28,10 @@ import (
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/alertapi"
 	"github.com/forta-network/forta-node/clients/messaging"
+	"github.com/forta-network/forta-node/clients/storagegrpc"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/services/publisher/webhooklog"
+	"github.com/forta-network/forta-node/services/storage"
 	"github.com/forta-network/forta-node/store"
 	ipfsapi "github.com/ipfs/go-ipfs-api"
 	log "github.com/sirupsen/logrus"
@@ -52,6 +54,7 @@ type Publisher struct {
 	cfg               PublisherConfig
 	contract          AlertsContract
 	ipfs              ipfs.Client
+	storage           protocol.StorageClient
 	metricsAggregator *AgentMetricsAggregator
 	messageClient     *messaging.Client
 	alertClient       clients.AlertAPIClient
@@ -96,6 +99,9 @@ type Publisher struct {
 
 // LocalAlertClient sends the local alerts.
 type LocalAlertClient webhook.AlertWebhookClient
+
+// StorageClient stores content.
+type StorageClient protocol.StorageClient
 
 // EthClient interacts with the Ethereum API.
 type EthClient interface {
@@ -287,26 +293,25 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 		logger.WithError(err).Error("failed to sign cid")
 		return false, err
 	}
-	resp, err := pub.alertClient.PostBatch(
-		&domain.AlertBatchRequest{
-			Scanner:            pub.cfg.Key.Address.Hex(),
-			ChainID:            int64(batch.ChainId),
-			BlockStart:         int64(batch.BlockStart),
-			BlockEnd:           int64(batch.BlockEnd),
-			AlertCount:         int64(batch.AlertCount),
-			MaxSeverity:        int64(batch.MaxSeverity),
-			Ref:                cid,
-			SignedBatch:        signedBatch,
-			SignedBatchSummary: signedBatchSummary,
-		}, scannerJwt,
-	)
+
+	scannerAddr := pub.cfg.Key.Address.Hex()
+	resp, err := pub.alertClient.PostBatch(&domain.AlertBatchRequest{
+		Scanner:            scannerAddr,
+		ChainID:            int64(batch.ChainId),
+		BlockStart:         int64(batch.BlockStart),
+		BlockEnd:           int64(batch.BlockEnd),
+		AlertCount:         int64(batch.AlertCount),
+		MaxSeverity:        int64(batch.MaxSeverity),
+		Ref:                cid,
+		SignedBatch:        signedBatch,
+		SignedBatchSummary: signedBatchSummary,
+	}, scannerJwt)
 
 	if err != nil {
 		logger.WithError(err).Error("alert while sending batch")
 		return false, fmt.Errorf("failed to send the alert tx: %v", err)
 	}
 
-	// TODO: after receipts are returned, make it non-optional
 	if resp.SignedReceipt != nil {
 		// store off receipt id
 		if err := pub.lastReceiptStore.Put(resp.ReceiptID); err != nil {
@@ -325,11 +330,22 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 			logger.WithError(err).Error("failed to marshal receipt (not saving receipt)")
 			return true, nil
 		}
-		logger = logger.WithFields(
-			log.Fields{
-				"receipt": string(b),
-			},
-		)
+		logger = logger.WithFields(log.Fields{
+			"receipt": string(b),
+		})
+		putResp, err := pub.storage.Put(pub.ctx, &protocol.PutRequest{
+			User:  scannerAddr,
+			Kind:  storage.KindBatchReceipt,
+			Bytes: b,
+		})
+		if err != nil {
+			logger.WithError(err).Warn("failed to storage batch receipt")
+		} else {
+			logger = logger.WithFields(log.Fields{
+				"storedReceiptRef":  putResp.ContentId,
+				"storedReceiptPath": putResp.ContentPath,
+			})
+		}
 	}
 
 	logger.Info("alert batch")
@@ -338,6 +354,10 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 }
 
 func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, bool) {
+	if pub.cfg.PublisherConfig.AlwaysPublish {
+		return "", false
+	}
+
 	if batch.AlertCount > 0 {
 		return "", false
 	}
@@ -801,18 +821,21 @@ func NewPublisher(ctx context.Context, cfg config.Config) (*Publisher, error) {
 
 	apiClient := alertapi.NewClient(cfg.Publish.APIURL)
 
-	return initPublisher(
-		ctx, mc, apiClient, PublisherConfig{
-			ChainID:         cfg.ChainID,
-			Key:             key,
-			PublisherConfig: cfg.Publish,
-			ReleaseSummary:  releaseSummary,
-			Config:          cfg,
-		},
-	)
+	storageClient, err := storagegrpc.DialContext(ctx, fmt.Sprintf("%s:%s", config.DockerStorageContainerName, config.DefaultStoragePort))
+	if err != nil {
+		return nil, fmt.Errorf("failed to dial the storage client: %v", err)
+	}
+
+	return initPublisher(ctx, mc, apiClient, storageClient, PublisherConfig{
+		ChainID:         cfg.ChainID,
+		Key:             key,
+		PublisherConfig: cfg.Publish,
+		ReleaseSummary:  releaseSummary,
+		Config:          cfg,
+	})
 }
 
-func initPublisher(ctx context.Context, mc *messaging.Client, alertClient clients.AlertAPIClient, cfg PublisherConfig) (*Publisher, error) {
+func initPublisher(ctx context.Context, mc *messaging.Client, alertClient clients.AlertAPIClient, storageClient StorageClient, cfg PublisherConfig) (*Publisher, error) {
 	ipfsClient, err := ipfs.NewClient(fmt.Sprintf("http://%s:5001", config.DockerIpfsContainerName))
 	if err != nil {
 		return nil, err
@@ -847,6 +870,7 @@ func initPublisher(ctx context.Context, mc *messaging.Client, alertClient client
 		ctx:               ctx,
 		cfg:               cfg,
 		ipfs:              ipfsClient,
+		storage:           storageClient,
 		metricsAggregator: NewMetricsAggregator(time.Duration(*cfg.PublisherConfig.Batch.MetricsBucketIntervalSeconds) * time.Second),
 		messageClient:     mc,
 		alertClient:       alertClient,

@@ -6,6 +6,7 @@ import (
 	jwt_provider "github.com/forta-network/forta-node/cmd/jwt-provider"
 	"github.com/forta-network/forta-node/cmd/publisher"
 	"github.com/forta-network/forta-node/cmd/scanner"
+	"github.com/forta-network/forta-node/cmd/storage"
 	"github.com/forta-network/forta-node/cmd/supervisor"
 	"github.com/forta-network/forta-node/cmd/updater"
 	"github.com/spf13/cobra"
@@ -43,7 +44,7 @@ var (
 			return nil
 		},
 	}
-	
+
 	cmdJWTProvider = &cobra.Command{
 		Use: "jwt-provider",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -51,7 +52,7 @@ var (
 			return nil
 		},
 	}
-	
+
 	cmdPublisher = &cobra.Command{
 		Use: "publisher",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -67,10 +68,19 @@ var (
 			return nil
 		},
 	}
+
 	cmdJsonRpc = &cobra.Command{
 		Use: "json-rpc",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			json_rpc.Run()
+			return nil
+		},
+	}
+
+	cmdStorage = &cobra.Command{
+		Use: "storage",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			storage.Run()
 			return nil
 		},
 	}
@@ -84,6 +94,7 @@ func init() {
 	cmdFortaNode.AddCommand(cmdInspector)
 	cmdFortaNode.AddCommand(cmdJsonRpc)
 	cmdFortaNode.AddCommand(cmdJWTProvider)
+	cmdFortaNode.AddCommand(cmdStorage)
 }
 
 func Run() error {

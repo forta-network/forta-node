@@ -2,15 +2,14 @@ module github.com/forta-network/forta-node
 
 go 1.19
 
-require github.com/forta-network/forta-core-go v0.0.0-20221111104852-b7149275d5f0
-
 require (
-	github.com/creasty/defaults v1.6.0
+	github.com/creasty/defaults v1.5.2
 	github.com/docker/docker v1.4.2-0.20180625184442-8e610b2b55bf
 	github.com/docker/go-connections v0.4.0
 	github.com/ethereum/go-ethereum v1.10.16
-	github.com/fatih/color v1.7.0
-	github.com/go-playground/validator/v10 v10.11.1
+	github.com/fatih/color v1.13.0
+	github.com/forta-network/forta-core-go v0.0.0-20221111104852-b7149275d5f0
+	github.com/go-playground/validator/v10 v10.9.0
 	github.com/goccy/go-json v0.9.4
 	github.com/golang-jwt/jwt/v4 v4.4.1
 	github.com/golang/mock v1.6.0
@@ -19,13 +18,15 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/ipfs/go-cid v0.3.2
 	github.com/ipfs/go-ipfs-api v0.3.0
-	github.com/nats-io/nats.go v1.19.0
+	github.com/libp2p/go-libp2p v0.23.2
+	github.com/nats-io/nats.go v1.9.1
 	github.com/rs/cors v1.7.0
 	github.com/shopspring/decimal v1.3.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/viper v1.3.2
 	github.com/stretchr/testify v1.8.0
+	github.com/tylertreat/BoomFilters v0.0.0-20210315201527-1a82519a3e43
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
 	google.golang.org/grpc v1.47.0
@@ -152,7 +153,6 @@ require (
 	github.com/libp2p/go-cidranger v1.1.0 // indirect
 	github.com/libp2p/go-doh-resolver v0.4.0 // indirect
 	github.com/libp2p/go-flow-metrics v0.1.0 // indirect
-	github.com/libp2p/go-libp2p v0.23.2 // indirect
 	github.com/libp2p/go-libp2p-asn-util v0.2.0 // indirect
 	github.com/libp2p/go-libp2p-core v0.20.1 // indirect
 	github.com/libp2p/go-libp2p-discovery v0.7.0 // indirect
@@ -179,7 +179,7 @@ require (
 	github.com/marten-seemann/qtls-go1-19 v0.1.0 // indirect
 	github.com/marten-seemann/tcp v0.0.0-20210406111302-dfbc87cc63fd // indirect
 	github.com/marten-seemann/webtransport-go v0.1.1 // indirect
-	github.com/mattn/go-colorable v0.1.8 // indirect
+	github.com/mattn/go-colorable v0.1.9 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/mattn/go-pointer v0.0.1 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
@@ -200,7 +200,8 @@ require (
 	github.com/multiformats/go-multihash v0.2.1 // indirect
 	github.com/multiformats/go-multistream v0.3.3 // indirect
 	github.com/multiformats/go-varint v0.0.6 // indirect
-	github.com/nats-io/nkeys v0.3.0 // indirect
+	github.com/nats-io/jwt v0.3.2 // indirect
+	github.com/nats-io/nkeys v0.1.3 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
@@ -235,7 +236,6 @@ require (
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tklauser/numcpus v0.4.0 // indirect
-	github.com/tylertreat/BoomFilters v0.0.0-20210315201527-1a82519a3e43 // indirect
 	github.com/vektah/gqlparser/v2 v2.4.5 // indirect
 	github.com/wI2L/jsondiff v0.2.0 // indirect
 	github.com/wealdtech/go-ens/v3 v3.5.2 // indirect

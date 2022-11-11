@@ -2,8 +2,8 @@ chainId: 137
 
 registry:
   ipfs:
-    gatewayUrl: http://localhost:8080
-    apiUrl: http://localhost:5001
+    gatewayUrl: http://localhost:8181
+    apiUrl: http://localhost:5002
   jsonRpc:
     url: http://localhost:8545
   containerRegistry: localhost:1970
@@ -16,8 +16,8 @@ scan:
 publish:
   apiUrl: http://localhost:9090
   ipfs:
-    gatewayUrl: http://localhost:8080
-    apiUrl: http://localhost:5001
+    gatewayUrl: http://localhost:8181
+    apiUrl: http://localhost:5002
   batch:
     skipEmpty: true
 

@@ -7,7 +7,7 @@ export RUNNER_TRACKING_ID=""
 TEST_DIR=$(dirname "${BASH_SOURCE[0]}")
 export IPFS_PATH="$TEST_DIR/.ipfs"
 export REGISTRY_CONFIGURATION_PATH="$TEST_DIR/disco.config.yml"
-export IPFS_URL="http://localhost:5001"
+export IPFS_URL="http://localhost:5002"
 export DISCO_PORT="1970"
 
 ETHEREUM_DIR="$TEST_DIR/.ethereum"
