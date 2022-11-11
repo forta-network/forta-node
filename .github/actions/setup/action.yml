@@ -15,4 +15,4 @@ runs:
         # increment the version number below to reset cache
         key: ${{ runner.os }}-go-v1-${{ hashFiles('**/go.sum') }}
         restore-keys: |
-          ${{ runner.os }}-go-
+          ${{ runner.os }}-go-v1
