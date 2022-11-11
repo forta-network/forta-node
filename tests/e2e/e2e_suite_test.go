@@ -399,6 +399,7 @@ func (s *Suite) ensureTx(name string, tx *types.Transaction) {
 		}
 		time.Sleep(time.Millisecond * 200)
 	}
+	time.Sleep(time.Second) // hard delay
 	s.r.FailNowf("failed to mine tx", "%s: %s", name, tx.Hash())
 }
 
