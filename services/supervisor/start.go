@@ -196,6 +196,7 @@ ipfs config Datastore.StorageMax '1GB'
 			// extra flags
 			"--offline",
 		},
+		CPUQuota: config.CPUsToMicroseconds(0.5),
 	})
 	if err != nil {
 		return err
