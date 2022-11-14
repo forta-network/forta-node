@@ -190,6 +190,13 @@ ipfs config Datastore.StorageMax '1GB'
 		NetworkID:   nodeNetworkID,
 		MaxLogFiles: sup.maxLogFiles,
 		MaxLogSize:  sup.maxLogSize,
+		Cmd: []string{
+			// default CMD - taken from https://hub.docker.com/layers/ipfs/kubo/master-latest/images/sha256-65b4c19a75987bd9bb677e8d9b1b1dafb81eec2335ba65f73dfb8256f6b3d22a?context=explore
+			"daemon", "--migrate=true", "--agent-version-suffix=docker",
+			// extra flags
+			"--offline",
+		},
+		CPUQuota: config.CPUsToMicroseconds(0.5),
 	})
 	if err != nil {
 		return err

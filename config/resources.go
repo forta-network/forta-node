@@ -17,7 +17,7 @@ func GetAgentResourceLimits(resourcesCfg ResourcesConfig) *AgentResourceLimits {
 
 	limits.CPUQuota = getDefaultCPUQuotaPerAgent()
 	if resourcesCfg.AgentMaxCPUs > 0 {
-		limits.CPUQuota = int64(resourcesCfg.AgentMaxCPUs * float64(100000))
+		limits.CPUQuota = CPUsToMicroseconds(resourcesCfg.AgentMaxCPUs)
 	}
 
 	limits.Memory = getDefaultMemoryPerAgent()
@@ -26,6 +26,11 @@ func GetAgentResourceLimits(resourcesCfg ResourcesConfig) *AgentResourceLimits {
 	}
 
 	return &limits
+}
+
+// CPUsToMicroseconds converts given CPU amount to microseconds.
+func CPUsToMicroseconds(cpus float64) int64 {
+	return int64(cpus * float64(100000))
 }
 
 // getDefaultCPUQuotaPerAgent returns the default CFS microseconds value allowed per agent
