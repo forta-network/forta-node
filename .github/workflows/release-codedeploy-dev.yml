@@ -4,7 +4,6 @@ on:
   push:
     branches: [master]
   workflow_dispatch:
-    branches: [master]
 
 env:
   DEFAULT_DEV_VERSION: v0.0.1
@@ -25,6 +24,7 @@ jobs:
 
   e2e:
     name: E2E Test
+    if: ${{ github.ref_name == 'master' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -175,6 +175,7 @@ jobs:
 
   release:
     name: Release dev
+    if: ${{ github.ref_name == 'master' }}
     runs-on: ubuntu-18.04
     needs: [build-deploy]
     environment: dev
