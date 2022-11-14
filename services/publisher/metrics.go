@@ -2,6 +2,7 @@ package publisher
 
 import (
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/forta-network/forta-core-go/protocol"
@@ -14,6 +15,7 @@ type AgentMetricsAggregator struct {
 	buckets        []*metricsBucket
 	bucketInterval time.Duration
 	lastFlush      time.Time
+	mu             sync.RWMutex
 }
 
 type metricsBucket struct {
@@ -36,6 +38,7 @@ func (mb *metricsBucket) CreateAndGetSummary(name string) *protocol.MetricSummar
 // NewAgentMetricsAggregator creates a new agent metrics aggregator.
 func NewMetricsAggregator(bucketInterval time.Duration) *AgentMetricsAggregator {
 	return &AgentMetricsAggregator{
+		mu:             sync.RWMutex{},
 		bucketInterval: bucketInterval,
 		lastFlush:      time.Now(), // avoid flushing immediately
 	}
@@ -73,6 +76,9 @@ func (ama *AgentMetricsAggregator) FindClosestBucketTime(t time.Time) time.Time 
 type agentResponse protocol.EvaluateTxResponse
 
 func (ama *AgentMetricsAggregator) AddAgentMetrics(ms *protocol.AgentMetricList) error {
+	ama.mu.Lock()
+	defer ama.mu.Unlock()
+
 	for _, m := range ms.Metrics {
 		t, _ := time.Parse(time.RFC3339, m.Timestamp)
 		bucket := ama.findBucket(m.AgentId, t)
@@ -83,6 +89,9 @@ func (ama *AgentMetricsAggregator) AddAgentMetrics(ms *protocol.AgentMetricList)
 
 // ForceFlush flushes without asking questions
 func (ama *AgentMetricsAggregator) ForceFlush() []*protocol.AgentMetrics {
+	ama.mu.Lock()
+	defer ama.mu.Unlock()
+
 	now := time.Now()
 
 	ama.lastFlush = now
@@ -101,6 +110,9 @@ func (ama *AgentMetricsAggregator) ForceFlush() []*protocol.AgentMetrics {
 
 // TryFlush checks the flushing condition(s) an returns metrics accordingly.
 func (ama *AgentMetricsAggregator) TryFlush() ([]*protocol.AgentMetrics, bool) {
+	ama.mu.Lock()
+	defer ama.mu.Unlock()
+
 	now := time.Now()
 	if now.Sub(ama.lastFlush) < ama.bucketInterval {
 		return nil, false

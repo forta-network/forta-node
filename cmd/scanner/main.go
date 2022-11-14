@@ -125,6 +125,61 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 	return txStream, blockFeed, nil
 }
 
+func initCombinationStream(ctx context.Context, msgClient *messaging.Client, cfg config.Config) (*scanner.CombinerAlertStreamService, feeds.AlertFeed, error) {
+	combinerFeed, err := feeds.NewCombinerFeed(
+		ctx, feeds.CombinerFeedConfig{
+			APIUrl: cfg.CombinerConfig.AlertAPIURL,
+			Start:  cfg.LocalModeConfig.RuntimeLimits.StartCombiner,
+			End:    cfg.LocalModeConfig.RuntimeLimits.StopCombiner,
+		},
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	combinerStream, err := scanner.NewCombinerAlertStreamService(
+		ctx, combinerFeed, msgClient, scanner.CombinerAlertStreamServiceConfig{
+			Start: cfg.LocalModeConfig.RuntimeLimits.StartCombiner,
+			End:   cfg.LocalModeConfig.RuntimeLimits.StopCombiner,
+		},
+	)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create the tx stream service: %v", err)
+	}
+
+	// subscribe to combiner feed so we can detect combiner stop and trigger exit
+	combinerErrCh := combinerFeed.RegisterHandler(
+		func(evt *domain.AlertEvent) error {
+			return nil
+		},
+	)
+
+	// detect end time, wait for scanning to finish, trigger exit
+	go func() {
+		err := <-combinerErrCh
+		if err == nil {
+			return
+		}
+
+		if err == context.Canceled {
+			return
+		}
+
+		if err != feeds.ErrCombinerStopReached {
+			log.WithError(err).Panic("unexpected failure in block feed")
+		}
+		log.Info("combiner stop reached - triggering exit")
+
+		var delay time.Duration
+		if cfg.LocalModeConfig.Enable {
+			delay = time.Duration(cfg.LocalModeConfig.RuntimeLimits.StopTimeoutSeconds) * time.Second
+		}
+		services.TriggerExit(delay)
+	}()
+
+	return combinerStream, combinerFeed, nil
+}
+
 func initTxAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.TxStreamService, ap *agentpool.AgentPool, msgClient clients.MessageClient) (*scanner.TxAnalyzerService, error) {
 	return scanner.NewTxAnalyzerService(ctx, scanner.TxAnalyzerServiceConfig{
 		TxChannel:   stream.ReadOnlyTxStream(),
@@ -141,6 +196,17 @@ func initBlockAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertS
 		AgentPool:    ap,
 		MsgClient:    msgClient,
 	})
+}
+
+func initCombinerAlertAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.CombinerAlertStreamService, ap *agentpool.AgentPool, msgClient clients.MessageClient) (*scanner.CombinerAlertAnalyzerService, error) {
+	return scanner.NewCombinerAlertAnalyzerService(
+		ctx, scanner.CombinerAlertAnalyzerServiceConfig{
+			AlertChannel: stream.ReadOnlyAlertStream(),
+			AlertSender:  as,
+			AgentPool:    ap,
+			MsgClient:    msgClient,
+		},
+	)
 }
 
 func initAlertSender(ctx context.Context, key *keystore.Key, pubClient clients.PublishClient) (clients.AlertSender, error) {
@@ -160,7 +226,6 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	cfg.Publish.IPFS.APIURL = utils.ConvertToDockerHostURL(cfg.Publish.IPFS.APIURL)
 	cfg.Publish.IPFS.GatewayURL = utils.ConvertToDockerHostURL(cfg.Publish.IPFS.GatewayURL)
 	cfg.LocalModeConfig.WebhookURL = utils.ConvertToDockerHostURL(cfg.LocalModeConfig.WebhookURL)
-
 	msgClient := messaging.NewClient("scanner", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 
 	key, err := security.LoadKey(config.DefaultContainerKeyDirPath)
@@ -193,6 +258,11 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 
+	combinationStream, combinationFeed, err := initCombinationStream(ctx, msgClient, cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	registryClient, err := ethereum.NewStreamEthClient(ctx, "registry", cfg.Registry.JsonRpc.Url)
 	if err != nil {
 		return nil, err
@@ -214,6 +284,11 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 
+	combinationAnalyzer, err := initCombinerAlertAnalyzer(ctx, cfg, as, combinationStream, agentPool, msgClient)
+	if err != nil {
+		return nil, err
+	}
+
 	// Start the main block feed so all transaction feeds can start consuming.
 	if !cfg.Scan.DisableAutostart {
 		blockFeed.Start()
@@ -222,12 +297,14 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	svcs := []services.Service{
 		health.NewService(ctx, "", healthutils.DefaultHealthServerErrHandler, health.CheckerFrom(
 			summarizeReports,
-			ethClient, traceClient, blockFeed, txStream, txAnalyzer, blockAnalyzer, agentPool, registryService,
+			ethClient, traceClient, combinationFeed, blockFeed, txStream, txAnalyzer, blockAnalyzer, combinationAnalyzer, agentPool, registryService,
 			publisherSvc,
 		)),
 		txStream,
 		txAnalyzer,
 		blockAnalyzer,
+		combinationStream,
+		combinationAnalyzer,
 		scanner.NewScannerAPI(ctx, blockFeed),
 		scanner.NewTxLogger(ctx),
 		publisherSvc,

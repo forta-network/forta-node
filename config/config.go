@@ -19,6 +19,7 @@ type ScannerConfig struct {
 	DisableAutostart   bool          `yaml:"disableAutostart" json:"disableAutostart"`
 	BlockRateLimit     int           `yaml:"blockRateLimit" json:"blockRateLimit" default:"200"`
 	BlockMaxAgeSeconds int64         `yaml:"blockMaxAgeSeconds" json:"blockMaxAgeSeconds" default:"600"`
+	AlertAPIURL        string        `yaml:"apiUrl" json:"apiUrl" default:"https://api.forta.network/graphql" validate:"url"`
 }
 
 type TraceConfig struct {
@@ -67,10 +68,11 @@ type BatchConfig struct {
 }
 
 type PublisherConfig struct {
-	SkipPublish bool        `yaml:"skipPublish" json:"skipPublish" default:"false"`
-	APIURL      string      `yaml:"apiUrl" json:"apiUrl" default:"https://alerts.forta.network" validate:"url"`
-	IPFS        IPFSConfig  `yaml:"ipfs" json:"ipfs" validate:"required_unless=SkipPublish true"`
-	Batch       BatchConfig `yaml:"batch" json:"batch"`
+	SkipPublish   bool        `yaml:"skipPublish" json:"skipPublish" default:"false"`
+	AlwaysPublish bool        `yaml:"alwaysPublish" json:"alwaysPublish" default:"false"`
+	APIURL        string      `yaml:"apiUrl" json:"apiUrl" default:"https://alerts.forta.network" validate:"url"`
+	IPFS          IPFSConfig  `yaml:"ipfs" json:"ipfs" validate:"required_unless=SkipPublish true"`
+	Batch         BatchConfig `yaml:"batch" json:"batch"`
 }
 
 type ResourcesConfig struct {
@@ -112,12 +114,15 @@ type RuntimeLimits struct {
 	StartBlock         uint64 `yaml:"startBlock" json:"startBlock"`
 	StopBlock          uint64 `yaml:"stopBlock" json:"stopBlock" validate:"omitempty,gtfield=StartBlock"`
 	StopTimeoutSeconds int    `yaml:"stopTimeoutSeconds" json:"stopTimeoutSeconds" default:"30"`
+	StartCombiner      uint64 `yaml:"startCombiner" json:"startCombiner"`
+	StopCombiner       uint64 `yaml:"stopCombiner" json:"stopCombiner"`
 }
 
 type LocalModeConfig struct {
 	Enable                bool                     `yaml:"enable" json:"enable"`
 	IncludeMetrics        bool                     `yaml:"includeMetrics" json:"includeMetrics"`
-	BotImages             []string                 `yaml:"botImages" json:"botImages" validate:"required_if=Enable true"`
+	BotIDs                []string                 `yaml:"botIds" json:"botIds"`
+	BotImages             []string                 `yaml:"botImages" json:"botImages"`
 	WebhookURL            string                   `yaml:"webhookUrl" json:"webhookUrl"`
 	LogFileName           string                   `yaml:"logFileName" json:"logFileName"`
 	ContainerRegistry     *ContainerRegistryConfig `yaml:"containerRegistry" json:"containerRegistry"`
@@ -129,6 +134,15 @@ type InspectionConfig struct {
 	BlockInterval     *int `yaml:"blockInterval" json:"blockInterval"`
 	NetworkSavingMode bool `yaml:"networkSavingMode" json:"networkSavingMode"`
 	InspectAtStartup  bool `yaml:"inspectAtStartup" json:"inspectAtStartup" default:"true"`
+}
+
+type StorageConfig struct {
+	Provide string `yaml:"provide" json:"provide" default:"https://ipfs-router.forta.network/provide"`
+	Reframe string `yaml:"reframe" json:"reframe" default:"https://ipfs-router.forta.network/reframe"`
+}
+
+type CombinerConfig struct {
+	AlertAPIURL string `yaml:"alertApiUrl" json:"alertApiUrl" default:"https://api.forta.network/graphql" validate:"url"`
 }
 
 type Config struct {
@@ -157,6 +171,8 @@ type Config struct {
 	AgentLogsConfig  AgentLogsConfig    `yaml:"agentLogs" json:"agentLogs"`
 	LocalModeConfig  LocalModeConfig    `yaml:"localMode" json:"localMode"`
 	InspectionConfig InspectionConfig   `yaml:"inspection" json:"inspection"`
+	StorageConfig    StorageConfig      `yaml:"storage" json:"storage"`
+	CombinerConfig   CombinerConfig     `yaml:"combiner" json:"combiner"`
 }
 
 func (cfg *Config) ConfigFilePath() string {

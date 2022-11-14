@@ -60,7 +60,7 @@ var (
 	gethNodeEndpoint        = "http://localhost:8545"
 	processStartWaitSeconds = 30
 	txWaitSeconds           = 5
-	ipfsEndpoint            = "http://localhost:5001"
+	ipfsEndpoint            = "http://localhost:5002"
 	discoConfigFile         = "disco.config.yml"
 	discoPort               = "1970"
 
@@ -399,6 +399,7 @@ func (s *Suite) ensureTx(name string, tx *types.Transaction) {
 		}
 		time.Sleep(time.Millisecond * 200)
 	}
+	time.Sleep(time.Second) // hard delay
 	s.r.FailNowf("failed to mine tx", "%s: %s", name, tx.Hash())
 }
 

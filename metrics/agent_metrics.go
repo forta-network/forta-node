@@ -1,8 +1,9 @@
 package metrics
 
 import (
-	"github.com/forta-network/forta-core-go/domain"
 	"time"
+
+	"github.com/forta-network/forta-core-go/domain"
 
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-node/clients"
@@ -32,6 +33,11 @@ const (
 	MetricJSONRPCSuccess   = "jsonrpc.success"
 	MetricJSONRPCThrottled = "jsonrpc.throttled"
 	MetricFindingsDropped  = "findings.dropped"
+	MetricCombinerRequest  = "combiner.request"
+	MetricCombinerLatency  = "combiner.latency"
+	MetricCombinerError    = "combiner.error"
+	MetricCombinerSuccess  = "combiner.success"
+	MetricCombinerDrop     = "combiner.drop"
 )
 
 func SendAgentMetrics(client clients.MessageClient, ms []*protocol.AgentMetric) {
@@ -99,6 +105,22 @@ func GetTxMetrics(agt config.AgentConfig, resp *protocol.EvaluateTxResponse, tim
 		metrics[MetricTxError] = 1
 	} else if resp.Status == protocol.ResponseStatus_SUCCESS {
 		metrics[MetricTxSuccess] = 1
+	}
+
+	return createMetrics(agt.ID, resp.Timestamp, metrics)
+}
+
+func GetCombinerMetrics(agt config.AgentConfig, resp *protocol.EvaluateAlertResponse, times *domain.TrackingTimestamps) []*protocol.AgentMetric {
+	metrics := make(map[string]float64)
+
+	metrics[MetricCombinerRequest] = 1
+	metrics[MetricFinding] = float64(len(resp.Findings))
+	metrics[MetricCombinerLatency] = float64(resp.LatencyMs)
+
+	if resp.Status == protocol.ResponseStatus_ERROR {
+		metrics[MetricCombinerError] = 1
+	} else if resp.Status == protocol.ResponseStatus_SUCCESS {
+		metrics[MetricCombinerSuccess] = 1
 	}
 
 	return createMetrics(agt.ID, resp.Timestamp, metrics)

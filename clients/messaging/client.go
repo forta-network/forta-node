@@ -51,6 +51,7 @@ func NewClient(name, natsURL string) *Client {
 
 // AgentsHandler handles agents.* subjects.
 type AgentsHandler func(AgentPayload) error
+type SubscriptionHandler func(SubscriptionPayload) error
 type AgentMetricHandler func(*protocol.AgentMetricList) error
 type InspectionResultsHandler func(results *protocol.InspectionResults) error
 type ScannerHandler func(ScannerPayload) error
@@ -95,15 +96,23 @@ func (client *Client) Subscribe(subject string, handler interface{}) {
 				break
 			}
 			err = h(payload)
+		case SubscriptionHandler:
+			var payload SubscriptionPayload
+			err = json.Unmarshal(m.Data, &payload)
+			if err != nil {
+				break
+			}
+			err = h(payload)
 
 		default:
 			logger.Panicf("no handler found")
 		}
 
 		if err != nil {
-			if err := m.Nak(); err != nil {
-				logger.Errorf("failed to send nak: %v", err)
-			}
+			// TODO: Replace nak with whatever is recent.
+			// if err := m.Nak() (); err != nil {
+			// 	logger.Errorf("failed to send nak: %v", err)
+			// }
 			logger.Errorf("failed to handle msg: %v", err)
 		}
 	})

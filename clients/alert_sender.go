@@ -2,6 +2,7 @@ package clients
 
 import (
 	"context"
+
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol"
@@ -12,11 +13,13 @@ import (
 
 // AgentRoundTrip contains
 type AgentRoundTrip struct {
-	AgentConfig       config.AgentConfig
-	EvalBlockRequest  *protocol.EvaluateBlockRequest
-	EvalBlockResponse *protocol.EvaluateBlockResponse
-	EvalTxRequest     *protocol.EvaluateTxRequest
-	EvalTxResponse    *protocol.EvaluateTxResponse
+	AgentConfig             config.AgentConfig
+	EvalBlockRequest        *protocol.EvaluateBlockRequest
+	EvalBlockResponse       *protocol.EvaluateBlockResponse
+	EvalTxRequest           *protocol.EvaluateTxRequest
+	EvalTxResponse          *protocol.EvaluateTxResponse
+	EvalAlertRequest  *protocol.EvaluateAlertRequest
+	EvalAlertResponse *protocol.EvaluateAlertResponse
 }
 
 type AlertSender interface {
@@ -50,27 +53,35 @@ func (a *alertSender) SignAlertAndNotify(rt *AgentRoundTrip, alert *protocol.Ale
 	}
 	signedAlert.ChainId = chainID
 	signedAlert.BlockNumber = blockNumber
-	_, err = a.pClient.Notify(a.ctx, &protocol.NotifyRequest{
-		SignedAlert:       signedAlert,
-		EvalBlockRequest:  rt.EvalBlockRequest,
-		EvalBlockResponse: rt.EvalBlockResponse,
-		EvalTxRequest:     rt.EvalTxRequest,
-		EvalTxResponse:    rt.EvalTxResponse,
-		AgentInfo:         rt.AgentConfig.ToAgentInfo(),
-		Timestamps:        ts.ToMessage(),
-	})
+	_, err = a.pClient.Notify(
+		a.ctx, &protocol.NotifyRequest{
+			SignedAlert:             signedAlert,
+			EvalBlockRequest:        rt.EvalBlockRequest,
+			EvalBlockResponse:       rt.EvalBlockResponse,
+			EvalTxRequest:           rt.EvalTxRequest,
+			EvalTxResponse:          rt.EvalTxResponse,
+			EvalAlertRequest:  rt.EvalAlertRequest,
+			EvalAlertResponse: rt.EvalAlertResponse,
+			AgentInfo:               rt.AgentConfig.ToAgentInfo(),
+			Timestamps:              ts.ToMessage(),
+		},
+	)
 	return err
 }
 
 func (a *alertSender) NotifyWithoutAlert(rt *AgentRoundTrip, ts *domain.TrackingTimestamps) error {
-	_, err := a.pClient.Notify(a.ctx, &protocol.NotifyRequest{
-		EvalBlockRequest:  rt.EvalBlockRequest,
-		EvalBlockResponse: rt.EvalBlockResponse,
-		EvalTxRequest:     rt.EvalTxRequest,
-		EvalTxResponse:    rt.EvalTxResponse,
-		AgentInfo:         rt.AgentConfig.ToAgentInfo(),
-		Timestamps:        ts.ToMessage(),
-	})
+	_, err := a.pClient.Notify(
+		a.ctx, &protocol.NotifyRequest{
+			EvalBlockRequest:        rt.EvalBlockRequest,
+			EvalBlockResponse:       rt.EvalBlockResponse,
+			EvalAlertRequest:  rt.EvalAlertRequest,
+			EvalAlertResponse: rt.EvalAlertResponse,
+			EvalTxRequest:           rt.EvalTxRequest,
+			EvalTxResponse:          rt.EvalTxResponse,
+			AgentInfo:               rt.AgentConfig.ToAgentInfo(),
+			Timestamps:              ts.ToMessage(),
+		},
+	)
 	return err
 }
 

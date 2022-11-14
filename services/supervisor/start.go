@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -48,13 +49,14 @@ type SupervisorService struct {
 	maxLogSize  string
 	maxLogFiles int
 
-	scannerContainer   *clients.DockerContainer
-	inspectorContainer *clients.DockerContainer
-	jsonRpcContainer   *clients.DockerContainer
-	containers         []*Container
-	mu                 sync.RWMutex
+	scannerContainer     *clients.DockerContainer
+	inspectorContainer   *clients.DockerContainer
+	jsonRpcContainer     *clients.DockerContainer
+	jwtProviderContainer *clients.DockerContainer
+	storageContainer     *clients.DockerContainer
+	containers           []*Container
+	mu                   sync.RWMutex
 
-	jwtProviderContainer            *clients.DockerContainer
 	lastRun                         health.TimeTracker
 	lastStop                        health.TimeTracker
 	lastTelemetryRequest            health.TimeTracker
@@ -162,13 +164,30 @@ func (sup *SupervisorService) start() error {
 		return fmt.Errorf("failed to attach supervisor container to nats network: %v", err)
 	}
 
+	prepareIpfsDir()
 	ipfsContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerIpfsContainerName,
-		Image: "ipfs/go-ipfs:v0.12.2",
+		Image: "ipfs/kubo:v0.16.0",
 		Ports: map[string]string{
 			"5001": "5001",
 		},
-		NetworkID:   natsNetworkID,
+		Files: map[string][]byte{
+			"/container-init.d/001-init.sh": []byte(`
+#!/bin/sh
+
+set -xe
+
+ipfs config --bool Discovery.MDNS.Enabled 'false' && \
+ipfs config --json Routing '{"Type":"none"}' && \
+ipfs config --json Addresses.Swarm '[]' && \
+ipfs config --json Bootstrap '[]' && \
+ipfs config Datastore.StorageMax '1GB'
+`),
+		},
+		Volumes: map[string]string{
+			path.Join(hostFortaDir, ".ipfs"): "/data/ipfs",
+		},
+		NetworkID:   nodeNetworkID,
 		MaxLogFiles: sup.maxLogFiles,
 		MaxLogSize:  sup.maxLogSize,
 	})
@@ -203,6 +222,40 @@ func (sup *SupervisorService) start() error {
 		sup.msgClient = messaging.NewClient("supervisor", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 	}
 	sup.registerMessageHandlers()
+
+	sup.storageContainer, err = sup.client.StartContainer(
+		sup.ctx, clients.DockerContainerConfig{
+			Name:  config.DockerStorageContainerName,
+			Image: commonNodeImage,
+			Cmd:   []string{config.DefaultFortaNodeBinaryPath, "storage"},
+			Env: map[string]string{
+				config.EnvReleaseInfo: releaseInfo.String(),
+			},
+			Volumes: map[string]string{
+				// give access to host docker
+				"/var/run/docker.sock": "/var/run/docker.sock",
+				hostFortaDir:           config.DefaultContainerFortaDirPath,
+			},
+			Ports: map[string]string{
+				"": config.DefaultHealthPort, // random host port
+			},
+			Files: map[string][]byte{
+				"passphrase": []byte(sup.config.Passphrase),
+			},
+			DialHost:    true,
+			NetworkID:   nodeNetworkID,
+			MaxLogFiles: sup.maxLogFiles,
+			MaxLogSize:  sup.maxLogSize,
+		},
+	)
+	if err != nil {
+		return err
+	}
+	sup.addContainerUnsafe(sup.storageContainer)
+
+	if err := sup.client.WaitContainerStart(sup.ctx, sup.storageContainer.ID); err != nil {
+		return fmt.Errorf("failed while waiting for the storage container to start: %v", err)
+	}
 
 	sup.jsonRpcContainer, err = sup.client.StartContainer(
 		sup.ctx, clients.DockerContainerConfig{
@@ -321,10 +374,11 @@ func (sup *SupervisorService) start() error {
 			Files: map[string][]byte{
 				"passphrase": []byte(sup.config.Passphrase),
 			},
-			DialHost:    true,
-			NetworkID:   natsNetworkID,
-			MaxLogFiles: sup.maxLogFiles,
-			MaxLogSize:  sup.maxLogSize,
+			DialHost:       true,
+			NetworkID:      nodeNetworkID,
+			LinkNetworkIDs: []string{natsNetworkID},
+			MaxLogFiles:    sup.maxLogFiles,
+			MaxLogSize:     sup.maxLogSize,
 		},
 	)
 	if err != nil {
@@ -332,6 +386,13 @@ func (sup *SupervisorService) start() error {
 	}
 	sup.addContainerUnsafe(sup.jwtProviderContainer)
 
+	return nil
+}
+
+func prepareIpfsDir() error {
+	if err := os.MkdirAll(path.Join(config.DefaultContainerFortaDirPath, ".ipfs"), 0700); err != nil {
+		return fmt.Errorf("failed to create ipfs dir: %v", err)
+	}
 	return nil
 }
 
@@ -356,8 +417,8 @@ func (sup *SupervisorService) ensureNodeImages() error {
 			Ref:  "nats:2.3.2",
 		},
 		{
-			Name: "ipfs/go-ipfs",
-			Ref:  "ipfs/go-ipfs:v0.12.2",
+			Name: "ipfs/kubo",
+			Ref:  "ipfs/kubo:v0.16.0",
 		},
 	} {
 		if err := sup.client.EnsureLocalImage(sup.ctx, image.Name, image.Ref); err != nil {
