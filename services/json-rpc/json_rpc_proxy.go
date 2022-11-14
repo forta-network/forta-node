@@ -41,8 +41,9 @@ type JsonRpcProxy struct {
 	lastErr health.ErrorTracker
 }
 
-const maxRetries = 4
-const retryDuration = time.Second * 60
+const maxRetries = 6
+// retryDuration is 2 eth blocks
+const retryDuration = time.Second * 24
 
 func (p *JsonRpcProxy) Start() error {
 	p.registerMessageHandlers()
@@ -55,8 +56,8 @@ func (p *JsonRpcProxy) Start() error {
 
 	rp.Transport = retry.NewTransport(
 		http.DefaultTransport, retry.Attempts(maxRetries), retry.Timeout(retryDuration),
-		// retry for a minute, every 15 seconds, 4 times
-		retry.ExpBackoff{Max: retryDuration, Base: time.Second * 10, Factor: 2.0},
+		// retry for 24 seconds, every 2 seconds, 4 times
+		retry.ExpBackoff{Max: retryDuration, Base: time.Second * 2, Factor: 2.0},
 	)
 
 	d := rp.Director
