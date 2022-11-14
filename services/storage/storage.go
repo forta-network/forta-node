@@ -9,6 +9,7 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/protocol"
@@ -62,10 +63,37 @@ func (storage *Storage) Start() error {
 		log.WithError(err).Info("storage server stopped")
 	}()
 
-	go storage.provideContent(storage.ctx)
-	go storage.collectGarbage(storage.ctx)
+	go storage.loop(storage.ctx)
 
 	return nil
+}
+
+func (storage *Storage) loop(ctx context.Context) {
+	ticker := time.NewTicker(time.Minute * 1)
+	var lastTick *time.Time
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("exiting content provider")
+			return
+		case currTick := <-ticker.C:
+			if err := storage.doProvideContent(context.Background()); err != nil {
+				log.WithError(err).Error("error while providing content")
+			} else {
+				log.Info("finished providing content refs")
+			}
+
+			if lastTick != nil && currTick.Sub(*lastTick) >= defaultGCInterval {
+				if err := storage.doCollectGarbage(context.Background()); err != nil {
+					log.WithError(err).Error("error while collecting garbage")
+				} else {
+					log.Info("finished collecting garbage")
+				}
+			}
+
+			lastTick = &currTick
+		}
+	}
 }
 
 // Stop stops the service.
@@ -93,15 +121,8 @@ func (storage *Storage) Put(ctx context.Context, req *protocol.PutRequest) (*pro
 		return nil, status.Errorf(codes.InvalidArgument, "user not provided")
 	}
 
-	// TODO: Remove or enable after testing.
-	// contentDir := content.ContentDir(req.User, req.Kind)
-	// if err := storage.ipfs.FilesMkdir(ctx, contentDir, ipfsapi.FilesMkdir.Parents(true)); err != nil {
-	// 	log.WithError(err).Error("failed to create parent directories")
-	// 	return nil, err
-	// }
-
-	contentPath := NewContentPath(req.User, req.Kind)
-	storage.ipfs.FilesMkdir(ctx, ContentDir(req.User, req.Kind), ipfsapi.FilesMkdir.Parents(true))
+	contentPath, bucketDir := NewContentPath(req.User, req.Kind)
+	storage.ipfs.FilesMkdir(ctx, bucketDir, ipfsapi.FilesMkdir.Parents(true))
 	contentID, err := storage.ipfs.AddToFiles(bytes.NewBuffer(req.Bytes), contentPath)
 	if err != nil {
 		return nil, err
@@ -174,27 +195,63 @@ func (storage *Storage) List(ctx context.Context, req *protocol.ListRequest) (*p
 	}
 
 	contentDir := ContentDir(req.User, req.Kind)
-	list, err := storage.ipfs.FilesLs(ctx, contentDir, ipfsapi.FilesLs.Stat(true))
+	bucketEntries, err := storage.ipfs.FilesLs(ctx, contentDir, ipfsapi.FilesLs.Stat(true))
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to list the directory '%s': %v", contentDir, err)
+		return nil, status.Errorf(codes.Internal, "failed to list the content directory '%s': %v", contentDir, err)
 	}
 
-	// TODO: Check these again.
-	if len(list) >= int(req.Offset) {
-		list = list[req.Offset:]
+	skipCount := int(req.Offset)
+	limit := int(req.Limit)
+	var allEntries []*ipfsapi.MfsLsEntry
+	for _, bucketEntry := range bucketEntries {
+		if limit == 0 {
+			break
+		}
+
+		list, err := storage.getContentBucketEntries(ctx, req.User, req.Kind, bucketEntry.Name)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to list the bucket directory '%s' in '%s': %v", bucketEntry.Name, contentDir, err)
+		}
+
+		var added []*ipfsapi.MfsLsEntry
+
+		// reduce skip count each time we skip content
+		// if we completed or are about to complete the skip count, mark content for aggregation
+		if skipCount >= len(list) {
+			skipCount -= len(list)
+		} else {
+			added = list[skipCount:]
+			skipCount = 0
+		}
+
+		// reduce total limit each time we aggregate content
+		// if we are reaching the limit, use the remaining on the current list for the last time
+		if len(added) <= limit {
+			limit -= len(added)
+		} else {
+			added = added[:limit]
+			limit = 0
+		}
+
+		// finally, append content
+		allEntries = append(allEntries, added...)
 	}
-	if len(list) > int(req.Limit) {
-		list = list[:req.Limit]
+
+	if len(allEntries) >= int(req.Offset) {
+		allEntries = allEntries[req.Offset:]
+	}
+	if len(allEntries) > int(req.Limit) {
+		allEntries = allEntries[:req.Limit]
 	}
 
 	if req.Sort == protocol.SortDirection_DESC {
-		sort.Slice(list, func(i, j int) bool {
-			return !sort.StringsAreSorted([]string{list[i].Name, list[j].Name})
+		sort.Slice(allEntries, func(i, j int) bool {
+			return !sort.StringsAreSorted([]string{allEntries[i].Name, allEntries[j].Name})
 		})
 	}
 
 	var resp protocol.ListResponse
-	for _, entry := range list {
+	for _, entry := range allEntries {
 		resp.Contents = append(resp.Contents, &protocol.ContentInfo{
 			ContentId:   entry.Hash,
 			ContentPath: path.Join(contentDir, entry.Name),
@@ -262,7 +319,7 @@ func (storage *Storage) getUsers(ctx context.Context) ([]*userInfo, error) {
 	return users, nil
 }
 
-func (storage *Storage) getContentInDir(ctx context.Context, user, kind string) ([]*ipfsapi.MfsLsEntry, []*ipfsapi.MfsLsEntry, error) {
+func (storage *Storage) getContentBuckets(ctx context.Context, user, kind string) ([]*ipfsapi.MfsLsEntry, []*ipfsapi.MfsLsEntry, error) {
 	contentDir := ContentDir(user, kind)
 	list, err := storage.ipfs.FilesLs(ctx, contentDir, ipfsapi.FilesLs.Stat(true))
 	if err != nil {
@@ -272,7 +329,7 @@ func (storage *Storage) getContentInDir(ctx context.Context, user, kind string) 
 	sort.Slice(list, func(i, j int) bool {
 		return sort.StringsAreSorted([]string{list[i].Name, list[j].Name})
 	})
-	limit := ContentLimit(kind)
+	limit := MaxBuckets
 
 	var (
 		newestEntries = list
@@ -284,4 +341,17 @@ func (storage *Storage) getContentInDir(ctx context.Context, user, kind string) 
 		oldEntries = list[:oldCount]
 	}
 	return newestEntries, oldEntries, nil
+}
+
+func (storage *Storage) getContentBucketEntries(ctx context.Context, user, kind, bucket string) ([]*ipfsapi.MfsLsEntry, error) {
+	bucketDir := BucketDir(user, kind, bucket)
+	list, err := storage.ipfs.FilesLs(ctx, bucketDir, ipfsapi.FilesLs.Stat(true))
+	if err != nil {
+		return nil, fmt.Errorf("error while listing '%s': %v", bucketDir, err)
+	}
+	// ensure it's sorted in alphabetical order (ascending)
+	sort.Slice(list, func(i, j int) bool {
+		return sort.StringsAreSorted([]string{list[i].Name, list[j].Name})
+	})
+	return list, nil
 }
