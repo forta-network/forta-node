@@ -97,8 +97,10 @@ func (storage *Storage) prepareAndSendBloom(ctx context.Context, user *userInfo)
 	}
 
 	storage.ipfs.FilesMkdir(storage.ctx, RepoDir(user.User), ipfsapi.FilesMkdir.Parents(true))
+	bloomPath := BloomPath(user.User)
+	storage.ipfs.FilesRm(storage.ctx, bloomPath, true)
 	if err := storage.ipfs.FilesWrite(
-		ctx, BloomPath(user.User), bytes.NewBuffer([]byte(bloomEncoded)), ipfsapi.FilesWrite.Create(true),
+		ctx, bloomPath, bytes.NewBuffer([]byte(bloomEncoded)), ipfsapi.FilesWrite.Create(true),
 	); err != nil {
 		return fmt.Errorf("failed to write bloom: %v", err)
 	}
