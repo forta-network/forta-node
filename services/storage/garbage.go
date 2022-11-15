@@ -9,20 +9,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (storage *Storage) collectGarbage(ctx context.Context) {
-	ticker := time.NewTicker(time.Minute * 30)
-	for {
-		select {
-		case <-ctx.Done():
-			log.Info("exiting garbage collection")
-			return
-		case <-ticker.C:
-			if err := storage.doCollectGarbage(context.Background()); err != nil {
-				log.WithError(err).Error("error while collecting garbage")
-			}
-		}
-	}
-}
+const (
+	defaultGCInterval = time.Minute * 30
+)
 
 func (storage *Storage) doCollectGarbage(ctx context.Context) error {
 	users, err := storage.getUsers(ctx)
@@ -55,7 +44,7 @@ func (storage *Storage) gcContents(ctx context.Context, user, kind string) error
 		"dir":  contentDir,
 	})
 
-	_, oldEntries, err := storage.getContentInDir(ctx, user, kind)
+	_, oldEntries, err := storage.getContentBuckets(ctx, user, kind)
 	if err != nil {
 		return err
 	}

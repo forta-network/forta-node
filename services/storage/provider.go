@@ -14,27 +14,8 @@ import (
 )
 
 const (
-	provideContentInterval        = time.Minute
-	provideContentLimit           = 10000
-	provideBloomFalsePositiveRate = 0.0001
+	provideContentInterval = time.Minute
 )
-
-func (storage *Storage) provideContent(ctx context.Context) {
-	ticker := time.NewTicker(time.Minute * 1)
-	for {
-		select {
-		case <-ctx.Done():
-			log.Info("exiting content provider")
-			return
-		case <-ticker.C:
-			if err := storage.doProvideContent(context.Background()); err != nil {
-				log.WithError(err).Error("error while providing content")
-			} else {
-				log.Info("finished providing content refs")
-			}
-		}
-	}
-}
 
 func (storage *Storage) doProvideContent(ctx context.Context) error {
 	users, err := storage.getUsers(ctx)
@@ -63,13 +44,28 @@ func (storage *Storage) prepareAndSendBloom(ctx context.Context, user *userInfo)
 			continue
 		}
 
-		entries, _, err := storage.getContentInDir(ctx, user.User, kind)
+		bucketEntries, _, err := storage.getContentBuckets(ctx, user.User, kind)
 		if err != nil {
 			return err
 		}
-		allEntries = append(allEntries, entries...)
-		if len(allEntries) > provideContentLimit {
-			allEntries = allEntries[:provideContentLimit]
+
+		var contentEntries []*ipfsapi.MfsLsEntry
+		for _, bucketEntry := range bucketEntries {
+			entries, err := storage.getContentBucketEntries(ctx, user.User, kind, bucketEntry.Name)
+			if err != nil {
+				return fmt.Errorf("failed to list bucket entries: %v", err)
+			}
+			contentEntries = append(contentEntries, entries...)
+		}
+
+		remainingSize := BloomLimit - len(allEntries)
+		if len(contentEntries) > remainingSize {
+			contentEntries = contentEntries[:remainingSize]
+		}
+
+		allEntries = append(allEntries, contentEntries...)
+		if len(allEntries) > BloomLimit {
+			allEntries = allEntries[:BloomLimit]
 			break
 		}
 	}
@@ -78,7 +74,7 @@ func (storage *Storage) prepareAndSendBloom(ctx context.Context, user *userInfo)
 		return nil
 	}
 
-	filter := boom.NewBloomFilter(provideContentLimit, provideBloomFalsePositiveRate)
+	filter := boom.NewBloomFilter(BloomLimit, BloomFalsePositiveRate)
 	logger.WithField("count", len(allEntries)).Debug("adding entries to bloom filter")
 	for _, entry := range allEntries {
 		logger.WithField("cid", entry.Hash).Trace("adding to bloom filter")
