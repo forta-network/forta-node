@@ -44,7 +44,7 @@ func (storage *Storage) gcContents(ctx context.Context, user, kind string) error
 		"dir":  contentDir,
 	})
 
-	_, oldEntries, err := storage.getContentBuckets(ctx, user, kind)
+	_, oldEntries, err := storage.getContentBuckets(ctx, user, kind, true)
 	if err != nil {
 		return err
 	}
