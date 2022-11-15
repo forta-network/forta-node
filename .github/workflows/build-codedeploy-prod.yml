@@ -30,6 +30,8 @@ jobs:
       - name: Setup
         id: setup
         uses: ./.github/actions/setup
+        with:
+          cache: 'false'
       - name: E2E Test
         id: e2e
         uses: ./.github/actions/e2e
