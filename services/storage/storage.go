@@ -18,13 +18,14 @@ import (
 	"github.com/forta-network/forta-node/config"
 	"github.com/ipfs/go-cid"
 	ipfsapi "github.com/ipfs/go-ipfs-api"
+	"github.com/patrickmn/go-cache"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-const defaultListLimit = 1000
+const defaultListLimit = 50
 
 // Storage persists node content.
 type Storage struct {
@@ -33,16 +34,19 @@ type Storage struct {
 	router IPFSRouter
 	server *grpc.Server
 
+	lsCache *cache.Cache
+
 	protocol.UnimplementedStorageServer
 }
 
 // New creates a new storage service.
 func NewStorage(ctx context.Context, ipfsURL, routerURL string) (*Storage, error) {
 	storage := &Storage{
-		ctx:    ctx,
-		ipfs:   ipfsclient.New(ipfsURL),
-		router: ipfsrouter.NewClient(routerURL),
-		server: grpc.NewServer(),
+		ctx:     ctx,
+		ipfs:    ipfsclient.New(ipfsURL),
+		router:  ipfsrouter.NewClient(routerURL),
+		server:  grpc.NewServer(),
+		lsCache: cache.New(time.Minute*5, time.Minute*5),
 	}
 	protocol.RegisterStorageServer(storage.server, storage)
 	return storage, nil
@@ -195,7 +199,7 @@ func (storage *Storage) List(ctx context.Context, req *protocol.ListRequest) (*p
 	}
 
 	contentDir := ContentDir(req.User, req.Kind)
-	bucketEntries, err := storage.ipfs.FilesLs(ctx, contentDir, ipfsapi.FilesLs.Stat(true))
+	bucketEntries, _, err := storage.getContentBuckets(ctx, req.User, req.Kind, false)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to list the content directory '%s': %v", contentDir, err)
 	}
@@ -203,12 +207,14 @@ func (storage *Storage) List(ctx context.Context, req *protocol.ListRequest) (*p
 	skipCount := int(req.Offset)
 	limit := int(req.Limit)
 	var allEntries []*ipfsapi.MfsLsEntry
-	for _, bucketEntry := range bucketEntries {
+	lastIndex := len(bucketEntries) - 1
+	for i, bucketEntry := range bucketEntries {
 		if limit == 0 {
 			break
 		}
 
-		list, err := storage.getContentBucketEntries(ctx, req.User, req.Kind, bucketEntry.Name)
+		useCache := i < lastIndex
+		list, err := storage.getContentBucketEntries(ctx, req.User, req.Kind, bucketEntry.Name, false, useCache)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to list the bucket directory '%s' in '%s': %v", bucketEntry.Name, contentDir, err)
 		}
@@ -319,7 +325,7 @@ func (storage *Storage) getUsers(ctx context.Context) ([]*userInfo, error) {
 	return users, nil
 }
 
-func (storage *Storage) getContentBuckets(ctx context.Context, user, kind string) ([]*ipfsapi.MfsLsEntry, []*ipfsapi.MfsLsEntry, error) {
+func (storage *Storage) getContentBuckets(ctx context.Context, user, kind string, asc bool) ([]*ipfsapi.MfsLsEntry, []*ipfsapi.MfsLsEntry, error) {
 	contentDir := ContentDir(user, kind)
 	list, err := storage.ipfs.FilesLs(ctx, contentDir, ipfsapi.FilesLs.Stat(true))
 	if err != nil {
@@ -327,7 +333,10 @@ func (storage *Storage) getContentBuckets(ctx context.Context, user, kind string
 	}
 	// ensure it's sorted in alphabetical order (ascending)
 	sort.Slice(list, func(i, j int) bool {
-		return sort.StringsAreSorted([]string{list[i].Name, list[j].Name})
+		if asc {
+			return sort.StringsAreSorted([]string{list[i].Name, list[j].Name})
+		}
+		return sort.StringsAreSorted([]string{list[j].Name, list[i].Name})
 	})
 	limit := MaxBuckets
 
@@ -343,15 +352,31 @@ func (storage *Storage) getContentBuckets(ctx context.Context, user, kind string
 	return newestEntries, oldEntries, nil
 }
 
-func (storage *Storage) getContentBucketEntries(ctx context.Context, user, kind, bucket string) ([]*ipfsapi.MfsLsEntry, error) {
+func (storage *Storage) getContentBucketEntries(ctx context.Context, user, kind, bucket string, asc, useCache bool) ([]*ipfsapi.MfsLsEntry, error) {
 	bucketDir := BucketDir(user, kind, bucket)
+	if useCache {
+		v, ok := storage.lsCache.Get(bucketDir)
+		if ok {
+			storage.lsCache.Set(bucketDir, v, 0)
+			return v.([]*ipfsapi.MfsLsEntry), nil
+		}
+	}
+
 	list, err := storage.ipfs.FilesLs(ctx, bucketDir, ipfsapi.FilesLs.Stat(true))
 	if err != nil {
 		return nil, fmt.Errorf("error while listing '%s': %v", bucketDir, err)
 	}
 	// ensure it's sorted in alphabetical order (ascending)
 	sort.Slice(list, func(i, j int) bool {
-		return sort.StringsAreSorted([]string{list[i].Name, list[j].Name})
+		if asc {
+			return sort.StringsAreSorted([]string{list[i].Name, list[j].Name})
+		}
+		return sort.StringsAreSorted([]string{list[j].Name, list[i].Name})
 	})
+
+	if useCache {
+		storage.lsCache.Set(bucketDir, list, 0)
+	}
+
 	return list, nil
 }

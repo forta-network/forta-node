@@ -35,7 +35,7 @@ func (storage *Storage) doProvideContent(ctx context.Context) error {
 func (storage *Storage) prepareAndSendBloom(ctx context.Context, user *userInfo) error {
 	logger := log.WithField("user", user.User)
 
-	var allEntries []*ipfsapi.MfsLsEntry
+	var allHashes []string
 	// prioritize some content over other
 	for _, kind := range []string{
 		KindBatchReceipt,
@@ -44,41 +44,42 @@ func (storage *Storage) prepareAndSendBloom(ctx context.Context, user *userInfo)
 			continue
 		}
 
-		bucketEntries, _, err := storage.getContentBuckets(ctx, user.User, kind)
+		bucketEntries, _, err := storage.getContentBuckets(ctx, user.User, kind, true)
 		if err != nil {
 			return err
 		}
 
-		var contentEntries []*ipfsapi.MfsLsEntry
-		for _, bucketEntry := range bucketEntries {
-			entries, err := storage.getContentBucketEntries(ctx, user.User, kind, bucketEntry.Name)
+		lastIndex := len(bucketEntries) - 1
+		for i, bucketEntry := range bucketEntries {
+			useCache := i < lastIndex
+			entries, err := storage.getContentBucketEntries(ctx, user.User, kind, bucketEntry.Name, true, useCache)
 			if err != nil {
 				return fmt.Errorf("failed to list bucket entries: %v", err)
 			}
-			contentEntries = append(contentEntries, entries...)
+			for _, entry := range entries {
+				allHashes = append(allHashes, entry.Hash)
+			}
+			if len(allHashes) > BloomLimit {
+				allHashes = allHashes[:BloomLimit]
+				break
+			}
 		}
 
-		remainingSize := BloomLimit - len(allEntries)
-		if len(contentEntries) > remainingSize {
-			contentEntries = contentEntries[:remainingSize]
-		}
-
-		allEntries = append(allEntries, contentEntries...)
-		if len(allEntries) > BloomLimit {
-			allEntries = allEntries[:BloomLimit]
+		if len(allHashes) > BloomLimit {
+			allHashes = allHashes[:BloomLimit]
 			break
 		}
 	}
-	if len(allEntries) == 0 {
+	if len(allHashes) == 0 {
 		logger.Info("no entries found - skipping provide call")
 		return nil
 	}
 
 	filter := boom.NewBloomFilter(BloomLimit, BloomFalsePositiveRate)
-	logger.WithField("count", len(allEntries)).Debug("adding entries to bloom filter")
-	for _, entry := range allEntries {
-		logger.WithField("cid", entry.Hash).Trace("adding to bloom filter")
-		filter.Add([]byte(entry.Hash))
+	logger.WithField("count", len(allHashes)).Debug("adding entries to bloom filter")
+	for _, hash := range allHashes {
+		logger.WithField("cid", hash).Trace("adding to bloom filter")
+		filter.Add([]byte(hash))
 	}
 	var buf bytes.Buffer
 	_, err := filter.WriteTo(&buf)
