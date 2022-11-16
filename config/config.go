@@ -186,11 +186,27 @@ func GetConfigForContainer() (Config, error) {
 	if _, err := os.Stat(DefaultContainerConfigPath); os.IsNotExist(err) {
 		return cfg, errors.New("config file not found")
 	}
+
 	cfg, err := getConfigFromFile(DefaultContainerConfigPath)
 	if err != nil {
 		return Config{}, err
 	}
 	applyContextDefaults(&cfg)
+
+	// initialize combiner cache dump path if cache is persistent
+	if cfg.CombinerConfig.CombinerCachePath != "" {
+		_, err = os.Stat(cfg.CombinerConfig.CombinerCachePath)
+		if !os.IsNotExist(err) {
+			return cfg, err
+		}
+
+		if os.IsNotExist(err) {
+			if err := os.WriteFile(cfg.CombinerConfig.CombinerCachePath, []byte("{}"), 0666); err != nil {
+				return cfg, err
+			}
+		}
+	}
+
 	return cfg, nil
 }
 
