@@ -128,9 +128,10 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 func initCombinationStream(ctx context.Context, msgClient *messaging.Client, cfg config.Config) (*scanner.CombinerAlertStreamService, feeds.AlertFeed, error) {
 	combinerFeed, err := feeds.NewCombinerFeed(
 		ctx, feeds.CombinerFeedConfig{
-			APIUrl: cfg.CombinerConfig.AlertAPIURL,
-			Start:  cfg.LocalModeConfig.RuntimeLimits.StartCombiner,
-			End:    cfg.LocalModeConfig.RuntimeLimits.StopCombiner,
+			APIUrl:            cfg.CombinerConfig.AlertAPIURL,
+			Start:             cfg.LocalModeConfig.RuntimeLimits.StartCombiner,
+			End:               cfg.LocalModeConfig.RuntimeLimits.StopCombiner,
+			CombinerCachePath: cfg.CombinerConfig.CombinerCachePath,
 		},
 	)
 	if err != nil {
