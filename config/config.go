@@ -142,7 +142,8 @@ type StorageConfig struct {
 }
 
 type CombinerConfig struct {
-	AlertAPIURL string `yaml:"alertApiUrl" json:"alertApiUrl" default:"https://api.forta.network/graphql" validate:"url"`
+	AlertAPIURL       string `yaml:"alertApiUrl" json:"alertApiUrl" default:"https://api.forta.network/graphql" validate:"url"`
+	CombinerCachePath string `yaml:"alertCachePath" json:"alert_cache_path"`
 }
 
 type Config struct {
@@ -204,6 +205,7 @@ func applyContextDefaults(cfg *Config) {
 	}
 	cfg.FortaDir = DefaultContainerFortaDirPath
 	cfg.KeyDirPath = path.Join(cfg.FortaDir, DefaultKeysDirName)
+	cfg.CombinerConfig.CombinerCachePath = path.Join(cfg.FortaDir, DefaultCombinerCacheFileName)
 }
 
 func getConfigFromFile(filename string) (Config, error) {
