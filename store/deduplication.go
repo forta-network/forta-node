@@ -63,7 +63,7 @@ func newClient(cfg config.Config) (rds.Client, error) {
 
 func NewDeduplicationStore(cfg config.Config) (DeduplicationStore, error) {
 	// no config, just return
-	if cfg.LocalModeConfig.DeduplicationConfig == nil {
+	if !cfg.LocalModeConfig.Enable || cfg.LocalModeConfig.DeduplicationConfig == nil || !cfg.LocalModeConfig.DeduplicationConfig.Enable {
 		return nil, nil
 	}
 	r, err := newClient(cfg)
