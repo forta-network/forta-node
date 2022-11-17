@@ -146,6 +146,10 @@ type CombinerConfig struct {
 	CombinerCachePath string `yaml:"alertCachePath" json:"alert_cache_path"`
 }
 
+type AdvancedConfig struct {
+	SafeOffset bool `yaml:"safeOffset" json:"safeOffset"`
+}
+
 type Config struct {
 	// runtime values
 
@@ -174,6 +178,7 @@ type Config struct {
 	InspectionConfig InspectionConfig   `yaml:"inspection" json:"inspection"`
 	StorageConfig    StorageConfig      `yaml:"storage" json:"storage"`
 	CombinerConfig   CombinerConfig     `yaml:"combiner" json:"combiner"`
+	AdvancedConfig   AdvancedConfig     `yaml:"advanced" json:"advanced"`
 }
 
 func (cfg *Config) ConfigFilePath() string {
