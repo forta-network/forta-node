@@ -38,7 +38,7 @@ func NewClusterClient(cfg config.RedisClusterConfig) (Client, error) {
 		log.WithError(err).Error("failed to connect to redis cluster")
 		return nil, err
 	}
-
+	log.Info("initialized redis cluster connection")
 	return r, nil
 }
 
@@ -55,6 +55,6 @@ func NewClient(cfg config.RedisConfig) (Client, error) {
 		log.WithError(err).Error("failed to connect to redis")
 		return nil, err
 	}
-
+	log.Info("initialized redis connection")
 	return r, nil
 }

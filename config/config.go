@@ -131,7 +131,6 @@ type RedisClusterConfig struct {
 }
 
 type DeduplicationConfig struct {
-	Enable       bool                `yaml:"enable" json:"enable" default:"true"`
 	TTLSeconds   int                 `yaml:"ttlSeconds" json:"ttlSeconds" default:"10"`
 	Redis        *RedisConfig        `yaml:"redis" json:"redis"`
 	RedisCluster *RedisClusterConfig `yaml:"redisCluster" json:"redisCluster"`
@@ -147,7 +146,7 @@ type LocalModeConfig struct {
 	ContainerRegistry     *ContainerRegistryConfig `yaml:"containerRegistry" json:"containerRegistry"`
 	RuntimeLimits         RuntimeLimits            `yaml:"runtimeLimits" json:"runtimeLimits"`
 	ForceEnableInspection bool                     `yaml:"forceEnableInspection" json:"forceEnableInspection"`
-	DeduplicationConfig   *DeduplicationConfig     `json:"deduplicationConfig" json:"deduplicationConfig"`
+	DeduplicationConfig   *DeduplicationConfig     `yaml:"deduplicationConfig" json:"deduplicationConfig"`
 }
 
 type InspectionConfig struct {

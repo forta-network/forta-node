@@ -63,11 +63,13 @@ func newClient(cfg config.Config) (rds.Client, error) {
 
 func NewDeduplicationStore(cfg config.Config) (DeduplicationStore, error) {
 	// no config, just return
-	if !cfg.LocalModeConfig.Enable || cfg.LocalModeConfig.DeduplicationConfig == nil || !cfg.LocalModeConfig.DeduplicationConfig.Enable {
+	if !cfg.LocalModeConfig.Enable || cfg.LocalModeConfig.DeduplicationConfig == nil {
+		log.Info("not enabling redis deduplication (not configured)")
 		return nil, nil
 	}
 	r, err := newClient(cfg)
 	if err != nil {
+		log.WithError(err).Error("failed to initialize deduplication store")
 		return nil, err
 	}
 	return &dedupeStore{
