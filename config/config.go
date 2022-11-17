@@ -131,7 +131,7 @@ type RedisClusterConfig struct {
 }
 
 type DeduplicationConfig struct {
-	TTLSeconds   int                 `yaml:"ttlSeconds" json:"ttlSeconds" default:"10"`
+	TTLSeconds   int                 `yaml:"ttlSeconds" json:"ttlSeconds" default:"300"`
 	Redis        *RedisConfig        `yaml:"redis" json:"redis"`
 	RedisCluster *RedisClusterConfig `yaml:"redisCluster" json:"redisCluster"`
 }
