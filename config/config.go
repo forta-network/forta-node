@@ -118,6 +118,25 @@ type RuntimeLimits struct {
 	StopCombiner       uint64 `yaml:"stopCombiner" json:"stopCombiner"`
 }
 
+type RedisConfig struct {
+	Address  string `yaml:"address" json:"address"`
+	Password string `yaml:"password" json:"password"`
+	DB       int    `yaml:"db" json:"db"`
+}
+
+type RedisClusterConfig struct {
+	Addresses []string `yaml:"addresses" json:"addresses"`
+	Password  string   `yaml:"password" json:"password"`
+	DB        int      `yaml:"db" json:"db"`
+}
+
+type DeduplicationConfig struct {
+	Enable       bool                `yaml:"enable" json:"enable" default:"true"`
+	TTLSeconds   int                 `yaml:"ttlSeconds" json:"ttlSeconds" default:"10"`
+	Redis        *RedisConfig        `yaml:"redis" json:"redis"`
+	RedisCluster *RedisClusterConfig `yaml:"redisCluster" json:"redisCluster"`
+}
+
 type LocalModeConfig struct {
 	Enable                bool                     `yaml:"enable" json:"enable"`
 	IncludeMetrics        bool                     `yaml:"includeMetrics" json:"includeMetrics"`
@@ -128,6 +147,7 @@ type LocalModeConfig struct {
 	ContainerRegistry     *ContainerRegistryConfig `yaml:"containerRegistry" json:"containerRegistry"`
 	RuntimeLimits         RuntimeLimits            `yaml:"runtimeLimits" json:"runtimeLimits"`
 	ForceEnableInspection bool                     `yaml:"forceEnableInspection" json:"forceEnableInspection"`
+	DeduplicationConfig   *DeduplicationConfig     `json:"deduplicationConfig" json:"deduplicationConfig"`
 }
 
 type InspectionConfig struct {
