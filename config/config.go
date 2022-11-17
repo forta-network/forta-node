@@ -162,7 +162,8 @@ type StorageConfig struct {
 }
 
 type CombinerConfig struct {
-	AlertAPIURL string `yaml:"alertApiUrl" json:"alertApiUrl" default:"https://api.forta.network/graphql" validate:"url"`
+	AlertAPIURL       string `yaml:"alertApiUrl" json:"alertApiUrl" default:"https://api.forta.network/graphql" validate:"url"`
+	CombinerCachePath string `yaml:"alertCachePath" json:"alert_cache_path"`
 }
 
 type Config struct {
@@ -205,11 +206,27 @@ func GetConfigForContainer() (Config, error) {
 	if _, err := os.Stat(DefaultContainerConfigPath); os.IsNotExist(err) {
 		return cfg, errors.New("config file not found")
 	}
+
 	cfg, err := getConfigFromFile(DefaultContainerConfigPath)
 	if err != nil {
 		return Config{}, err
 	}
 	applyContextDefaults(&cfg)
+
+	// initialize combiner cache dump path if cache is persistent
+	if cfg.CombinerConfig.CombinerCachePath != "" {
+		_, err = os.Stat(cfg.CombinerConfig.CombinerCachePath)
+		if !os.IsNotExist(err) {
+			return cfg, err
+		}
+
+		if os.IsNotExist(err) {
+			if err := os.WriteFile(cfg.CombinerConfig.CombinerCachePath, []byte("{}"), 0666); err != nil {
+				return cfg, err
+			}
+		}
+	}
+
 	return cfg, nil
 }
 
@@ -224,6 +241,7 @@ func applyContextDefaults(cfg *Config) {
 	}
 	cfg.FortaDir = DefaultContainerFortaDirPath
 	cfg.KeyDirPath = path.Join(cfg.FortaDir, DefaultKeysDirName)
+	cfg.CombinerConfig.CombinerCachePath = path.Join(cfg.FortaDir, DefaultCombinerCacheFileName)
 }
 
 func getConfigFromFile(filename string) (Config, error) {

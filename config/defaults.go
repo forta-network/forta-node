@@ -2,6 +2,7 @@ package config
 
 const (
 	DefaultKeysDirName         = ".keys"
+	DefaultCombinerCacheFileName  = ".combiner_cache.json"
 	DefaultConfigFileName      = "config.yml"
 	DefaultNatsPort            = "4222"
 	DefaultContainerPort       = "8089"
