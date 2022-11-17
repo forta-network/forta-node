@@ -10,6 +10,7 @@ require (
 	github.com/fatih/color v1.13.0
 	github.com/forta-network/forta-core-go v0.0.0-20221116111105-9e0a836569c2
 	github.com/go-playground/validator/v10 v10.9.0
+	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/goccy/go-json v0.9.4
 	github.com/golang-jwt/jwt/v4 v4.4.1
 	github.com/golang/mock v1.6.0
