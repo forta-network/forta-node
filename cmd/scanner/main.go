@@ -33,6 +33,7 @@ import (
 
 func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, cfg config.Config) (*scanner.TxStreamService, feeds.BlockFeed, error) {
 	cfg.Scan.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Scan.JsonRpc.Url)
+	cfg.JsonRpcProxy.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Scan.JsonRpc.Url)
 	cfg.Registry.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Registry.JsonRpc.Url)
 	cfg.Registry.IPFS.APIURL = utils.ConvertToDockerHostURL(cfg.Registry.IPFS.APIURL)
 	cfg.Registry.IPFS.GatewayURL = utils.ConvertToDockerHostURL(cfg.Registry.IPFS.GatewayURL)
@@ -79,7 +80,7 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 		Tracing:             cfg.Trace.Enabled,
 		RateLimit:           rateLimit,
 		SkipBlocksOlderThan: maxAgePtr,
-		Offset:              settings.GetBlockOffset(cfg.ChainID),
+		Offset:              getBlockOffset(cfg),
 		Start:               startBlock,
 		End:                 stopBlock,
 	})
@@ -123,6 +124,24 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 	}
 
 	return txStream, blockFeed, nil
+}
+
+// getBlockOffset either returns the default offset configured for the chain or
+// the safe offset if required.
+func getBlockOffset(cfg config.Config) int {
+	chainSettings := settings.GetChainSettings(cfg.ChainID)
+
+	if cfg.AdvancedConfig.SafeOffset {
+		return chainSettings.SafeOffset
+	}
+
+	scanURL := strings.Trim(cfg.Scan.JsonRpc.Url, "/")
+	proxyURL := strings.Trim(cfg.JsonRpcProxy.JsonRpc.Url, "/")
+	if len(proxyURL) > 0 && proxyURL != scanURL {
+		return chainSettings.SafeOffset
+	}
+
+	return chainSettings.DefaultOffset
 }
 
 func initCombinationStream(ctx context.Context, msgClient *messaging.Client, cfg config.Config) (*scanner.CombinerAlertStreamService, feeds.AlertFeed, error) {
