@@ -50,10 +50,6 @@ func (ds *dedupeStore) IsFirst(id string) (bool, error) {
 }
 
 func newClient(cfg config.Config) (rds.Client, error) {
-	// no config, just return
-	if cfg.LocalModeConfig.DeduplicationConfig == nil {
-		return nil, nil
-	}
 	// regular redis
 	if cfg.LocalModeConfig.DeduplicationConfig.Redis != nil {
 		return rds.NewClient(*cfg.LocalModeConfig.DeduplicationConfig.Redis)
@@ -66,6 +62,10 @@ func newClient(cfg config.Config) (rds.Client, error) {
 }
 
 func NewDeduplicationStore(cfg config.Config) (DeduplicationStore, error) {
+	// no config, just return
+	if cfg.LocalModeConfig.DeduplicationConfig == nil {
+		return nil, nil
+	}
 	r, err := newClient(cfg)
 	if err != nil {
 		return nil, err
