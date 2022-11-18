@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/forta-network/forta-core-go/domain"
+	"github.com/forta-network/forta-core-go/utils"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/forta-network/forta-node/metrics"
@@ -267,7 +268,7 @@ func validateInitializeResponse(response *protocol.InitializeResponse) error {
 	}
 
 	for _, subscription := range response.AlertConfig.Subscriptions {
-		if !isValidBotId(subscription.BotId) {
+		if !utils.IsValidBotID(subscription.BotId) {
 			return fmt.Errorf("invalid bot id :%s", subscription.BotId)
 		}
 	}
