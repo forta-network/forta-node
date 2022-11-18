@@ -2,7 +2,6 @@ package poolagent
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"regexp"
 	"sync"
@@ -274,14 +273,6 @@ func validateInitializeResponse(response *protocol.InitializeResponse) error {
 	}
 
 	return nil
-}
-
-func isValidBotId(path string) bool {
-	if path[:2] != "0x" {
-		return false
-	}
-	b, err := hex.DecodeString(path[2:])
-	return len(b) == 32 && err == nil
 }
 
 func (agent *Agent) WaitInitialization() {
