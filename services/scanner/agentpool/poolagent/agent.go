@@ -2,6 +2,7 @@ package poolagent
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"regexp"
 	"sync"
@@ -248,11 +249,34 @@ func (agent *Agent) initialize() {
 		return
 	}
 
+	if err := validateInitializeResponse(initializeResponse); err != nil{
+		logger.WithError(err).Warn("bot initialization validation failed")
+		return
+	}
+
 	if initializeResponse != nil {
 		agent.SetAlertConfig(initializeResponse.AlertConfig)
 	}
 
 	logger.Info("bot initialization succeeded")
+}
+
+func validateInitializeResponse(response *protocol.InitializeResponse) error {
+	for _, subscription := range response.AlertConfig.Subscriptions {
+		if !isValidBotId(subscription.BotId) {
+			return fmt.Errorf("invalid bot id :%s", subscription.BotId)
+		}
+	}
+
+	return nil
+}
+
+func isValidBotId(path string) bool {
+	if path[:2] != "0x" {
+		return false
+	}
+	b, err := hex.DecodeString(path[2:])
+	return len(b) == 32 && err == nil
 }
 
 func (agent *Agent) WaitInitialization() {
