@@ -51,19 +51,19 @@ func (ds *dedupeStore) IsFirst(id string) (bool, error) {
 
 func newClient(cfg config.Config) (rds.Client, error) {
 	// regular redis
-	if cfg.LocalModeConfig.DeduplicationConfig.Redis != nil {
-		return rds.NewClient(*cfg.LocalModeConfig.DeduplicationConfig.Redis)
+	if cfg.LocalModeConfig.Deduplication.Redis != nil {
+		return rds.NewClient(*cfg.LocalModeConfig.Deduplication.Redis)
 	}
 	// redis cluster
-	if cfg.LocalModeConfig.DeduplicationConfig.RedisCluster != nil {
-		return rds.NewClusterClient(*cfg.LocalModeConfig.DeduplicationConfig.RedisCluster)
+	if cfg.LocalModeConfig.Deduplication.RedisCluster != nil {
+		return rds.NewClusterClient(*cfg.LocalModeConfig.Deduplication.RedisCluster)
 	}
 	return nil, errors.New("redis or redisCluster is required in deduplicationConfig section")
 }
 
 func NewDeduplicationStore(cfg config.Config) (DeduplicationStore, error) {
 	// no config, just return
-	if !cfg.LocalModeConfig.Enable || cfg.LocalModeConfig.DeduplicationConfig == nil {
+	if !cfg.LocalModeConfig.Enable || cfg.LocalModeConfig.Deduplication == nil {
 		log.Info("not enabling redis deduplication (not configured)")
 		return nil, nil
 	}
@@ -75,7 +75,7 @@ func NewDeduplicationStore(cfg config.Config) (DeduplicationStore, error) {
 	return &dedupeStore{
 		cfg: cfg,
 		r:   r,
-		ttl: time.Duration(cfg.LocalModeConfig.DeduplicationConfig.TTLSeconds) * time.Second,
+		ttl: time.Duration(cfg.LocalModeConfig.Deduplication.TTLSeconds) * time.Second,
 		mux: sync.Mutex{},
 	}, nil
 }

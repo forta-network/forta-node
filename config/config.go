@@ -146,7 +146,7 @@ type LocalModeConfig struct {
 	ContainerRegistry     *ContainerRegistryConfig `yaml:"containerRegistry" json:"containerRegistry"`
 	RuntimeLimits         RuntimeLimits            `yaml:"runtimeLimits" json:"runtimeLimits"`
 	ForceEnableInspection bool                     `yaml:"forceEnableInspection" json:"forceEnableInspection"`
-	DeduplicationConfig   *DeduplicationConfig     `yaml:"deduplicationConfig" json:"deduplicationConfig"`
+	Deduplication         *DeduplicationConfig     `yaml:"deduplication" json:"deduplication"`
 }
 
 type InspectionConfig struct {
