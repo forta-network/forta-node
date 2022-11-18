@@ -542,7 +542,6 @@ func (bd *BatchData) AppendAlert(notif *protocol.NotifyRequest) {
 			agentAlerts = (*TransactionResults)(txRes).GetAgentAlerts(notif.AgentInfo)
 		}
 	} else if isCombinationAlert {
-		// TODO REMOVE THIS BEFORE PRODUCTION
 		bd.AddBatchAgent(notif.AgentInfo, 0, "", notif.EvalAlertRequest.Event.Alert.Source.Bot.Id)
 		metaRes := bd.GetCombinationAlertResults(notif.EvalAlertRequest.Event)
 		if hasAlert {
@@ -634,7 +633,7 @@ func (bd *BatchData) GetCombinationAlertResults(combinationAlert *protocol.Alert
 			return blockRes
 		}
 	}
-	// TODO fill this data
+
 	mr := &protocol.CombinationAlertResults{
 		AlertEvent: combinationAlert,
 	}

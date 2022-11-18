@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/forta-network/forta-core-go/domain"
+	"github.com/forta-network/forta-core-go/utils"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/forta-network/forta-node/metrics"
@@ -248,11 +249,30 @@ func (agent *Agent) initialize() {
 		return
 	}
 
+	if err := validateInitializeResponse(initializeResponse); err != nil{
+		logger.WithError(err).Warn("bot initialization validation failed")
+		return
+	}
+
 	if initializeResponse != nil {
 		agent.SetAlertConfig(initializeResponse.AlertConfig)
 	}
 
 	logger.Info("bot initialization succeeded")
+}
+
+func validateInitializeResponse(response *protocol.InitializeResponse) error {
+	if response == nil || response.AlertConfig == nil{
+		return nil
+	}
+
+	for _, subscription := range response.AlertConfig.Subscriptions {
+		if !utils.IsValidBotID(subscription.BotId) {
+			return fmt.Errorf("invalid bot id :%s", subscription.BotId)
+		}
+	}
+
+	return nil
 }
 
 func (agent *Agent) WaitInitialization() {
