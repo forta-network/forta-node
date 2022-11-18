@@ -22,7 +22,7 @@ const (
 	testAgentID           = "test-agent"
 	testRequestID         = "test-request-id"
 	testResponseID        = "test-response-id"
-	testCombinerSourceBot = "test-combiner-source"
+	testCombinerSourceBot = "0x1d646c4045189991fdfd24a66b192a294158b839a6ec121d740474bdacb3as12"
 )
 
 // TestSuite runs the test suite.

@@ -262,6 +262,10 @@ func (agent *Agent) initialize() {
 }
 
 func validateInitializeResponse(response *protocol.InitializeResponse) error {
+	if response == nil || response.AlertConfig == nil{
+		return nil
+	}
+
 	for _, subscription := range response.AlertConfig.Subscriptions {
 		if !isValidBotId(subscription.BotId) {
 			return fmt.Errorf("invalid bot id :%s", subscription.BotId)
