@@ -333,13 +333,16 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 		logger = logger.WithFields(log.Fields{
 			"receipt": string(b),
 		})
-		putResp, err := pub.storage.Put(pub.ctx, &protocol.PutRequest{
+
+		ctx, cancel := context.WithTimeout(pub.ctx, time.Second*10)
+		defer cancel()
+		putResp, err := pub.storage.Put(ctx, &protocol.PutRequest{
 			User:  scannerAddr,
 			Kind:  storage.KindBatchReceipt,
 			Bytes: b,
 		})
 		if err != nil {
-			logger.WithError(err).Warn("failed to storage batch receipt")
+			logger.WithError(err).Warn("failed to store batch receipt")
 		} else {
 			logger = logger.WithFields(log.Fields{
 				"storedReceiptRef":  putResp.ContentId,
