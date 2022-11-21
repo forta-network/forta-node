@@ -4,13 +4,8 @@ import (
 	"context"
 	"fmt"
 	"path"
-	"time"
 
 	log "github.com/sirupsen/logrus"
-)
-
-const (
-	defaultGCInterval = time.Minute * 30
 )
 
 func (storage *Storage) doCollectGarbage(ctx context.Context) error {

@@ -74,7 +74,7 @@ func (storage *Storage) Start() error {
 
 func (storage *Storage) loop(ctx context.Context) {
 	ticker := time.NewTicker(time.Minute * 1)
-	var lastTick *time.Time
+	var lastGC *time.Time
 	for {
 		select {
 		case <-ctx.Done():
@@ -87,15 +87,17 @@ func (storage *Storage) loop(ctx context.Context) {
 				log.Info("finished providing content refs")
 			}
 
-			if lastTick != nil && currTick.Sub(*lastTick) >= defaultGCInterval {
+			neverCollectedGarbage := lastGC == nil
+			timeToCollectGarbage := lastGC != nil && currTick.Sub(*lastGC) >= BucketInterval
+
+			if neverCollectedGarbage || timeToCollectGarbage {
 				if err := storage.doCollectGarbage(context.Background()); err != nil {
 					log.WithError(err).Error("error while collecting garbage")
 				} else {
 					log.Info("finished collecting garbage")
 				}
+				lastGC = &currTick
 			}
-
-			lastTick = &currTick
 		}
 	}
 }
