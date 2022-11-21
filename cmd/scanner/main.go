@@ -3,6 +3,7 @@ package scanner
 import (
 	"context"
 	"fmt"
+	"github.com/forta-network/forta-node/store"
 	"math/big"
 	"strconv"
 	"strings"
@@ -229,9 +230,14 @@ func initCombinerAlertAnalyzer(ctx context.Context, cfg config.Config, as client
 	)
 }
 
-func initAlertSender(ctx context.Context, key *keystore.Key, pubClient clients.PublishClient) (clients.AlertSender, error) {
+func initAlertSender(ctx context.Context, key *keystore.Key, pubClient clients.PublishClient, cfg config.Config) (clients.AlertSender, error) {
+	ds, err := store.NewDeduplicationStore(cfg)
+	if err != nil {
+		return nil, err
+	}
 	return clients.NewAlertSender(ctx, pubClient, clients.AlertSenderConfig{
 		Key: key,
+		DS:  ds,
 	})
 }
 
@@ -258,7 +264,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 
-	as, err := initAlertSender(ctx, key, publisherSvc)
+	as, err := initAlertSender(ctx, key, publisherSvc, cfg)
 	if err != nil {
 		return nil, err
 	}
