@@ -33,5 +33,5 @@ privateKeyFileName=$(echo $privateKeyItem | jq -r '.FileName.S')
 mkdir -p "$HOME/.forta/.keys"
 echo "$privateKeyJson" > "$HOME/.forta/.keys/$privateKeyFileName"
 
-nohup \
-	forta --passphrase $passphrase run > /dev/null 2> /tmp/forta.log < /dev/null &
+sudo systemctl daemon-reload
+sudo systemctl restart forta.service
