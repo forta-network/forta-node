@@ -451,6 +451,7 @@ func (sup *SupervisorService) removeOldContainers() error {
 		config.DockerJWTProviderContainerName,
 		config.DockerNatsContainerName,
 		config.DockerIpfsContainerName,
+		config.DockerStorageContainerName,
 	} {
 		container, err := sup.client.GetContainerByName(sup.ctx, containerName)
 		if err != nil {
