@@ -181,6 +181,7 @@ func (s *Suite) initialContainerCheck() {
 		config.DockerJWTProviderContainerName,
 		config.DockerNatsContainerName,
 		config.DockerIpfsContainerName,
+		config.DockerStorageContainerName,
 	} {
 		s.dockerClient.EXPECT().GetContainerByName(s.service.ctx, containerName).Return(&types.Container{ID: testGenericContainerID}, nil)
 	}
