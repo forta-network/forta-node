@@ -44,8 +44,8 @@ func (t *BlockAnalyzerService) publishMetrics(result *BlockResult) {
 func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
 	alertID := alerthash.ForBlockAlert(
 		&alerthash.Inputs{
-			Block:   result.Request.Event,
-			Finding: f,
+			BlockEvent: result.Request.Event,
+			Finding:    f,
 			BotInfo: alerthash.BotInfo{
 				BotImage: result.AgentConfig.Image,
 				BotID:    result.AgentConfig.ID,

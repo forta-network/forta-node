@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"strings"
@@ -26,6 +27,8 @@ func handleFortaRegister(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to decode pool ID: %v", err)
 	}
 
+	verbose, _ := cmd.Flags().GetBool("verbose")
+
 	scannerKey, err := security.LoadKeyWithPassphrase(cfg.KeyDirPath, cfg.Passphrase)
 	if err != nil {
 		return fmt.Errorf("failed to load scanner key: %v", err)
@@ -42,7 +45,7 @@ func handleFortaRegister(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create registry client: %v", err)
 	}
 
-	sig, err := registry.GenerateScannerRegistrationSignature(&eip712.ScannerNodeRegistration{
+	encodedPayload, sig, err := registry.GenerateScannerRegistrationSignature(&eip712.ScannerNodeRegistration{
 		Scanner:       scannerKey.Address,
 		ScannerPoolId: poolID,
 		ChainId:       big.NewInt(int64(cfg.ChainID)),
@@ -59,7 +62,13 @@ func handleFortaRegister(cmd *cobra.Command, args []string) error {
 	}
 
 	whiteBold("Please use the registration signature below on https://app.forta.network as soon as possible!\n\n")
-	color.New(color.FgYellow).Println(encodedSig)
+
+	if verbose {
+		color.New(color.FgYellow).Println("encoded:", hex.EncodeToString(encodedPayload))
+		color.New(color.FgYellow).Println("signature:", encodedSig)
+	} else {
+		color.New(color.FgYellow).Println(encodedSig)
+	}
 
 	return nil
 }
