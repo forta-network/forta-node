@@ -28,6 +28,7 @@ func handleFortaRegister(cmd *cobra.Command, args []string) error {
 	}
 
 	verbose, _ := cmd.Flags().GetBool("verbose")
+	force, _ := cmd.Flags().GetBool("force")
 
 	scannerKey, err := security.LoadKeyWithPassphrase(cfg.KeyDirPath, cfg.Passphrase)
 	if err != nil {
@@ -43,6 +44,24 @@ func handleFortaRegister(cmd *cobra.Command, args []string) error {
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create registry client: %v", err)
+	}
+
+	scanner, err := registry.GetPoolScanner(scannerKey.Address.Hex())
+	if err != nil {
+		return fmt.Errorf("failed to get scanner from registry: %v", err)
+	}
+	if scanner != nil {
+		color.New(color.FgYellow).Printf("This scanner is already registered to pool %s!", scanner.PoolID)
+		return nil
+	}
+
+	willShutdown, err := registry.WillNewScannerShutdownPool(poolID)
+	if err != nil {
+		return fmt.Errorf("failed to check pool shutdown condition: %v", err)
+	}
+	if willShutdown && !force {
+		redBold("Registration of this scanner will shutdown the pool! Please stake more on the pool %s first.\n", (*hexutil.Big)(poolID).String())
+		return nil
 	}
 
 	encodedPayload, sig, err := registry.GenerateScannerRegistrationSignature(&eip712.ScannerNodeRegistration{

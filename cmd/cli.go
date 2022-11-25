@@ -196,6 +196,7 @@ func init() {
 	cmdFortaRegister.Flags().String("pool-id", "", "scanner pool ID in hex format")
 	cmdFortaRegister.MarkFlagRequired("pool-id")
 	cmdFortaRegister.Flags().BoolP("verbose", "v", false, "see more details")
+	cmdFortaRegister.Flags().BoolP("force", "f", false, "force registration")
 	cmdFortaRegister.MarkFlagRequired("passphrase")
 
 	// forta enable
