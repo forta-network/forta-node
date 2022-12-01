@@ -115,7 +115,7 @@ publishes alerts about them`,
 
 	cmdFortaRegister = &cobra.Command{
 		Use:   "register",
-		Short: "generate a signature to register your scan node to a pool",
+		Short: "register your scan node to enable it for scanning (requires MATIC in your scan node address)",
 		RunE:  withInitialized(withValidConfig(handleFortaRegister)),
 	}
 
@@ -131,6 +131,20 @@ publishes alerts about them`,
 		Short:  "disable your scan node (requires MATIC in your scan node address)",
 		RunE:   withInitialized(withValidConfig(handleFortaDisable)),
 		Hidden: true,
+	}
+
+	cmdFortaAuthorize = &cobra.Command{
+		Use:   "authorize",
+		Short: "generate a signature for a specific action",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cmd.Help()
+		},
+	}
+
+	cmdFortaAuthorizePool = &cobra.Command{
+		Use:   "pool",
+		Short: "generate a pool registration signature",
+		RunE:  withInitialized(withValidConfig(handleFortaAuthorizePool)),
 	}
 )
 
@@ -161,6 +175,9 @@ func init() {
 	cmdForta.AddCommand(cmdFortaRegister)
 	cmdForta.AddCommand(cmdFortaEnable)
 	cmdForta.AddCommand(cmdFortaDisable)
+
+	cmdForta.AddCommand(cmdFortaAuthorize)
+	cmdFortaAuthorize.AddCommand(cmdFortaAuthorizePool)
 
 	// Global (persistent) flags
 
@@ -195,10 +212,8 @@ func init() {
 	cmdFortaStatus.Flags().String("show", StatusShowSummary, "filter statuses to show: summary (default), important, all")
 
 	// forta register
-	cmdFortaRegister.Flags().String("pool-id", "", "scanner pool ID in hex format")
-	cmdFortaRegister.MarkFlagRequired("pool-id")
-	cmdFortaRegister.Flags().BoolP("verbose", "v", false, "see more details")
-	cmdFortaRegister.Flags().BoolP("force", "f", false, "force registration")
+	cmdFortaRegister.Flags().String("owner-address", "", "Ethereum wallet address of the scanner owner")
+	cmdFortaRegister.MarkFlagRequired("owner-address")
 	cmdFortaRegister.MarkFlagRequired("passphrase")
 
 	// forta enable
@@ -206,6 +221,12 @@ func init() {
 
 	// forta disable
 	cmdFortaDisable.MarkFlagRequired("passphrase")
+
+	// forta authorize pool
+	cmdFortaAuthorizePool.Flags().String("id", "", "scanner pool ID (integer)")
+	cmdFortaAuthorizePool.MarkFlagRequired("id")
+	cmdFortaAuthorizePool.Flags().BoolP("verbose", "v", false, "see more output")
+	cmdFortaAuthorizePool.Flags().BoolP("force", "f", false, "ignore warning(s)")
 }
 
 func initConfig() {

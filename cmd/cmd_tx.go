@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/fatih/color"
 	"github.com/forta-network/forta-core-go/registry"
@@ -19,8 +21,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func handleFortaRegister(cmd *cobra.Command, args []string) error {
-	poolIDStr, err := cmd.Flags().GetString("pool-id")
+func handleFortaAuthorizePool(cmd *cobra.Command, args []string) error {
+	poolIDStr, err := cmd.Flags().GetString("id")
 	if err != nil {
 		return err
 	}
@@ -52,7 +54,7 @@ func handleFortaRegister(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to get scanner from registry: %v", err)
 	}
-	if scanner != nil {
+	if scanner != nil && !force {
 		color.New(color.FgYellow).Printf("This scanner is already registered to pool %s!\n", scanner.PoolID)
 		return nil
 	}
@@ -83,7 +85,7 @@ func handleFortaRegister(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to encode registration signature: %v", err)
 	}
 
-	whiteBold("Please use the registration signature below on https://app.forta.network as soon as possible!\n\n")
+	whiteBold("Please use the registration signature below on https://app.forta.network as soon as possible and do not share with anyone!\n\n")
 
 	if verbose {
 		color.New(color.FgYellow).Println("encoded:", hex.EncodeToString(encodedPayload))
@@ -143,6 +145,54 @@ func handleFortaEnable(cmd *cobra.Command, args []string) error {
 
 	greenBold("Successfully sent the transaction!\n\n")
 	whiteBold("https://polygonscan.com/tx/%s\n", txHash)
+
+	return nil
+}
+
+// DEPRECATED COMMANDS:
+
+func handleFortaRegister(cmd *cobra.Command, args []string) error {
+	ownerAddressStr, err := cmd.Flags().GetString("owner-address")
+	if err != nil {
+		return err
+	}
+	if !common.IsHexAddress(ownerAddressStr) {
+		return errors.New("invalid owner address provided")
+	}
+
+	scannerKey, err := security.LoadKeyWithPassphrase(cfg.KeyDirPath, cfg.Passphrase)
+	if err != nil {
+		return fmt.Errorf("failed to load scanner key: %v", err)
+	}
+	scannerPrivateKey := scannerKey.PrivateKey
+	scannerAddressStr := scannerKey.Address.Hex()
+
+	if strings.EqualFold(scannerAddressStr, ownerAddressStr) {
+		redBold("Scanner and owner cannot be the same identity! Please provide a different wallet address of your own.\n")
+	}
+
+	registry, err := store.GetRegistryClient(context.Background(), cfg, registry.ClientConfig{
+		JsonRpcUrl: cfg.Registry.JsonRpc.Url,
+		ENSAddress: cfg.ENSConfig.ContractAddress,
+		Name:       "registry-client",
+		PrivateKey: scannerPrivateKey,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create registry client: %v", err)
+	}
+
+	color.Yellow(fmt.Sprintf("Sending a transaction to register your scan node to chain %d...\n", cfg.ChainID))
+
+	txHash, err := registry.RegisterScannerOld(ownerAddressStr, int64(cfg.ChainID), "")
+	if err != nil && strings.Contains(err.Error(), "insufficient funds") {
+		yellowBold("This action requires Polygon (Mainnet) MATIC. Have you funded your address %s yet?\n", scannerAddressStr)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to send the transaction: %v", err)
+	}
+
+	greenBold("Successfully sent the transaction!\n\n")
+	whiteBold("Please ensure that https://polygonscan.com/tx/%s succeeds before you do 'forta run'. This can take a while depending on the network load.\n", txHash)
 
 	return nil
 }
