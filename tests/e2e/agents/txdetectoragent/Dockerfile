@@ -2,7 +2,7 @@
 
 FROM alpine AS base
 
-FROM golang:1.16.4 AS go-builder
+FROM golang:1.19 AS go-builder
 WORKDIR /go/app
 COPY go.mod .
 COPY go.sum .

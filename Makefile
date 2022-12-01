@@ -3,7 +3,7 @@ containers:
 	docker pull nats:2.3.2
 
 containers-dev:
-	DOCKER_BUILDKIT=1 docker build -t forta-network/forta-node -f Dockerfile.buildkit.node .
+	DOCKER_BUILDKIT=1 docker build --network=host -t forta-network/forta-node -f Dockerfile.buildkit.node .
 	docker pull nats:2.3.2
 
 main:
@@ -17,6 +17,7 @@ mocks:
 	mockgen -source clients/interfaces.go -destination clients/mocks/mock_clients.go
 	mockgen -source services/registry/registry.go -destination services/registry/mocks/mock_registry.go
 	mockgen -source store/registry.go -destination store/mocks/mock_registry.go
+	mockgen -source services/storage/ipfs.go -destination services/storage/mocks/mock_ipfs.go
 
 test:
 	go test -v -count=1 ./...

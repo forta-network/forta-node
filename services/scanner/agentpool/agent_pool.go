@@ -23,23 +23,25 @@ import (
 // AgentPool maintains the pool of agents that the scanner should
 // interact with.
 type AgentPool struct {
-	ctx          context.Context
-	agents       []*poolagent.Agent
-	txResults    chan *scanner.TxResult
-	blockResults chan *scanner.BlockResult
-	msgClient    clients.MessageClient
-	dialer       func(config.AgentConfig) (clients.AgentClient, error)
-	mu           sync.RWMutex
-	botWaitGroup *sync.WaitGroup
+	ctx                     context.Context
+	agents                  []*poolagent.Agent
+	txResults               chan *scanner.TxResult
+	blockResults            chan *scanner.BlockResult
+	combinationAlertResults chan *scanner.CombinationAlertResult
+	msgClient               clients.MessageClient
+	dialer                  func(config.AgentConfig) (clients.AgentClient, error)
+	mu                      sync.RWMutex
+	botWaitGroup            *sync.WaitGroup
 }
 
 // NewAgentPool creates a new agent pool.
-func NewAgentPool(ctx context.Context, cfg config.ScannerConfig, msgClient clients.MessageClient, waitBots int) *AgentPool {
+func NewAgentPool(ctx context.Context, _ config.ScannerConfig, msgClient clients.MessageClient, waitBots int) *AgentPool {
 	agentPool := &AgentPool{
-		ctx:          ctx,
-		txResults:    make(chan *scanner.TxResult),
-		blockResults: make(chan *scanner.BlockResult),
-		msgClient:    msgClient,
+		ctx:                       ctx,
+		txResults:                 make(chan *scanner.TxResult),
+		blockResults:              make(chan *scanner.BlockResult),
+		combinationAlertResults:   make(chan *scanner.CombinationAlertResult),
+		msgClient:                 msgClient,
 		dialer: func(ac config.AgentConfig) (clients.AgentClient, error) {
 			client := agentgrpc.NewClient()
 			if err := client.Dial(ac); err != nil {
@@ -227,10 +229,12 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 			lg.WithField("agent", agent.Config().ID).Warn("agent block request buffer is full - skipping")
 			metricsList = append(metricsList, metrics.CreateAgentMetric(agent.Config().ID, metrics.MetricBlockDrop, 1))
 		}
-		lg.WithFields(log.Fields{
-			"agent":    agent.Config().ID,
-			"duration": time.Since(startTime),
-		}).Debug("sent tx request to evalBlockCh")
+		lg.WithFields(
+			log.Fields{
+				"agent":    agent.Config().ID,
+				"duration": time.Since(startTime),
+			},
+		).Debug("sent tx request to evalBlockCh")
 	}
 
 	blockNumber, _ := hexutil.DecodeUint64(req.Event.BlockNumber)
@@ -242,6 +246,75 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 	lg.WithFields(log.Fields{
 		"duration": time.Since(startTime),
 	}).Debug("Finished SendEvaluateBlockRequest")
+}
+
+// SendEvaluateAlertRequest sends the request to all the active agents which
+// should be processing the alert.
+func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest) {
+	startTime := time.Now()
+	lg := log.WithFields(log.Fields{
+		"component": "pool",
+	})
+	lg.Debug("SendEvaluateAlertRequest")
+
+	if req.Event.Alert == nil || req.Event.Alert.Source == nil || req.Event.Alert.Source.Bot == nil {
+		lg.Warn("bad request")
+		return
+	}
+
+	if ap.botWaitGroup != nil {
+		ap.botWaitGroup.Wait()
+	}
+
+	ap.mu.RLock()
+	agents := ap.agents
+	ap.mu.RUnlock()
+
+	encoded, err := agentgrpc.EncodeMessage(req)
+	if err != nil {
+		lg.WithError(err).Error("failed to encode message")
+		return
+	}
+
+	var metricsList []*protocol.AgentMetric
+	for _, agent := range agents {
+		if !agent.IsReady() || !agent.ShouldProcessAlert(req.Event) {
+			continue
+		}
+
+		lg.WithFields(log.Fields{
+			"agent":    agent.Config().ID,
+			"duration": time.Since(startTime),
+		}).Debug("sending alert request to evalAlertCh")
+
+		// unblock req send if agent is closed
+		select {
+		case <-agent.Closed():
+			ap.discardAgent(agent)
+		case agent.CombinationRequestCh() <- &poolagent.CombinationRequest{
+			Original: req,
+			Encoded:  encoded,
+		}:
+		default: // do not try to send if the buffer is full
+			lg.WithField("agent", agent.Config().ID).Warn("agent alert request buffer is full - skipping")
+			metricsList = append(metricsList, metrics.CreateAgentMetric(agent.Config().ID, metrics.MetricBlockDrop, 1))
+		}
+		lg.WithFields(log.Fields{
+			"agent":    agent.Config().ID,
+			"duration": time.Since(startTime),
+		}).Debug("sent alert request to evalAlertCh")
+	}
+
+	ap.msgClient.Publish(messaging.SubjectScannerAlert, &messaging.ScannerPayload{})
+	metrics.SendAgentMetrics(ap.msgClient, metricsList)
+	lg.WithFields(log.Fields{
+		"duration": time.Since(startTime),
+	}).Debug("Finished SendEvaluateAlertRequest")
+}
+
+// CombinationAlertResults returns the receive-only alert results channel.
+func (ap *AgentPool) CombinationAlertResults() <-chan *scanner.CombinationAlertResult {
+	return ap.combinationAlertResults
 }
 
 func (ap *AgentPool) logAgentChanBuffersLoop() {
@@ -270,7 +343,6 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
 
-	log.Debug("handleAgentVersionsUpdate")
 	latestVersions := payload
 
 	// The agents list which we completely replace with the old ones.
@@ -285,14 +357,14 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 			found = found || (agent.Config().ContainerName() == agentCfg.ContainerName())
 		}
 		if !found {
-			newAgents = append(newAgents, poolagent.New(ap.ctx, agentCfg, ap.msgClient, ap.txResults, ap.blockResults))
+			newAgents = append(newAgents, poolagent.New(ap.ctx, agentCfg, ap.msgClient, ap.txResults, ap.blockResults, ap.combinationAlertResults))
 			agentsToRun = append(agentsToRun, agentCfg)
 			log.WithField("agent", agentCfg.ID).Info("will trigger start")
 		}
 	}
 
 	// Find the missing agents in the latest versions and send a "stop" message.
-	// Otherwise, add to the new agents list so we keep on running.
+	// Otherwise, add to the new agents list, so we keep on running.
 	var agentsToStop []config.AgentConfig
 	for _, agent := range ap.agents {
 		var found bool
@@ -326,24 +398,44 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
 
-	log.Debug("handleStatusRunning")
 	// If an agent was added before and just started to run, we should mark as ready.
 	var agentsToStop []config.AgentConfig
 	var agentsReady []config.AgentConfig
+	var newSubscriptions []messaging.CombinerBotSubscription
+	var removedSubscriptions []messaging.CombinerBotSubscription
 
 	for _, agentCfg := range payload {
 		for _, agent := range ap.agents {
 			if agent.Config().ContainerName() == agentCfg.ContainerName() {
+				logger := log.WithField("agent", agent.Config().ID)
+				if agent.IsReady() {
+					continue
+				}
+
 				c, err := ap.dialer(agent.Config())
 				if err != nil {
 					log.WithField("agent", agent.Config().ID).WithError(err).Error("handleStatusRunning: error while dialing")
 					agentsToStop = append(agentsToStop, agent.Config())
+					if agent.IsCombinerBot() {
+						for _, subscription := range agent.AlertConfig().Subscriptions {
+							removedSubscriptions = append(removedSubscriptions, messaging.CombinerBotSubscription{Subscription: subscription})
+						}
+					}
 					continue
 				}
+
 				agent.SetClient(c)
 				agent.SetReady()
 				agent.StartProcessing()
-				log.WithField("agent", agent.Config().ID).WithField("image", agent.Config().Image).Info("attached")
+				agent.WaitInitialization()
+
+				if agent.IsCombinerBot() {
+					for _, subscription := range agent.AlertConfig().Subscriptions {
+						newSubscriptions = append(newSubscriptions, messaging.CombinerBotSubscription{Subscription: subscription})
+					}
+				}
+
+				logger.WithField("image", agent.Config().Image).Info("attached")
 				agentsReady = append(agentsReady, agent.Config())
 			}
 		}
@@ -357,6 +449,13 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	if len(agentsToStop) > 0 {
 		ap.msgClient.Publish(messaging.SubjectAgentsActionStop, agentsToStop)
 	}
+	if len(newSubscriptions) > 0 {
+		ap.msgClient.Publish(messaging.SubjectAgentsAlertSubscribe, newSubscriptions)
+	}
+	if len(removedSubscriptions) > 0 {
+		ap.msgClient.Publish(messaging.SubjectAgentsAlertUnsubscribe, removedSubscriptions)
+	}
+
 	return nil
 }
 
@@ -364,7 +463,6 @@ func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
 
-	log.Debug("handleStatusStopped")
 	var newAgents []*poolagent.Agent
 	for _, agent := range ap.agents {
 		var stopped bool

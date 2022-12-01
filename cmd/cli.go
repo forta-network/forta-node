@@ -241,7 +241,9 @@ func initConfig() {
 	fortaDir := viper.GetString(keyFortaDir)
 	if fortaDir == "" {
 		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
+		if err != nil {
+			logrus.Panicf("failed to get home dir: %v", err)
+		}
 		fortaDir = path.Join(home, ".forta")
 	}
 

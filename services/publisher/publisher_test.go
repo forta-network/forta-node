@@ -82,6 +82,30 @@ func TestBatchData_AppendPrivateAlert_Block(t *testing.T) {
 	assert.EqualValues(t, alert, bd.PrivateAlerts[0].Alerts[0])
 }
 
+func TestBatchData_AppendPrivateAlert_Combination(t *testing.T) {
+	bd := BatchData{}
+	alert := &protocol.SignedAlert{
+		Alert: &protocol.Alert{Id: "alertId", Finding: &protocol.Finding{}},
+	}
+	nr := &protocol.NotifyRequest{
+		SignedAlert:      alert,
+		EvalAlertRequest: &protocol.EvaluateAlertRequest{},
+		EvalAlertResponse: &protocol.EvaluateAlertResponse{
+			Private: true,
+		},
+		AgentInfo: &protocol.AgentInfo{
+			Manifest: "agentInfo",
+		},
+	}
+
+	assert.Len(t, bd.PrivateAlerts, 0)
+	bd.AppendAlert(nr)
+	assert.Len(t, bd.PrivateAlerts, 1)
+	assert.Equal(t, nr.AgentInfo.Manifest, bd.PrivateAlerts[0].AgentManifest)
+	assert.Len(t, bd.PrivateAlerts[0].Alerts, 1)
+	assert.EqualValues(t, alert, bd.PrivateAlerts[0].Alerts[0])
+}
+
 func TestShouldSkipPublishing(t *testing.T) {
 	veryRecently := time.Now().Add(-time.Second * 2)
 

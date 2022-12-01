@@ -111,6 +111,13 @@ func (ins *Inspector) runInspection(blockNum uint64) error {
 			CheckTrace:  ins.inspectTrace,
 		},
 	)
+	
+	if ins.cfg.Config.JsonRpcProxy.JsonRpc.Url != "" {
+		results.Inputs.ProxyAPIURL = ins.cfg.Config.JsonRpcProxy.JsonRpc.Url
+	} else {
+		results.Inputs.ProxyAPIURL = ins.cfg.Config.Scan.JsonRpc.Url
+	}
+
 	cancel()
 
 	// use inspection results even if there are errors

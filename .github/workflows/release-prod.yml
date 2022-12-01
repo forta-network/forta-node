@@ -27,6 +27,8 @@ jobs:
       - name: Setup
         id: setup
         uses: ./.github/actions/setup
+        with:
+          cache: 'false'
       - name: E2E Test
         id: e2e
         uses: ./.github/actions/e2e
@@ -111,7 +113,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.16
+          go-version: 1.19
       - name: Create build for revision
         run: |
           ./scripts/build.sh ${{ needs.containers.outputs.node-image-ref }} \

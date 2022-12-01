@@ -40,12 +40,22 @@ func (t *TxStreamService) ReadOnlyTxStream() <-chan *domain.TransactionEvent {
 }
 
 func (t *TxStreamService) handleBlock(evt *domain.BlockEvent) error {
+	select {
+	case <-t.ctx.Done():
+		return nil
+	default:
+	}
 	t.blockOutput <- evt
 	t.lastBlockActivity.Set()
 	return nil
 }
 
 func (t *TxStreamService) handleTx(evt *domain.TransactionEvent) error {
+	select {
+	case <-t.ctx.Done():
+		return nil
+	default:
+	}
 	t.txOutput <- evt
 	t.lastTxActivity.Set()
 	return nil
@@ -66,10 +76,32 @@ func (t *TxStreamService) Start() error {
 
 func (t *TxStreamService) Stop() error {
 	if t.txOutput != nil {
-		close(t.txOutput)
+		// drain and close tx channel
+		func(c chan *domain.TransactionEvent) {
+			for {
+				select {
+				case tx := <-c:
+					log.WithFields(log.Fields{"tx": tx.Transaction.Hash}).Info("gracefully draining transaction")
+				default:
+					close(c)
+					return
+				}
+			}
+		}(t.txOutput)
 	}
 	if t.blockOutput != nil {
-		close(t.blockOutput)
+		// drain and close block channel
+		func(c chan *domain.BlockEvent) {
+			for {
+				select {
+				case block := <-c:
+					log.WithFields(log.Fields{"tx": block.Block.Hash}).Info("gracefully draining block")
+				default:
+					close(c)
+					return
+				}
+			}
+		}(t.blockOutput)
 	}
 	return nil
 }
