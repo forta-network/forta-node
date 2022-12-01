@@ -3,8 +3,10 @@ package cmd
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,7 +24,7 @@ func handleFortaRegister(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	poolID, err := hexutil.DecodeBig(poolIDStr)
+	poolID, err := strconv.ParseInt(poolIDStr, 10, 64)
 	if err != nil {
 		return fmt.Errorf("failed to decode pool ID: %v", err)
 	}
@@ -51,25 +53,26 @@ func handleFortaRegister(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get scanner from registry: %v", err)
 	}
 	if scanner != nil {
-		color.New(color.FgYellow).Printf("This scanner is already registered to pool %s!", scanner.PoolID)
+		color.New(color.FgYellow).Printf("This scanner is already registered to pool %s!\n", scanner.PoolID)
 		return nil
 	}
 
-	willShutdown, err := registry.WillNewScannerShutdownPool(poolID)
+	willShutdown, err := registry.WillNewScannerShutdownPool(big.NewInt(poolID))
 	if err != nil {
 		return fmt.Errorf("failed to check pool shutdown condition: %v", err)
 	}
 	if willShutdown && !force {
-		redBold("Registration of this scanner will shutdown the pool! Please stake more on the pool %s first.\n", (*hexutil.Big)(poolID).String())
+		redBold("Registering this scanner will shutdown the pool! Please stake more on the pool (id = %d) first.\n", poolID)
 		return nil
 	}
 
+	ts := time.Now().Unix()
 	encodedPayload, sig, err := registry.GenerateScannerRegistrationSignature(&eip712.ScannerNodeRegistration{
 		Scanner:       scannerKey.Address,
-		ScannerPoolId: poolID,
+		ScannerPoolId: big.NewInt(poolID),
 		ChainId:       big.NewInt(int64(cfg.ChainID)),
 		Metadata:      "",
-		Timestamp:     big.NewInt(time.Now().Unix()),
+		Timestamp:     big.NewInt(ts),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to generate registration signature: %v", err)
@@ -84,12 +87,30 @@ func handleFortaRegister(cmd *cobra.Command, args []string) error {
 
 	if verbose {
 		color.New(color.FgYellow).Println("encoded:", hex.EncodeToString(encodedPayload))
+		color.New(color.FgYellow).Println("tuple:", makeArgsTuple(scannerKey.Address.Hex(), poolID, cfg.ChainID, ts))
 		color.New(color.FgYellow).Println("signature:", encodedSig)
 	} else {
 		color.New(color.FgYellow).Println(encodedSig)
 	}
 
 	return nil
+}
+
+//	struct ScannerNodeRegistration {
+//		address scanner;
+//		uint256 scannerPoolId;
+//		uint256 chainId;
+//		string metadata;
+//		uint256 timestamp;
+//	}
+func makeArgsTuple(scannerAddr string, poolID int64, chainID int, ts int64) string {
+	tuple := make([]string, 5)
+	tuple[0] = scannerAddr
+	tuple[1] = (*hexutil.Big)(big.NewInt(poolID)).String()
+	tuple[2] = (*hexutil.Big)(big.NewInt(int64(chainID))).String()
+	tuple[4] = (*hexutil.Big)(big.NewInt(int64(ts))).String()
+	b, _ := json.Marshal(tuple)
+	return string(b)
 }
 
 func handleFortaEnable(cmd *cobra.Command, args []string) error {
