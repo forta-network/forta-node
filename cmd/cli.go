@@ -120,15 +120,17 @@ publishes alerts about them`,
 	}
 
 	cmdFortaEnable = &cobra.Command{
-		Use:   "enable",
-		Short: "enable your scan node (requires MATIC in your scan node address)",
-		RunE:  withInitialized(withValidConfig(handleFortaEnable)),
+		Use:    "enable",
+		Short:  "enable your scan node (requires MATIC in your scan node address)",
+		RunE:   withInitialized(withValidConfig(handleFortaEnable)),
+		Hidden: true,
 	}
 
 	cmdFortaDisable = &cobra.Command{
-		Use:   "disable",
-		Short: "disable your scan node (requires MATIC in your scan node address)",
-		RunE:  withInitialized(withValidConfig(handleFortaDisable)),
+		Use:    "disable",
+		Short:  "disable your scan node (requires MATIC in your scan node address)",
+		RunE:   withInitialized(withValidConfig(handleFortaDisable)),
+		Hidden: true,
 	}
 )
 
