@@ -37,3 +37,5 @@ require (
 	google.golang.org/grpc v1.47.0
 	gopkg.in/yaml.v3 v3.0.1
 )
+
+replace forta-core-go-pre-delegated-staking => github.com/forta-network/forta-core-go v0.0.0-20221128181542-dd10f3709f95
