@@ -136,7 +136,7 @@ jobs:
     if: ${{ github.event.action == 'released' }}
     name: Release to prod
     needs: [build]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     environment: prod
     steps:
       - name: Checkout
