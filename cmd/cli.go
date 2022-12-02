@@ -227,6 +227,7 @@ func init() {
 	cmdFortaAuthorizePool.MarkFlagRequired("id")
 	cmdFortaAuthorizePool.Flags().BoolP("verbose", "v", false, "see more output")
 	cmdFortaAuthorizePool.Flags().BoolP("force", "f", false, "ignore warning(s)")
+	cmdFortaAuthorizePool.Flags().Bool("only-signature", false, "output only the signature")
 }
 
 func initConfig() {

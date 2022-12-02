@@ -33,6 +33,7 @@ func handleFortaAuthorizePool(cmd *cobra.Command, args []string) error {
 
 	verbose, _ := cmd.Flags().GetBool("verbose")
 	force, _ := cmd.Flags().GetBool("force")
+	onlySignature, _ := cmd.Flags().GetBool("only-signature")
 
 	scannerKey, err := security.LoadKeyWithPassphrase(cfg.KeyDirPath, cfg.Passphrase)
 	if err != nil {
@@ -83,6 +84,11 @@ func handleFortaAuthorizePool(cmd *cobra.Command, args []string) error {
 	encodedSig, err := security.EncodeEthereumSignature(sig)
 	if err != nil {
 		return fmt.Errorf("failed to encode registration signature: %v", err)
+	}
+
+	if onlySignature {
+		fmt.Println(encodedSig)
+		return nil
 	}
 
 	whiteBold("Please use the registration signature below on https://app.forta.network as soon as possible and do not share with anyone!\n\n")
