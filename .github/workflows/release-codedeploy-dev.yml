@@ -178,7 +178,7 @@ jobs:
   release:
     name: Release dev
     if: ${{ github.ref_name == 'master' }}
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     needs: [build-deploy]
     environment: dev
     steps:
