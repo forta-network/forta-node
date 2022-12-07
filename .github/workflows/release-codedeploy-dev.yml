@@ -106,7 +106,7 @@ jobs:
   build-deploy:
     name: Build and deploy
     needs: [containers]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     environment: dev
     steps:
       - name: Echo Image References
