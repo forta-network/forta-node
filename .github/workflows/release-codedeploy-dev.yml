@@ -24,7 +24,7 @@ jobs:
 
   e2e:
     name: E2E Test
-#    if: ${{ github.ref_name == 'master' }}
+    if: ${{ github.ref_name == 'master' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -177,7 +177,7 @@ jobs:
 
   release:
     name: Release dev
-#    if: ${{ github.ref_name == 'master' }}
+    if: ${{ github.ref_name == 'master' }}
     runs-on: ubuntu-18.04
     needs: [build-deploy]
     environment: dev
