@@ -36,7 +36,7 @@ jobs:
   containers:
     name: Build and push containers
     needs: [go,e2e]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     environment: prod
     outputs:
       node-image-ref: ${{ steps.write-output.outputs.node-image-ref }}
@@ -96,7 +96,7 @@ jobs:
     if: ${{ github.event.action == 'released' }}
     name: Build
     needs: [containers]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     environment: prod
     steps:
       - name: Echo Image References
