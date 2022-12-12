@@ -31,7 +31,7 @@ const (
 	testProxyContainerID       = "test-proxy-container-id"
 	testSupervisorContainerID  = "test-supervisor-container-id"
 	testAgentID                = "test-agent"
-	testAgentContainerName     = "forta-agent-test-age-cdd4" // This is a result
+	testAgentContainerName     = "forta-agent-test-age-cdd4-0" // This is a result
 	testAgentNetworkID         = "test-agent-network-id"
 	testAgentContainerID       = "test-agent-container-id"
 	testJWTProviderContainerID = "test-jwt-provider-container-id"
