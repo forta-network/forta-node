@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/ipfs/go-cid"
 	log "github.com/sirupsen/logrus"
 
@@ -132,7 +133,34 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 		rs.lastCompletedVersion = hash.Hash // remember next time so we don't retry the same list
 	}
 
-	return loadedBots, true, nil
+	// populate bots with redundancy
+	var allBots []*config.AgentConfig
+	for _, bot := range loadedBots {
+		if bot.Redundancy == 0 {
+			bot.Redundancy = 1
+		}
+
+		for i := uint(0); i < bot.Redundancy; i++ {
+			allBots = append(
+				allBots, &config.AgentConfig{
+					ID:         bot.ID,
+					Image:      bot.Image,
+					Manifest:   bot.Manifest,
+					IsLocal:    bot.IsLocal,
+					StartBlock: bot.StartBlock,
+					StopBlock:  bot.StopBlock,
+					Redundancy: bot.Redundancy,
+					// add shard id
+					ShardId: i,
+					AlertConfig: &protocol.AlertConfig{
+						Subscriptions: bot.AlertConfig.Subscriptions,
+					},
+				},
+			)
+		}
+	}
+
+	return allBots, true, nil
 }
 
 func (rs *registryStore) FindAgentGlobally(agentID string) (*config.AgentConfig, error) {
