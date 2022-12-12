@@ -297,7 +297,9 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 
 	var waitBots int
 	if cfg.LocalModeConfig.Enable {
-		waitBots = len(cfg.LocalModeConfig.BotImages)
+		for _, image := range cfg.LocalModeConfig.BotImages {
+			waitBots += int(image.Redundancy)
+		}
 	}
 
 	agentPool := agentpool.NewAgentPool(ctx, cfg.Scan, msgClient, waitBots)

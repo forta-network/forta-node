@@ -140,13 +140,18 @@ type LocalModeConfig struct {
 	Enable                bool                     `yaml:"enable" json:"enable"`
 	IncludeMetrics        bool                     `yaml:"includeMetrics" json:"includeMetrics"`
 	BotIDs                []string                 `yaml:"botIds" json:"botIds"`
-	BotImages             []string                 `yaml:"botImages" json:"botImages"`
+	BotImages             []LocalModeBotConfig     `yaml:"botImages" json:"botImages"`
 	WebhookURL            string                   `yaml:"webhookUrl" json:"webhookUrl"`
 	LogFileName           string                   `yaml:"logFileName" json:"logFileName"`
 	ContainerRegistry     *ContainerRegistryConfig `yaml:"containerRegistry" json:"containerRegistry"`
 	RuntimeLimits         RuntimeLimits            `yaml:"runtimeLimits" json:"runtimeLimits"`
 	ForceEnableInspection bool                     `yaml:"forceEnableInspection" json:"forceEnableInspection"`
 	Deduplication         *DeduplicationConfig     `yaml:"deduplication" json:"deduplication"`
+}
+
+type LocalModeBotConfig struct {
+	Image      string `yaml:"image" json:"image"`
+	Redundancy uint   `yaml:"redundancy,omitempty" json:"redundancy" default:"1"`
 }
 
 type InspectionConfig struct {
