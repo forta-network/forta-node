@@ -6,12 +6,14 @@ const (
 	EnvReleaseInfo  = "FORTA_RELEASE_INFO"
 
 	// Agent env vars
-	EnvJsonRpcHost     = "JSON_RPC_HOST"
-	EnvJsonRpcPort     = "JSON_RPC_PORT"
-	EnvJWTProviderHost = "FORTA_JWT_PROVIDER_HOST"
-	EnvJWTProviderPort = "FORTA_JWT_PROVIDER_PORT"
-	EnvAgentGrpcPort   = "AGENT_GRPC_PORT"
-	EnvFortaBotID      = "FORTA_BOT_ID"
+	EnvJsonRpcHost        = "JSON_RPC_HOST"
+	EnvJsonRpcPort        = "JSON_RPC_PORT"
+	EnvJWTProviderHost    = "FORTA_JWT_PROVIDER_HOST"
+	EnvJWTProviderPort    = "FORTA_JWT_PROVIDER_PORT"
+	EnvAgentGrpcPort      = "AGENT_GRPC_PORT"
+	EnvFortaBotID         = "FORTA_BOT_ID"
+	EnvFortaBotShardID    = "FORTA_BOT_SHARD_ID"
+	EnvFortaBotRedundancy = "FORTA_BOT_REDUNDANCY"
 )
 
 // EnvDefaults contain default values for one env.
