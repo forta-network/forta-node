@@ -351,13 +351,19 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 	// Find the missing agents in the pool, add them to the new agents list
 	// and send a "run" message.
 	var agentsToRun []config.AgentConfig
+
 	for _, agentCfg := range latestVersions {
 		var found bool
 		for _, agent := range ap.agents {
 			found = found || (agent.Config().ContainerName() == agentCfg.ContainerName())
 		}
 		if !found {
-			newAgents = append(newAgents, poolagent.New(ap.ctx, agentCfg, ap.msgClient, ap.txResults, ap.blockResults, ap.combinationAlertResults))
+			newAgents = append(
+				newAgents,
+				poolagent.New(
+					ap.ctx, agentCfg, ap.msgClient, ap.txResults, ap.blockResults, ap.combinationAlertResults,
+				),
+			)
 			agentsToRun = append(agentsToRun, agentCfg)
 			log.WithField("agent", agentCfg.ID).Info("will trigger start")
 		}

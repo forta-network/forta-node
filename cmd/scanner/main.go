@@ -297,8 +297,8 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 
 	var waitBots int
 	if cfg.LocalModeConfig.Enable {
-		for _, image := range cfg.LocalModeConfig.BotImages {
-			waitBots += int(image.Redundancy)
+		for _, bot := range cfg.LocalModeConfig.BotImages {
+			waitBots += int(bot.ShardCount)
 		}
 	}
 

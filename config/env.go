@@ -14,6 +14,7 @@ const (
 	EnvFortaBotID         = "FORTA_BOT_ID"
 	EnvFortaBotShardID    = "FORTA_BOT_SHARD_ID"
 	EnvFortaBotRedundancy = "FORTA_BOT_REDUNDANCY"
+	EnvFortaBotShardCount = "FORTA_BOT_SHARD_COUNT"
 )
 
 // EnvDefaults contain default values for one env.

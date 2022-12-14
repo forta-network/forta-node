@@ -136,11 +136,11 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 	// populate bots with redundancy
 	var allBots []*config.AgentConfig
 	for _, bot := range loadedBots {
-		if bot.Redundancy == 0 {
-			bot.Redundancy = 1
+		if bot.ShardCount == 0 {
+			bot.ShardCount = 1
 		}
 
-		for i := uint(0); i < bot.Redundancy; i++ {
+		for i := uint(0); i < bot.ShardCount; i++ {
 			allBots = append(
 				allBots, &config.AgentConfig{
 					ID:         bot.ID,
@@ -149,6 +149,7 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 					IsLocal:    bot.IsLocal,
 					StartBlock: bot.StartBlock,
 					StopBlock:  bot.StopBlock,
+					ShardCount: bot.ShardCount,
 					Redundancy: bot.Redundancy,
 					// add shard id
 					ShardId: i,
@@ -267,12 +268,15 @@ func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]*config.Ag
 		// forta-agent-1, forta-agent-2, forta-agent-3, ...
 		agentID := strconv.Itoa(i + 1)
 
-		for i := 0; i < int(bot.Redundancy); i++ {
+		// for local mode, shard count is the global redundancy
+		redundancy := bot.ShardCount
+
+		for i := 0; i < int(bot.ShardCount); i++ {
 			// forta-agent-1-1, forta-agent-1-2, forta-agent-1-3, ...
 			agentConfigs = append(
 				agentConfigs, rs.makePrivateModeAgentConfig(
-					agentID, bot.Image, bot.Redundancy,
-					uint(i),
+					agentID, bot.Image, bot.ShardCount,
+					uint(i), redundancy,
 				),
 			)
 		}
@@ -305,12 +309,13 @@ func (rs *privateRegistryStore) FindAgentGlobally(agentID string) (*config.Agent
 }
 
 func (rs *privateRegistryStore) makePrivateModeAgentConfig(
-	id string, image string, redundancy, shardID uint,
+	id string, image string, shardCount, shardID, redundancy uint,
 ) *config.AgentConfig {
 	return &config.AgentConfig{
 		ID:         id,
 		Image:      image,
 		IsLocal:    true,
+		ShardCount: shardCount,
 		Redundancy: redundancy,
 		ShardId:    shardID,
 	}

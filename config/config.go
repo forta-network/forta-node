@@ -151,7 +151,7 @@ type LocalModeConfig struct {
 
 type LocalModeBotConfig struct {
 	Image      string `yaml:"image" json:"image"`
-	Redundancy uint   `yaml:"redundancy,omitempty" json:"redundancy" default:"1"`
+	ShardCount uint   `yaml:"shardCount,omitempty" json:"shardCount" default:"1"`
 }
 
 type InspectionConfig struct {

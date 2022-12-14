@@ -55,6 +55,7 @@ func (sup *SupervisorService) startAgent(ctx context.Context, agent config.Agent
 				config.EnvJWTProviderPort:    config.DefaultJWTProviderPort,
 				config.EnvAgentGrpcPort:      agent.GrpcPort(),
 				config.EnvFortaBotShardID:    fmt.Sprintf("%d", agent.ShardId),
+				config.EnvFortaBotShardCount: fmt.Sprintf("%d", agent.ShardCount),
 				config.EnvFortaBotRedundancy: fmt.Sprintf("%d", agent.Redundancy),
 			},
 			MaxLogFiles: sup.maxLogFiles,

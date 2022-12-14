@@ -12,15 +12,16 @@ const (
 )
 
 type AgentConfig struct {
-	ID           string        `yaml:"id" json:"id"`
-	Image        string        `yaml:"image" json:"image"`
-	Manifest     string        `yaml:"manifest" json:"manifest"`
-	IsLocal      bool          `yaml:"isLocal" json:"isLocal"`
-	StartBlock   *uint64       `yaml:"startBlock" json:"startBlock,omitempty"`
-	StopBlock    *uint64       `yaml:"stopBlock" json:"stopBlock,omitempty"`
-	Redundancy   uint          `yaml:"redundancy" json:"redundancy"`
-	ShardId uint
-	AlertConfig  *protocol.AlertConfig
+	ID          string  `yaml:"id" json:"id"`
+	Image       string  `yaml:"image" json:"image"`
+	Manifest    string  `yaml:"manifest" json:"manifest"`
+	IsLocal     bool    `yaml:"isLocal" json:"isLocal"`
+	StartBlock  *uint64 `yaml:"startBlock" json:"startBlock,omitempty"`
+	StopBlock   *uint64 `yaml:"stopBlock" json:"stopBlock,omitempty"`
+	Redundancy  uint    `yaml:"redundancy" json:"redundancy"`
+	ShardCount  uint    `yaml:"shardCount" json:"shardCount"`
+	ShardId     uint    `yaml:"shardId" json:"shardId"`
+	AlertConfig *protocol.AlertConfig
 }
 
 // ToAgentInfo transforms the agent config to the agent info.
