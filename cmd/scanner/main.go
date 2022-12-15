@@ -3,11 +3,12 @@ package scanner
 import (
 	"context"
 	"fmt"
-	"github.com/forta-network/forta-node/store"
 	"math/big"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/forta-network/forta-node/store"
 
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol/settings"
@@ -226,6 +227,7 @@ func initCombinerAlertAnalyzer(ctx context.Context, cfg config.Config, as client
 			AlertSender:  as,
 			AgentPool:    ap,
 			MsgClient:    msgClient,
+			ChainID:      fmt.Sprintf("%d", cfg.ChainID),
 		},
 	)
 }
