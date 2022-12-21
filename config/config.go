@@ -15,11 +15,12 @@ type JsonRpcConfig struct {
 }
 
 type ScannerConfig struct {
-	JsonRpc            JsonRpcConfig `yaml:"jsonRpc" json:"jsonRpc"`
-	DisableAutostart   bool          `yaml:"disableAutostart" json:"disableAutostart"`
-	BlockRateLimit     int           `yaml:"blockRateLimit" json:"blockRateLimit" default:"200"`
-	BlockMaxAgeSeconds int64         `yaml:"blockMaxAgeSeconds" json:"blockMaxAgeSeconds" default:"600"`
-	AlertAPIURL        string        `yaml:"apiUrl" json:"apiUrl" default:"https://api.forta.network/graphql" validate:"url"`
+	JsonRpc              JsonRpcConfig `yaml:"jsonRpc" json:"jsonRpc"`
+	DisableAutostart     bool          `yaml:"disableAutostart" json:"disableAutostart"`
+	BlockRateLimit       int           `yaml:"blockRateLimit" json:"blockRateLimit" default:"200"`
+	BlockMaxAgeSeconds   int64         `yaml:"blockMaxAgeSeconds" json:"blockMaxAgeSeconds" default:"600"`
+	RetryIntervalSeconds int64         `yaml:"retryIntervalSeconds" json:"retryIntervalSeconds" default:"8"`
+	AlertAPIURL          string        `yaml:"apiUrl" json:"apiUrl" default:"https://api.forta.network/graphql" validate:"url"`
 }
 
 type TraceConfig struct {

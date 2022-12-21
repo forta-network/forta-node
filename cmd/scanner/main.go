@@ -3,11 +3,12 @@ package scanner
 import (
 	"context"
 	"fmt"
-	"github.com/forta-network/forta-node/store"
 	"math/big"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/forta-network/forta-node/store"
 
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol/settings"
@@ -75,6 +76,8 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 			stopBlock = big.NewInt(0).SetUint64(runtimeLimits.StopBlock)
 		}
 	}
+
+	ethClient.SetRetryInterval(time.Second * time.Duration(cfg.Scan.RetryIntervalSeconds))
 
 	blockFeed, err := feeds.NewBlockFeed(ctx, ethClient, traceClient, feeds.BlockFeedConfig{
 		ChainID:             chainID,
