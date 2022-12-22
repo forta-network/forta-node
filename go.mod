@@ -8,7 +8,7 @@ require (
 	github.com/docker/go-connections v0.4.0
 	github.com/ethereum/go-ethereum v1.10.16
 	github.com/fatih/color v1.13.0
-	github.com/forta-network/forta-core-go v0.0.0-20221221201509-0a7169781047
+	github.com/forta-network/forta-core-go v0.0.0-20221222191021-b0675d25b64a
 	github.com/go-playground/validator/v10 v10.9.0
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/goccy/go-json v0.9.4
