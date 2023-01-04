@@ -61,7 +61,7 @@ func (t *CombinerAlertStreamService) Start() error {
 	t.registerMessageHandlers()
 	go func() {
 		t.alertFeed.RegisterHandler(t.handleAlert)
-		t.alertFeed.StartRange(t.cfg.Start, t.cfg.End, 0)
+		t.alertFeed.Start()
 	}()
 	return nil
 }
