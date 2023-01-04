@@ -77,6 +77,8 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 		}
 	}
 
+	ethClient.SetRetryInterval(time.Second * time.Duration(cfg.Scan.RetryIntervalSeconds))
+
 	blockFeed, err := feeds.NewBlockFeed(ctx, ethClient, traceClient, feeds.BlockFeedConfig{
 		ChainID:             chainID,
 		Tracing:             cfg.Trace.Enabled,
