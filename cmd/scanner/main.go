@@ -229,6 +229,7 @@ func initCombinerAlertAnalyzer(ctx context.Context, cfg config.Config, as client
 			AlertSender:  as,
 			AgentPool:    ap,
 			MsgClient:    msgClient,
+			ChainID:      fmt.Sprintf("%d", cfg.ChainID),
 		},
 	)
 }

@@ -35,6 +35,7 @@ type CombinerAlertAnalyzerServiceConfig struct {
 	AlertSender  clients.AlertSender
 	AgentPool    AgentPool
 	MsgClient    clients.MessageClient
+	ChainID      string
 }
 
 func (aas *CombinerAlertAnalyzerService) publishMetrics(result *CombinationAlertResult) {
@@ -112,7 +113,7 @@ func (aas *CombinerAlertAnalyzerService) Start() error {
 					continue
 				}
 				if err := aas.cfg.AlertSender.SignAlertAndNotify(
-					rt, alert, "", "", result.Timestamps,
+					rt, alert, aas.cfg.ChainID, "", result.Timestamps,
 				); err != nil {
 					log.WithError(err).Panic("failed sign alert and notify")
 				}
