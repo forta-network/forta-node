@@ -45,14 +45,16 @@ jobs:
     runs-on: ubuntu-22.04
     environment: dev
     outputs:
-      node-image-ref: disco-dev.forta.network/bafybeiceyp233hnzj5bznak2azdyxfzqhhw2gny2zo55yy4lr3qaqmsk6y@sha256:0ab329db8d759541350526d6b55d225d5a88dce50e76fb14b684ac4c99c3286d #${{ steps.write-output.outputs.node-image-ref }}
+      node-image-ref: 'disco-dev.forta.network/bafybeiceyp233hnzj5bznak2azdyxfzqhhw2gny2zo55yy4lr3qaqmsk6y@sha256:0ab329db8d759541350526d6b55d225d5a88dce50e76fb14b684ac4c99c3286d' #${{ steps.write-output.outputs.node-image-ref }}
       node-release-cid: 'QmNeyipaBphw2zndXvrqHaRTGPePJAFsxh2nFdYhkCJ6Mh' #${{ steps.write-output.outputs.node-release-cid }}
     # strategy:
     #   matrix:
     #     image-name: [
     #       "node"
     #     ]
-    # steps:
+    steps:
+        - name: Print
+          run: echo "done"
     #   - name: Clear artifacts
     #     uses: kolpav/purge-artifacts-action@v1
     #     continue-on-error: true
