@@ -57,6 +57,7 @@ runs:
         cd createrepo_folder
         git clone https://github.com/rpm-software-management/createrepo_c
         cd createrepo_c
+        git checkout 0.20.1
         mkdir build
         cd build
         cmake .. -DWITH_ZCHUNK=NO -DWITH_LIBMODULEMD=NO
