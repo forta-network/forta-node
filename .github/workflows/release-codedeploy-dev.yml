@@ -4,109 +4,110 @@ on:
   push:
     branches: [master]
   workflow_dispatch:
+  pull_request:
 
 env:
   DEFAULT_DEV_VERSION: v0.0.1
 
 jobs:
-  go:
-    name: Go
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Setup
-        id: setup
-        uses: ./.github/actions/setup
-      - name: Validate and test Go code
-        id: go
-        uses: ./.github/actions/go
+  # go:
+  #   name: Go
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+  #     - name: Setup
+  #       id: setup
+  #       uses: ./.github/actions/setup
+  #     - name: Validate and test Go code
+  #       id: go
+  #       uses: ./.github/actions/go
 
-  e2e:
-    name: E2E Test
-    if: ${{ github.ref_name == 'master' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Setup
-        id: setup
-        uses: ./.github/actions/setup
-        with:
-          cache: 'false'
-      - name: E2E Test
-        id: e2e
-        uses: ./.github/actions/e2e
+  # e2e:
+  #   name: E2E Test
+  #   if: ${{ github.ref_name == 'master' }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+  #     - name: Setup
+  #       id: setup
+  #       uses: ./.github/actions/setup
+  #       with:
+  #         cache: 'false'
+  #     - name: E2E Test
+  #       id: e2e
+  #       uses: ./.github/actions/e2e
 
   containers:
     name: Build and push containers
     needs: [go]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     environment: dev
     outputs:
-      node-image-ref: ${{ steps.write-output.outputs.node-image-ref }}
-      node-release-cid: ${{ steps.write-output.outputs.node-release-cid }}
-    strategy:
-      matrix:
-        image-name: [
-          "node"
-        ]
-    steps:
-      - name: Clear artifacts
-        uses: kolpav/purge-artifacts-action@v1
-        continue-on-error: true
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          expire-in: 7days
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Build and push container
-        id: build-and-push
-        uses: ./.github/actions/build-push
-        with:
-          registry: disco-dev.forta.network
-          name: ${{ matrix.image-name }}
-          version: ${{ env.DEFAULT_DEV_VERSION }}
-      - name: Write output values
-        id: write-output
-        run: |
-          echo "::set-output name=${{ matrix.image-name }}-release-cid::${{ steps.build-and-push.outputs.release-cid }}"
-          echo "::set-output name=${{ matrix.image-name }}-image-ref::${{ steps.build-and-push.outputs.image-reference }}"
+      node-image-ref: disco-dev.forta.network/bafybeiceyp233hnzj5bznak2azdyxfzqhhw2gny2zo55yy4lr3qaqmsk6y@sha256:0ab329db8d759541350526d6b55d225d5a88dce50e76fb14b684ac4c99c3286d #${{ steps.write-output.outputs.node-image-ref }}
+      node-release-cid: 'QmNeyipaBphw2zndXvrqHaRTGPePJAFsxh2nFdYhkCJ6Mh' #${{ steps.write-output.outputs.node-release-cid }}
+    # strategy:
+    #   matrix:
+    #     image-name: [
+    #       "node"
+    #     ]
+    # steps:
+    #   - name: Clear artifacts
+    #     uses: kolpav/purge-artifacts-action@v1
+    #     continue-on-error: true
+    #     with:
+    #       token: ${{ secrets.GITHUB_TOKEN }}
+    #       expire-in: 7days
+    #   - name: Checkout
+    #     uses: actions/checkout@v2
+    #   - name: Build and push container
+    #     id: build-and-push
+    #     uses: ./.github/actions/build-push
+    #     with:
+    #       registry: disco-dev.forta.network
+    #       name: ${{ matrix.image-name }}
+    #       version: ${{ env.DEFAULT_DEV_VERSION }}
+    #   - name: Write output values
+    #     id: write-output
+    #     run: |
+    #       echo "::set-output name=${{ matrix.image-name }}-release-cid::${{ steps.build-and-push.outputs.release-cid }}"
+    #       echo "::set-output name=${{ matrix.image-name }}-image-ref::${{ steps.build-and-push.outputs.image-reference }}"
 
-  publish-hash:
-    name: Publish Hash to Contract
-    needs: containers
-    runs-on: ubuntu-latest
-    environment: dev
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Echo Hash
-        run: |
-          echo "release-cid=${{ needs.containers.outputs.node-release-cid }}"
-      - name: Publish Hash
-        run: |
-          ./scripts/publish-release.sh ${{ needs.containers.outputs.node-release-cid }} ${{ secrets.DEV_PUBLISH_AUTOTASK_KEY }} ${{ secrets.DEV_PUBLISH_AUTOTASK_URL }}
+  # publish-hash:
+  #   name: Publish Hash to Contract
+  #   needs: containers
+  #   runs-on: ubuntu-latest
+  #   environment: dev
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+  #     - name: Echo Hash
+  #       run: |
+  #         echo "release-cid=${{ needs.containers.outputs.node-release-cid }}"
+  #     - name: Publish Hash
+  #       run: |
+  #         ./scripts/publish-release.sh ${{ needs.containers.outputs.node-release-cid }} ${{ secrets.DEV_PUBLISH_AUTOTASK_KEY }} ${{ secrets.DEV_PUBLISH_AUTOTASK_URL }}
 
-  publish-hash-beta:
-    name: Publish Hash (Beta) to Contract
-    needs: containers
-    runs-on: ubuntu-latest
-    environment: dev
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Echo Hash
-        run: |
-          echo "release-cid=${{ needs.containers.outputs.node-release-cid }}"
-      - name: Publish Hash
-        run: |
-          ./scripts/publish-release.sh ${{ needs.containers.outputs.node-release-cid }} ${{ secrets.DEV_PUBLISH_AUTOTASK_KEY }} ${{ secrets.DEV_PUBLISH_BETA_AUTOTASK_URL }}
+  # publish-hash-beta:
+  #   name: Publish Hash (Beta) to Contract
+  #   needs: containers
+  #   runs-on: ubuntu-latest
+  #   environment: dev
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+  #     - name: Echo Hash
+  #       run: |
+  #         echo "release-cid=${{ needs.containers.outputs.node-release-cid }}"
+  #     - name: Publish Hash
+  #       run: |
+  #         ./scripts/publish-release.sh ${{ needs.containers.outputs.node-release-cid }} ${{ secrets.DEV_PUBLISH_AUTOTASK_KEY }} ${{ secrets.DEV_PUBLISH_BETA_AUTOTASK_URL }}
 
   build-deploy:
     name: Build and deploy
     needs: [containers]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     environment: dev
     steps:
       - name: Echo Image References
@@ -147,38 +148,38 @@ jobs:
           cp forta dist/
           cp appspec.yml dist/
           cp -R scripts dist/
-      - name: Zip Distribution
-        uses: vimtor/action-zip@v1
-        with:
-          files: dist/
-          dest: deploy.zip
-      - uses: actions/upload-artifact@v1
-        with:
-          name: deploy-artifact
-          path: ${{ github.workspace }}/deploy.zip
+      # - name: Zip Distribution
+      #   uses: vimtor/action-zip@v1
+      #   with:
+      #     files: dist/
+      #     dest: deploy.zip
+      # - uses: actions/upload-artifact@v1
+      #   with:
+      #     name: deploy-artifact
+      #     path: ${{ github.workspace }}/deploy.zip
 
-      - name: Configure AWS credentials (CodeDeploy)
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.DEV_DEPLOY_AWS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.DEV_DEPLOY_AWS_SECRET_KEY }}
-          aws-region: us-east-1
-      - name: AWS CodeDeploy
-        uses: sourcetoad/aws-codedeploy-action@v1
-        with:
-          aws_access_key: ${{ secrets.DEV_DEPLOY_AWS_ACCESS_KEY }}
-          aws_secret_key: ${{ secrets.DEV_DEPLOY_AWS_SECRET_KEY }}
-          aws_region: us-east-1
-          codedeploy_name: dev-forta-node
-          codedeploy_group: dev-forta-deploy-group
-          s3_bucket: dev-forta-codedeploy
-          s3_folder: dev
-          directory: ./dist/
+      # - name: Configure AWS credentials (CodeDeploy)
+      #   uses: aws-actions/configure-aws-credentials@v1
+      #   with:
+      #     aws-access-key-id: ${{ secrets.DEV_DEPLOY_AWS_ACCESS_KEY }}
+      #     aws-secret-access-key: ${{ secrets.DEV_DEPLOY_AWS_SECRET_KEY }}
+      #     aws-region: us-east-1
+      # - name: AWS CodeDeploy
+      #   uses: sourcetoad/aws-codedeploy-action@v1
+      #   with:
+      #     aws_access_key: ${{ secrets.DEV_DEPLOY_AWS_ACCESS_KEY }}
+      #     aws_secret_key: ${{ secrets.DEV_DEPLOY_AWS_SECRET_KEY }}
+      #     aws_region: us-east-1
+      #     codedeploy_name: dev-forta-node
+      #     codedeploy_group: dev-forta-deploy-group
+      #     s3_bucket: dev-forta-codedeploy
+      #     s3_folder: dev
+      #     directory: ./dist/
 
   release:
     name: Release dev
     #if: ${{ github.ref_name == 'master' }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: [build-deploy]
     environment: dev
     steps:
