@@ -8,13 +8,11 @@ jobs:
     name: Go
     runs-on: ubuntu-latest
     steps:
-      - name: Print
-        run: echo "done"
-      # - name: Checkout
-      #   uses: actions/checkout@v2
-      # - name: Setup
-      #   id: setup
-      #   uses: ./.github/actions/setup
-      # - name: Validate and test Go code
-      #   id: go
-      #   uses: ./.github/actions/go
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup
+        id: setup
+        uses: ./.github/actions/setup
+      - name: Validate and test Go code
+        id: go
+        uses: ./.github/actions/go
