@@ -53,6 +53,7 @@ runs:
         sudo apt-get install wget
 
         wget https://dist.forta.network/tools/createrepo
+        chmod 0777 createrepo
         sudo mv createrepo /usr/bin/createrepo
 
         sudo mv /usr/bin/gpg /usr/bin/gpg2 # have no default
