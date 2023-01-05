@@ -41,7 +41,7 @@ jobs:
 
   containers:
     name: Build and push containers
-    needs: [go]
+    #needs: [go]
     runs-on: ubuntu-22.04
     environment: dev
     outputs:
