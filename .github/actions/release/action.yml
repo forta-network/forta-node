@@ -50,6 +50,10 @@ runs:
         sudo apt-get install tree gpg rpm createrepo aptly devscripts build-essential lintian
         sudo apt-get install -t bionic-backports debhelper
         sudo apt-get install gnupg1 gpgv1
+        sudo apt-get install wget
+
+        wget https://dist.forta.network/tools/createrepo
+        sudo mv createrepo /usr/bin/createrepo
 
         sudo mv /usr/bin/gpg /usr/bin/gpg2 # have no default
         sudo ln -sf /usr/bin/gpg1 /usr/bin/gpg # make gpg1 default
