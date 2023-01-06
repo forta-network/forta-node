@@ -47,8 +47,25 @@ runs:
       shell: bash
       run: |
         sudo apt-get update &> /dev/null
-        sudo apt-get install tree gpg rpm createrepo aptly devscripts build-essential lintian
-        sudo apt-get install -t bionic-backports debhelper
+
+        # build createrepo_c
+        sudo apt-get install git
+
+        # taken from https://www.stableit.blog/2021/07/createrepo-on-ubuntu-2004.html
+        sudo apt install -y libcurl4-openssl-dev libbz2-dev libxml2-dev libssl-dev zlib1g-dev pkg-config libglib2.0-dev liblzma-dev libsqlite0-dev libsqlite3-dev librpm-dev libzstd-dev python3.9-dev cmake doxygen
+        mkdir createrepo_folder
+        cd createrepo_folder
+        git clone https://github.com/rpm-software-management/createrepo_c
+        cd createrepo_c
+        git checkout 0.20.1
+        mkdir build
+        cd build
+        cmake .. -DWITH_ZCHUNK=NO -DWITH_LIBMODULEMD=NO
+        make -j
+        sudo mv src/createrepo_c /usr/bin/createrepo
+
+        sudo apt-get install tree gpg rpm aptly devscripts build-essential lintian
+        sudo apt-get install -t focal-backports debhelper
         sudo apt-get install gnupg1 gpgv1
 
         sudo mv /usr/bin/gpg /usr/bin/gpg2 # have no default
