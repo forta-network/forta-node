@@ -67,7 +67,6 @@ runs:
         sudo apt-get install tree gpg rpm aptly devscripts build-essential lintian
         sudo apt-get install -t focal-backports debhelper
         sudo apt-get install gnupg1 gpgv1
-        sudo apt-get install wget
 
         sudo mv /usr/bin/gpg /usr/bin/gpg2 # have no default
         sudo ln -sf /usr/bin/gpg1 /usr/bin/gpg # make gpg1 default
