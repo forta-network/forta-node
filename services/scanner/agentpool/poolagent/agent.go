@@ -231,7 +231,7 @@ func (agent *Agent) StartProcessing() {
 	go func() {
 		err := agent.initWorker(agent.ctx)
 		if err != nil {
-			log.WithError(err).Warn("failed to initialize bot")
+			log.WithError(err).WithField("bot-id", agent.config.ID).Warn("failed to initialize bot")
 		}
 	}()
 	go agent.processTransactions()
@@ -242,13 +242,10 @@ func (agent *Agent) StartProcessing() {
 func (agent *Agent) initWorker(ctx context.Context) error {
 	// first try without waiting for the ticker
 	initCtx, cancel := context.WithTimeout(ctx, DefaultAgentInitializeTimeout)
+	defer cancel()
 	if err := agent.initialize(initCtx); err == nil {
-		// 	break if successfully initialized
-		cancel()
 		return nil
 	}
-	cancel()
-
 
 	// start retrying
 	initRetryInterval := time.Minute * 10
