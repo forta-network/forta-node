@@ -55,9 +55,12 @@ type Agent struct {
 	readyOnce sync.Once
 	closed    chan struct{}
 	closeOnce sync.Once
-	initWait  sync.WaitGroup
 
-	mu          sync.RWMutex
+	// initialization fields
+	initWait         sync.WaitGroup
+	newSubscriptions chan<- messaging.CombinerBotSubscription
+
+	mu sync.RWMutex
 }
 
 func (agent *Agent) AlertConfig() *protocol.AlertConfig {
@@ -103,7 +106,11 @@ type CombinationRequest struct {
 }
 
 // New creates a new agent.
-func New(ctx context.Context, agentCfg config.AgentConfig, msgClient clients.MessageClient, txResults chan<- *scanner.TxResult, blockResults chan<- *scanner.BlockResult, alertResults chan<- *scanner.CombinationAlertResult) *Agent {
+func New(
+	ctx context.Context, agentCfg config.AgentConfig, msgClient clients.MessageClient,
+	txResults chan<- *scanner.TxResult, blockResults chan<- *scanner.BlockResult,
+	alertResults chan<- *scanner.CombinationAlertResult, alertSubscriptionsCh chan messaging.CombinerBotSubscription,
+) *Agent {
 	return &Agent{
 		ctx:                 ctx,
 		config:              agentCfg,
@@ -117,6 +124,7 @@ func New(ctx context.Context, agentCfg config.AgentConfig, msgClient clients.Mes
 		msgClient:           msgClient,
 		ready:               make(chan struct{}),
 		closed:              make(chan struct{}),
+		newSubscriptions:    alertSubscriptionsCh,
 	}
 }
 
@@ -219,46 +227,90 @@ func (agent *Agent) SetClient(agentClient clients.AgentClient) {
 // from request channels.
 func (agent *Agent) StartProcessing() {
 	agent.initWait.Add(1)
-	go agent.initialize()
 
+	go func() {
+		err := agent.initWorker(agent.ctx)
+		if err != nil {
+			log.WithError(err).Warn("failed to initialize bot")
+		}
+	}()
 	go agent.processTransactions()
 	go agent.processBlocks()
 	go agent.processCombinationAlerts()
 }
 
-func (agent *Agent) initialize() {
-	defer agent.initWait.Done()
+func (agent *Agent) initWorker(ctx context.Context) error {
+	// first try without waiting for the ticker
+	initCtx, cancel := context.WithTimeout(ctx, DefaultAgentInitializeTimeout)
+	if err := agent.initialize(initCtx); err == nil {
+		// 	break if successfully initialized
+		cancel()
+		return nil
+	}
+	cancel()
 
-	logger := log.WithFields(log.Fields{
-		"agent": agent.config.ID,
-	})
 
-	ctx, cancel := context.WithTimeout(agent.ctx, DefaultAgentInitializeTimeout)
-	defer cancel()
-	initializeResponse, err := agent.client.Initialize(ctx, &protocol.InitializeRequest{
-		AgentId:   agent.config.ID,
-		ProxyHost: config.DockerJSONRPCProxyContainerName,
-	})
+	// start retrying
+	initRetryInterval := time.Minute * 10
+	t := time.NewTicker(initRetryInterval)
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-t.C:
+			initCtx, cancel := context.WithTimeout(agent.ctx, DefaultAgentInitializeTimeout)
+			if err := agent.initialize(initCtx); err == nil {
+				// 	break if successfully initialized
+				cancel()
+				return nil
+			}
+			cancel()
+		}
+	}
+}
+
+func (agent *Agent) initialize(ctx context.Context) error {
+	logger := log.WithFields(
+		log.Fields{
+			"agent": agent.config.ID,
+		},
+	)
+
+	initializeResponse, err := agent.client.Initialize(
+		ctx, &protocol.InitializeRequest{
+			AgentId:   agent.config.ID,
+			ProxyHost: config.DockerJSONRPCProxyContainerName,
+		},
+	)
 
 	if status.Code(err) == codes.Unimplemented {
 		logger.WithError(err).Info("initialize() method not implemented in bot - safe to ignore")
-		return
+		return err
 	}
+
 	if err != nil {
 		logger.WithError(err).Warn("bot initialization failed")
-		return
+		return err
 	}
 
-	if err := validateInitializeResponse(initializeResponse); err != nil{
+	if err := validateInitializeResponse(initializeResponse); err != nil {
 		logger.WithError(err).Warn("bot initialization validation failed")
-		return
+		return err
 	}
 
+	// pass new alert subscriptions to pool
 	if initializeResponse != nil {
 		agent.SetAlertConfig(initializeResponse.AlertConfig)
+		for _, subscription := range initializeResponse.AlertConfig.Subscriptions {
+			agent.newSubscriptions <- messaging.CombinerBotSubscription{Subscription: subscription}
+		}
 	}
 
 	logger.Info("bot initialization succeeded")
+
+	agent.initWait.Done()
+
+	return nil
 }
 
 func validateInitializeResponse(response *protocol.InitializeResponse) error {
@@ -273,10 +325,6 @@ func validateInitializeResponse(response *protocol.InitializeResponse) error {
 	}
 
 	return nil
-}
-
-func (agent *Agent) WaitInitialization() {
-	agent.initWait.Wait()
 }
 
 func (agent *Agent) processTransactions() {
