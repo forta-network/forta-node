@@ -32,7 +32,6 @@ type AgentPool struct {
 	dialer                  func(config.AgentConfig) (clients.AgentClient, error)
 	mu                      sync.RWMutex
 	botWaitGroup            *sync.WaitGroup
-	handleAlertSubscribeCh  chan messaging.CombinerBotSubscription
 }
 
 // NewAgentPool creates a new agent pool.
@@ -42,7 +41,6 @@ func NewAgentPool(ctx context.Context, _ config.ScannerConfig, msgClient clients
 		txResults:               make(chan *scanner.TxResult),
 		blockResults:            make(chan *scanner.BlockResult),
 		combinationAlertResults: make(chan *scanner.CombinationAlertResult),
-		handleAlertSubscribeCh:  make(chan messaging.CombinerBotSubscription),
 		msgClient:               msgClient,
 		dialer: func(ac config.AgentConfig) (clients.AgentClient, error) {
 			client := agentgrpc.NewClient()
@@ -60,7 +58,6 @@ func NewAgentPool(ctx context.Context, _ config.ScannerConfig, msgClient clients
 
 	agentPool.registerMessageHandlers()
 	go agentPool.logAgentChanBuffersLoop()
-	go agentPool.handleAlertSubscriptions()
 
 	return agentPool
 }
@@ -338,16 +335,6 @@ func (ap *AgentPool) logAgentStatuses() {
 	}
 }
 
-func (ap *AgentPool) handleAlertSubscriptions() {
-	for {
-		select {
-		case <-ap.ctx.Done():
-			return
-		case newSubscription := <-ap.handleAlertSubscribeCh:
-			ap.msgClient.Publish(messaging.SubjectAgentsAlertSubscribe, messaging.SubscriptionPayload{newSubscription})
-		}
-	}
-}
 // BlockResults returns the receive-only tx results channel.
 func (ap *AgentPool) BlockResults() <-chan *scanner.BlockResult {
 	return ap.blockResults
@@ -374,7 +361,7 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 			newAgents = append(
 				newAgents, poolagent.New(
 					ap.ctx, agentCfg, ap.msgClient, ap.txResults,
-					ap.blockResults, ap.combinationAlertResults, ap.handleAlertSubscribeCh,
+					ap.blockResults, ap.combinationAlertResults,
 				),
 			)
 			agentsToRun = append(agentsToRun, agentCfg)

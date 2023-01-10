@@ -58,7 +58,6 @@ type Agent struct {
 
 	// initialization fields
 	initWait         sync.WaitGroup
-	newSubscriptions chan<- messaging.CombinerBotSubscription
 
 	mu sync.RWMutex
 }
@@ -109,7 +108,7 @@ type CombinationRequest struct {
 func New(
 	ctx context.Context, agentCfg config.AgentConfig, msgClient clients.MessageClient,
 	txResults chan<- *scanner.TxResult, blockResults chan<- *scanner.BlockResult,
-	alertResults chan<- *scanner.CombinationAlertResult, alertSubscriptionsCh chan messaging.CombinerBotSubscription,
+	alertResults chan<- *scanner.CombinationAlertResult,
 ) *Agent {
 	return &Agent{
 		ctx:                 ctx,
@@ -124,7 +123,6 @@ func New(
 		msgClient:           msgClient,
 		ready:               make(chan struct{}),
 		closed:              make(chan struct{}),
-		newSubscriptions:    alertSubscriptionsCh,
 	}
 }
 
@@ -299,7 +297,12 @@ func (agent *Agent) initialize(ctx context.Context) error {
 	if initializeResponse != nil {
 		agent.SetAlertConfig(initializeResponse.AlertConfig)
 		for _, subscription := range initializeResponse.AlertConfig.Subscriptions {
-			agent.newSubscriptions <- messaging.CombinerBotSubscription{Subscription: subscription}
+			agent.msgClient.Publish(
+				messaging.SubjectAgentsAlertSubscribe, messaging.SubscriptionPayload{
+					messaging.
+					CombinerBotSubscription{Subscription: subscription},
+				},
+			)
 		}
 	}
 
