@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/utils"
@@ -227,7 +228,7 @@ func (agent *Agent) StartProcessing() {
 	agent.initWait.Add(1)
 
 	go func() {
-		err := agent.initWorker(agent.ctx)
+		err := agent.startInitWorker(agent.ctx)
 		if err != nil {
 			log.WithError(err).WithField("bot-id", agent.config.ID).Warn("failed to initialize bot")
 		}
@@ -237,31 +238,27 @@ func (agent *Agent) StartProcessing() {
 	go agent.processCombinationAlerts()
 }
 
-func (agent *Agent) initWorker(ctx context.Context) error {
-	// first try without waiting for the ticker
-	initCtx, cancel := context.WithTimeout(ctx, DefaultAgentInitializeTimeout)
-	defer cancel()
-	if err := agent.initialize(initCtx); err == nil {
-		return nil
+func (agent *Agent) startInitWorker(ctx context.Context) error {
+	bExp := &backoff.ExponentialBackOff{
+		InitialInterval:     time.Second * 30,
+		RandomizationFactor: backoff.DefaultRandomizationFactor,
+		Multiplier:          backoff.DefaultMultiplier,
+		MaxInterval:         time.Minute * 10,
+		MaxElapsedTime:      time.Hour,
+		Stop:                backoff.Stop,
+		Clock:               backoff.SystemClock,
 	}
 
-	// start retrying
-	initRetryInterval := time.Minute * 10
-	t := time.NewTicker(initRetryInterval)
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-t.C:
+	bo := backoff.WithContext(bExp, ctx)
+	err := backoff.Retry(
+		func() error {
 			initCtx, cancel := context.WithTimeout(agent.ctx, DefaultAgentInitializeTimeout)
-			if err := agent.initialize(initCtx); err == nil {
-				// 	break if successfully initialized
-				cancel()
-				return nil
-			}
-			cancel()
-		}
-	}
+			defer cancel()
+			return agent.initialize(initCtx)
+		}, bo,
+	)
+
+	return fmt.Errorf("backoff initialize failed: %v", err)
 }
 
 func (agent *Agent) initialize(ctx context.Context) error {
