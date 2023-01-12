@@ -34,6 +34,11 @@ func handleFortaRun(cmd *cobra.Command, args []string) error {
 }
 
 func checkScannerState() error {
+	scannerKey, err := security.LoadKeyWithPassphrase(cfg.KeyDirPath, cfg.Passphrase)
+	if err != nil {
+		return fmt.Errorf("failed to load scanner key: %v", err)
+	}
+
 	// disable registration and staking check in local mode
 	if cfg.LocalModeConfig.Enable {
 		return nil
@@ -43,10 +48,6 @@ func checkScannerState() error {
 		return nil
 	}
 
-	scannerKey, err := security.LoadKeyWithPassphrase(cfg.KeyDirPath, cfg.Passphrase)
-	if err != nil {
-		return fmt.Errorf("failed to load scanner key: %v", err)
-	}
 	scannerAddressStr := scannerKey.Address.Hex()
 
 	registry, err := store.GetRegistryClient(context.Background(), cfg, registry.ClientConfig{

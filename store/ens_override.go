@@ -30,8 +30,6 @@ func NewENSOverrideStore(cfg config.Config) (*ensOverrideStore, error) {
 	store.contracts.ScannerRegistry = common.HexToAddress(store.contractsMap[ens.ScannerRegistryContract])
 	store.contracts.ScannerNodeVersion = common.HexToAddress(store.contractsMap[ens.ScannerNodeVersionContract])
 	store.contracts.FortaStaking = common.HexToAddress(store.contractsMap[ens.StakingContract])
-	scannerPoolReg := common.HexToAddress(store.contractsMap[ens.ScannerPoolRegistryContract])
-	store.contracts.ScannerPoolRegistry = &scannerPoolReg
 	return &store, nil
 }
 

@@ -2,7 +2,9 @@ package scanner
 
 import (
 	"context"
+	"fmt"
 	"math/big"
+	"strconv"
 	"time"
 
 	"github.com/forta-network/forta-core-go/clients/health"
@@ -35,6 +37,7 @@ type CombinerAlertAnalyzerServiceConfig struct {
 	AlertSender  clients.AlertSender
 	AgentPool    AgentPool
 	MsgClient    clients.MessageClient
+	ChainID      string
 }
 
 func (aas *CombinerAlertAnalyzerService) publishMetrics(result *CombinationAlertResult) {
@@ -105,6 +108,8 @@ func (aas *CombinerAlertAnalyzerService) Start() error {
 				}
 			}
 
+			chainIDInt, _ := strconv.Atoi(aas.cfg.ChainID)
+			chainID := fmt.Sprintf("0x%x", chainIDInt)
 			for _, f := range result.Response.Findings {
 				alert, err := aas.findingToAlert(result, ts, f)
 				if err != nil {
@@ -112,7 +117,7 @@ func (aas *CombinerAlertAnalyzerService) Start() error {
 					continue
 				}
 				if err := aas.cfg.AlertSender.SignAlertAndNotify(
-					rt, alert, "", "", result.Timestamps,
+					rt, alert, chainID, "", result.Timestamps,
 				); err != nil {
 					log.WithError(err).Panic("failed sign alert and notify")
 				}

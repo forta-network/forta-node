@@ -88,7 +88,7 @@ func summarizeReports(reports health.Reports) *health.Report {
 	totalMemory, ok := reports.NameContains(inspect.IndicatorResourcesMemoryTotal)
 	if ok {
 		mem, _ := strconv.ParseFloat(totalMemory.Details, 64)
-		if mem < scorecalc.MinTotalMemoryRequired {
+		if mem < scorecalc.DefaultMinTotalMemory {
 			summary.Add("low total memory.")
 			summary.Status(health.StatusFailing)
 		}

@@ -41,7 +41,7 @@ jobs:
   containers:
     name: Build and push containers
     needs: [go]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     environment: dev
     outputs:
       node-image-ref: ${{ steps.write-output.outputs.node-image-ref }}
@@ -106,7 +106,7 @@ jobs:
   build-deploy:
     name: Build and deploy
     needs: [containers]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     environment: dev
     steps:
       - name: Echo Image References
@@ -177,8 +177,8 @@ jobs:
 
   release:
     name: Release dev
-    if: ${{ github.ref_name == 'master' }}
-    runs-on: ubuntu-18.04
+    #if: ${{ github.ref_name == 'master' }}
+    runs-on: ubuntu-20.04
     needs: [build-deploy]
     environment: dev
     steps:
