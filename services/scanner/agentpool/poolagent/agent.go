@@ -230,7 +230,7 @@ func (agent *Agent) StartProcessing() {
 	go func() {
 		err := agent.startInitWorker(agent.ctx)
 		if err != nil {
-			log.WithError(err).WithField("bot-id", agent.config.ID).Warn("failed to initialize bot")
+			log.WithError(err).WithField("botId", agent.config.ID).Warn("failed to initialize bot")
 		}
 	}()
 	go agent.processTransactions()
