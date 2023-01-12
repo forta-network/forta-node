@@ -258,7 +258,7 @@ func (agent *Agent) startInitWorker(ctx context.Context) error {
 		}, bo,
 	)
 
-	return fmt.Errorf("backoff initialize failed: %v", err)
+	return fmt.Errorf("agent.initialize() backoff failed: %v", err)
 }
 
 func (agent *Agent) initialize(ctx context.Context) error {
