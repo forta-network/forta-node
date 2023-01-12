@@ -20,7 +20,16 @@ mocks:
 	mockgen -source services/storage/ipfs.go -destination services/storage/mocks/mock_ipfs.go
 
 test:
-	go test -v -count=1 ./...
+	go test -v -count=1 ./... -coverprofile=coverage.out
+
+coverage:
+	go tool cover -func=coverage.out | grep total | awk '{print substr($$3, 1, length($$3)-1)}'
+
+coverage-func:
+	go tool cover -func=coverage.out
+
+coverage-html:
+	go tool cover -html=coverage.out -o=coverage.html
 
 perf-test:
 	go test ./... -tags=perf_test
