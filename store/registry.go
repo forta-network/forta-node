@@ -12,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/forta-network/forta-core-go/ethereum"
+	"github.com/forta-network/forta-core-go/feeds"
 	"github.com/forta-network/forta-core-go/manifest"
 	"github.com/forta-network/forta-core-go/registry"
 	"github.com/forta-network/forta-core-go/utils"
@@ -194,7 +195,7 @@ func loadBot(ctx context.Context, cfg config.Config, mc manifest.Client, agentID
 	}, nil
 }
 
-func NewRegistryStore(ctx context.Context, cfg config.Config, ethClient ethereum.Client) (*registryStore, error) {
+func NewRegistryStore(ctx context.Context, cfg config.Config, ethClient ethereum.Client, blockFeed feeds.BlockFeed) (*registryStore, error) {
 	mc, err := manifest.NewClient(cfg.Registry.IPFS.GatewayURL)
 	if err != nil {
 		return nil, err
@@ -208,6 +209,9 @@ func NewRegistryStore(ctx context.Context, cfg config.Config, ethClient ethereum
 	if err != nil {
 		return nil, err
 	}
+
+	// make sure the registry client is refreshed and in sync.
+	registry.ListenToUpgrades(ctx, rc, blockFeed)
 
 	return &registryStore{
 		ctx: ctx,
