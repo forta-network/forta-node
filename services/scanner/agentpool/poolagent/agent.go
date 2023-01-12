@@ -277,7 +277,7 @@ func (agent *Agent) initialize(ctx context.Context) error {
 
 	if status.Code(err) == codes.Unimplemented {
 		logger.WithError(err).Info("initialize() method not implemented in bot - safe to ignore")
-		return err
+		return nil
 	}
 
 	if err != nil {
