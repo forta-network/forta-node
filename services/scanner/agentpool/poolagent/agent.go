@@ -264,7 +264,7 @@ func (agent *Agent) startInitWorker(ctx context.Context) error {
 func (agent *Agent) initialize(ctx context.Context) error {
 	logger := log.WithFields(
 		log.Fields{
-			"agent": agent.config.ID,
+			"botId": agent.config.ID,
 		},
 	)
 
