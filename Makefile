@@ -64,3 +64,7 @@ build-remote: ## Try the "remote" containers option for build
 .PHONY: install
 install: build-local ## Single install target for local installation
 	cp forta /usr/local/bin/forta
+
+.PHONY: update-core
+update-core:
+	go get github.com/forta-network/forta-core-go && go mod tidy
