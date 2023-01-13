@@ -1,6 +1,9 @@
 pragma solidity ^0.8.0;
 
 contract MockRegistry {
+    /// dev: all contracts will use default tags because of this
+    string public constant version = "0.0.1";
+
     uint256 constant AGENT_ID = 0x1;
 
     string public scannerNodeVersion;
