@@ -21,15 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/forta-network/forta-core-go/contracts/contract_access_manager"
-	"github.com/forta-network/forta-core-go/contracts/contract_agent_registry"
-	"github.com/forta-network/forta-core-go/contracts/contract_dispatch"
-	"github.com/forta-network/forta-core-go/contracts/contract_forta_staking"
-	"github.com/forta-network/forta-core-go/contracts/contract_router"
-	"github.com/forta-network/forta-core-go/contracts/contract_scanner_node_version"
-	"github.com/forta-network/forta-core-go/contracts/contract_scanner_registry"
 	"github.com/forta-network/forta-core-go/ens"
 	"github.com/forta-network/forta-core-go/manifest"
 	"github.com/forta-network/forta-core-go/release"
@@ -37,7 +29,7 @@ import (
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/tests/e2e/ethaccounts"
-	"github.com/forta-network/forta-node/tests/e2e/misccontracts/contract_erc20"
+	"github.com/forta-network/forta-node/tests/e2e/misccontracts/contract_mock_registry"
 	"github.com/forta-network/forta-node/tests/e2e/misccontracts/contract_transparent_upgradeable_proxy"
 	"github.com/forta-network/forta-node/testutils/alertserver"
 	ipfsapi "github.com/ipfs/go-ipfs-api"
@@ -64,7 +56,7 @@ var (
 	discoConfigFile         = "disco.config.yml"
 	discoPort               = "1970"
 
-	agentID         = "0x8fe07f1a4d33b30be2387293f052c273660c829e9a6965cf7e8d485bcb871083"
+	agentID         = "0x0000000000000000000000000000000000000000000000000000000000000001"
 	agentIDBigInt   = utils.AgentHexToBigInt(agentID)
 	scannerIDBigInt = utils.ScannerIDHexToBigInt(ethaccounts.ScannerAddress.Hex())
 	// to be set in forta-agent-0x04f4b6-02b4 format
@@ -86,6 +78,9 @@ var (
 	envEmptyRunnerTrackingID = "RUNNER_TRACKING_ID="
 
 	testAgentLocalImageName = "forta-e2e-test-agent"
+
+	stakeAmount, _    = big.NewInt(0).SetString("500000000000000000000", 10)
+	maxStakeAmount, _ = big.NewInt(0).SetString("1000000000000000000000", 10)
 )
 
 type Suite struct {
@@ -101,13 +96,9 @@ type Suite struct {
 	deployer *bind.TransactOpts
 	admin    *bind.TransactOpts
 	scanner  *bind.TransactOpts
+	operator *bind.TransactOpts
 
-	tokenContract          *contract_erc20.ERC20
-	stakingContract        *contract_forta_staking.FortaStaking
-	scannerRegContract     *contract_scanner_registry.ScannerRegistry
-	agentRegContract       *contract_agent_registry.AgentRegistry
-	dispatchContract       *contract_dispatch.Dispatch
-	scannerVersionContract *contract_scanner_node_version.ScannerNodeVersion
+	mockRegistryContract *contract_mock_registry.MockRegistry
 
 	releaseManifest    *release.ReleaseManifest
 	releaseManifestCid string
@@ -173,149 +164,9 @@ func (s *Suite) SetupTest() {
 	s.deployer = bind.NewKeyedTransactor(ethaccounts.DeployerKey)
 	s.admin = bind.NewKeyedTransactor(ethaccounts.AccessAdminKey)
 	s.scanner = bind.NewKeyedTransactor(ethaccounts.ScannerKey)
+	s.operator = bind.NewKeyedTransactor(ethaccounts.ScannerOwnerKey)
 
-	accessMgrAddr, err := s.deployContractWithProxy(
-		"AccessManager", s.deployer, contract_access_manager.AccessManagerMetaData,
-	)
-	s.r.NoError(err)
-	accessMgrContract, _ := contract_access_manager.NewAccessManager(accessMgrAddr, s.ethClient)
-	tx, err := accessMgrContract.Initialize(s.deployer, ethaccounts.AccessAdminAddress)
-	s.r.NoError(err)
-	s.ensureTx("AccessManager.initialize()", tx)
-
-	// give role permissions to manager account
-
-	roleDefaultAdmin := common.Hash{}
-	s.T().Logf("DEFAULT_ADMIN_ROLE: %s", roleDefaultAdmin.Hex())
-	roleScannerVersion := crypto.Keccak256Hash([]byte("SCANNER_VERSION_ROLE"))
-	s.T().Logf("SCANNER_VERSION_ROLE: %s", roleScannerVersion.Hex())
-	roleDispatcher := crypto.Keccak256Hash([]byte("DISPATCHER_ROLE"))
-	s.T().Logf("DISPATCHER_ROLE: %s", roleDispatcher.Hex())
-	roleScannerAdmin := crypto.Keccak256Hash([]byte("SCANNER_ADMIN_ROLE"))
-	s.T().Logf("SCANNER_ADMIN_ROLE: %s", roleScannerAdmin.Hex())
-
-	hasRole, err := accessMgrContract.HasRole(&bind.CallOpts{From: ethaccounts.AccessAdminAddress}, roleDefaultAdmin, ethaccounts.AccessAdminAddress)
-	s.r.NoError(err)
-	s.T().Log("admin has role default:", hasRole)
-
-	tx, err = accessMgrContract.SetNewRole(s.admin, roleScannerVersion, roleDefaultAdmin)
-	s.r.NoError(err)
-	s.ensureTx("AccessManager set SCANNER_VERSION_ROLE", tx)
-
-	tx, err = accessMgrContract.SetNewRole(s.admin, roleDispatcher, roleDefaultAdmin)
-	s.r.NoError(err)
-	s.ensureTx("AccessManager set DISPATCHER_ROLE", tx)
-
-	tx, err = accessMgrContract.SetNewRole(s.admin, roleScannerAdmin, roleDefaultAdmin)
-	s.r.NoError(err)
-	s.ensureTx("AccessManager set SCANNER_ADMIN_ROLE", tx)
-
-	tx, err = accessMgrContract.GrantRole(
-		s.admin, roleScannerVersion, ethaccounts.AccessAdminAddress,
-	)
-	s.r.NoError(err)
-	s.ensureTx("AccessManager grant SCANNER_VERSION_ROLE to admin", tx)
-
-	tx, err = accessMgrContract.GrantRole(
-		s.admin, roleDispatcher, ethaccounts.AccessAdminAddress,
-	)
-	s.r.NoError(err)
-	s.ensureTx("AccessManager grant DISPATCHER_ROLE to admin", tx)
-
-	tx, err = accessMgrContract.GrantRole(
-		s.admin, roleScannerAdmin, ethaccounts.AccessAdminAddress,
-	)
-	s.r.NoError(err)
-	s.ensureTx("AccessManager grant SCANNER_ADMIN_ROLE to admin", tx)
-
-	routerAddr, err := s.deployContractWithProxy(
-		"Router", s.deployer, contract_router.RouterMetaData,
-	)
-	s.r.NoError(err)
-	routerContract, _ := contract_router.NewRouter(routerAddr, s.ethClient)
-	tx, err = routerContract.Initialize(s.deployer, accessMgrAddr)
-	s.r.NoError(err)
-	s.ensureTx("Router.initialize()", tx)
-
-	tokenAddr, tx, tokenContract, err := contract_erc20.DeployERC20(s.deployer, s.ethClient, "FORT", "FORT")
-	s.r.NoError(err)
-	s.ensureTx("ERC20 (FORT) deployment", tx)
-	s.tokenContract = tokenContract
-
-	stakingAddr, err := s.deployContractWithProxy(
-		"FortaStaking", s.deployer, contract_forta_staking.FortaStakingMetaData,
-	)
-	s.r.NoError(err)
-	stakingContract, _ := contract_forta_staking.NewFortaStaking(stakingAddr, s.ethClient)
-	s.stakingContract = stakingContract
-	tx, err = stakingContract.Initialize(s.deployer, accessMgrAddr, routerAddr, tokenAddr, 0, ethaccounts.MiscAddress)
-	s.r.NoError(err)
-	s.ensureTx("FortaStaking.initialize()", tx)
-
-	scannerRegAddr, err := s.deployContractWithProxy(
-		"ScannerRegistry", s.deployer, contract_scanner_registry.ScannerRegistryMetaData,
-	)
-	s.r.NoError(err)
-	scannerRegContract, _ := contract_scanner_registry.NewScannerRegistry(scannerRegAddr, s.ethClient)
-	s.scannerRegContract = scannerRegContract
-	tx, err = scannerRegContract.Initialize(s.deployer, accessMgrAddr, routerAddr, "Forta Scanners", "FScanners")
-	s.r.NoError(err)
-	s.ensureTx("ScannerRegistry.initialize()", tx)
-
-	// set stake threshold as zero for now
-	tx, err = scannerRegContract.SetStakeThreshold(
-		s.admin, contract_scanner_registry.IStakeSubjectStakeThreshold{
-			Min:       big.NewInt(0),
-			Max:       big.NewInt(1),
-			Activated: true,
-		}, big.NewInt(networkID))
-	s.r.NoError(err)
-	s.ensureTx("ScannerRegistry.setStakeThreshold()", tx)
-
-	agentRegAddr, err := s.deployContractWithProxy(
-		"ScannerRegistry", s.deployer, contract_agent_registry.AgentRegistryMetaData,
-	)
-	s.r.NoError(err)
-	agentRegContract, _ := contract_agent_registry.NewAgentRegistry(agentRegAddr, s.ethClient)
-	s.agentRegContract = agentRegContract
-	tx, err = agentRegContract.Initialize(s.deployer, accessMgrAddr, routerAddr, "Forta Agents", "FAgents")
-	s.r.NoError(err)
-	s.ensureTx("AgentRegistry.initialize()", tx)
-
-	dispatchAddr, err := s.deployContractWithProxy(
-		"ScannerRegistry", s.deployer, contract_dispatch.DispatchMetaData,
-	)
-	s.r.NoError(err)
-	dispatchRegContract, _ := contract_dispatch.NewDispatch(dispatchAddr, s.ethClient)
-	s.dispatchContract = dispatchRegContract
-	tx, err = dispatchRegContract.Initialize(s.deployer, accessMgrAddr, routerAddr, agentRegAddr, scannerRegAddr)
-	s.r.NoError(err)
-	s.ensureTx("Dispatch.initialize()", tx)
-
-	scannerVersionAddress, err := s.deployContractWithProxy(
-		"ScannerNodeVersion", s.deployer, contract_scanner_node_version.ScannerNodeVersionMetaData,
-	)
-	s.r.NoError(err)
-	scannerVersionContract, _ := contract_scanner_node_version.NewScannerNodeVersion(scannerVersionAddress, s.ethClient)
-	s.scannerVersionContract = scannerVersionContract
-	tx, err = scannerVersionContract.Initialize(s.deployer, accessMgrAddr, routerAddr)
-	s.r.NoError(err)
-	s.ensureTx("ScannerNodeVersion.initialize()", tx)
-
-	// let deployer be
-
-	ensOverrides := map[string]string{
-		ens.DispatchContract:           dispatchAddr.Hex(),
-		ens.AgentRegistryContract:      agentRegAddr.Hex(),
-		ens.ScannerRegistryContract:    scannerRegAddr.Hex(),
-		ens.ScannerNodeVersionContract: scannerVersionAddress.Hex(),
-		ens.StakingContract:            stakingAddr.Hex(),
-	}
-	b, _ := json.MarshalIndent(ensOverrides, "", "  ")
-	s.r.NoError(ioutil.WriteFile(".forta/ens-override.json", b, 0644))
-	s.r.NoError(ioutil.WriteFile(".forta-local/ens-override.json", b, 0644))
-
-	// set runtime vars and put release to ipfs and to the scanner version contract
+	// set runtime vars and put release to ipfs
 	nodeImageRef := s.readImageRef("node")
 	config.DockerSupervisorImage = nodeImageRef
 	config.DockerUpdaterImage = nodeImageRef
@@ -335,9 +186,6 @@ func (s *Suite) SetupTest() {
 	}
 	s.releaseManifestCid = s.ipfsFilesAdd("/release", s.releaseManifest)
 	config.ReleaseCid = s.releaseManifestCid
-	tx, err = s.scannerVersionContract.SetScannerNodeVersion(s.admin, s.releaseManifestCid)
-	s.r.NoError(err)
-	s.ensureTx("ScannerNodeVersion version update", tx)
 
 	// put agent manifest to ipfs
 	agentImageRef := s.readImageRef("agent")
@@ -361,12 +209,25 @@ func (s *Suite) SetupTest() {
 		Image: agentImageRef,
 	}.ContainerName()
 
-	// register agent
-	tx, err = s.agentRegContract.CreateAgent(
-		s.admin, agentIDBigInt, ethaccounts.MiscAddress, s.agentManifestCid, []*big.Int{big.NewInt(networkID)},
+	// deploy mock contract with release and bot info
+	mockRegistryAddr, err := s.deployContract(
+		Deploy("MockRegistry", s.deployer, contract_mock_registry.MockRegistryMetaData).
+			Construct(s.releaseManifestCid, s.agentManifestCid),
 	)
 	s.r.NoError(err)
-	s.ensureTx("AgentRegitry.createAgent() - creating exploiter tx detector agent", tx)
+	s.mockRegistryContract, _ = contract_mock_registry.NewMockRegistry(mockRegistryAddr, s.ethClient)
+
+	// point ENS to mock
+	ensOverrides := map[string]string{
+		ens.DispatchContract:           mockRegistryAddr.Hex(),
+		ens.AgentRegistryContract:      mockRegistryAddr.Hex(),
+		ens.ScannerRegistryContract:    mockRegistryAddr.Hex(),
+		ens.ScannerNodeVersionContract: mockRegistryAddr.Hex(),
+		ens.StakingContract:            mockRegistryAddr.Hex(),
+	}
+	b, _ := json.MarshalIndent(ensOverrides, "", "  ")
+	s.r.NoError(ioutil.WriteFile(".forta/ens-override.json", b, 0644))
+	s.r.NoError(ioutil.WriteFile(".forta-local/ens-override.json", b, 0644))
 
 	// start the fake alert server
 	s.alertServer = alertserver.New(s.ctx, 9090)
@@ -403,22 +264,62 @@ func (s *Suite) ensureTx(name string, tx *types.Transaction) {
 	s.r.FailNowf("failed to mine tx", "%s: %s", name, tx.Hash())
 }
 
-func (s *Suite) deployContractWithProxy(
-	name string, auth *bind.TransactOpts, contractMetaData *bind.MetaData,
-) (common.Address, error) {
-	abi, bin := getAbiAndBin(contractMetaData)
-	address, tx, _, err := bind.DeployContract(auth, *abi, common.FromHex(bin), s.ethClient, ethaccounts.ForwarderAddress)
+type Deployment struct {
+	Name            string
+	Auth            *bind.TransactOpts
+	ContractMeta    *bind.MetaData
+	ConstructorArgs []interface{}
+	InitializeArgs  []interface{}
+}
+
+func Deploy(name string, auth *bind.TransactOpts, meta *bind.MetaData) *Deployment {
+	return &Deployment{
+		Name:         name,
+		Auth:         auth,
+		ContractMeta: meta,
+	}
+}
+
+func (dep *Deployment) Construct(args ...interface{}) *Deployment {
+	dep.ConstructorArgs = append(dep.ConstructorArgs, args...)
+	return dep
+}
+
+func (dep *Deployment) Init(args ...interface{}) *Deployment {
+	dep.InitializeArgs = append(dep.InitializeArgs, args...)
+	return dep
+}
+
+func (s *Suite) deployContract(dep *Deployment) (common.Address, error) {
+	abi, bin := getAbiAndBin(dep.ContractMeta)
+	implAddr, tx, _, err := bind.DeployContract(dep.Auth, *abi, common.FromHex(bin), s.ethClient, dep.ConstructorArgs...)
 	if err != nil {
 		return common.Address{}, fmt.Errorf("failed to deploy logic contract: %v", err)
 	}
-	s.ensureTx(fmt.Sprintf("%s deployment", name), tx)
+	s.ensureTx(fmt.Sprintf("%s deployment", dep.Name), tx)
+	return implAddr, nil
+}
+
+func (s *Suite) deployContractWithProxy(dep *Deployment) (common.Address, error) {
+	implAddr, err := s.deployContract(dep)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	abi, _ := getAbiAndBin(dep.ContractMeta)
+	initCallData, err := abi.Pack("initialize", dep.InitializeArgs...)
+	if err != nil {
+		return common.Address{}, fmt.Errorf("failed to construct init call data: %v", err)
+	}
+
 	proxyAddress, tx, _, err := contract_transparent_upgradeable_proxy.DeployTransparentUpgradeableProxy(
-		auth, s.ethClient, address, ethaccounts.ProxyAdminAddress, nil,
+		dep.Auth, s.ethClient, implAddr, ethaccounts.ProxyAdminAddress, initCallData,
 	)
 	if err != nil {
 		return common.Address{}, fmt.Errorf("failed to deploy proxy: %v", err)
 	}
-	s.ensureTx(fmt.Sprintf("%s proxy deployment", name), tx)
+	s.ensureTx(fmt.Sprintf("%s proxy deployment", dep.Name), tx)
+
 	return proxyAddress, nil
 }
 
@@ -459,7 +360,9 @@ func (s *Suite) ensureAvailability(name string, check func() error) {
 
 func (s *Suite) TearDownTest() {
 	s.fortaProcess = nil
-	s.alertServer.Close()
+	if s.alertServer != nil {
+		s.alertServer.Close()
+	}
 }
 func (s *Suite) tearDownProcess(process *os.Process) {
 	process.Signal(syscall.SIGINT)
@@ -484,6 +387,10 @@ func (wb *wrappedBuffer) Write(b []byte) (int, error) {
 
 func (process *Process) HasOutput(s string) bool {
 	return strings.Contains(process.stdout.String(), s) || strings.Contains(process.stderr.String(), s)
+}
+
+func (process *Process) GetOutput() string {
+	return process.stdout.String()
 }
 
 func (s *Suite) forta(fortaDir string, args ...string) {
@@ -522,19 +429,8 @@ func (s *Suite) forta(fortaDir string, args ...string) {
 }
 
 func (s *Suite) startForta(register ...bool) {
-	if register != nil && register[0] {
-		s.registerNode()
-	}
 	s.forta("", "run")
 	s.expectUpIn(largeTimeout, allServiceContainers...)
-}
-
-func (s *Suite) registerNode() {
-	tx, err := s.scannerRegContract.Register(
-		s.scanner, ethaccounts.ScannerOwnerAddress, big.NewInt(networkID), "",
-	)
-	s.r.NoError(err)
-	s.ensureTx("ScannerRegistry.register() scan node before 'forta run'", tx)
 }
 
 func (s *Suite) stopForta() {

@@ -8,7 +8,6 @@ require (
 	github.com/docker/go-connections v0.4.0
 	github.com/ethereum/go-ethereum v1.10.16
 	github.com/fatih/color v1.13.0
-	github.com/forta-network/forta-core-go v0.0.0-20230105144553-4642caea16e6
 	github.com/go-playground/validator/v10 v10.9.0
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/goccy/go-json v0.9.4
@@ -19,13 +18,10 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/ipfs/go-cid v0.3.2
 	github.com/ipfs/go-ipfs-api v0.3.0
-	github.com/libp2p/go-libp2p v0.23.2
-	github.com/nats-io/nats.go v1.9.1
-	github.com/patrickmn/go-cache v2.1.0+incompatible
-	github.com/rs/cors v1.7.0
-	github.com/shopspring/decimal v1.3.1
-	github.com/sirupsen/logrus v1.8.1
-	github.com/spf13/cobra v1.5.0
+	github.com/nats-io/nats-server/v2 v2.3.2 // indirect
+	github.com/nats-io/nats.go v1.11.1-0.20210623165838-4b75fc59ae30
+	github.com/opencontainers/go-digest v1.0.0 // indirect
+	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/spf13/viper v1.3.2
 	github.com/stretchr/testify v1.8.0
 	github.com/tylertreat/BoomFilters v0.0.0-20210315201527-1a82519a3e43
@@ -33,6 +29,16 @@ require (
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
 	google.golang.org/grpc v1.47.0
 	gopkg.in/yaml.v3 v3.0.1
+)
+
+require (
+	github.com/forta-network/forta-core-go v0.0.0-20230113140631-f33a15e47ab8
+	github.com/libp2p/go-libp2p v0.23.2
+	github.com/patrickmn/go-cache v2.1.0+incompatible
+	github.com/rs/cors v1.7.0
+	github.com/shopspring/decimal v1.3.1
+	github.com/sirupsen/logrus v1.8.1
+	github.com/spf13/cobra v0.0.5
 )
 
 require (
@@ -203,14 +209,11 @@ require (
 	github.com/multiformats/go-multihash v0.2.1 // indirect
 	github.com/multiformats/go-multistream v0.3.3 // indirect
 	github.com/multiformats/go-varint v0.0.6 // indirect
-	github.com/nats-io/jwt v0.3.2 // indirect
-	github.com/nats-io/nkeys v0.1.3 // indirect
+	github.com/nats-io/nkeys v0.3.0 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
-	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/opencontainers/runtime-spec v1.0.2 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/openzipkin/zipkin-go v0.4.0 // indirect
@@ -233,7 +236,7 @@ require (
 	github.com/spf13/cast v1.3.0 // indirect
 	github.com/spf13/jwalterweatherman v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/tidwall/gjson v1.14.0 // indirect
+	github.com/tidwall/gjson v1.14.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.9 // indirect

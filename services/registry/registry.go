@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/ethereum"
+	"github.com/forta-network/forta-core-go/feeds"
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/config"
@@ -25,6 +26,7 @@ type RegistryService struct {
 	scannerAddress common.Address
 	msgClient      clients.MessageClient
 	ethClient      ethereum.Client
+	blockFeed      feeds.BlockFeed
 
 	rpcClient     *rpc.Client
 	registryStore store.RegistryStore
@@ -50,7 +52,7 @@ type EthClient interface {
 }
 
 // New creates a new service.
-func New(cfg config.Config, scannerAddress common.Address, msgClient clients.MessageClient, ethClient ethereum.Client) *RegistryService {
+func New(cfg config.Config, scannerAddress common.Address, msgClient clients.MessageClient, ethClient ethereum.Client, blockFeed feeds.BlockFeed) *RegistryService {
 	return &RegistryService{
 		cfg:            cfg,
 		scannerAddress: scannerAddress,
@@ -69,7 +71,7 @@ func (rs *RegistryService) Init() error {
 	if rs.cfg.LocalModeConfig.Enable {
 		regStr, err = store.NewPrivateRegistryStore(context.Background(), rs.cfg)
 	} else {
-		regStr, err = store.NewRegistryStore(context.Background(), rs.cfg, rs.ethClient)
+		regStr, err = store.NewRegistryStore(context.Background(), rs.cfg, rs.ethClient, rs.blockFeed)
 	}
 	if err != nil {
 		return err
