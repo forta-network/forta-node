@@ -100,6 +100,11 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 		botCfg, err := loadBot(rs.ctx, rs.cfg, rs.mc, bot.AgentID, bot.Manifest)
 		switch {
 		case err == nil: // yay
+			botCfg.ShardID, err = rs.FindScannerShardIDForBot(botCfg.ID, scanner)
+			if err != nil {
+				logger.WithError(err).Warn("could not find shard id for bot")
+				return nil
+			}
 			loadedBots = append(loadedBots, botCfg) // remember for next time
 			logger.Info("successfully loaded bot")
 			return nil
