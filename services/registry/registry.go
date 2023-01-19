@@ -59,6 +59,7 @@ func New(cfg config.Config, scannerAddress common.Address, msgClient clients.Mes
 		msgClient:      msgClient,
 		ethClient:      ethClient,
 		done:           make(chan struct{}),
+		blockFeed:      blockFeed,
 	}
 }
 

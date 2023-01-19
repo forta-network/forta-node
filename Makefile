@@ -3,7 +3,8 @@ containers:
 	docker pull nats:2.3.2
 
 containers-dev:
-	DOCKER_BUILDKIT=1 docker build --network=host -t forta-network/forta-node -f Dockerfile.buildkit.node .
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o forta-node cmd/node/main.go
+	DOCKER_BUILDKIT=1 docker build --network=host -t forta-network/forta-node -f Dockerfile.buildkit.dev.node .
 	docker pull nats:2.3.2
 
 main:

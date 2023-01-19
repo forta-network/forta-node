@@ -31,7 +31,7 @@ func (t *TxLogger) Stop() error {
 }
 
 func (t *TxLogger) Name() string {
-	return "TxLogger"
+	return "tx-logger"
 }
 
 func NewTxLogger(ctx context.Context) *TxLogger {
