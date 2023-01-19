@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,6 +18,11 @@ import (
 	"github.com/forta-network/forta-node/services"
 	"github.com/forta-network/forta-node/store"
 	log "github.com/sirupsen/logrus"
+)
+
+// Errprs
+var (
+	ErrBadProxyAPI = fmt.Errorf("proxy api must be specified as http(s) when scan api is websocket")
 )
 
 // Runner receives and starts the latest updater and supervisor.
@@ -112,6 +118,29 @@ func (runner *Runner) doStartUpCheck() error {
 	if err != nil {
 		return fmt.Errorf("scan api check failed: %v", err)
 	}
+
+	// ensure that the proxy api is specified as http when the scan api is websocket
+	proxyUrlStr := runner.cfg.JsonRpcProxy.JsonRpc.Url
+	scanUrl, err := url.Parse(runner.cfg.Scan.JsonRpc.Url)
+	if err != nil {
+		return fmt.Errorf("invalid scan api url: %v", err)
+	}
+	// when the scan api is ws or wss
+	if scanUrl.Scheme == "ws" || scanUrl.Scheme == "wss" {
+		// then the proxy api must be specified
+		if len(proxyUrlStr) == 0 {
+			return ErrBadProxyAPI
+		}
+		proxyUrl, err := url.Parse(proxyUrlStr)
+		if err != nil {
+			return fmt.Errorf("invalid proxy api url: %v", err)
+		}
+		// and proxy api must be either http or https
+		if !(proxyUrl.Scheme == "http" || proxyUrl.Scheme == "https") {
+			return ErrBadProxyAPI
+		}
+	}
+
 	if runner.cfg.Trace.Enabled {
 		// ensure that the trace json-rpc api is reachable
 		err = ethereum.TestAPI(runner.ctx, runner.fixTestRpcUrl(runner.cfg.Trace.JsonRpc.Url))
