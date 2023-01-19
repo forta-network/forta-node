@@ -1,0 +1,5 @@
+# syntax = docker/dockerfile:latest
+
+FROM alpine AS base
+COPY forta-node /forta-node
+EXPOSE 8089 8090

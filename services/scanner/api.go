@@ -99,7 +99,7 @@ func (t *API) Stop() error {
 }
 
 func (t *API) Name() string {
-	return "ScannerAPI"
+	return "scanner-api"
 }
 
 func NewScannerAPI(ctx context.Context, feed feeds.BlockFeed) *API {
