@@ -340,6 +340,8 @@ github.com/forta-network/forta-core-go v0.0.0-20230114105253-250cf5643abf h1:0h9
 github.com/forta-network/forta-core-go v0.0.0-20230114105253-250cf5643abf/go.mod h1:c3acQH/1rEQjquAb6ebPYH5dNRuOnYv0QdoNIwGlmtA=
 github.com/forta-network/forta-core-go v0.0.0-20230114110007-54986ad9fc79 h1:HPAYva3WsobjPGD/FIN6cD076r00jV27Ir3racwfASQ=
 github.com/forta-network/forta-core-go v0.0.0-20230114110007-54986ad9fc79/go.mod h1:c3acQH/1rEQjquAb6ebPYH5dNRuOnYv0QdoNIwGlmtA=
+github.com/forta-network/forta-core-go v0.0.0-20230119103827-f61c80dea61b h1:TeUISRI6F5FPaWT0MB0dw78DCrUFQask/+6e0qfSV2U=
+github.com/forta-network/forta-core-go v0.0.0-20230119103827-f61c80dea61b/go.mod h1:c3acQH/1rEQjquAb6ebPYH5dNRuOnYv0QdoNIwGlmtA=
 github.com/fortytw2/leaktest v1.3.0/go.mod h1:jDsjWgpAGjm2CA7WthBh/CdZYEPF31XHquHwclZch5g=
 github.com/francoispqt/gojay v1.2.13 h1:d2m3sFjloqoIUQU3TsHBgj6qg/BVGlTBeHDUmyJnXKk=
 github.com/francoispqt/gojay v1.2.13/go.mod h1:ehT5mTG4ua4581f1++1WLG0vPdaA9HaiDsoyrBGkyDY=

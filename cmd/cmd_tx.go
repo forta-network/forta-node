@@ -46,7 +46,7 @@ func handleFortaRegister(cmd *cobra.Command, args []string) error {
 
 	color.Yellow(fmt.Sprintf("Sending a transaction to register your scan node to chain %d...\n", cfg.ChainID))
 
-	txHash, err := registry.RegisterScanner(ownerAddressStr, int64(cfg.ChainID), "")
+	txHash, err := registry.RegisterScannerOld(ownerAddressStr, int64(cfg.ChainID), "")
 	if err != nil && strings.Contains(err.Error(), "insufficient funds") {
 		yellowBold("This action requires Polygon (Mainnet) MATIC. Have you funded your address %s yet?\n", scannerAddressStr)
 	}

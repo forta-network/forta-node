@@ -166,7 +166,8 @@ func (rs *registryStore) FindScannerShardIDForBot(agentID, scannerAddress string
 	}
 
 	// extract chain setting from manifest
-	chainSetting, ok := agentManifest.Manifest.ChainSettings[uint(chainID)]
+	chainIDStr := strconv.FormatInt(int64(chainID), 10)
+	chainSetting, ok := agentManifest.Manifest.ChainSettings[chainIDStr]
 	// if not a sharded bot, shard is always 0
 	if !ok {
 		return 0, nil
@@ -179,6 +180,9 @@ func (rs *registryStore) FindScannerShardIDForBot(agentID, scannerAddress string
 	idx, err := rs.rc.IndexOfAssignedScannerByChain(agentID, scannerAddress, big.NewInt(int64(rs.cfg.ChainID)))
 	if err != nil {
 		return 0, fmt.Errorf("failed to get the index of scanner: %v, agentID: %s", err, agentID)
+	}
+	if idx == nil {
+		return 0, fmt.Errorf("index for %s and %s not found", agentID, scannerAddress)
 	}
 
 	return calculateShardID(target, shards, uint(idx.Uint64())), nil
