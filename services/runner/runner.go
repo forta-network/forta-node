@@ -19,6 +19,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Errprs
+var (
+	ErrBadProxyAPI = fmt.Errorf("proxy api must be specified as http(s) when scan api is websocket")
+)
+
 // Runner receives and starts the latest updater and supervisor.
 type Runner struct {
 	ctx          context.Context
@@ -112,6 +117,11 @@ func (runner *Runner) doStartUpCheck() error {
 	if err != nil {
 		return fmt.Errorf("scan api check failed: %v", err)
 	}
+
+	if err := CheckProxyAgainstScan(runner.cfg.Scan.JsonRpc.Url, runner.cfg.JsonRpcProxy.JsonRpc.Url); err != nil {
+		return err
+	}
+
 	if runner.cfg.Trace.Enabled {
 		// ensure that the trace json-rpc api is reachable
 		err = ethereum.TestAPI(runner.ctx, runner.fixTestRpcUrl(runner.cfg.Trace.JsonRpc.Url))
