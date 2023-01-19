@@ -3,7 +3,6 @@ package runner
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -119,26 +118,8 @@ func (runner *Runner) doStartUpCheck() error {
 		return fmt.Errorf("scan api check failed: %v", err)
 	}
 
-	// ensure that the proxy api is specified as http when the scan api is websocket
-	proxyUrlStr := runner.cfg.JsonRpcProxy.JsonRpc.Url
-	scanUrl, err := url.Parse(runner.cfg.Scan.JsonRpc.Url)
-	if err != nil {
-		return fmt.Errorf("invalid scan api url: %v", err)
-	}
-	// when the scan api is ws or wss
-	if scanUrl.Scheme == "ws" || scanUrl.Scheme == "wss" {
-		// then the proxy api must be specified
-		if len(proxyUrlStr) == 0 {
-			return ErrBadProxyAPI
-		}
-		proxyUrl, err := url.Parse(proxyUrlStr)
-		if err != nil {
-			return fmt.Errorf("invalid proxy api url: %v", err)
-		}
-		// and proxy api must be either http or https
-		if !(proxyUrl.Scheme == "http" || proxyUrl.Scheme == "https") {
-			return ErrBadProxyAPI
-		}
+	if err := CheckProxyAgainstScan(runner.cfg.Scan.JsonRpc.Url, runner.cfg.JsonRpcProxy.JsonRpc.Url); err != nil {
+		return err
 	}
 
 	if runner.cfg.Trace.Enabled {
