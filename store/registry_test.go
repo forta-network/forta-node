@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/forta-network/forta-core-go/ethereum"
+	"github.com/forta-network/forta-core-go/feeds"
 	"github.com/forta-network/forta-node/config"
 )
 
@@ -28,7 +29,11 @@ func Test_registryStore_FindShardIDForBot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rs, err := NewRegistryStore(ctx, cfg, ethClient)
+	bf, err := feeds.NewBlockFeed(ctx, ethClient, ethClient, feeds.BlockFeedConfig{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rs, err := NewRegistryStore(ctx, cfg, ethClient, bf)
 	if err != nil {
 		t.Fatal(err)
 	}
