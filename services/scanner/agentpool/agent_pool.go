@@ -37,11 +37,11 @@ type AgentPool struct {
 // NewAgentPool creates a new agent pool.
 func NewAgentPool(ctx context.Context, _ config.ScannerConfig, msgClient clients.MessageClient, waitBots int) *AgentPool {
 	agentPool := &AgentPool{
-		ctx:                       ctx,
-		txResults:                 make(chan *scanner.TxResult),
-		blockResults:              make(chan *scanner.BlockResult),
-		combinationAlertResults:   make(chan *scanner.CombinationAlertResult),
-		msgClient:                 msgClient,
+		ctx:                     ctx,
+		txResults:               make(chan *scanner.TxResult),
+		blockResults:            make(chan *scanner.BlockResult),
+		combinationAlertResults: make(chan *scanner.CombinationAlertResult),
+		msgClient:               msgClient,
 		dialer: func(ac config.AgentConfig) (clients.AgentClient, error) {
 			client := agentgrpc.NewClient()
 			if err := client.Dial(ac); err != nil {
@@ -58,6 +58,7 @@ func NewAgentPool(ctx context.Context, _ config.ScannerConfig, msgClient clients
 
 	agentPool.registerMessageHandlers()
 	go agentPool.logAgentChanBuffersLoop()
+
 	return agentPool
 }
 
@@ -357,7 +358,12 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 			found = found || (agent.Config().ContainerName() == agentCfg.ContainerName())
 		}
 		if !found {
-			newAgents = append(newAgents, poolagent.New(ap.ctx, agentCfg, ap.msgClient, ap.txResults, ap.blockResults, ap.combinationAlertResults))
+			newAgents = append(
+				newAgents, poolagent.New(
+					ap.ctx, agentCfg, ap.msgClient, ap.txResults,
+					ap.blockResults, ap.combinationAlertResults,
+				),
+			)
 			agentsToRun = append(agentsToRun, agentCfg)
 			log.WithField("agent", agentCfg.ID).Info("will trigger start")
 		}
@@ -401,7 +407,6 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	// If an agent was added before and just started to run, we should mark as ready.
 	var agentsToStop []config.AgentConfig
 	var agentsReady []config.AgentConfig
-	var newSubscriptions []messaging.CombinerBotSubscription
 	var removedSubscriptions []messaging.CombinerBotSubscription
 
 	for _, agentCfg := range payload {
@@ -427,13 +432,6 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 				agent.SetClient(c)
 				agent.SetReady()
 				agent.StartProcessing()
-				agent.WaitInitialization()
-
-				if agent.IsCombinerBot() {
-					for _, subscription := range agent.AlertConfig().Subscriptions {
-						newSubscriptions = append(newSubscriptions, messaging.CombinerBotSubscription{Subscription: subscription})
-					}
-				}
 
 				logger.WithField("image", agent.Config().Image).Info("attached")
 				agentsReady = append(agentsReady, agent.Config())
@@ -448,9 +446,6 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	}
 	if len(agentsToStop) > 0 {
 		ap.msgClient.Publish(messaging.SubjectAgentsActionStop, agentsToStop)
-	}
-	if len(newSubscriptions) > 0 {
-		ap.msgClient.Publish(messaging.SubjectAgentsAlertSubscribe, newSubscriptions)
 	}
 	if len(removedSubscriptions) > 0 {
 		ap.msgClient.Publish(messaging.SubjectAgentsAlertUnsubscribe, removedSubscriptions)
