@@ -120,15 +120,31 @@ publishes alerts about them`,
 	}
 
 	cmdFortaEnable = &cobra.Command{
-		Use:   "enable",
-		Short: "enable your scan node (requires MATIC in your scan node address)",
-		RunE:  withInitialized(withValidConfig(handleFortaEnable)),
+		Use:    "enable",
+		Short:  "enable your scan node (requires MATIC in your scan node address)",
+		RunE:   withInitialized(withValidConfig(handleFortaEnable)),
+		Hidden: true,
 	}
 
 	cmdFortaDisable = &cobra.Command{
-		Use:   "disable",
-		Short: "disable your scan node (requires MATIC in your scan node address)",
-		RunE:  withInitialized(withValidConfig(handleFortaDisable)),
+		Use:    "disable",
+		Short:  "disable your scan node (requires MATIC in your scan node address)",
+		RunE:   withInitialized(withValidConfig(handleFortaDisable)),
+		Hidden: true,
+	}
+
+	cmdFortaAuthorize = &cobra.Command{
+		Use:   "authorize",
+		Short: "generate a signature for a specific action",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cmd.Help()
+		},
+	}
+
+	cmdFortaAuthorizePool = &cobra.Command{
+		Use:   "pool",
+		Short: "generate a pool registration signature",
+		RunE:  withInitialized(withValidConfig(handleFortaAuthorizePool)),
 	}
 )
 
@@ -159,6 +175,9 @@ func init() {
 	cmdForta.AddCommand(cmdFortaRegister)
 	cmdForta.AddCommand(cmdFortaEnable)
 	cmdForta.AddCommand(cmdFortaDisable)
+
+	cmdForta.AddCommand(cmdFortaAuthorize)
+	cmdFortaAuthorize.AddCommand(cmdFortaAuthorizePool)
 
 	// Global (persistent) flags
 
@@ -202,6 +221,13 @@ func init() {
 
 	// forta disable
 	cmdFortaDisable.MarkFlagRequired("passphrase")
+
+	// forta authorize pool
+	cmdFortaAuthorizePool.Flags().String("id", "", "scanner pool ID (integer)")
+	cmdFortaAuthorizePool.MarkFlagRequired("id")
+	cmdFortaAuthorizePool.Flags().BoolP("verbose", "v", false, "see more output")
+	cmdFortaAuthorizePool.Flags().BoolP("force", "f", false, "ignore warning(s)")
+	cmdFortaAuthorizePool.Flags().Bool("only-signature", false, "output only the signature")
 }
 
 func initConfig() {
@@ -216,7 +242,9 @@ func initConfig() {
 	fortaDir := viper.GetString(keyFortaDir)
 	if fortaDir == "" {
 		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
+		if err != nil {
+			logrus.Panicf("failed to get home dir: %v", err)
+		}
 		fortaDir = path.Join(home, ".forta")
 	}
 

@@ -6,15 +6,15 @@ func (s *Suite) TestLinkUnlink() {
 		return s.fortaProcess.HasOutput("container started")
 	})
 
-	tx, err := s.dispatchContract.Link(s.admin, agentIDBigInt, scannerIDBigInt)
+	tx, err := s.mockRegistryContract.LinkTestAgent(s.deployer)
 	s.r.NoError(err)
-	s.ensureTx("Dispatch.link() agent", tx)
+	s.ensureTx("link agent", tx)
 
 	s.expectUpIn(largeTimeout, agentContainerID)
 
-	tx, err = s.dispatchContract.Unlink(s.admin, agentIDBigInt, scannerIDBigInt)
+	tx, err = s.mockRegistryContract.UnlinkTestAgent(s.deployer)
 	s.r.NoError(err)
-	s.ensureTx("Dispatch.unlink() agent", tx)
+	s.ensureTx("unlink agent", tx)
 
 	s.stopForta()
 }
