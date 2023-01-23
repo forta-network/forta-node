@@ -32,7 +32,6 @@ require (
 )
 
 require (
-	github.com/cenkalti/backoff/v4 v4.1.3
 	github.com/forta-network/forta-core-go v0.0.0-20230123085659-4c7365b21a31
 	github.com/libp2p/go-libp2p v0.23.2
 	github.com/patrickmn/go-cache v2.1.0+incompatible
@@ -56,6 +55,7 @@ require (
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/btcsuite/btcd v0.22.1 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
+	github.com/cenkalti/backoff/v4 v4.1.3 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/containerd/cgroups v1.0.4 // indirect
 	github.com/coreos/go-systemd/v22 v22.4.0 // indirect

@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/utils"
@@ -56,9 +55,7 @@ type Agent struct {
 	readyOnce sync.Once
 	closed    chan struct{}
 	closeOnce sync.Once
-
-	// initialization fields
-	initWait sync.WaitGroup
+	initWait  sync.WaitGroup
 
 	mu sync.RWMutex
 }
@@ -106,11 +103,7 @@ type CombinationRequest struct {
 }
 
 // New creates a new agent.
-func New(
-	ctx context.Context, agentCfg config.AgentConfig, msgClient clients.MessageClient,
-	txResults chan<- *scanner.TxResult, blockResults chan<- *scanner.BlockResult,
-	alertResults chan<- *scanner.CombinationAlertResult,
-) *Agent {
+func New(ctx context.Context, agentCfg config.AgentConfig, msgClient clients.MessageClient, txResults chan<- *scanner.TxResult, blockResults chan<- *scanner.BlockResult, alertResults chan<- *scanner.CombinationAlertResult) *Agent {
 	return &Agent{
 		ctx:                 ctx,
 		config:              agentCfg,
@@ -226,91 +219,46 @@ func (agent *Agent) SetClient(agentClient clients.AgentClient) {
 // from request channels.
 func (agent *Agent) StartProcessing() {
 	agent.initWait.Add(1)
+	go agent.initialize()
 
-	go func() {
-		err := agent.startInitWorker(agent.ctx)
-		if err != nil {
-			log.WithError(err).WithField("botId", agent.config.ID).Warn("failed to initialize bot")
-		}
-	}()
 	go agent.processTransactions()
 	go agent.processBlocks()
 	go agent.processCombinationAlerts()
 }
 
-func (agent *Agent) startInitWorker(ctx context.Context) error {
-	bExp := &backoff.ExponentialBackOff{
-		InitialInterval:     time.Second * 30,
-		RandomizationFactor: backoff.DefaultRandomizationFactor,
-		Multiplier:          backoff.DefaultMultiplier,
-		MaxInterval:         time.Minute * 10,
-		MaxElapsedTime:      time.Hour,
-		Stop:                backoff.Stop,
-		Clock:               backoff.SystemClock,
-	}
+func (agent *Agent) initialize() {
+	defer agent.initWait.Done()
 
-	bo := backoff.WithContext(bExp, ctx)
-	err := backoff.Retry(
-		func() error {
-			initCtx, cancel := context.WithTimeout(agent.ctx, DefaultAgentInitializeTimeout)
-			defer cancel()
-			return agent.initialize(initCtx)
-		}, bo,
-	)
+	logger := log.WithFields(log.Fields{
+		"agent": agent.config.ID,
+	})
 
-	if err != nil {
-		return fmt.Errorf("agent.initialize() backoff failed: %v", err)
-	}
-	return nil
-}
-
-func (agent *Agent) initialize(ctx context.Context) error {
-	logger := log.WithFields(
-		log.Fields{
-			"botId": agent.config.ID,
-		},
-	)
-
-	initializeResponse, err := agent.client.Initialize(
-		ctx, &protocol.InitializeRequest{
-			AgentId:   agent.config.ID,
-			ProxyHost: config.DockerJSONRPCProxyContainerName,
-		},
-	)
+	ctx, cancel := context.WithTimeout(agent.ctx, DefaultAgentInitializeTimeout)
+	defer cancel()
+	initializeResponse, err := agent.client.Initialize(ctx, &protocol.InitializeRequest{
+		AgentId:   agent.config.ID,
+		ProxyHost: config.DockerJSONRPCProxyContainerName,
+	})
 
 	if status.Code(err) == codes.Unimplemented {
 		logger.WithError(err).Info("initialize() method not implemented in bot - safe to ignore")
-		return nil
+		return
 	}
-
 	if err != nil {
 		logger.WithError(err).Warn("bot initialization failed")
-		return err
+		return
 	}
 
 	if err := validateInitializeResponse(initializeResponse); err != nil {
 		logger.WithError(err).Warn("bot initialization validation failed")
-		return err
+		return
 	}
 
-	// pass new alert subscriptions to pool
 	if initializeResponse != nil {
 		agent.SetAlertConfig(initializeResponse.AlertConfig)
-		for _, subscription := range initializeResponse.AlertConfig.Subscriptions {
-			agent.msgClient.Publish(
-				messaging.SubjectAgentsAlertSubscribe, messaging.SubscriptionPayload{
-					messaging.
-						CombinerBotSubscription{Subscription: subscription},
-				},
-			)
-		}
 	}
 
 	logger.Info("bot initialization succeeded")
-
-	agent.initWait.Done()
-
-	return nil
 }
 
 func validateInitializeResponse(response *protocol.InitializeResponse) error {
@@ -325,6 +273,10 @@ func validateInitializeResponse(response *protocol.InitializeResponse) error {
 	}
 
 	return nil
+}
+
+func (agent *Agent) WaitInitialization() {
+	agent.initWait.Wait()
 }
 
 func (agent *Agent) processTransactions() {

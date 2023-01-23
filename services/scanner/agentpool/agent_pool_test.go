@@ -22,7 +22,7 @@ const (
 	testAgentID           = "test-agent"
 	testRequestID         = "test-request-id"
 	testResponseID        = "test-response-id"
-	testCombinerSourceBot = "0xe5d1a9f6da9140c7762a2cd470e0f150db57550f3d51c5e56cba1941c1e1fa3e"
+	testCombinerSourceBot = "0x1d646c4045189991fdfd24a66b192a294158b839a6ec121d740474bdacb3as12"
 )
 
 // TestSuite runs the test suite.
@@ -61,25 +61,23 @@ func (s *Suite) SetupTest() {
 
 // TestStartProcessStop tests the starting, processing and stopping flow for an agent.
 func (s *Suite) TestStartProcessStop() {
-	alertCfg := &protocol.AlertConfig{
-		Subscriptions: []*protocol.CombinerBotSubscription{
-			{
-				BotId: testCombinerSourceBot,
+	agentConfig := config.AgentConfig{
+		ID: testAgentID,
+		AlertConfig: &protocol.AlertConfig{
+			Subscriptions: []*protocol.CombinerBotSubscription{
+				{
+					BotId: testCombinerSourceBot,
+				},
 			},
 		},
 	}
-	agentConfig := config.AgentConfig{
-		ID:          testAgentID,
-		AlertConfig: alertCfg,
-	}
-	initResponse := &protocol.InitializeResponse{AlertConfig: alertCfg}
 
 	agentPayload := messaging.AgentPayload{
 		agentConfig,
 	}
 	emptyPayload := messaging.AgentPayload{}
 
-	s.agentClient.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(initResponse, nil).AnyTimes()
+	s.agentClient.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 	// Given that there are no agents running
 	// When the latest list is received,

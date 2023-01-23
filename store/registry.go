@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/big"
 	"strconv"
 	"sync"
 	"time"
@@ -96,11 +95,6 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 		botCfg, err := loadBot(rs.ctx, rs.cfg, rs.mc, bot.AgentID, bot.Manifest)
 		switch {
 		case err == nil: // yay
-			botCfg.ShardID, err = rs.FindScannerShardIDForBot(botCfg.ID, scanner)
-			if err != nil {
-				logger.WithError(err).Warn("could not find shard id for bot")
-				return nil
-			}
 			loadedBots = append(loadedBots, botCfg) // remember for next time
 			logger.Info("successfully loaded bot")
 			return nil
@@ -147,58 +141,7 @@ func (rs *registryStore) FindAgentGlobally(agentID string) (*config.AgentConfig,
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the latest ref: %v, agentID: %s", err, agentID)
 	}
-
 	return loadBot(rs.ctx, rs.cfg, rs.mc, agentID, agt.Manifest)
-}
-
-func (rs *registryStore) FindScannerShardIDForBot(agentID, scannerAddress string) (uint, error) {
-	chainID := rs.cfg.ChainID
-
-	// get manifest cid
-	agt, err := rs.FindAgentGlobally(agentID)
-	if err != nil {
-		return 0, err
-	}
-
-	// fetch manifest
-	agentManifest, err := rs.mc.GetAgentManifest(rs.ctx, agt.Manifest)
-	if err != nil {
-		return 0, err
-	}
-
-	// extract chain setting from manifest
-	chainIDStr := strconv.FormatInt(int64(chainID), 10)
-	chainSetting, ok := agentManifest.Manifest.ChainSettings[chainIDStr]
-	// if not a sharded bot, shard is always 0
-	if !ok {
-		return 0, nil
-	}
-
-	target := chainSetting.Target
-	shards := chainSetting.Shards
-
-	// get index of the scanner among scanners assigned to the bot for the same chain
-	idx, err := rs.rc.IndexOfAssignedScannerByChain(agentID, scannerAddress, big.NewInt(int64(rs.cfg.ChainID)))
-	if err != nil {
-		return 0, fmt.Errorf("failed to get the index of scanner: %v, agentID: %s", err, agentID)
-	}
-	if idx == nil {
-		return 0, fmt.Errorf("index for %s and %s not found", agentID, scannerAddress)
-	}
-
-	return calculateShardID(target, shards, uint(idx.Uint64())), nil
-}
-
-// returns shard id for an index, distributed evenly in an increased order.
-// Example:
-// Target: 6, Shards: 3
-// [0,0,1,1,2,2]
-func calculateShardID(target, shards, idx uint) uint {
-	if shards == 0 || target == 0 {
-		return 0
-	}
-	chunkSize := target / shards
-	return idx / chunkSize
 }
 
 func (rs *registryStore) getLoadedBot(bot *registry.Agent) (*config.AgentConfig, bool) {
