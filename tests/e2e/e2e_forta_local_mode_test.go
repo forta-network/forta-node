@@ -107,6 +107,9 @@ telemetry:
 agentLogs:
   disable: true
 
+combiner:
+  alertApiUrl: https://api-dev.forta.network/graphql
+
 log:
   level: trace
 `
