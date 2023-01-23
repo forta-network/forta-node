@@ -58,7 +58,7 @@ type Agent struct {
 	closeOnce sync.Once
 
 	// initialization fields
-	initWait         sync.WaitGroup
+	initWait sync.WaitGroup
 
 	mu sync.RWMutex
 }
@@ -258,7 +258,10 @@ func (agent *Agent) startInitWorker(ctx context.Context) error {
 		}, bo,
 	)
 
-	return fmt.Errorf("agent.initialize() backoff failed: %v", err)
+	if err != nil {
+		return fmt.Errorf("agent.initialize() backoff failed: %v", err)
+	}
+	return nil
 }
 
 func (agent *Agent) initialize(ctx context.Context) error {
@@ -297,7 +300,7 @@ func (agent *Agent) initialize(ctx context.Context) error {
 			agent.msgClient.Publish(
 				messaging.SubjectAgentsAlertSubscribe, messaging.SubscriptionPayload{
 					messaging.
-					CombinerBotSubscription{Subscription: subscription},
+						CombinerBotSubscription{Subscription: subscription},
 				},
 			)
 		}
@@ -311,7 +314,7 @@ func (agent *Agent) initialize(ctx context.Context) error {
 }
 
 func validateInitializeResponse(response *protocol.InitializeResponse) error {
-	if response == nil || response.AlertConfig == nil{
+	if response == nil || response.AlertConfig == nil {
 		return nil
 	}
 
