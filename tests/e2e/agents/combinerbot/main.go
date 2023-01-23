@@ -33,7 +33,7 @@ type agentServer struct {
 }
 
 var (
-	subscription = "0x2bee737433c0c8cdbd924bbb68306cfd8abcf0e46a6ce8994fa7d474361bb186"
+	subscribedBot = "0x2bee737433c0c8cdbd924bbb68306cfd8abcf0e46a6ce8994fa7d474361bb186"
 	// alertSubscriptions subscribes to police bot alerts
 	alertSubscriptions = []*protocol.CombinerBotSubscription{
 		{
