@@ -133,7 +133,7 @@ func (s *Suite) TestLocalModeWithWebhookLogger() {
 
 func (s *Suite) TestLocalModeAlertHandlingWithWebhookLogger() {
 	webhookURL := "" // should cause the logger to be used
-	logFileName := "test-log-file"
+	logFileName := "test-log-file-handle-alert"
 	logFilePath := path.Join(localModeDir, "logs", logFileName)
 	_ = os.RemoveAll(logFilePath)
 	s.runLocalModeAlertHandler(
