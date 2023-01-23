@@ -254,7 +254,8 @@ func (agent *Agent) initialize() {
 		return
 	}
 
-	if initializeResponse != nil {
+	// pass new alert subscriptions to pool
+	if initializeResponse != nil && initializeResponse.AlertConfig != nil {
 		agent.SetAlertConfig(initializeResponse.AlertConfig)
 	}
 
