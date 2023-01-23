@@ -12,7 +12,6 @@ const (
 	EnvJWTProviderPort = "FORTA_JWT_PROVIDER_PORT"
 	EnvAgentGrpcPort   = "AGENT_GRPC_PORT"
 	EnvFortaBotID      = "FORTA_BOT_ID"
-	EnvFortaShardID      = "FORTA_SHARD_ID"
 )
 
 // EnvDefaults contain default values for one env.
