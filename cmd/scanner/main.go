@@ -297,7 +297,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	if err != nil {
 		return nil, err
 	}
-	registryService := registry.New(cfg, key.Address, msgClient, registryClient)
+	registryService := registry.New(cfg, key.Address, msgClient, registryClient, blockFeed)
 
 	var waitBots int
 	if cfg.LocalModeConfig.Enable {

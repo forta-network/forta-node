@@ -27,9 +27,12 @@ type AgentPayload []config.AgentConfig
 // AgentMetricPayload is the message payload for metrics.
 type AgentMetricPayload *protocol.AgentMetricList
 
+// CombinerBotSubscription contains subscription data of a bot.
 type CombinerBotSubscription struct {
-	Subscription *protocol.CombinerBotSubscription
+	Subscription *protocol.CombinerBotSubscription `json:"subscription"`
 }
+
+// SubscriptionPayload is the message payload for combiner bot subscriptions.
 type SubscriptionPayload []CombinerBotSubscription
 
 // ScannerPayload is the message payload for general scanner info.

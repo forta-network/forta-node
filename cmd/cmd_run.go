@@ -65,12 +65,12 @@ func checkScannerState() error {
 
 	// treat reverts the same as non-registered
 	if scanner == nil {
-		yellowBold("Scanner not registered - please make sure you register with 'forta register' first.\n")
+		yellowBold("Scanner not registered - please make sure you register first.\n")
 		toStderr("You can disable this behaviour with --no-check flag.\n")
 		return ErrCannotRunScanner
 	}
 	if !scanner.Enabled {
-		yellowBold("Warning! Your scan node is either disabled or does not meet with the minimum staking requirement. It will not receive any detection bots yet.\n")
+		yellowBold("Warning! Your scan node is either disabled or does not meet with the minimum stake requirement. It will not receive any detection bots yet.\n")
 	}
 	return nil
 }

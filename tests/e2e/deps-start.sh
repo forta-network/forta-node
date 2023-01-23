@@ -25,7 +25,7 @@ set +e
 # ignore error from 'ipfs init' here since it might be failing due to reusing ipfs dir from previous run.
 # this is useful for making container-related steps faster in local development.
 ipfs init
-ipfs daemon --routing none > /dev/null 2>&1 &
+ipfs daemon --routing none --offline > /dev/null 2>&1 &
 
 disco > /dev/null 2>&1 &
 
