@@ -57,7 +57,7 @@ type Agent struct {
 	closeOnce sync.Once
 	initWait  sync.WaitGroup
 
-	mu          sync.RWMutex
+	mu sync.RWMutex
 }
 
 func (agent *Agent) AlertConfig() *protocol.AlertConfig {
@@ -249,7 +249,7 @@ func (agent *Agent) initialize() {
 		return
 	}
 
-	if err := validateInitializeResponse(initializeResponse); err != nil{
+	if err := validateInitializeResponse(initializeResponse); err != nil {
 		logger.WithError(err).Warn("bot initialization validation failed")
 		return
 	}
@@ -262,7 +262,7 @@ func (agent *Agent) initialize() {
 }
 
 func validateInitializeResponse(response *protocol.InitializeResponse) error {
-	if response == nil || response.AlertConfig == nil{
+	if response == nil || response.AlertConfig == nil {
 		return nil
 	}
 

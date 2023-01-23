@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/forta-network/forta-core-go/clients/webhook/client/models"
 	"github.com/forta-network/forta-core-go/security"
@@ -121,7 +122,7 @@ func (s *Suite) TestLocalModeWithWebhookClient() {
 
 func (s *Suite) TestLocalModeWithWebhookLogger() {
 	webhookURL := "" // should cause the logger to be used
-	logFileName := "test-log-file"
+	logFileName := logFileName()
 	logFilePath := path.Join(localModeDir, "logs", logFileName)
 	_ = os.RemoveAll(logFilePath)
 	s.runLocalMode(webhookURL, logFileName, func() ([]byte, bool) {
@@ -133,7 +134,7 @@ func (s *Suite) TestLocalModeWithWebhookLogger() {
 
 func (s *Suite) TestLocalModeAlertHandlingWithWebhookLogger() {
 	webhookURL := "" // should cause the logger to be used
-	logFileName := "test-log-file"
+	logFileName := logFileName()
 	logFilePath := path.Join(localModeDir, "logs", logFileName)
 	_ = os.RemoveAll(logFilePath)
 	s.runLocalModeAlertHandler(
@@ -143,6 +144,10 @@ func (s *Suite) TestLocalModeAlertHandlingWithWebhookLogger() {
 			return b, err == nil && len(b) > 0
 		},
 	)
+}
+
+func logFileName() string {
+	return fmt.Sprintf("test-log-file-%d", time.Now().UnixNano())
 }
 
 func (s *Suite) runLocalMode(webhookURL, logFileName string, readAlertsFunc func() ([]byte, bool)) {
