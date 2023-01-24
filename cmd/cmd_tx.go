@@ -138,6 +138,7 @@ func handleFortaEnable(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create registry client: %v", err)
 	}
+	reg.SetRegistryChainID(cfg.Registry.ChainID)
 
 	color.Yellow("Sending a transaction to enable your scan node...\n")
 
@@ -186,6 +187,7 @@ func handleFortaRegister(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create registry client: %v", err)
 	}
+	registry.SetRegistryChainID(cfg.Registry.ChainID)
 
 	color.Yellow(fmt.Sprintf("Sending a transaction to register your scan node to chain %d...\n", cfg.ChainID))
 
@@ -220,6 +222,7 @@ func handleFortaDisable(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create registry client: %v", err)
 	}
+	reg.SetRegistryChainID(cfg.Registry.ChainID)
 
 	color.Yellow("Sending a transaction to disable your scan node...\n")
 
