@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 	"strconv"
 	"sync"
 	"time"
@@ -21,6 +22,10 @@ import (
 
 var (
 	errInvalidBot = errors.New("invalid bot")
+)
+
+const (
+	keyDefaultChainSetting = "default"
 )
 
 type RegistryStore interface {
@@ -142,6 +147,74 @@ func (rs *registryStore) FindAgentGlobally(agentID string) (*config.AgentConfig,
 		return nil, fmt.Errorf("failed to get the latest ref: %v, agentID: %s", err, agentID)
 	}
 	return loadBot(rs.ctx, rs.cfg, rs.mc, agentID, agt.Manifest)
+}
+
+func (rs *registryStore) FindScannerShardIDForBot(agentID, scannerAddress string) (uint, error) {
+	chainID := rs.cfg.ChainID
+
+	// get manifest cid
+	agt, err := rs.FindAgentGlobally(agentID)
+	if err != nil {
+		return 0, err
+	}
+
+	// fetch manifest
+	agentManifest, err := rs.mc.GetAgentManifest(rs.ctx, agt.Manifest)
+	if err != nil {
+		return 0, err
+	}
+
+	var target, shards uint
+	// check if there is a default chain setting
+	chainSetting, ok := agentManifest.Manifest.ChainSettings[keyDefaultChainSetting]
+	// if not a sharded bot, shard is always 0
+	if ok {
+		target = chainSetting.Target
+		shards = chainSetting.Shards
+	}
+
+	// check if there is a chain setting for the scanner's chain
+	chainIDStr := strconv.FormatInt(int64(chainID), 10)
+	chainSetting, ok = agentManifest.Manifest.ChainSettings[chainIDStr]
+	// if not a sharded bot, shard is always 0
+	if ok {
+		target = chainSetting.Target
+		shards = chainSetting.Shards
+	}
+
+	assigns, err := rs.rc.NumScannersForByChain(agentID, big.NewInt(int64(chainID)))
+	if err != nil {
+		return 0, fmt.Errorf("failed to get assign count: %v", err)
+	}
+
+	// fallback for target, calculate it from shard to assign ratio
+	if target == 0 && shards != 0 {
+		target = uint(assigns.Uint64() / uint64(shards))
+	}
+
+	// get index of the scanner among scanners assigned to the bot for the same chain
+	idx, err := rs.rc.IndexOfAssignedScannerByChain(agentID, scannerAddress, big.NewInt(int64(rs.cfg.ChainID)))
+	if err != nil {
+		return 0, fmt.Errorf("failed to get the index of scanner: %v, agentID: %s", err, agentID)
+	}
+
+	if idx == nil {
+		return 0, fmt.Errorf("index for %s and %s not found", agentID, scannerAddress)
+	}
+
+	return calculateShardID(target, uint(idx.Uint64())), nil
+}
+
+// returns shard id for an index, distributed evenly in an increased order.
+// Example:
+// Target: 6, Shards: 3
+// should be [0,0,0,0,0,0,1,1,1,1,1,1,2,2,2,2,2,2]
+func calculateShardID(target, idx uint) uint {
+	if target == 0 {
+		return 0
+	}
+
+	return idx / target
 }
 
 func (rs *registryStore) getLoadedBot(bot *registry.Agent) (*config.AgentConfig, bool) {
