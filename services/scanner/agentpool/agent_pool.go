@@ -297,7 +297,7 @@ func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest
 		}:
 		default: // do not try to send if the buffer is full
 			lg.WithField("agent", agent.Config().ID).Warn("agent alert request buffer is full - skipping")
-			metricsList = append(metricsList, metrics.CreateAgentMetric(agent.Config().ID, metrics.MetricBlockDrop, 1))
+			metricsList = append(metricsList, metrics.CreateAgentMetric(agent.Config().ID, metrics.MetricCombinerDrop, 1))
 		}
 		lg.WithFields(log.Fields{
 			"agent":    agent.Config().ID,
