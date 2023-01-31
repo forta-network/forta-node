@@ -49,6 +49,21 @@ func (mr *MockRegistryStoreMockRecorder) FindAgentGlobally(agentID interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindAgentGlobally", reflect.TypeOf((*MockRegistryStore)(nil).FindAgentGlobally), agentID)
 }
 
+// FindScannerShardIDForBot mocks base method.
+func (m *MockRegistryStore) FindScannerShardIDForBot(agentID, scannerAddress string) (uint, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindScannerShardIDForBot", agentID, scannerAddress)
+	ret0, _ := ret[0].(uint)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FindScannerShardIDForBot indicates an expected call of FindScannerShardIDForBot.
+func (mr *MockRegistryStoreMockRecorder) FindScannerShardIDForBot(agentID, scannerAddress interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindScannerShardIDForBot", reflect.TypeOf((*MockRegistryStore)(nil).FindScannerShardIDForBot), agentID, scannerAddress)
+}
+
 // GetAgentsIfChanged mocks base method.
 func (m *MockRegistryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConfig, bool, error) {
 	m.ctrl.T.Helper()

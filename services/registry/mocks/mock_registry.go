@@ -8,6 +8,7 @@ import (
 	context "context"
 	big "math/big"
 	reflect "reflect"
+	time "time"
 
 	ethereum "github.com/ethereum/go-ethereum"
 	types "github.com/ethereum/go-ethereum/core/types"
@@ -179,6 +180,20 @@ func (mr *MockEthClientMockRecorder) Health() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Health", reflect.TypeOf((*MockEthClient)(nil).Health))
 }
 
+// IsWebsocket mocks base method.
+func (m *MockEthClient) IsWebsocket() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsWebsocket")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsWebsocket indicates an expected call of IsWebsocket.
+func (mr *MockEthClientMockRecorder) IsWebsocket() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsWebsocket", reflect.TypeOf((*MockEthClient)(nil).IsWebsocket))
+}
+
 // Name mocks base method.
 func (m *MockEthClient) Name() string {
 	m.ctrl.T.Helper()
@@ -191,6 +206,33 @@ func (m *MockEthClient) Name() string {
 func (mr *MockEthClientMockRecorder) Name() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockEthClient)(nil).Name))
+}
+
+// SetRetryInterval mocks base method.
+func (m *MockEthClient) SetRetryInterval(arg0 time.Duration) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetRetryInterval", arg0)
+}
+
+// SetRetryInterval indicates an expected call of SetRetryInterval.
+func (mr *MockEthClientMockRecorder) SetRetryInterval(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRetryInterval", reflect.TypeOf((*MockEthClient)(nil).SetRetryInterval), arg0)
+}
+
+// SubscribeToHead mocks base method.
+func (m *MockEthClient) SubscribeToHead(ctx context.Context) (domain.HeaderCh, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SubscribeToHead", ctx)
+	ret0, _ := ret[0].(domain.HeaderCh)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SubscribeToHead indicates an expected call of SubscribeToHead.
+func (mr *MockEthClientMockRecorder) SubscribeToHead(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscribeToHead", reflect.TypeOf((*MockEthClient)(nil).SubscribeToHead), ctx)
 }
 
 // TraceBlock mocks base method.
