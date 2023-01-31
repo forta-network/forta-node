@@ -187,6 +187,12 @@ func (rs *registryStore) FindScannerShardIDForBot(agentID, scannerAddress string
 		shards = chainSetting.Shards
 	}
 
+	// if no shard is used, return early
+	if shards == 0 {
+		return 0, nil
+	}
+
+	// if bot is sharded, get total number of scanners by chain
 	assigns, err := rs.rc.NumScannersForByChain(agentID, big.NewInt(int64(chainID)))
 	if err != nil {
 		return 0, fmt.Errorf("failed to get assign count: %v", err)
