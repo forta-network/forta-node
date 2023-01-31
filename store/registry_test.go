@@ -17,19 +17,19 @@ func Test_calculateShardID(t *testing.T) {
 	}{
 		// [0,0,0,1,1,1]
 		{
-			name: "50% sharded",
+			name: "2 shards, 3 target",
 			args: args{target: 3, shards: 2, idx: 3},
 			want: 1,
 		},
 		// [0,0,1,1,2,2]
 		{
-			name: "66% sharded",
+			name: "3 shards, 2 target",
 			args: args{target: 2, shards: 3, idx: 3},
 			want: 1,
 		},
 		// [0,1,2,3,4,5]
 		{
-			name: "max redundancy",
+			name: "6 shards, 1 target",
 			args: args{target: 1, shards: 6, idx: 5},
 			want: 5,
 		},
