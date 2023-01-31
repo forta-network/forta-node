@@ -31,6 +31,7 @@ const (
 type RegistryStore interface {
 	FindAgentGlobally(agentID string) (*config.AgentConfig, error)
 	GetAgentsIfChanged(scanner string) ([]*config.AgentConfig, bool, error)
+	FindScannerShardIDForBot(agentID, scannerAddress string) (uint, error)
 }
 
 type registryStore struct {
@@ -317,6 +318,10 @@ type privateRegistryStore struct {
 	rc  registry.Client
 	mc  manifest.Client
 	mu  sync.Mutex
+}
+
+func (rs *privateRegistryStore) FindScannerShardIDForBot(agentID, scannerAddress string) (uint, error) {
+	return 0, nil
 }
 
 func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConfig, bool, error) {
