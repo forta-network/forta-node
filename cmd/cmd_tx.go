@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"context"
-	"encoding/hex"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -31,9 +31,9 @@ func handleFortaAuthorizePool(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to decode pool ID: %v", err)
 	}
 
-	verbose, _ := cmd.Flags().GetBool("verbose")
+	polygonscan, _ := cmd.Flags().GetBool("polygonscan")
 	force, _ := cmd.Flags().GetBool("force")
-	onlySignature, _ := cmd.Flags().GetBool("only-signature")
+	clean, _ := cmd.Flags().GetBool("clean")
 
 	scannerKey, err := security.LoadKeyWithPassphrase(cfg.KeyDirPath, cfg.Passphrase)
 	if err != nil {
@@ -70,7 +70,7 @@ func handleFortaAuthorizePool(cmd *cobra.Command, args []string) error {
 	}
 
 	ts := time.Now().Unix()
-	encodedPayload, sig, err := registry.GenerateScannerRegistrationSignature(&eip712.ScannerNodeRegistration{
+	regInfo, err := registry.GenerateScannerRegistrationSignature(&eip712.ScannerNodeRegistration{
 		Scanner:       scannerKey.Address,
 		ScannerPoolId: big.NewInt(poolID),
 		ChainId:       big.NewInt(int64(cfg.ChainID)),
@@ -81,24 +81,24 @@ func handleFortaAuthorizePool(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to generate registration signature: %v", err)
 	}
 
-	encodedSig, err := security.EncodeEthereumSignature(sig)
+	infoB, err := json.Marshal(regInfo)
 	if err != nil {
-		return fmt.Errorf("failed to encode registration signature: %v", err)
+		return fmt.Errorf("failed to marshal registration info: %v", err)
 	}
+	infoStr := base64.URLEncoding.EncodeToString(infoB)
 
-	if onlySignature {
-		fmt.Println(encodedSig)
+	if clean {
+		fmt.Println(infoStr)
 		return nil
 	}
 
-	whiteBold("Please use the registration signature below on https://app.forta.network as soon as possible and do not share with anyone!\n\n")
-
-	if verbose {
-		color.New(color.FgYellow).Println("encoded:", hex.EncodeToString(encodedPayload))
-		color.New(color.FgYellow).Println("tuple:", makeArgsTuple(scannerKey.Address.Hex(), poolID, cfg.ChainID, ts))
-		color.New(color.FgYellow).Println("signature:", encodedSig)
+	if polygonscan {
+		whiteBold("Please use the registerScannerNode() inputs below on https://polygonscan.com as soon as possible and do not share with anyone!\n\n")
+		color.New(color.FgYellow).Println("req      :", makeArgsTuple(scannerKey.Address.Hex(), poolID, cfg.ChainID, ts))
+		color.New(color.FgYellow).Println("signature:", regInfo.Signature)
 	} else {
-		color.New(color.FgYellow).Println(encodedSig)
+		whiteBold("Please use the registration signature below on https://app.forta.network as soon as possible and do not share with anyone!\n\n")
+		color.New(color.FgYellow).Println(infoStr)
 	}
 
 	return nil
