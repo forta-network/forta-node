@@ -31,3 +31,4 @@ coverage
 
 forta-test
 node_modules
+test-bot-*
