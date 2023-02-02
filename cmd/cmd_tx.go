@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"context"
-	"encoding/hex"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -31,9 +31,9 @@ func handleFortaAuthorizePool(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to decode pool ID: %v", err)
 	}
 
-	verbose, _ := cmd.Flags().GetBool("verbose")
+	polygonscan, _ := cmd.Flags().GetBool("polygonscan")
 	force, _ := cmd.Flags().GetBool("force")
-	onlySignature, _ := cmd.Flags().GetBool("only-signature")
+	clean, _ := cmd.Flags().GetBool("clean")
 
 	scannerKey, err := security.LoadKeyWithPassphrase(cfg.KeyDirPath, cfg.Passphrase)
 	if err != nil {
@@ -41,7 +41,7 @@ func handleFortaAuthorizePool(cmd *cobra.Command, args []string) error {
 	}
 	scannerPrivateKey := scannerKey.PrivateKey
 
-	registry, err := store.GetRegistryClient(context.Background(), cfg, registry.ClientConfig{
+	regClient, err := store.GetRegistryClient(context.Background(), cfg, registry.ClientConfig{
 		JsonRpcUrl: cfg.Registry.JsonRpc.Url,
 		ENSAddress: cfg.ENSConfig.ContractAddress,
 		Name:       "registry-client",
@@ -50,8 +50,9 @@ func handleFortaAuthorizePool(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create registry client: %v", err)
 	}
+	regClient.SetRegistryChainID(cfg.Registry.ChainID)
 
-	scanner, err := registry.GetPoolScanner(scannerKey.Address.Hex())
+	scanner, err := regClient.GetPoolScanner(scannerKey.Address.Hex())
 	if err != nil {
 		return fmt.Errorf("failed to get scanner from registry: %v", err)
 	}
@@ -60,7 +61,7 @@ func handleFortaAuthorizePool(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	willShutdown, err := registry.WillNewScannerShutdownPool(big.NewInt(poolID))
+	willShutdown, err := regClient.WillNewScannerShutdownPool(big.NewInt(poolID))
 	if err != nil {
 		return fmt.Errorf("failed to check pool shutdown condition: %v", err)
 	}
@@ -70,7 +71,7 @@ func handleFortaAuthorizePool(cmd *cobra.Command, args []string) error {
 	}
 
 	ts := time.Now().Unix()
-	encodedPayload, sig, err := registry.GenerateScannerRegistrationSignature(&eip712.ScannerNodeRegistration{
+	regInfo, err := regClient.GenerateScannerRegistrationSignature(&eip712.ScannerNodeRegistration{
 		Scanner:       scannerKey.Address,
 		ScannerPoolId: big.NewInt(poolID),
 		ChainId:       big.NewInt(int64(cfg.ChainID)),
@@ -81,24 +82,24 @@ func handleFortaAuthorizePool(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to generate registration signature: %v", err)
 	}
 
-	encodedSig, err := security.EncodeEthereumSignature(sig)
+	infoB, err := json.Marshal(regInfo)
 	if err != nil {
-		return fmt.Errorf("failed to encode registration signature: %v", err)
+		return fmt.Errorf("failed to marshal registration info: %v", err)
 	}
+	infoStr := base64.URLEncoding.EncodeToString(infoB)
 
-	if onlySignature {
-		fmt.Println(encodedSig)
+	if clean {
+		fmt.Println(infoStr)
 		return nil
 	}
 
-	whiteBold("Please use the registration signature below on https://app.forta.network as soon as possible and do not share with anyone!\n\n")
-
-	if verbose {
-		color.New(color.FgYellow).Println("encoded:", hex.EncodeToString(encodedPayload))
-		color.New(color.FgYellow).Println("tuple:", makeArgsTuple(scannerKey.Address.Hex(), poolID, cfg.ChainID, ts))
-		color.New(color.FgYellow).Println("signature:", encodedSig)
+	if polygonscan {
+		whiteBold("Please use the registerScannerNode() inputs below on https://polygonscan.com as soon as possible and do not share with anyone!\n\n")
+		color.New(color.FgYellow).Println("req      :", makeArgsTuple(scannerKey.Address.Hex(), poolID, cfg.ChainID, ts))
+		color.New(color.FgYellow).Println("signature:", regInfo.Signature)
 	} else {
-		color.New(color.FgYellow).Println(encodedSig)
+		whiteBold("Please use the registration signature below on https://app.forta.network as soon as possible and do not share with anyone!\n\n")
+		color.New(color.FgYellow).Println(infoStr)
 	}
 
 	return nil
@@ -129,7 +130,7 @@ func handleFortaEnable(cmd *cobra.Command, args []string) error {
 	scannerPrivateKey := scannerKey.PrivateKey
 	scannerAddressStr := scannerKey.Address.Hex()
 
-	reg, err := store.GetRegistryClient(context.Background(), cfg, registry.ClientConfig{
+	regClient, err := store.GetRegistryClient(context.Background(), cfg, registry.ClientConfig{
 		JsonRpcUrl: cfg.Registry.JsonRpc.Url,
 		ENSAddress: cfg.ENSConfig.ContractAddress,
 		Name:       "registry-client",
@@ -138,11 +139,11 @@ func handleFortaEnable(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create registry client: %v", err)
 	}
-	reg.SetRegistryChainID(cfg.Registry.ChainID)
+	regClient.SetRegistryChainID(cfg.Registry.ChainID)
 
 	color.Yellow("Sending a transaction to enable your scan node...\n")
 
-	txHash, err := reg.EnableScanner(registry.ScannerPermissionSelf, scannerAddressStr)
+	txHash, err := regClient.EnableScanner(registry.ScannerPermissionSelf, scannerAddressStr)
 	if err != nil && strings.Contains(err.Error(), "insufficient funds") {
 		yellowBold("This action requires Polygon (Mainnet) MATIC. Have you funded your address %s yet?\n", scannerAddressStr)
 	}
@@ -178,7 +179,7 @@ func handleFortaRegister(cmd *cobra.Command, args []string) error {
 		redBold("Scanner and owner cannot be the same identity! Please provide a different wallet address of your own.\n")
 	}
 
-	registry, err := store.GetRegistryClient(context.Background(), cfg, registry.ClientConfig{
+	regClient, err := store.GetRegistryClient(context.Background(), cfg, registry.ClientConfig{
 		JsonRpcUrl: cfg.Registry.JsonRpc.Url,
 		ENSAddress: cfg.ENSConfig.ContractAddress,
 		Name:       "registry-client",
@@ -187,11 +188,11 @@ func handleFortaRegister(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create registry client: %v", err)
 	}
-	registry.SetRegistryChainID(cfg.Registry.ChainID)
+	regClient.SetRegistryChainID(cfg.Registry.ChainID)
 
 	color.Yellow(fmt.Sprintf("Sending a transaction to register your scan node to chain %d...\n", cfg.ChainID))
 
-	txHash, err := registry.RegisterScannerOld(ownerAddressStr, int64(cfg.ChainID), "")
+	txHash, err := regClient.RegisterScannerOld(ownerAddressStr, int64(cfg.ChainID), "")
 	if err != nil && strings.Contains(err.Error(), "insufficient funds") {
 		yellowBold("This action requires Polygon (Mainnet) MATIC. Have you funded your address %s yet?\n", scannerAddressStr)
 	}
@@ -213,7 +214,7 @@ func handleFortaDisable(cmd *cobra.Command, args []string) error {
 	scannerPrivateKey := scannerKey.PrivateKey
 	scannerAddressStr := scannerKey.Address.Hex()
 
-	reg, err := store.GetRegistryClient(context.Background(), cfg, registry.ClientConfig{
+	regClient, err := store.GetRegistryClient(context.Background(), cfg, registry.ClientConfig{
 		JsonRpcUrl: cfg.Registry.JsonRpc.Url,
 		ENSAddress: cfg.ENSConfig.ContractAddress,
 		Name:       "registry-client",
@@ -222,11 +223,11 @@ func handleFortaDisable(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create registry client: %v", err)
 	}
-	reg.SetRegistryChainID(cfg.Registry.ChainID)
+	regClient.SetRegistryChainID(cfg.Registry.ChainID)
 
 	color.Yellow("Sending a transaction to disable your scan node...\n")
 
-	txHash, err := reg.DisableScanner(registry.ScannerPermissionSelf, scannerAddressStr)
+	txHash, err := regClient.DisableScanner(registry.ScannerPermissionSelf, scannerAddressStr)
 	if err != nil && strings.Contains(err.Error(), "insufficient funds") {
 		yellowBold("This action requires Polygon (Mainnet) MATIC. Have you funded your address %s yet?\n", scannerAddressStr)
 	}

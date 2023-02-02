@@ -225,9 +225,9 @@ func init() {
 	// forta authorize pool
 	cmdFortaAuthorizePool.Flags().String("id", "", "scanner pool ID (integer)")
 	cmdFortaAuthorizePool.MarkFlagRequired("id")
-	cmdFortaAuthorizePool.Flags().BoolP("verbose", "v", false, "see more output")
+	cmdFortaAuthorizePool.Flags().Bool("polygonscan", false, "see the registerScannerNode() inputs to use in Polygonscan")
 	cmdFortaAuthorizePool.Flags().BoolP("force", "f", false, "ignore warning(s)")
-	cmdFortaAuthorizePool.Flags().Bool("only-signature", false, "output only the signature")
+	cmdFortaAuthorizePool.Flags().Bool("clean", false, "output only the encoded registration info")
 }
 
 func initConfig() {
