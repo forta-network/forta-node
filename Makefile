@@ -48,19 +48,9 @@ e2e-test-deps:
 
 .PHONY: e2e-test
 e2e-test:
-	rm -rf tests/e2e/.forta/coverage
-	mkdir -p tests/e2e/.forta/coverage
-	rm -rf tests/e2e/.forta-local/coverage
-	mkdir -p tests/e2e/.forta-local/coverage
-
 	./tests/e2e/build.sh
 
 	cd tests/e2e && E2E_TEST=1 go test -v -count=1 .
-
-	rm -rf coverage
-	cp -r tests/e2e/.forta/coverage .
-	cp -r tests/e2e/.forta-local/coverage/* coverage/
-	./scripts/total-coverage.sh e2e
 
 run:
 	go build -o forta . && ./forta --passphrase 123

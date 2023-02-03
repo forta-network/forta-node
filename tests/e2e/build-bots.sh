@@ -4,7 +4,8 @@ set -ex
 set -o pipefail
 
 TEST_DIR=$(dirname "${BASH_SOURCE[0]}")
-SCRIPTS_DIR="$TEST_DIR/../../scripts"
+ROOT_DIR="$TEST_DIR/../.."
+SCRIPTS_DIR="$ROOT_DIR/scripts"
 
 REGISTRY="localhost:1970"
 AGENT_IMAGE_SHORT_NAME="forta-e2e-test-agent"
@@ -14,11 +15,13 @@ ALERT_AGENT_IMAGE_SHORT_NAME="forta-e2e-alert-test-agent"
 ALERT_AGENT_IMAGE_FULL_NAME="$REGISTRY/$ALERT_AGENT_IMAGE_SHORT_NAME"
 
 # build test agent image
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o test-bot-txdetector "$TEST_DIR/agents/txdetectoragent/main.go"
 DOCKER_BUILDKIT=1 docker build --network host -t "$AGENT_IMAGE_FULL_NAME" -f \
     "$TEST_DIR/agents/txdetectoragent/Dockerfile" .
 docker tag "$AGENT_IMAGE_FULL_NAME" "$AGENT_IMAGE_SHORT_NAME"
 
-# build test alert bot image
+# build test combiner bot image
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o test-bot-combiner "$TEST_DIR/agents/combinerbot/main.go"
 DOCKER_BUILDKIT=1 docker build --network host -t "$ALERT_AGENT_IMAGE_FULL_NAME" -f \
     "$TEST_DIR/agents/combinerbot/Dockerfile" .
 docker tag "$ALERT_AGENT_IMAGE_FULL_NAME" "$ALERT_AGENT_IMAGE_SHORT_NAME"

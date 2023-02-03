@@ -401,11 +401,9 @@ func (s *Suite) forta(fortaDir string, args ...string) {
 		fortaDir = ".forta"
 	}
 	fullFortaDir := path.Join(dir, fortaDir)
-	coveragePath := path.Join(fortaDir, "coverage", fmt.Sprintf("runner-coverage-%d.tmp", time.Now().Unix()))
 
 	args = append([]string{
 		"./forta-test",
-		fmt.Sprintf("-test.coverprofile=%s", coveragePath),
 	}, args...)
 	cmdForta := exec.Command(args[0], args[1:]...)
 	cmdForta.Env = append(cmdForta.Env,

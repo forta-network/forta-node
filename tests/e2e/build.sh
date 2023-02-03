@@ -32,8 +32,7 @@ IMPORT="$MODULE_NAME/config"
 GO_PACKAGES=$(go list ./... | grep -v tests | tr "\n" ",")
 GO_PACKAGES=${GO_PACKAGES%?} # cut trailing comma
 
-go test -c -o forta-test -race -covermode=atomic -coverpkg \
-	"$GO_PACKAGES" \
+go test -c -o forta-test \
 	-ldflags="-X '$IMPORT.DockerSupervisorImage=$NODE_IMAGE_REF' -X '$IMPORT.DockerUpdaterImage=$NODE_IMAGE_REF' -X '$IMPORT.UseDockerImages=remote' -X '$IMPORT.Version=0.0.1-test'" \
 	"$TEST_DIR/cmd/cli"
 mv -f forta-test "$TEST_DIR/"
