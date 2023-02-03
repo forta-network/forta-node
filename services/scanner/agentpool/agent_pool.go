@@ -355,6 +355,9 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 		var found bool
 		for _, agent := range ap.agents {
 			found = found || (agent.Config().ContainerName() == agentCfg.ContainerName())
+			if found {
+				agent.SetConfig(agentCfg)
+			}
 		}
 		if !found {
 			newAgents = append(newAgents, poolagent.New(ap.ctx, agentCfg, ap.msgClient, ap.txResults, ap.blockResults, ap.combinationAlertResults))

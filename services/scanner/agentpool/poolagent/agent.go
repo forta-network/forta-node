@@ -570,3 +570,10 @@ func (agent *Agent) ShouldProcessAlert(event *protocol.AlertEvent) bool {
 
 	return false
 }
+
+func (agent *Agent) SetConfig(cfg config.AgentConfig) {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+
+	agent.config = cfg
+}
