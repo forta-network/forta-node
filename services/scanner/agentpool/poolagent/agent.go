@@ -550,7 +550,15 @@ func (agent *Agent) ShouldProcessBlock(blockNumberHex string) bool {
 		isAtMostStopBlock = true
 	}
 
-	return isAtLeastStartBlock && isAtMostStopBlock
+	var isOnThisShard bool
+	// if sharded, block % shards must be equal to shard id
+	if agent.config.Shards > 0 {
+		isOnThisShard = uint(blockNumber)%agent.config.Shards == agent.config.ShardID
+	} else {
+		isOnThisShard = true
+	}
+
+	return isAtLeastStartBlock && isAtMostStopBlock && isOnThisShard
 }
 
 func (agent *Agent) ShouldProcessAlert(event *protocol.AlertEvent) bool {
@@ -563,7 +571,29 @@ func (agent *Agent) ShouldProcessAlert(event *protocol.AlertEvent) bool {
 		// bot is subscribed to the alert id
 		subscribedToAlert := subscription.AlertId == "" || subscription.AlertId == event.Alert.AlertId
 
-		if subscribedToBot && subscribedToAlert {
+		// handle sharding
+		alertCreatedAt, err := time.Parse(time.RFC3339Nano, event.Alert.CreatedAt)
+		if err != nil {
+			log.WithFields(
+				log.Fields{
+					"alert_hash": event.Alert.Hash,
+					"created_at": event.Alert.CreatedAt,
+					"bot_id":     agent.config.ID,
+				},
+			).Warn("failed to parse created at for sharding calculation")
+
+			return false
+		}
+
+		var isOnThisShard bool
+		if agent.config.Shards > 0 {
+			isOnThisShard = uint(alertCreatedAt.Unix())%agent.config.Shards == agent.config.ShardID
+		} else {
+			isOnThisShard = true
+		}
+
+		// if matches at least one subscription of the bot
+		if subscribedToBot && subscribedToAlert && isOnThisShard {
 			return true
 		}
 	}
