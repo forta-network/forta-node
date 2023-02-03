@@ -216,7 +216,7 @@ func (rs *registryStore) FindScannerShardIDForBot(agentID, scannerAddress string
 		return 0, 0, 0, fmt.Errorf("index for %s and %s not found", agentID, scannerAddress)
 	}
 
-	return uint(idx.Uint64()), shards, target, nil
+	return calculateShardID(target, uint(idx.Uint64())), shards, target, nil
 }
 
 // returns shard id for an index, distributed evenly in an increased order.
