@@ -552,7 +552,7 @@ func (agent *Agent) ShouldProcessBlock(blockNumberHex string) bool {
 
 	var isOnThisShard bool
 	// if sharded, block % shards must be equal to shard id
-	if agent.config.Shards > 0 {
+	if agent.config.Shards > 1 {
 		isOnThisShard = uint(blockNumber)%agent.config.Shards == agent.config.ShardID
 	} else {
 		isOnThisShard = true
@@ -586,7 +586,7 @@ func (agent *Agent) ShouldProcessAlert(event *protocol.AlertEvent) bool {
 		}
 
 		var isOnThisShard bool
-		if agent.config.Shards > 0 {
+		if agent.config.Shards > 1 {
 			isOnThisShard = uint(alertCreatedAt.Unix())%agent.config.Shards == agent.config.ShardID
 		} else {
 			isOnThisShard = true
