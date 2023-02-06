@@ -357,6 +357,7 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 			found = found || (agent.Config().ContainerName() == agentCfg.ContainerName())
 			if found {
 				agent.SetConfig(agentCfg)
+				break
 			}
 		}
 		if !found {
