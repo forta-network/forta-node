@@ -14,7 +14,6 @@ import (
 	"github.com/forta-network/forta-core-go/inspect"
 	"github.com/forta-network/forta-core-go/inspect/scorecalc"
 	"github.com/forta-network/forta-core-go/protocol/settings"
-	"github.com/forta-network/forta-core-go/protocol/transform"
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/config"
@@ -47,9 +46,10 @@ type Inspector struct {
 }
 
 type InspectorConfig struct {
-	Config    config.Config
-	ProxyHost string
-	ProxyPort string
+	Config         config.Config
+	ProxyHost      string
+	ProxyPort      string
+	ScannerAddress string
 }
 
 func (ins *Inspector) Start() error {
@@ -94,7 +94,7 @@ func (ins *Inspector) inspectionPublisher(ctx context.Context) error {
 			return ctx.Err()
 		case <-t.C:
 			ins.latestInspectionMu.RLock()
-			ins.msgClient.PublishProto(messaging.SubjectInspectionDone, transform.ToProtoInspectionResults(ins.latestInspection))
+			ins.msgClient.PublishProto(messaging.SubjectInspectionDone, inspect.ToProtoInspectionResults(ins.latestInspection))
 			ins.latestInspectionMu.RUnlock()
 		}
 	}
@@ -104,14 +104,17 @@ func (ins *Inspector) runInspection(blockNum uint64) error {
 	inspectCtx, cancel := context.WithTimeout(ins.ctx, time.Minute*2)
 	results, err := inspect.Inspect(
 		inspectCtx, inspect.InspectionConfig{
-			ScanAPIURL:  ins.cfg.Config.Scan.JsonRpc.Url,
-			ProxyAPIURL: fmt.Sprintf("http://%s:%s", ins.cfg.ProxyHost, ins.cfg.ProxyPort),
-			TraceAPIURL: ins.cfg.Config.Trace.JsonRpc.Url,
-			BlockNumber: blockNum,
-			CheckTrace:  ins.inspectTrace,
+			ScanAPIURL:         ins.cfg.Config.Scan.JsonRpc.Url,
+			ProxyAPIURL:        fmt.Sprintf("http://%s:%s", ins.cfg.ProxyHost, ins.cfg.ProxyPort),
+			TraceAPIURL:        ins.cfg.Config.Trace.JsonRpc.Url,
+			BlockNumber:        blockNum,
+			CheckTrace:         ins.inspectTrace,
+			RegistryAPIURL:     ins.cfg.Config.Registry.JsonRpc.Url,
+			ENSContractAddress: ins.cfg.Config.ENSConfig.ContractAddress,
+			ScannerAddress:     ins.cfg.ScannerAddress,
 		},
 	)
-	
+
 	if ins.cfg.Config.JsonRpcProxy.JsonRpc.Url != "" {
 		results.Inputs.ProxyAPIURL = ins.cfg.Config.JsonRpcProxy.JsonRpc.Url
 	} else {

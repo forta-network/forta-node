@@ -9,6 +9,7 @@ import (
 	"github.com/forta-network/forta-core-go/inspect"
 	"github.com/forta-network/forta-core-go/inspect/scorecalc"
 	"github.com/forta-network/forta-core-go/protocol/settings"
+	"github.com/forta-network/forta-core-go/security"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/healthutils"
 	"github.com/forta-network/forta-node/services"
@@ -20,10 +21,16 @@ var nodeConfig config.Config
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
 	nodeConfig = cfg
 
+	key, err := security.LoadKey(config.DefaultContainerKeyDirPath)
+	if err != nil {
+		return nil, err
+	}
+
 	inspector, err := inspector.NewInspector(ctx, inspector.InspectorConfig{
-		Config:    cfg,
-		ProxyHost: config.DockerJSONRPCProxyContainerName,
-		ProxyPort: config.DefaultJSONRPCProxyPort,
+		Config:         cfg,
+		ProxyHost:      config.DockerJSONRPCProxyContainerName,
+		ProxyPort:      config.DefaultJSONRPCProxyPort,
+		ScannerAddress: key.Address.String(),
 	})
 	if err != nil {
 		return nil, err
