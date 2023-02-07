@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -55,6 +56,7 @@ func (sup *SupervisorService) startAgent(ctx context.Context, agent config.Agent
 				config.EnvJWTProviderPort: config.DefaultJWTProviderPort,
 				config.EnvAgentGrpcPort:   agent.GrpcPort(),
 				config.EnvFortaBotID:      agent.ID,
+				config.EnvFortaShardID:    strconv.FormatUint(uint64(agent.ShardID), 10),
 			},
 			MaxLogFiles: sup.maxLogFiles,
 			MaxLogSize:  sup.maxLogSize,
