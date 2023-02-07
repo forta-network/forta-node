@@ -576,9 +576,9 @@ func (agent *Agent) ShouldProcessAlert(event *protocol.AlertEvent) bool {
 		if err != nil {
 			log.WithFields(
 				log.Fields{
-					"alert_hash": event.Alert.Hash,
-					"created_at": event.Alert.CreatedAt,
-					"bot_id":     agent.config.ID,
+					"alertHash": event.Alert.Hash,
+					"createdAt": event.Alert.CreatedAt,
+					"botId":     agent.config.ID,
 				},
 			).Warn("failed to parse created at for sharding calculation")
 
