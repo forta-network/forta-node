@@ -3,6 +3,7 @@ package agentpool
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-node/clients"
@@ -115,6 +116,7 @@ func (s *Suite) TestStartProcessStop() {
 			Alert: &protocol.AlertEvent_Alert{
 				Hash:   "123123",
 				Source: &protocol.AlertEvent_Alert_Source{Bot: &protocol.AlertEvent_Alert_Bot{Id: testCombinerSourceBot}},
+				CreatedAt: time.Now().Format(time.RFC3339Nano),
 			},
 		},
 	}
