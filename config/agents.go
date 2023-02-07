@@ -20,6 +20,8 @@ type AgentConfig struct {
 	StopBlock   *uint64 `yaml:"stopBlock" json:"stopBlock,omitempty"`
 	AlertConfig *protocol.AlertConfig
 	ShardID     uint `yaml:"shardId" json:"shardId"`
+	Shards      uint `yaml:"shards" json:"shards"`
+	Target      uint `yaml:"target" json:"target"`
 }
 
 // ToAgentInfo transforms the agent config to the agent info.

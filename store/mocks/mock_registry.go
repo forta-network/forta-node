@@ -50,12 +50,14 @@ func (mr *MockRegistryStoreMockRecorder) FindAgentGlobally(agentID interface{}) 
 }
 
 // FindScannerShardIDForBot mocks base method.
-func (m *MockRegistryStore) FindScannerShardIDForBot(agentID, scannerAddress string) (uint, error) {
+func (m *MockRegistryStore) FindScannerShardIDForBot(agentID, scannerAddress string) (uint, uint, uint, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FindScannerShardIDForBot", agentID, scannerAddress)
 	ret0, _ := ret[0].(uint)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(uint)
+	ret2, _ := ret[2].(uint)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
 }
 
 // FindScannerShardIDForBot indicates an expected call of FindScannerShardIDForBot.
