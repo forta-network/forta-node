@@ -5,6 +5,7 @@ contract MockRegistry {
     string public constant version = "0.0.1";
 
     uint256 constant AGENT_ID = 0x1;
+    address constant SCANNER_ID = 0x222244861C15A8F2A05fbD15E747Ea8F20c2C0c9;
 
     string public scannerNodeVersion;
 
@@ -107,5 +108,23 @@ contract MockRegistry {
     {
         (registered, owner, agentVersion, metadata, chainIds) = getAgent(AGENT_ID);
         return (registered, owner, agentId, agentVersion, metadata, chainIds, true, 0);
+    }
+
+    function numScannersFor(uint256 agentId) external view returns (uint256 count) {
+        return 1;
+    }
+
+    function scannerRefAt(uint256 agentId, uint256 pos)
+        external view
+        returns (
+            bool registered,
+            uint256 scannerId,
+            address owner,
+            uint256 chainId,
+            string memory metadata,
+            bool enabled,
+            uint256 disabledFlags
+        ) {
+        return (true, uint256(uint160(SCANNER_ID)), address(0x0), 137, string(""), true, 0);
     }
 }
