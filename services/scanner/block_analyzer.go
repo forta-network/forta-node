@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"github.com/forta-network/forta-core-go/clients/health"
@@ -10,6 +11,7 @@ import (
 	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/metrics"
+	"github.com/influxdata/influxdb/pkg/bloom"
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/google/uuid"
@@ -41,7 +43,34 @@ func (t *BlockAnalyzerService) publishMetrics(result *BlockResult) {
 	t.cfg.MsgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: m})
 }
 
-func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
+const (
+	maxAddressesLength       = 50
+	addressBloomFilterSize   = 1e4
+	addressBloomFilterFPRate = 1e-3
+)
+
+func truncateFinding(finding *protocol.Finding) (bloomFilter []byte, truncated bool) {
+	sort.Strings(finding.Addresses)
+
+	// create bloom filter from addresses
+	bf := bloom.NewFilter(addressBloomFilterSize, addressBloomFilterFPRate)
+	for _, address := range finding.Addresses {
+		bf.Insert([]byte(address))
+	}
+
+	bloomFilter = bf.Bytes()
+
+	if len(finding.Addresses) > maxAddressesLength {
+		finding.Addresses = finding.Addresses[:maxAddressesLength]
+		truncated = true
+	}
+
+	return bf.Bytes(), truncated
+}
+
+func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time, f *protocol.Finding) (
+	*protocol.Alert, error,
+) {
 	alertID := alerthash.ForBlockAlert(
 		&alerthash.Inputs{
 			BlockEvent: result.Request.Event,
@@ -52,6 +81,7 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 			},
 		},
 	)
+
 	blockNumber, err := utils.HexToBigInt(result.Request.Event.BlockNumber)
 	if err != nil {
 		return nil, err
@@ -72,14 +102,19 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 		tags["blockHash"] = result.Request.Event.BlockHash
 		tags["blockNumber"] = blockNumber.String()
 	}
+
+	addressesBloomFilter, truncated := truncateFinding(f)
+
 	return &protocol.Alert{
-		Id:         alertID,
-		Finding:    f,
-		Timestamp:  ts.Format(utils.AlertTimeFormat),
-		Type:       alertType,
-		Agent:      result.AgentConfig.ToAgentInfo(),
-		Tags:       tags,
-		Timestamps: result.Timestamps.ToMessage(),
+		Id:                   alertID,
+		Finding:              f,
+		Timestamp:            ts.Format(utils.AlertTimeFormat),
+		Type:                 alertType,
+		Agent:                result.AgentConfig.ToAgentInfo(),
+		Tags:                 tags,
+		Timestamps:           result.Timestamps.ToMessage(),
+		Truncated:            truncated,
+		AddressesBloomFilter: addressesBloomFilter,
 	}, nil
 }
 
