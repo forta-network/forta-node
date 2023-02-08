@@ -5,13 +5,13 @@ import (
 	"sort"
 	"time"
 
+	"github.com/bits-and-blooms/bloom"
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol/alerthash"
 	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/metrics"
-	"github.com/influxdata/influxdb/pkg/bloom"
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/google/uuid"
@@ -53,19 +53,22 @@ func truncateFinding(finding *protocol.Finding) (bloomFilter []byte, truncated b
 	sort.Strings(finding.Addresses)
 
 	// create bloom filter from addresses
-	bf := bloom.NewFilter(addressBloomFilterSize, addressBloomFilterFPRate)
+	bf := bloom.NewWithEstimates(addressBloomFilterSize, addressBloomFilterFPRate)
 	for _, address := range finding.Addresses {
-		bf.Insert([]byte(address))
+		bf.Add([]byte(address))
 	}
 
-	bloomFilter = bf.Bytes()
+	bloomFilter, err := bf.MarshalJSON()
+	if err != nil {
+		return nil, false
+	}
 
 	if len(finding.Addresses) > maxAddressesLength {
 		finding.Addresses = finding.Addresses[:maxAddressesLength]
 		truncated = true
 	}
 
-	return bf.Bytes(), truncated
+	return bloomFilter, truncated
 }
 
 func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time, f *protocol.Finding) (
