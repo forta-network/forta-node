@@ -45,7 +45,6 @@ func (t *BlockAnalyzerService) publishMetrics(result *BlockResult) {
 
 const (
 	maxAddressesLength       = 50
-	addressBloomFilterSize   = 1e4
 	addressBloomFilterFPRate = 1e-3
 )
 
@@ -53,7 +52,7 @@ func truncateFinding(finding *protocol.Finding) (bloomFilter []byte, truncated b
 	sort.Strings(finding.Addresses)
 
 	// create bloom filter from addresses
-	bf := bloom.NewWithEstimates(addressBloomFilterSize, addressBloomFilterFPRate)
+	bf := bloom.NewWithEstimates(uint(len(finding.Addresses)), addressBloomFilterFPRate)
 	for _, address := range finding.Addresses {
 		bf.Add([]byte(address))
 	}
