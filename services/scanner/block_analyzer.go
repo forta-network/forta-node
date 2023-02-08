@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"bytes"
 	"context"
 	"sort"
 	"time"
@@ -48,7 +49,7 @@ const (
 	addressBloomFilterFPRate = 1e-3
 )
 
-func truncateFinding(finding *protocol.Finding) (bloomFilter []byte, truncated bool) {
+func truncateFinding(finding *protocol.Finding) (bloomFilter *protocol.BloomFilter, truncated bool) {
 	sort.Strings(finding.Addresses)
 
 	// create bloom filter from addresses
@@ -57,7 +58,10 @@ func truncateFinding(finding *protocol.Finding) (bloomFilter []byte, truncated b
 		bf.Add([]byte(address))
 	}
 
-	bloomFilter, err := bf.MarshalJSON()
+	// extract bitset from bloom filter
+	var b bytes.Buffer
+
+	_, err := bf.WriteTo(&b)
 	if err != nil {
 		return nil, false
 	}
@@ -67,7 +71,11 @@ func truncateFinding(finding *protocol.Finding) (bloomFilter []byte, truncated b
 		truncated = true
 	}
 
-	return bloomFilter, truncated
+	return &protocol.BloomFilter{
+		K:      uint64(bf.K()),
+		M:      uint64(bf.Cap()),
+		Bitset: b.Bytes(),
+	}, truncated
 }
 
 func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time, f *protocol.Finding) (
