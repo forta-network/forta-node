@@ -356,7 +356,7 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 		for _, agent := range ap.agents {
 			if agent.Config().ContainerName() == agentCfg.ContainerName() {
 				found = true
-				agent.SetConfig(agentCfg)
+				agent.SetShardConfig(agentCfg)
 				break
 			}
 		}
