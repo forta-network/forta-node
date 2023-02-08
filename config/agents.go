@@ -19,11 +19,14 @@ type AgentConfig struct {
 	StartBlock  *uint64 `yaml:"startBlock" json:"startBlock,omitempty"`
 	StopBlock   *uint64 `yaml:"stopBlock" json:"stopBlock,omitempty"`
 	AlertConfig *protocol.AlertConfig
-	ShardID     uint `yaml:"shardId" json:"shardId"`
-	Shards      uint `yaml:"shards" json:"shards"`
-	Target      uint `yaml:"target" json:"target"`
+	ShardConfig *ShardConfig
 }
 
+type ShardConfig struct {
+	ShardID uint `yaml:"shardId" json:"shardId"`
+	Shards  uint `yaml:"shards" json:"shards"`
+	Target  uint `yaml:"target" json:"target"`
+}
 // ToAgentInfo transforms the agent config to the agent info.
 func (ac AgentConfig) ToAgentInfo() *protocol.AgentInfo {
 	return &protocol.AgentInfo{
