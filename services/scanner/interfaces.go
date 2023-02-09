@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"bytes"
+	"encoding/base64"
 	"sort"
 
 	"github.com/bits-and-blooms/bloom"
@@ -73,9 +74,11 @@ func truncateFinding(finding *protocol.Finding) (bloomFilter *protocol.BloomFilt
 		truncated = true
 	}
 
+	bitset := base64.StdEncoding.EncodeToString(b.Bytes())
+
 	return &protocol.BloomFilter{
 		K:      uint64(bf.K()),
 		M:      uint64(bf.Cap()),
-		Bitset: string(b.Bytes()),
+		Bitset: bitset,
 	}, truncated
 }
