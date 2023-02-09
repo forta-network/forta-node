@@ -76,6 +76,6 @@ func truncateFinding(finding *protocol.Finding) (bloomFilter *protocol.BloomFilt
 	return &protocol.BloomFilter{
 		K:      uint64(bf.K()),
 		M:      uint64(bf.Cap()),
-		Bitset: b.Bytes(),
+		Bitset: string(b.Bytes()),
 	}, truncated
 }
