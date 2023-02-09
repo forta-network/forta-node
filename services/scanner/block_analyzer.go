@@ -1,12 +1,9 @@
 package scanner
 
 import (
-	"bytes"
 	"context"
-	"sort"
 	"time"
 
-	"github.com/bits-and-blooms/bloom"
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol/alerthash"
@@ -42,40 +39,6 @@ type BlockAnalyzerServiceConfig struct {
 func (t *BlockAnalyzerService) publishMetrics(result *BlockResult) {
 	m := metrics.GetBlockMetrics(result.AgentConfig, result.Response, result.Timestamps)
 	t.cfg.MsgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: m})
-}
-
-const (
-	maxAddressesLength       = 50
-	addressBloomFilterFPRate = 1e-3
-)
-
-func truncateFinding(finding *protocol.Finding) (bloomFilter *protocol.BloomFilter, truncated bool) {
-	sort.Strings(finding.Addresses)
-
-	// create bloom filter from addresses
-	bf := bloom.NewWithEstimates(uint(len(finding.Addresses)), addressBloomFilterFPRate)
-	for _, address := range finding.Addresses {
-		bf.Add([]byte(address))
-	}
-
-	// extract bitset from bloom filter
-	var b bytes.Buffer
-
-	_, err := bf.WriteTo(&b)
-	if err != nil {
-		return nil, false
-	}
-
-	if len(finding.Addresses) > maxAddressesLength {
-		finding.Addresses = finding.Addresses[:maxAddressesLength]
-		truncated = true
-	}
-
-	return &protocol.BloomFilter{
-		K:      uint64(bf.K()),
-		M:      uint64(bf.Cap()),
-		Bitset: b.Bytes(),
-	}, truncated
 }
 
 func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time, f *protocol.Finding) (
