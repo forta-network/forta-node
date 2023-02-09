@@ -69,14 +69,18 @@ func (aas *CombinerAlertAnalyzerService) findingToAlert(result *CombinationAlert
 		alertType = protocol.AlertType_COMBINATION
 	}
 
+	addressBloomFilter, truncated := truncateFinding(f)
+
 	return &protocol.Alert{
-		Id:         alertID,
-		Finding:    f,
-		Timestamp:  ts.Format(utils.AlertTimeFormat),
-		Type:       alertType,
-		Agent:      result.AgentConfig.ToAgentInfo(),
-		Tags:       tags,
-		Timestamps: result.Timestamps.ToMessage(),
+		Id:                 alertID,
+		Finding:            f,
+		Timestamp:          ts.Format(utils.AlertTimeFormat),
+		Type:               alertType,
+		Agent:              result.AgentConfig.ToAgentInfo(),
+		Tags:               tags,
+		Timestamps:         result.Timestamps.ToMessage(),
+		Truncated:          truncated,
+		AddressBloomFilter: addressBloomFilter,
 	}, nil
 }
 

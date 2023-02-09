@@ -113,18 +113,18 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 		tags["blockNumber"] = blockNumber.String()
 	}
 
-	addressesBloomFilter, truncated := truncateFinding(f)
+	addressBloomFilter, truncated := truncateFinding(f)
 
 	return &protocol.Alert{
-		Id:                   alertID,
-		Finding:              f,
-		Timestamp:            ts.Format(utils.AlertTimeFormat),
-		Type:                 alertType,
-		Agent:                result.AgentConfig.ToAgentInfo(),
-		Tags:                 tags,
-		Timestamps:           result.Timestamps.ToMessage(),
-		Truncated:            truncated,
-		AddressesBloomFilter: addressesBloomFilter,
+		Id:                 alertID,
+		Finding:            f,
+		Timestamp:          ts.Format(utils.AlertTimeFormat),
+		Type:               alertType,
+		Agent:              result.AgentConfig.ToAgentInfo(),
+		Tags:               tags,
+		Timestamps:         result.Timestamps.ToMessage(),
+		Truncated:          truncated,
+		AddressBloomFilter: addressBloomFilter,
 	}, nil
 }
 
