@@ -73,14 +73,18 @@ func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *pr
 		tags["blockNumber"] = blockNumber.String()
 	}
 
+	addressBloomFilter, truncated := truncateFinding(f)
+
 	return &protocol.Alert{
-		Id:         alertID,
-		Finding:    f,
-		Timestamp:  ts.Format(utils.AlertTimeFormat),
-		Type:       alertType,
-		Agent:      result.AgentConfig.ToAgentInfo(),
-		Tags:       tags,
-		Timestamps: result.Timestamps.ToMessage(),
+		Id:                 alertID,
+		Finding:            f,
+		Timestamp:          ts.Format(utils.AlertTimeFormat),
+		Type:               alertType,
+		Agent:              result.AgentConfig.ToAgentInfo(),
+		Tags:               tags,
+		Timestamps:         result.Timestamps.ToMessage(),
+		Truncated:          truncated,
+		AddressBloomFilter: addressBloomFilter,
 	}, nil
 }
 

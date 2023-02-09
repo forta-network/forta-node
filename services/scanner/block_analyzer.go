@@ -41,7 +41,9 @@ func (t *BlockAnalyzerService) publishMetrics(result *BlockResult) {
 	t.cfg.MsgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: m})
 }
 
-func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
+func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time, f *protocol.Finding) (
+	*protocol.Alert, error,
+) {
 	alertID := alerthash.ForBlockAlert(
 		&alerthash.Inputs{
 			BlockEvent: result.Request.Event,
@@ -52,6 +54,7 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 			},
 		},
 	)
+
 	blockNumber, err := utils.HexToBigInt(result.Request.Event.BlockNumber)
 	if err != nil {
 		return nil, err
@@ -72,14 +75,19 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 		tags["blockHash"] = result.Request.Event.BlockHash
 		tags["blockNumber"] = blockNumber.String()
 	}
+
+	addressBloomFilter, truncated := truncateFinding(f)
+
 	return &protocol.Alert{
-		Id:         alertID,
-		Finding:    f,
-		Timestamp:  ts.Format(utils.AlertTimeFormat),
-		Type:       alertType,
-		Agent:      result.AgentConfig.ToAgentInfo(),
-		Tags:       tags,
-		Timestamps: result.Timestamps.ToMessage(),
+		Id:                 alertID,
+		Finding:            f,
+		Timestamp:          ts.Format(utils.AlertTimeFormat),
+		Type:               alertType,
+		Agent:              result.AgentConfig.ToAgentInfo(),
+		Tags:               tags,
+		Timestamps:         result.Timestamps.ToMessage(),
+		Truncated:          truncated,
+		AddressBloomFilter: addressBloomFilter,
 	}, nil
 }
 

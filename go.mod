@@ -32,7 +32,8 @@ require (
 )
 
 require (
-	github.com/forta-network/forta-core-go v0.0.0-20230207180329-3425d3c96e89
+	github.com/bits-and-blooms/bloom v2.0.3+incompatible
+	github.com/forta-network/forta-core-go v0.0.0-20230209095406-2bed371647bb
 	github.com/libp2p/go-libp2p v0.23.2
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/rs/cors v1.7.0
@@ -252,6 +253,7 @@ require (
 	github.com/whyrusleeping/multiaddr-filter v0.0.0-20160516205228-e903e4adabd7 // indirect
 	github.com/whyrusleeping/tar-utils v0.0.0-20180509141711-8c6c8ba81d5c // indirect
 	github.com/whyrusleeping/timecache v0.0.0-20160911033111-cfcb2f1abfee // indirect
+	github.com/willf/bitset v1.1.3 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.mongodb.org/mongo-driver v1.8.3 // indirect
 	go.opencensus.io v0.23.0 // indirect
