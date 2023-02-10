@@ -3,12 +3,13 @@ package scanner
 import (
 	"bytes"
 	"encoding/base64"
+	"math/big"
 	"sort"
-	"strconv"
 
 	"github.com/bits-and-blooms/bloom"
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol"
+	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/config"
 )
 
@@ -77,8 +78,12 @@ func truncateFinding(finding *protocol.Finding) (bloomFilter *protocol.BloomFilt
 	}
 
 	bitset := base64.StdEncoding.EncodeToString(b.Bytes())
-	kHexStr := strconv.FormatUint(uint64(bf.K()), 16)
-	mHexStr := strconv.FormatUint(uint64(bf.Cap()), 16)
+
+	kBigInt := new(big.Int).SetUint64(uint64(bf.K()))
+	mBigInt := new(big.Int).SetUint64(uint64(bf.Cap()))
+
+	kHexStr := utils.BigIntToHex(kBigInt)
+	mHexStr := utils.BigIntToHex(mBigInt)
 
 	return &protocol.BloomFilter{
 		K:         kHexStr,
