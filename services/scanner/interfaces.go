@@ -3,11 +3,13 @@ package scanner
 import (
 	"bytes"
 	"encoding/base64"
+	"math/big"
 	"sort"
 
 	"github.com/bits-and-blooms/bloom"
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol"
+	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/config"
 )
 
@@ -69,16 +71,24 @@ func truncateFinding(finding *protocol.Finding) (bloomFilter *protocol.BloomFilt
 		return nil, false
 	}
 
-	if len(finding.Addresses) > maxAddressesLength {
+	addressesLength := len(finding.Addresses)
+	if addressesLength > maxAddressesLength {
 		finding.Addresses = finding.Addresses[:maxAddressesLength]
 		truncated = true
 	}
 
 	bitset := base64.StdEncoding.EncodeToString(b.Bytes())
 
+	kBigInt := new(big.Int).SetUint64(uint64(bf.K()))
+	mBigInt := new(big.Int).SetUint64(uint64(bf.Cap()))
+
+	kHexStr := utils.BigIntToHex(kBigInt)
+	mHexStr := utils.BigIntToHex(mBigInt)
+
 	return &protocol.BloomFilter{
-		K:      uint64(bf.K()),
-		M:      uint64(bf.Cap()),
-		Bitset: bitset,
+		K:         kHexStr,
+		M:         mHexStr,
+		Bitset:    bitset,
+		ItemCount: uint32(addressesLength),
 	}, truncated
 }
