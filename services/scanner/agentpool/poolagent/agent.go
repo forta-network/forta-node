@@ -631,9 +631,6 @@ func (agent *Agent) ShouldProcessAlert(event *protocol.AlertEvent) bool {
 		return false
 	}
 
-	if event.Alert.ChainId != 1{
-		fmt.Println("----------------------------------------", event.Alert.ChainId)
-	}
 	for _, subscription := range agent.config.AlertConfig.Subscriptions {
 		// bot is subscribed to the bot id
 		subscribedToBot := subscription.BotId == "" || subscription.BotId == event.Alert.Source.Bot.Id
