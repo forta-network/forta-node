@@ -145,6 +145,9 @@ func (agent *Agent) TxBufferIsFull() bool {
 
 // Config returns the agent config.
 func (agent *Agent) Config() config.AgentConfig {
+	agent.mu.RLock()
+	defer agent.mu.RUnlock()
+
 	return agent.config
 }
 
@@ -281,63 +284,81 @@ func (agent *Agent) WaitInitialization() {
 }
 
 func (agent *Agent) processTransactions() {
-	lg := log.WithFields(log.Fields{
-		"agent":     agent.config.ID,
-		"component": "agent",
-		"evaluate":  "transaction",
-	})
+	lg := log.WithFields(
+		log.Fields{
+			"agent":     agent.config.ID,
+			"component": "agent",
+			"evaluate":  "transaction",
+		},
+	)
 
 	agent.initWait.Wait()
 
 	for request := range agent.txRequests {
-		startTime := time.Now()
-		if agent.IsClosed() {
+		if exit := agent.processTransaction(lg, request); exit {
 			return
 		}
-		ctx, cancel := context.WithTimeout(agent.ctx, AgentTimeout)
-		lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
-		resp := new(protocol.EvaluateTxResponse)
+	}
+}
 
-		requestTime := time.Now().UTC()
-		err := agent.client.Invoke(ctx, agentgrpc.MethodEvaluateTx, request.Encoded, resp)
-		responseTime := time.Now().UTC()
-		cancel()
-		if err == nil {
-			// truncate findings
-			if len(resp.Findings) > MaxFindings {
-				dropped := len(resp.Findings) - MaxFindings
-				droppedMetric := metrics.CreateAgentMetric(agent.config.ID, metrics.MetricFindingsDropped, float64(dropped))
-				agent.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{droppedMetric}})
-				resp.Findings = resp.Findings[:MaxFindings]
-			}
-			var duration time.Duration
-			resp.Timestamp, resp.LatencyMs, duration = calculateResponseTime(&startTime)
-			lg.WithField("duration", duration).Debugf("request successful")
+func (agent *Agent) processTransaction(lg *log.Entry, request *TxRequest) (exit bool) {
+	agent.mu.RLock()
+	defer agent.mu.RUnlock()
 
-			if resp.Metadata == nil {
-				resp.Metadata = make(map[string]string)
-			}
-			resp.Metadata["imageHash"] = agent.config.ImageHash()
+	startTime := time.Now()
+	if agent.IsClosed() {
+		return true
+	}
 
-			ts := domain.TrackingTimestampsFromMessage(request.Original.Event.Timestamps)
-			ts.BotRequest = requestTime
-			ts.BotResponse = responseTime
+	ctx, cancel := context.WithTimeout(agent.ctx, AgentTimeout)
+	lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
+	resp := new(protocol.EvaluateTxResponse)
 
-			agent.txResults <- &scanner.TxResult{
-				AgentConfig: agent.config,
-				Request:     request.Original,
-				Response:    resp,
-				Timestamps:  ts,
-			}
-			lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
-			continue
+	requestTime := time.Now().UTC()
+	err := agent.client.Invoke(ctx, agentgrpc.MethodEvaluateTx, request.Encoded, resp)
+	responseTime := time.Now().UTC()
+	cancel()
+	if err == nil {
+		// truncate findings
+		if len(resp.Findings) > MaxFindings {
+			dropped := len(resp.Findings) - MaxFindings
+			droppedMetric := metrics.CreateAgentMetric(agent.config.ID, metrics.MetricFindingsDropped, float64(dropped))
+			agent.msgClient.PublishProto(
+				messaging.SubjectMetricAgent,
+				&protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{droppedMetric}},
+			)
+			resp.Findings = resp.Findings[:MaxFindings]
 		}
-		lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking agent")
-		if agent.errCounter.TooManyErrs(err) {
-			lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down agent")
-			agent.Close()
-			agent.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{agent.config})
-			agent.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{
+		var duration time.Duration
+		resp.Timestamp, resp.LatencyMs, duration = calculateResponseTime(&startTime)
+		lg.WithField("duration", duration).Debugf("request successful")
+
+		if resp.Metadata == nil {
+			resp.Metadata = make(map[string]string)
+		}
+		resp.Metadata["imageHash"] = agent.config.ImageHash()
+
+		ts := domain.TrackingTimestampsFromMessage(request.Original.Event.Timestamps)
+		ts.BotRequest = requestTime
+		ts.BotResponse = responseTime
+
+		agent.txResults <- &scanner.TxResult{
+			AgentConfig: agent.config,
+			Request:     request.Original,
+			Response:    resp,
+			Timestamps:  ts,
+		}
+		lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
+
+		return false
+	}
+	lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking agent")
+	if agent.errCounter.TooManyErrs(err) {
+		lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down agent")
+		agent.Close()
+		agent.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{agent.config})
+		agent.msgClient.PublishProto(
+			messaging.SubjectMetricAgent, &protocol.AgentMetricList{
 				Metrics: []*protocol.AgentMetric{
 					{
 						AgentId:   agent.config.ID,
@@ -346,72 +367,95 @@ func (agent *Agent) processTransactions() {
 						Value:     1,
 					},
 				},
-			})
+			},
+		)
+		return true
+	}
+
+	return false
+}
+
+func (agent *Agent) processBlocks() {
+	lg := log.WithFields(
+		log.Fields{
+			"agent":     agent.config.ID,
+			"component": "agent",
+			"evaluate":  "block",
+		},
+	)
+
+	agent.initWait.Wait()
+
+	for request := range agent.blockRequests {
+		if exit := agent.processBlock(lg, request); exit {
 			return
 		}
 	}
 }
 
-func (agent *Agent) processBlocks() {
-	lg := log.WithFields(log.Fields{
-		"agent":     agent.config.ID,
-		"component": "agent",
-		"evaluate":  "block",
-	})
+func (agent *Agent) processBlock(lg *log.Entry, request *BlockRequest) (exit bool) {
+	agent.mu.RLock()
+	defer agent.mu.RUnlock()
 
-	agent.initWait.Wait()
-
-	for request := range agent.blockRequests {
-		startTime := time.Now()
-		if agent.IsClosed() {
-			return
-		}
-
-		ctx, cancel := context.WithTimeout(agent.ctx, AgentTimeout)
-		lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
-		resp := new(protocol.EvaluateBlockResponse)
-		requestTime := time.Now().UTC()
-		err := agent.client.Invoke(ctx, agentgrpc.MethodEvaluateBlock, request.Encoded, resp)
-		responseTime := time.Now().UTC()
-		cancel()
-		if err == nil {
-			// truncate findings
-			if len(resp.Findings) > MaxFindings {
-				dropped := len(resp.Findings) - MaxFindings
-				droppedMetric := metrics.CreateAgentMetric(agent.config.ID, metrics.MetricFindingsDropped, float64(dropped))
-				agent.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{droppedMetric}})
-				resp.Findings = resp.Findings[:MaxFindings]
-			}
-			var duration time.Duration
-			resp.Timestamp, resp.LatencyMs, duration = calculateResponseTime(&startTime)
-			lg.WithField("duration", duration).Debugf("request successful")
-
-			if resp.Metadata == nil {
-				resp.Metadata = make(map[string]string)
-			}
-			resp.Metadata["imageHash"] = agent.config.ImageHash()
-
-			ts := domain.TrackingTimestampsFromMessage(request.Original.Event.Timestamps)
-			ts.BotRequest = requestTime
-			ts.BotResponse = responseTime
-
-			agent.blockResults <- &scanner.BlockResult{
-				AgentConfig: agent.config,
-				Request:     request.Original,
-				Response:    resp,
-				Timestamps:  ts,
-			}
-			lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
-			continue
-		}
-		lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking agent")
-		if agent.errCounter.TooManyErrs(err) {
-			lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down agent")
-			agent.Close()
-			agent.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{agent.config})
-			return
-		}
+	startTime := time.Now()
+	if agent.IsClosed() {
+		return true
 	}
+
+	ctx, cancel := context.WithTimeout(agent.ctx, AgentTimeout)
+	lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
+	resp := new(protocol.EvaluateBlockResponse)
+	requestTime := time.Now().UTC()
+	err := agent.client.Invoke(ctx, agentgrpc.MethodEvaluateBlock, request.Encoded, resp)
+	responseTime := time.Now().UTC()
+	cancel()
+	if err == nil {
+		// truncate findings
+		if len(resp.Findings) > MaxFindings {
+			dropped := len(resp.Findings) - MaxFindings
+			droppedMetric := metrics.CreateAgentMetric(
+				agent.config.ID, metrics.MetricFindingsDropped, float64(dropped),
+			)
+			agent.msgClient.PublishProto(
+				messaging.SubjectMetricAgent,
+				&protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{droppedMetric}},
+			)
+			resp.Findings = resp.Findings[:MaxFindings]
+		}
+		var duration time.Duration
+		resp.Timestamp, resp.LatencyMs, duration = calculateResponseTime(&startTime)
+		lg.WithField("duration", duration).Debugf("request successful")
+
+		if resp.Metadata == nil {
+			resp.Metadata = make(map[string]string)
+		}
+		resp.Metadata["imageHash"] = agent.config.ImageHash()
+
+		ts := domain.TrackingTimestampsFromMessage(request.Original.Event.Timestamps)
+		ts.BotRequest = requestTime
+		ts.BotResponse = responseTime
+
+		agent.blockResults <- &scanner.BlockResult{
+			AgentConfig: agent.config,
+			Request:     request.Original,
+			Response:    resp,
+			Timestamps:  ts,
+		}
+		lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
+
+		return false
+	}
+
+	lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking agent")
+	if agent.errCounter.TooManyErrs(err) {
+		lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down agent")
+		agent.Close()
+		agent.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{agent.config})
+
+		return true
+	}
+
+	return false
 }
 
 func (agent *Agent) processCombinationAlerts() {
@@ -426,67 +470,82 @@ func (agent *Agent) processCombinationAlerts() {
 	agent.initWait.Wait()
 
 	for request := range agent.combinationRequests {
-		startTime := time.Now()
-		if agent.IsClosed() {
+		if exit := agent.processCombinationAlert(lg, request); exit {
 			return
 		}
-
-		ctx, cancel := context.WithTimeout(agent.ctx, AgentTimeout)
-		lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
-		resp := new(protocol.EvaluateAlertResponse)
-		requestTime := time.Now().UTC()
-		err := agent.client.Invoke(ctx, agentgrpc.MethodEvaluateAlert, request.Encoded, resp)
-		responseTime := time.Now().UTC()
-		cancel()
-
-		if err != nil {
-			lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking agent")
-			if agent.errCounter.TooManyErrs(err) {
-				lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down agent")
-				agent.Close()
-				agent.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{agent.config})
-				return
-			}
-		}
-
-		// validate response
-		if vErr := validateEvaluateAlertResponse(resp); vErr != nil {
-			lg.WithField("request", request.Original.RequestId).WithError(vErr).Error("evaluate combination response validation failed")
-			continue
-		}
-
-		// truncate findings
-		if len(resp.Findings) > MaxFindings {
-			dropped := len(resp.Findings) - MaxFindings
-			droppedMetric := metrics.CreateAgentMetric(agent.config.ID, metrics.MetricFindingsDropped, float64(dropped))
-			agent.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{droppedMetric}})
-			resp.Findings = resp.Findings[:MaxFindings]
-		}
-
-		var duration time.Duration
-		resp.Timestamp, resp.LatencyMs, duration = calculateResponseTime(&startTime)
-		lg.WithField("duration", duration).Debugf("request successful")
-
-		if resp.Metadata == nil {
-			resp.Metadata = make(map[string]string)
-		}
-
-		resp.Metadata["imageHash"] = agent.config.ImageHash()
-
-		ts := domain.TrackingTimestampsFromMessage(request.Original.Event.Timestamps)
-		ts.BotRequest = requestTime
-		ts.BotResponse = responseTime
-
-		agent.combinationResults <- &scanner.CombinationAlertResult{
-			AgentConfig: agent.config,
-			Request:     request.Original,
-			Response:    resp,
-			Timestamps:  ts,
-		}
-
-		lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
-		continue
 	}
+}
+
+func (agent *Agent) processCombinationAlert(lg *log.Entry, request *CombinationRequest) bool {
+	agent.mu.RLock()
+	defer agent.mu.RUnlock()
+
+	startTime := time.Now()
+	if agent.IsClosed() {
+		agent.mu.RUnlock()
+	}
+
+	ctx, cancel := context.WithTimeout(agent.ctx, AgentTimeout)
+	lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
+	resp := new(protocol.EvaluateAlertResponse)
+	requestTime := time.Now().UTC()
+	err := agent.client.Invoke(ctx, agentgrpc.MethodEvaluateAlert, request.Encoded, resp)
+	responseTime := time.Now().UTC()
+	cancel()
+
+	if err != nil {
+		lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking agent")
+		if agent.errCounter.TooManyErrs(err) {
+			lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down agent")
+			agent.Close()
+			agent.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{agent.config})
+
+			return true
+		}
+	}
+
+	// validate response
+	if vErr := validateEvaluateAlertResponse(resp); vErr != nil {
+		lg.WithField(
+			"request", request.Original.RequestId,
+		).WithError(vErr).Error("evaluate combination response validation failed")
+
+		return false
+	}
+
+	// truncate findings
+	if len(resp.Findings) > MaxFindings {
+		dropped := len(resp.Findings) - MaxFindings
+		droppedMetric := metrics.CreateAgentMetric(agent.config.ID, metrics.MetricFindingsDropped, float64(dropped))
+		agent.msgClient.PublishProto(
+			messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{droppedMetric}},
+		)
+		resp.Findings = resp.Findings[:MaxFindings]
+	}
+
+	var duration time.Duration
+	resp.Timestamp, resp.LatencyMs, duration = calculateResponseTime(&startTime)
+	lg.WithField("duration", duration).Debugf("request successful")
+
+	if resp.Metadata == nil {
+		resp.Metadata = make(map[string]string)
+	}
+
+	resp.Metadata["imageHash"] = agent.config.ImageHash()
+
+	ts := domain.TrackingTimestampsFromMessage(request.Original.Event.Timestamps)
+	ts.BotRequest = requestTime
+	ts.BotResponse = responseTime
+
+	agent.combinationResults <- &scanner.CombinationAlertResult{
+		AgentConfig: agent.config,
+		Request:     request.Original,
+		Response:    resp,
+		Timestamps:  ts,
+	}
+
+	lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
+	return false
 }
 
 func validateEvaluateAlertResponse(resp *protocol.EvaluateAlertResponse) (err error) {
@@ -535,6 +594,9 @@ func calculateResponseTime(startTime *time.Time) (timestamp string, latencyMs ui
 
 // ShouldProcessBlock tells if the agent should process block.
 func (agent *Agent) ShouldProcessBlock(blockNumberHex string) bool {
+	agent.mu.RLock()
+	defer agent.mu.RUnlock()
+
 	blockNumber, _ := hexutil.DecodeUint64(blockNumberHex)
 	var isAtLeastStartBlock bool
 	if agent.config.StartBlock != nil {
@@ -552,7 +614,7 @@ func (agent *Agent) ShouldProcessBlock(blockNumberHex string) bool {
 
 	var isOnThisShard bool
 	// if sharded, block % shards must be equal to shard id
-	if agent.config.ShardConfig != nil && agent.config.ShardConfig.Shards > 1 {
+	if agent.IsSharded() {
 		isOnThisShard = uint(blockNumber)%agent.config.ShardConfig.Shards == agent.config.ShardConfig.ShardID
 	} else {
 		isOnThisShard = true
@@ -562,10 +624,13 @@ func (agent *Agent) ShouldProcessBlock(blockNumberHex string) bool {
 }
 
 func (agent *Agent) ShouldProcessAlert(event *protocol.AlertEvent) bool {
+	agent.mu.RLock()
+	defer agent.mu.RUnlock()
+
 	if agent.config.AlertConfig == nil {
 		return false
 	}
-	
+
 	for _, subscription := range agent.config.AlertConfig.Subscriptions {
 		// bot is subscribed to the bot id
 		subscribedToBot := subscription.BotId == "" || subscription.BotId == event.Alert.Source.Bot.Id
@@ -589,7 +654,7 @@ func (agent *Agent) ShouldProcessAlert(event *protocol.AlertEvent) bool {
 		}
 
 		var isOnThisShard bool
-		if agent.config.ShardConfig != nil && agent.config.ShardConfig.Shards > 1 {
+		if agent.IsSharded() {
 			isOnThisShard = uint(alertCreatedAt.Unix())%agent.config.ShardConfig.Shards == agent.config.ShardConfig.ShardID
 		} else {
 			isOnThisShard = true
@@ -609,4 +674,8 @@ func (agent *Agent) SetShardConfig(cfg config.AgentConfig) {
 	defer agent.mu.Unlock()
 
 	agent.config.ShardConfig = cfg.ShardConfig
+}
+
+func (agent *Agent) IsSharded() bool {
+	return agent.config.ShardConfig != nil && agent.config.ShardConfig.Shards > 1
 }
