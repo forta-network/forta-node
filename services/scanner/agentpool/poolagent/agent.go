@@ -565,11 +565,14 @@ func (agent *Agent) ShouldProcessAlert(event *protocol.AlertEvent) bool {
 	if agent.config.AlertConfig == nil {
 		return false
 	}
+	
 	for _, subscription := range agent.config.AlertConfig.Subscriptions {
 		// bot is subscribed to the bot id
 		subscribedToBot := subscription.BotId == "" || subscription.BotId == event.Alert.Source.Bot.Id
 		// bot is subscribed to the alert id
 		subscribedToAlert := subscription.AlertId == "" || subscription.AlertId == event.Alert.AlertId
+		// correct chain id
+		correctChainID := subscription.ChainId == 0 || subscription.ChainId == event.Alert.ChainId
 
 		// handle sharding
 		alertCreatedAt, err := time.Parse(time.RFC3339Nano, event.Alert.CreatedAt)
@@ -593,7 +596,7 @@ func (agent *Agent) ShouldProcessAlert(event *protocol.AlertEvent) bool {
 		}
 
 		// if matches at least one subscription of the bot
-		if subscribedToBot && subscribedToAlert && isOnThisShard {
+		if subscribedToBot && subscribedToAlert && correctChainID && isOnThisShard {
 			return true
 		}
 	}
