@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"text/template"
 
@@ -12,6 +14,8 @@ import (
 	"github.com/forta-network/forta-node/config"
 	"github.com/spf13/cobra"
 )
+
+const minPassphraseLength = 12
 
 func handleFortaInit(cmd *cobra.Command, args []string) error {
 	if isInitialized() {
@@ -51,6 +55,11 @@ func handleFortaInit(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		}
 
+		if !isValidPassphrase(cfg.Passphrase) || len(cfg.Passphrase) < minPassphraseLength {
+			yellowBold("Please provide an alphanumeric passphrase (a-z, A-Z, 0-9) with at least %d characters.\n\n", minPassphraseLength)
+			return errors.New("invalid passphrase")
+		}
+
 		ks := keystore.NewKeyStore(cfg.KeyDirPath, keystore.StandardScryptN, keystore.StandardScryptP)
 		acct, err := ks.NewAccount(cfg.Passphrase)
 		if err != nil {
@@ -66,6 +75,11 @@ func handleFortaInit(cmd *cobra.Command, args []string) error {
 	}, "\n"))
 
 	return nil
+}
+
+func isValidPassphrase(passphrase string) bool {
+	matches, _ := regexp.MatchString(`([a-zA-Z0-9]+)`, passphrase)
+	return matches
 }
 
 func printScannerAddress(address string) {
