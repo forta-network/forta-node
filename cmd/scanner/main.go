@@ -302,6 +302,11 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	var waitBots int
 	if cfg.LocalModeConfig.Enable {
 		waitBots = len(cfg.LocalModeConfig.BotImages)
+		for _, bot := range cfg.LocalModeConfig.ShardedBots {
+			if bot != nil {
+				waitBots += int(bot.Target * bot.Shards)
+			}
+		}
 	}
 
 	agentPool := agentpool.NewAgentPool(ctx, cfg.Scan, msgClient, waitBots)

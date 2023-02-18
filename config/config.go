@@ -153,10 +153,12 @@ type LocalModeConfig struct {
 
 type LocalShardedBot struct {
 	// Use either BotID or BotImage
-	BotImage *string
-	BotID    *string
-	Shards   uint
-	Target   uint
+	BotImage *string `yaml:"botImage" json:"botImage"`
+	BotID    *string `yaml:"botID" json:"botID"`
+	// number of shards for bot
+	Shards uint `yaml:"shards" json:"shards"`
+	// target per shard for bot
+	Target uint `yaml:"target" json:"target"`
 }
 
 type InspectionConfig struct {
