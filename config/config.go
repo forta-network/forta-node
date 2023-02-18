@@ -152,9 +152,7 @@ type LocalModeConfig struct {
 }
 
 type LocalShardedBot struct {
-	// Use either BotID or BotImage
 	BotImage *string `yaml:"botImage" json:"botImage"`
-	BotID    *string `yaml:"botID" json:"botID"`
 	// number of shards for bot
 	Shards uint `yaml:"shards" json:"shards"`
 	// target per shard for bot
