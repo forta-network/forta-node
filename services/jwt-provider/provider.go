@@ -6,13 +6,10 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/security"
 	"github.com/forta-network/forta-node/clients"
@@ -23,9 +20,6 @@ import (
 
 // JWTProvider provides jwt tokens to bots, signed with node's private key..
 type JWTProvider struct {
-	botConfigs      []config.AgentConfig
-	botConfigsMutex sync.RWMutex
-
 	// to match request ip <-> bot id
 	dockerClient clients.DockerClient
 
@@ -190,13 +184,6 @@ func (j *JWTProvider) Health() health.Reports {
 	return health.Reports{
 		j.lastErr.GetReport("api"),
 	}
-}
-
-// requestHash used for "hash" claim in JWT token
-func requestHash(uri string, payload []byte) common.Hash {
-	requestStr := fmt.Sprintf("%s%s", uri, payload)
-
-	return crypto.Keccak256Hash([]byte(requestStr))
 }
 
 // CreateBotJWT returns a bot JWT token. Basically security.ScannerJWT with bot&request info.

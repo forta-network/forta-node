@@ -1,6 +1,7 @@
 package jwt_provider
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -31,24 +32,10 @@ func (j *JWTProvider) createJWTHandler(w http.ResponseWriter, req *http.Request)
 		}
 	}
 
-	ipAddr, _, err := net.SplitHostPort(req.RemoteAddr)
+	jwt, err := j.doCreateJWT(req.Context(), req.RemoteAddr, msg.Claims)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		_, _ = fmt.Fprintf(w, "can't extract ip from request %s", req.RemoteAddr)
-		return
-	}
-
-	agentID, err := j.agentIDReverseLookup(req.Context(), ipAddr)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		_, _ = fmt.Fprintf(w, "can't find bot id from request source %s, err: %v", ipAddr, err)
-		return
-	}
-
-	jwt, err := CreateBotJWT(j.cfg.Key, agentID, msg.Claims)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		_, _ = fmt.Fprint(w, errFailedToCreateJWT)
+		_, _ = fmt.Fprintf(w, "can not create jwt: %v", err)
 		return
 	}
 
@@ -56,4 +43,23 @@ func (j *JWTProvider) createJWTHandler(w http.ResponseWriter, req *http.Request)
 
 	w.WriteHeader(http.StatusOK)
 	_, _ = fmt.Fprintf(w, "%s", resp)
+}
+
+func (j *JWTProvider) doCreateJWT(ctx context.Context, remoteAddr string, claims map[string]interface{}) (string, error) {
+	ipAddr, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		return "", fmt.Errorf("can't extract ip from request %s", remoteAddr)
+	}
+
+	agentID, err := j.agentIDReverseLookup(ctx, ipAddr)
+	if err != nil {
+		return "", fmt.Errorf("can't find bot id from request source %s, err: %v", ipAddr, err)
+	}
+
+	jwt, err := CreateBotJWT(j.cfg.Key, agentID, claims)
+	if err != nil {
+		return "", fmt.Errorf(errFailedToCreateJWT)
+	}
+
+	return jwt, nil
 }
