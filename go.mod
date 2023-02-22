@@ -33,7 +33,7 @@ require (
 
 require (
 	github.com/bits-and-blooms/bloom v2.0.3+incompatible
-	github.com/forta-network/forta-core-go v0.0.0-20230215114418-8b703e8a51af
+	github.com/forta-network/forta-core-go v0.0.0-20230222140747-b402eec5fa7c
 	github.com/libp2p/go-libp2p v0.23.2
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/rs/cors v1.7.0

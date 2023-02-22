@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	mock_manifest2 "github.com/forta-network/forta-core-go/manifest/mocks"
+	mock_registry "github.com/forta-network/forta-core-go/registry/mocks"
 	"github.com/ipfs/go-cid"
 	log "github.com/sirupsen/logrus"
 
@@ -106,7 +108,7 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 			shardID, shards, target, err := rs.FindScannerShardIDForBot(botCfg.ID, scanner)
 			if err != nil {
 				logger.WithError(err).Warn("could not find shard information for bot")
-				return nil
+				return err
 			}
 
 			botCfg.ShardConfig = &config.ShardConfig{ShardID: shardID, Shards: shards, Target: target}
@@ -157,6 +159,11 @@ func (rs *registryStore) FindAgentGlobally(agentID string) (*config.AgentConfig,
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the latest ref: %v, agentID: %s", err, agentID)
 	}
+
+	if agt == nil {
+		return nil, fmt.Errorf("agent does not exist: %s", agentID)
+	}
+
 	return loadBot(rs.ctx, rs.cfg, rs.mc, agentID, agt.Manifest)
 }
 
@@ -321,87 +328,8 @@ func NewRegistryStore(ctx context.Context, cfg config.Config, ethClient ethereum
 	}, nil
 }
 
-type privateRegistryStore struct {
-	ctx context.Context
-	cfg config.Config
-	rc  registry.Client
-	mc  manifest.Client
-	mu  sync.Mutex
-}
-
-func (rs *privateRegistryStore) FindScannerShardIDForBot(agentID, scannerAddress string) (uint, uint, uint, error) {
-	return 0, 0, 0, nil
-}
-
-func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConfig, bool, error) {
-	rs.mu.Lock()
-	defer rs.mu.Unlock()
-
-	var agentConfigs []*config.AgentConfig
-
-	// load by image references
-	for i, agentImage := range rs.cfg.LocalModeConfig.BotImages {
-		if len(agentImage) == 0 {
-			continue
-		}
-		// forta-agent-1, forta-agent-2, forta-agent-3, ...
-		agentID := strconv.Itoa(i + 1)
-		agentConfigs = append(agentConfigs, rs.makePrivateModeAgentConfig(agentID, agentImage))
-	}
-
-	// load by bot IDs
-	for _, agentID := range rs.cfg.LocalModeConfig.BotIDs {
-		agt, err := rs.rc.GetAgent(agentID)
-		logger := log.WithFields(log.Fields{
-			"botID": agentID,
-		})
-		if err != nil {
-			logger.WithError(err).Error("failed to get bot from registry")
-			continue
-		}
-		agtCfg, err := loadBot(rs.ctx, rs.cfg, rs.mc, agentID, agt.Manifest)
-		if err != nil {
-			logger.WithError(err).Error("failed to load bot")
-			continue
-		}
-		agentConfigs = append(agentConfigs, agtCfg)
-	}
-
-	return agentConfigs, true, nil
-}
-
-func (rs *privateRegistryStore) FindAgentGlobally(agentID string) (*config.AgentConfig, error) {
-	return nil, errors.New("feature not available (private/local registry)")
-}
-
-func (rs *privateRegistryStore) makePrivateModeAgentConfig(id string, image string) *config.AgentConfig {
-	return &config.AgentConfig{
-		ID:      id,
-		Image:   image,
-		IsLocal: true,
-	}
-}
-
-func NewPrivateRegistryStore(ctx context.Context, cfg config.Config) (*privateRegistryStore, error) {
-	mc, err := manifest.NewClient(cfg.Registry.IPFS.GatewayURL)
-	if err != nil {
-		return nil, err
-	}
-
-	rc, err := GetRegistryClient(ctx, cfg, registry.ClientConfig{
-		JsonRpcUrl: cfg.Registry.JsonRpc.Url,
-		ENSAddress: cfg.ENSConfig.ContractAddress,
-		Name:       "registry-store",
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &privateRegistryStore{
-		ctx: ctx,
-		cfg: cfg,
-		mc:  mc,
-		rc:  rc,
-	}, nil
+func NewRegistryStoreFromClients(ctx context.Context, cfg config.Config, mc *mock_manifest2.MockClient, rc *mock_registry.MockClient) (*registryStore, error) {
+	return &registryStore{rc: rc, mc: mc, ctx: ctx, cfg: cfg}, nil
 }
 
 // GetRegistryClient checks the config and returns the suitaable registry.
