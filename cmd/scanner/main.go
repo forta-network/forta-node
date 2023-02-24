@@ -302,6 +302,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	var waitBots int
 	if cfg.LocalModeConfig.Enable {
 		waitBots = len(cfg.LocalModeConfig.BotImages)
+		// sharded bots spawn on multiple containers, so total "wait bot" count is shards * target
 		for _, bot := range cfg.LocalModeConfig.ShardedBots {
 			if bot != nil {
 				waitBots += int(bot.Target * bot.Shards)

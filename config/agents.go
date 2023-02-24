@@ -53,7 +53,7 @@ func (ac AgentConfig) ContainerName() string {
 	)
 }
 
-func (ac AgentConfig) Compare(b AgentConfig) bool {
+func (ac AgentConfig) IsEqual(b AgentConfig) bool {
 	sameID := strings.EqualFold(ac.ID, b.ID)
 	sameDigest := strings.EqualFold(ac.Image, b.Image)
 
