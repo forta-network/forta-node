@@ -148,6 +148,15 @@ type LocalModeConfig struct {
 	RuntimeLimits         RuntimeLimits            `yaml:"runtimeLimits" json:"runtimeLimits"`
 	ForceEnableInspection bool                     `yaml:"forceEnableInspection" json:"forceEnableInspection"`
 	Deduplication         *DeduplicationConfig     `yaml:"deduplication" json:"deduplication"`
+	ShardedBots           []*LocalShardedBot       `yaml:"shardedBots" json:"shardedBots"`
+}
+
+type LocalShardedBot struct {
+	BotImage *string `yaml:"botImage" json:"botImage"`
+	// number of shards for bot
+	Shards uint `yaml:"shards" json:"shards"`
+	// target per shard for bot
+	Target uint `yaml:"target" json:"target"`
 }
 
 type InspectionConfig struct {

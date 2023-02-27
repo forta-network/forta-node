@@ -346,7 +346,7 @@ func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]*config.Ag
 		}
 		// forta-agent-1, forta-agent-2, forta-agent-3, ...
 		agentID := strconv.Itoa(i + 1)
-		agentConfigs = append(agentConfigs, rs.makePrivateModeAgentConfig(agentID, agentImage))
+		agentConfigs = append(agentConfigs, rs.makePrivateModeAgentConfig(agentID, agentImage, nil))
 	}
 
 	// load by bot IDs
@@ -364,7 +364,28 @@ func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]*config.Ag
 			logger.WithError(err).Error("failed to load bot")
 			continue
 		}
+
 		agentConfigs = append(agentConfigs, agtCfg)
+	}
+
+	// load sharded bots by image
+	for i, shardedBot := range rs.cfg.LocalModeConfig.ShardedBots {
+		// load bot by image
+		if shardedBot.BotImage != nil {
+			instances := shardedBot.Shards * shardedBot.Target
+			for botIdx := uint(0); botIdx < instances; botIdx++ {
+				shardConfig := &config.ShardConfig{
+					Shards:  shardedBot.Shards,
+					Target:  shardedBot.Target,
+					ShardID: calculateShardID(shardedBot.Target, botIdx),
+				}
+
+				agentID := strconv.Itoa(len(agentConfigs) + i + 1)
+				agentConfigs = append(
+					agentConfigs, rs.makePrivateModeAgentConfig(agentID, *shardedBot.BotImage, shardConfig),
+				)
+			}
+		}
 	}
 
 	return agentConfigs, true, nil
@@ -374,11 +395,15 @@ func (rs *privateRegistryStore) FindAgentGlobally(agentID string) (*config.Agent
 	return nil, errors.New("feature not available (private/local registry)")
 }
 
-func (rs *privateRegistryStore) makePrivateModeAgentConfig(id string, image string) *config.AgentConfig {
+func (rs *privateRegistryStore) makePrivateModeAgentConfig(
+	id string, image string,
+	shardConfig *config.ShardConfig,
+) *config.AgentConfig {
 	return &config.AgentConfig{
-		ID:      id,
-		Image:   image,
-		IsLocal: true,
+		ID:          id,
+		Image:       image,
+		IsLocal:     true,
+		ShardConfig: shardConfig,
 	}
 }
 
