@@ -176,19 +176,10 @@ func Test_registryStore_FindScannerShardIDForBot(t *testing.T) {
 			tt.name, func(t *testing.T) {
 				rs, _ := NewRegistryStoreFromClients(context.Background(), tt.fields.cfg, tt.fields.mc(t), tt.fields.rc(t))
 				gotShardID, gotShards, gotTarget, err := rs.FindScannerShardIDForBot(tt.args.agentID, tt.args.scannerAddress)
-				if (err != nil) != tt.wantErr {
-					t.Errorf("FindScannerShardIDForBot() error = %v, wantErr %v", err, tt.wantErr)
-					return
-				}
-				if gotShardID != tt.wantShardID {
-					t.Errorf("FindScannerShardIDForBot() gotShardID = %v, want %v", gotShardID, tt.wantShardID)
-				}
-				if gotShards != tt.wantShards {
-					t.Errorf("FindScannerShardIDForBot() gotShards = %v, want %v", gotShards, tt.wantShards)
-				}
-				if gotTarget != tt.wantTarget {
-					t.Errorf("FindScannerShardIDForBot() gotTarget = %v, want %v", gotTarget, tt.wantTarget)
-				}
+				assert.Equal(t, err != nil, tt.wantErr)
+				assert.Equal(t, gotShardID, tt.wantShardID)
+				assert.Equal(t, gotShards, tt.wantShards)
+				assert.Equal(t, gotTarget, tt.wantTarget)
 			},
 		)
 	}
@@ -271,16 +262,9 @@ func Test_registryStore_GetAgentsIfChanged(t *testing.T) {
 			tt.name, func(t *testing.T) {
 				rs, _ := NewRegistryStoreFromClients(context.Background(), tt.fields.cfg, tt.fields.mc(t), tt.fields.rc(t))
 				got, got1, err := rs.GetAgentsIfChanged(tt.args.scannerAddress)
-				if (err != nil) != tt.wantErr {
-					t.Errorf("GetAgentsIfChanged() error = %v, wantErr %v", err, tt.wantErr)
-					return
-				}
-				if !assert.Equal(t, got, tt.want) {
-					t.Errorf("GetAgentsIfChanged() got = %v, want %v", got, tt.want)
-				}
-				if got1 != tt.want1 {
-					t.Errorf("GetAgentsIfChanged() got1 = %v, want %v", got1, tt.want1)
-				}
+				assert.Equal(t, err != nil, tt.wantErr)
+				assert.Equal(t, got, tt.want)
+				assert.Equal(t, got1, tt.want1)
 			},
 		)
 	}
