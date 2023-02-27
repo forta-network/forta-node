@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/forta-network/forta-core-go/clients/health"
@@ -17,6 +18,7 @@ import (
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 )
+
 
 // TxAnalyzerService reads TX info, calls agents, and emits results
 type TxAnalyzerService struct {
@@ -40,6 +42,8 @@ func (t *TxAnalyzerService) publishMetrics(result *TxResult) {
 }
 
 func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
+	t.createAddressDetails(result.Request.Event, f)
+
 	alertID := alerthash.ForTransactionAlert(
 		&alerthash.Inputs{
 			TransactionEvent: result.Request.Event,
@@ -50,6 +54,7 @@ func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *pr
 			},
 		},
 	)
+
 	blockNumber, err := utils.HexToBigInt(result.Request.Event.Block.BlockNumber)
 	if err != nil {
 		return nil, err
@@ -86,6 +91,42 @@ func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *pr
 		Truncated:          truncated,
 		AddressBloomFilter: addressBloomFilter,
 	}, nil
+}
+
+// createAddressDetails adds transaction addresses and creates details
+func (t *TxAnalyzerService) createAddressDetails(event *protocol.TransactionEvent, f *protocol.Finding) {
+	// populate address details from finding sources
+	var ad []*protocol.AddressDetails
+	addrs := uniqLowerCase(f.Addresses)
+	for _, addr := range addrs {
+		ad = append(
+			ad, &protocol.AddressDetails{
+				Type:    AddressTypeUnknown,
+				Sources: []string{AddressSourceFinding},
+				Address: addr,
+			},
+		)
+	}
+
+	// append addresses in transaction to finding and create address details
+	for addr := range event.Addresses {
+		addrs = append(addrs, addr)
+		alertDetails, ok := FindAddressDetails(ad, addr)
+		if !ok {
+			ad = append(
+				ad, &protocol.AddressDetails{
+					Type:    AddressTypeUnknown,
+					Address: strings.ToLower(addr),
+					Sources: []string{AddressSourceTransaction},
+				},
+			)
+		} else {
+			alertDetails.Sources = append(alertDetails.Sources, AddressSourceTransaction)
+		}
+	}
+
+	// remove duplicate addresses, set finding addresses
+	f.Addresses = uniqLowerCase(addrs)
 }
 
 func (t *TxAnalyzerService) Start() error {

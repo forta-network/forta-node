@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"math/big"
 	"sort"
+	"strings"
 
 	"github.com/bits-and-blooms/bloom"
 	"github.com/forta-network/forta-core-go/domain"
@@ -91,4 +92,39 @@ func truncateFinding(finding *protocol.Finding) (bloomFilter *protocol.BloomFilt
 		Bitset:    bitset,
 		ItemCount: uint32(addressesLength),
 	}, truncated
+}
+
+// Address types
+const (
+	AddressTypeWallet   = "wallet"
+	AddressTypeContract = "contract"
+	AddressTypeUnknown  = "unknown"
+
+	AddressSourceTransaction = "transaction"
+	AddressSourceFinding     = "finding"
+	AddressSourceMetadata    = "metadata"
+
+	ProjectSourceAddress = "address"
+	ProjectSourceAgent   = "agent"
+)
+
+func uniqLowerCase(vals []string) []string {
+	var result []string
+	uniq := make(map[string]bool)
+	for _, v := range vals {
+		lower := strings.ToLower(v)
+		if _, ok := uniq[lower]; !ok {
+			uniq[lower] = true
+			result = append(result, lower)
+		}
+	}
+	return result
+}
+func FindAddressDetails(details []*protocol.AddressDetails, addr string) (*protocol.AddressDetails, bool) {
+	for _, ad := range details {
+		if strings.EqualFold(ad.Address, addr) {
+			return ad, true
+		}
+	}
+	return nil, false
 }

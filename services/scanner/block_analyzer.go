@@ -44,6 +44,8 @@ func (t *BlockAnalyzerService) publishMetrics(result *BlockResult) {
 func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time, f *protocol.Finding) (
 	*protocol.Alert, error,
 ) {
+	t.createAddressDetails(f)
+
 	alertID := alerthash.ForBlockAlert(
 		&alerthash.Inputs{
 			BlockEvent: result.Request.Event,
@@ -89,6 +91,25 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 		Truncated:          truncated,
 		AddressBloomFilter: addressBloomFilter,
 	}, nil
+}
+
+// createAddressDetails adds transaction addresses and creates details
+func (t *BlockAnalyzerService) createAddressDetails(f *protocol.Finding) {
+	// populate address details from finding sources
+	var ad []*protocol.AddressDetails
+	addrs := uniqLowerCase(f.Addresses)
+	for _, addr := range addrs {
+		ad = append(
+			ad, &protocol.AddressDetails{
+				Type:    AddressTypeUnknown,
+				Sources: []string{AddressSourceFinding},
+				Address: addr,
+			},
+		)
+	}
+
+	// remove duplicate addresses, set finding addresses
+	f.Addresses = uniqLowerCase(addrs)
 }
 
 func (t *BlockAnalyzerService) Start() error {

@@ -46,6 +46,8 @@ func (aas *CombinerAlertAnalyzerService) publishMetrics(result *CombinationAlert
 }
 
 func (aas *CombinerAlertAnalyzerService) findingToAlert(result *CombinationAlertResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
+	aas.createAddressDetails(f)
+
 	alertID := alerthash.ForCombinationAlert(
 		&alerthash.Inputs{
 			AlertEvent: result.Request.Event,
@@ -82,6 +84,25 @@ func (aas *CombinerAlertAnalyzerService) findingToAlert(result *CombinationAlert
 		Truncated:          truncated,
 		AddressBloomFilter: addressBloomFilter,
 	}, nil
+}
+
+// createAddressDetails adds transaction addresses and creates details
+func (aas *CombinerAlertAnalyzerService) createAddressDetails(f *protocol.Finding) {
+	// populate address details from finding sources
+	var ad []*protocol.AddressDetails
+	addrs := uniqLowerCase(f.Addresses)
+	for _, addr := range addrs {
+		ad = append(
+			ad, &protocol.AddressDetails{
+				Type:    AddressTypeUnknown,
+				Sources: []string{AddressSourceFinding},
+				Address: addr,
+			},
+		)
+	}
+
+	// remove duplicate addresses, set finding addresses
+	f.Addresses = uniqLowerCase(addrs)
 }
 
 func (aas *CombinerAlertAnalyzerService) Start() error {
