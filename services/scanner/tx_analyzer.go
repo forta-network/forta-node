@@ -2,7 +2,6 @@ package scanner
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/forta-network/forta-core-go/clients/health"
@@ -42,8 +41,6 @@ func (t *TxAnalyzerService) publishMetrics(result *TxResult) {
 }
 
 func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
-	t.createAddressDetails(result.Request.Event, f)
-
 	alertID := alerthash.ForTransactionAlert(
 		&alerthash.Inputs{
 			TransactionEvent: result.Request.Event,
@@ -78,7 +75,12 @@ func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *pr
 		tags["blockNumber"] = blockNumber.String()
 	}
 
-	addressBloomFilter, truncated := truncateFinding(f)
+	addressBloomFilter, err := t.createBloomFilter(f, result.Request.Event)
+	if err != nil {
+		return nil, err
+	}
+
+	truncated := truncateFinding(f)
 
 	return &protocol.Alert{
 		Id:                 alertID,
@@ -93,40 +95,15 @@ func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *pr
 	}, nil
 }
 
-// createAddressDetails adds transaction addresses and creates details
-func (t *TxAnalyzerService) createAddressDetails(event *protocol.TransactionEvent, f *protocol.Finding) {
-	// populate address details from finding sources
-	var ad []*protocol.AddressDetails
-	addrs := uniqLowerCase(f.Addresses)
-	for _, addr := range addrs {
-		ad = append(
-			ad, &protocol.AddressDetails{
-				Type:    AddressTypeUnknown,
-				Sources: []string{AddressSourceFinding},
-				Address: addr,
-			},
-		)
+func (t *TxAnalyzerService) createBloomFilter(finding *protocol.Finding, event *protocol.TransactionEvent) (bloomFilter *protocol.BloomFilter, err error) {
+	allAddresses := finding.Addresses
+
+	// append tx addresses if exists
+	if event != nil {
+		allAddresses = append(allAddresses, reduceMapToArr(event.Addresses)...)
 	}
 
-	// append addresses in transaction to finding and create address details
-	for addr := range event.Addresses {
-		addrs = append(addrs, addr)
-		alertDetails, ok := FindAddressDetails(ad, addr)
-		if !ok {
-			ad = append(
-				ad, &protocol.AddressDetails{
-					Type:    AddressTypeUnknown,
-					Address: strings.ToLower(addr),
-					Sources: []string{AddressSourceTransaction},
-				},
-			)
-		} else {
-			alertDetails.Sources = append(alertDetails.Sources, AddressSourceTransaction)
-		}
-	}
-
-	// remove duplicate addresses, set finding addresses
-	f.Addresses = uniqLowerCase(addrs)
+	return createBloomFilter(allAddresses)
 }
 
 func (t *TxAnalyzerService) Start() error {

@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"math/big"
 	"sort"
-	"strings"
 
 	"github.com/bits-and-blooms/bloom"
 	"github.com/forta-network/forta-core-go/domain"
@@ -49,18 +48,29 @@ type AgentPool interface {
 	CombinationAlertResults() <-chan *CombinationAlertResult
 }
 
-
 const (
 	maxAddressesLength       = 50
 	addressBloomFilterFPRate = 1e-3
 )
 
-func truncateFinding(finding *protocol.Finding) (bloomFilter *protocol.BloomFilter, truncated bool) {
+func truncateFinding(finding *protocol.Finding) (truncated bool) {
 	sort.Strings(finding.Addresses)
 
-	// create bloom filter from addresses
-	bf := bloom.NewWithEstimates(uint(len(finding.Addresses)), addressBloomFilterFPRate)
-	for _, address := range finding.Addresses {
+	// truncate finding addresses
+	lenFindingAddrs := len(finding.Addresses)
+	if lenFindingAddrs > maxAddressesLength {
+		finding.Addresses = finding.Addresses[:maxAddressesLength]
+		truncated = true
+	}
+
+	return truncated
+}
+
+func createBloomFilter(allAddresses []string) (*protocol.BloomFilter, error) {
+
+	// create bloom filter from all addresses
+	bf := bloom.NewWithEstimates(uint(len(allAddresses)), addressBloomFilterFPRate)
+	for _, address := range allAddresses {
 		bf.Add([]byte(address))
 	}
 
@@ -69,15 +79,10 @@ func truncateFinding(finding *protocol.Finding) (bloomFilter *protocol.BloomFilt
 
 	_, err := bf.WriteTo(&b)
 	if err != nil {
-		return nil, false
+		return nil, err
 	}
 
-	addressesLength := len(finding.Addresses)
-	if addressesLength > maxAddressesLength {
-		finding.Addresses = finding.Addresses[:maxAddressesLength]
-		truncated = true
-	}
-
+	// create bloom filter
 	bitset := base64.StdEncoding.EncodeToString(b.Bytes())
 
 	kBigInt := new(big.Int).SetUint64(uint64(bf.K()))
@@ -90,41 +95,14 @@ func truncateFinding(finding *protocol.Finding) (bloomFilter *protocol.BloomFilt
 		K:         kHexStr,
 		M:         mHexStr,
 		Bitset:    bitset,
-		ItemCount: uint32(addressesLength),
-	}, truncated
+		ItemCount: uint32(len(allAddresses)),
+	}, nil
 }
 
-// Address types
-const (
-	AddressTypeWallet   = "wallet"
-	AddressTypeContract = "contract"
-	AddressTypeUnknown  = "unknown"
-
-	AddressSourceTransaction = "transaction"
-	AddressSourceFinding     = "finding"
-	AddressSourceMetadata    = "metadata"
-
-	ProjectSourceAddress = "address"
-	ProjectSourceAgent   = "agent"
-)
-
-func uniqLowerCase(vals []string) []string {
-	var result []string
-	uniq := make(map[string]bool)
-	for _, v := range vals {
-		lower := strings.ToLower(v)
-		if _, ok := uniq[lower]; !ok {
-			uniq[lower] = true
-			result = append(result, lower)
-		}
+func reduceMapToArr(m map[string]bool) (result []string) {
+	for s, _ := range m {
+		result = append(result, s)
 	}
-	return result
-}
-func FindAddressDetails(details []*protocol.AddressDetails, addr string) (*protocol.AddressDetails, bool) {
-	for _, ad := range details {
-		if strings.EqualFold(ad.Address, addr) {
-			return ad, true
-		}
-	}
-	return nil, false
+
+	return
 }

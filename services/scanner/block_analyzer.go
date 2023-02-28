@@ -44,8 +44,6 @@ func (t *BlockAnalyzerService) publishMetrics(result *BlockResult) {
 func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time, f *protocol.Finding) (
 	*protocol.Alert, error,
 ) {
-	t.createAddressDetails(f)
-
 	alertID := alerthash.ForBlockAlert(
 		&alerthash.Inputs{
 			BlockEvent: result.Request.Event,
@@ -78,7 +76,12 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 		tags["blockNumber"] = blockNumber.String()
 	}
 
-	addressBloomFilter, truncated := truncateFinding(f)
+	addressBloomFilter, err := t.createBloomFilter(f)
+	if err != nil {
+		return nil, err
+	}
+
+	truncated := truncateFinding(f)
 
 	return &protocol.Alert{
 		Id:                 alertID,
@@ -93,23 +96,8 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 	}, nil
 }
 
-// createAddressDetails adds transaction addresses and creates details
-func (t *BlockAnalyzerService) createAddressDetails(f *protocol.Finding) {
-	// populate address details from finding sources
-	var ad []*protocol.AddressDetails
-	addrs := uniqLowerCase(f.Addresses)
-	for _, addr := range addrs {
-		ad = append(
-			ad, &protocol.AddressDetails{
-				Type:    AddressTypeUnknown,
-				Sources: []string{AddressSourceFinding},
-				Address: addr,
-			},
-		)
-	}
-
-	// remove duplicate addresses, set finding addresses
-	f.Addresses = uniqLowerCase(addrs)
+func (t *BlockAnalyzerService) createBloomFilter(finding *protocol.Finding) (bloomFilter *protocol.BloomFilter, err error) {
+	return createBloomFilter(finding.Addresses)
 }
 
 func (t *BlockAnalyzerService) Start() error {
