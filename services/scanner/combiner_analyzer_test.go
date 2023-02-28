@@ -37,9 +37,7 @@ func TestCombinerAlertAnalyzerService_createBloomFilter(t *testing.T) {
 
 				// check for finding addresses
 				for _, findingAddr := range tt.args.finding.Addresses {
-					if !bf.Test([]byte(findingAddr)) {
-						t.Errorf("finding address %s does not exists in bloom filter", findingAddr)
-					}
+					assert.True(t, bf.Test([]byte(findingAddr)), findingAddr)
 				}
 			},
 		)
