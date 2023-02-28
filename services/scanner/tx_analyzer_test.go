@@ -57,9 +57,7 @@ func TestTxAnalyzerService_createBloomFilter(t1 *testing.T) {
 
 				// check for tx addresses
 				for txAddr := range tt.args.event.Addresses {
-					if !bf.Test([]byte(txAddr)) {
-						t1.Errorf("tx address %s does not exists in bloom filter", txAddr)
-					}
+					assert.True(t, bf.Test([]byte(txAddr)), txAddr)
 				}
 			},
 		)
