@@ -42,9 +42,9 @@ func TestTxAnalyzerService_createBloomFilter(t1 *testing.T) {
 	}
 	for _, tt := range tests {
 		t1.Run(
-			tt.name, func(t1 *testing.T) {
-				t := &TxAnalyzerService{}
-				gotBloomFilter, err := t.createBloomFilter(tt.args.finding, tt.args.event)
+			tt.name, func(t *testing.T) {
+				txAnalyzer := &TxAnalyzerService{}
+				gotBloomFilter, err := txAnalyzer.createBloomFilter(tt.args.finding, tt.args.event)
 				assert.Equal(t1, tt.wantErr, err != nil)
 
 				bf, err := utils.RecreateBloomFilter(gotBloomFilter)

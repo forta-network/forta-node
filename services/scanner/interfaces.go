@@ -100,7 +100,7 @@ func createBloomFilter(allAddresses []string) (*protocol.BloomFilter, error) {
 }
 
 func reduceMapToArr(m map[string]bool) (result []string) {
-	for s, _ := range m {
+	for s := range m {
 		result = append(result, s)
 	}
 
