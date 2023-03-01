@@ -47,7 +47,7 @@ func TestTxAnalyzerService_createBloomFilter(t *testing.T) {
 				gotBloomFilter, err := txAnalyzer.createBloomFilter(tt.args.finding, tt.args.event)
 				assert.Equal(t, tt.wantErr, err != nil)
 
-				bf, err := utils.RecreateBloomFilter(gotBloomFilter)
+				bf, err := utils.CreateBloomFilterFromProto(gotBloomFilter)
 				assert.NoError(t, err)
 
 				// check for finding addresses
