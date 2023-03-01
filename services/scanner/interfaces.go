@@ -1,12 +1,8 @@
 package scanner
 
 import (
-	"bytes"
-	"encoding/base64"
-	"math/big"
 	"sort"
 
-	"github.com/bits-and-blooms/bloom"
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-core-go/utils"
@@ -48,47 +44,24 @@ type AgentPool interface {
 	CombinationAlertResults() <-chan *CombinationAlertResult
 }
 
-
-const (
-	maxAddressesLength       = 50
-	addressBloomFilterFPRate = 1e-3
-)
-
-func truncateFinding(finding *protocol.Finding) (bloomFilter *protocol.BloomFilter, truncated bool) {
+func truncateFinding(finding *protocol.Finding) (truncated bool) {
 	sort.Strings(finding.Addresses)
 
-	// create bloom filter from addresses
-	bf := bloom.NewWithEstimates(uint(len(finding.Addresses)), addressBloomFilterFPRate)
-	for _, address := range finding.Addresses {
-		bf.Add([]byte(address))
-	}
+	// truncate finding addresses
+	lenFindingAddrs := len(finding.Addresses)
 
-	// extract bitset from bloom filter
-	var b bytes.Buffer
-
-	_, err := bf.WriteTo(&b)
-	if err != nil {
-		return nil, false
-	}
-
-	addressesLength := len(finding.Addresses)
-	if addressesLength > maxAddressesLength {
-		finding.Addresses = finding.Addresses[:maxAddressesLength]
+	if lenFindingAddrs > utils.NumMaxAddressesPerAlert {
+		finding.Addresses = finding.Addresses[:utils.NumMaxAddressesPerAlert]
 		truncated = true
 	}
 
-	bitset := base64.StdEncoding.EncodeToString(b.Bytes())
+	return truncated
+}
 
-	kBigInt := new(big.Int).SetUint64(uint64(bf.K()))
-	mBigInt := new(big.Int).SetUint64(uint64(bf.Cap()))
+func reduceMapToArr(m map[string]bool) (result []string) {
+	for s := range m {
+		result = append(result, s)
+	}
 
-	kHexStr := utils.BigIntToHex(kBigInt)
-	mHexStr := utils.BigIntToHex(mBigInt)
-
-	return &protocol.BloomFilter{
-		K:         kHexStr,
-		M:         mHexStr,
-		Bitset:    bitset,
-		ItemCount: uint32(addressesLength),
-	}, truncated
+	return
 }

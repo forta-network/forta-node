@@ -69,7 +69,12 @@ func (aas *CombinerAlertAnalyzerService) findingToAlert(result *CombinationAlert
 		alertType = protocol.AlertType_COMBINATION
 	}
 
-	addressBloomFilter, truncated := truncateFinding(f)
+	addressBloomFilter, err := aas.createBloomFilter(f)
+	if err != nil {
+		return nil, err
+	}
+
+	truncated := truncateFinding(f)
 
 	return &protocol.Alert{
 		Id:                 alertID,
@@ -82,6 +87,10 @@ func (aas *CombinerAlertAnalyzerService) findingToAlert(result *CombinationAlert
 		Truncated:          truncated,
 		AddressBloomFilter: addressBloomFilter,
 	}, nil
+}
+
+func (aas *CombinerAlertAnalyzerService) createBloomFilter(finding *protocol.Finding) (bloomFilter *protocol.BloomFilter, err error) {
+	return utils.CreateBloomFilter(finding.Addresses, utils.AddressBloomFilterFPRate)
 }
 
 func (aas *CombinerAlertAnalyzerService) Start() error {

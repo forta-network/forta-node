@@ -18,6 +18,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+
 // TxAnalyzerService reads TX info, calls agents, and emits results
 type TxAnalyzerService struct {
 	ctx context.Context
@@ -50,6 +51,7 @@ func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *pr
 			},
 		},
 	)
+
 	blockNumber, err := utils.HexToBigInt(result.Request.Event.Block.BlockNumber)
 	if err != nil {
 		return nil, err
@@ -73,7 +75,12 @@ func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *pr
 		tags["blockNumber"] = blockNumber.String()
 	}
 
-	addressBloomFilter, truncated := truncateFinding(f)
+	addressBloomFilter, err := t.createBloomFilter(f, result.Request.Event)
+	if err != nil {
+		return nil, err
+	}
+
+	truncated := truncateFinding(f)
 
 	return &protocol.Alert{
 		Id:                 alertID,
@@ -86,6 +93,17 @@ func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *pr
 		Truncated:          truncated,
 		AddressBloomFilter: addressBloomFilter,
 	}, nil
+}
+
+func (t *TxAnalyzerService) createBloomFilter(finding *protocol.Finding, event *protocol.TransactionEvent) (bloomFilter *protocol.BloomFilter, err error) {
+	allAddresses := finding.Addresses
+
+	// append tx addresses if exists
+	if event != nil {
+		allAddresses = append(allAddresses, reduceMapToArr(event.Addresses)...)
+	}
+
+	return utils.CreateBloomFilter(finding.Addresses, utils.AddressBloomFilterFPRate)
 }
 
 func (t *TxAnalyzerService) Start() error {

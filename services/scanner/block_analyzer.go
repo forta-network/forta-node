@@ -76,7 +76,12 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 		tags["blockNumber"] = blockNumber.String()
 	}
 
-	addressBloomFilter, truncated := truncateFinding(f)
+	addressBloomFilter, err := t.createBloomFilter(f)
+	if err != nil {
+		return nil, err
+	}
+
+	truncated := truncateFinding(f)
 
 	return &protocol.Alert{
 		Id:                 alertID,
@@ -89,6 +94,10 @@ func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time,
 		Truncated:          truncated,
 		AddressBloomFilter: addressBloomFilter,
 	}, nil
+}
+
+func (t *BlockAnalyzerService) createBloomFilter(finding *protocol.Finding) (bloomFilter *protocol.BloomFilter, err error) {
+	return utils.CreateBloomFilter(finding.Addresses, utils.AddressBloomFilterFPRate)
 }
 
 func (t *BlockAnalyzerService) Start() error {
