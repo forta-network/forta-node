@@ -443,8 +443,9 @@ func summarizeReports(reports health.Reports) *health.Report {
 }
 
 func isNotFoundErr(errMsg string) bool {
+	errMsg = strings.ToLower(errMsg)
 	return strings.Contains(errMsg, "not found") || strings.Contains(errMsg, "could not find") ||
-		strings.Contains(errMsg, "cannot query unfinalized data")
+		strings.Contains(errMsg, "cannot query unfinalized data") || strings.Contains(errMsg, "unknown block")
 }
 
 func Run() {
