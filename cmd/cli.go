@@ -113,26 +113,6 @@ publishes alerts about them`,
 		RunE:  handleFortaStatus,
 	}
 
-	cmdFortaRegister = &cobra.Command{
-		Use:   "register",
-		Short: "register your scan node to enable it for scanning (requires MATIC in your scan node address)",
-		RunE:  withInitialized(withValidConfig(handleFortaRegister)),
-	}
-
-	cmdFortaEnable = &cobra.Command{
-		Use:    "enable",
-		Short:  "enable your scan node (requires MATIC in your scan node address)",
-		RunE:   withInitialized(withValidConfig(handleFortaEnable)),
-		Hidden: true,
-	}
-
-	cmdFortaDisable = &cobra.Command{
-		Use:    "disable",
-		Short:  "disable your scan node (requires MATIC in your scan node address)",
-		RunE:   withInitialized(withValidConfig(handleFortaDisable)),
-		Hidden: true,
-	}
-
 	cmdFortaAuthorize = &cobra.Command{
 		Use:   "authorize",
 		Short: "generate a signature for a specific action",
@@ -172,10 +152,6 @@ func init() {
 
 	cmdForta.AddCommand(cmdFortaStatus)
 
-	cmdForta.AddCommand(cmdFortaRegister)
-	cmdForta.AddCommand(cmdFortaEnable)
-	cmdForta.AddCommand(cmdFortaDisable)
-
 	cmdForta.AddCommand(cmdFortaAuthorize)
 	cmdFortaAuthorize.AddCommand(cmdFortaAuthorizePool)
 
@@ -210,17 +186,6 @@ func init() {
 	cmdFortaStatus.Flags().String("format", StatusFormatPretty, "output formatting/encoding: pretty (default), oneline, json, csv")
 	cmdFortaStatus.Flags().Bool("no-color", false, "disable colors")
 	cmdFortaStatus.Flags().String("show", StatusShowSummary, "filter statuses to show: summary (default), important, all")
-
-	// forta register
-	cmdFortaRegister.Flags().String("owner-address", "", "Ethereum wallet address of the scanner owner")
-	cmdFortaRegister.MarkFlagRequired("owner-address")
-	cmdFortaRegister.MarkFlagRequired("passphrase")
-
-	// forta enable
-	cmdFortaEnable.MarkFlagRequired("passphrase")
-
-	// forta disable
-	cmdFortaDisable.MarkFlagRequired("passphrase")
 
 	// forta authorize pool
 	cmdFortaAuthorizePool.Flags().String("id", "", "scanner pool ID (integer)")
