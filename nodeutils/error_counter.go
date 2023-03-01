@@ -8,7 +8,7 @@ type ErrorCounter struct {
 	max             uint
 	isCriticalError func(error) bool
 	count           uint
-	sync.Mutex
+	mu              sync.Mutex
 }
 
 // NewErrorCounter creates a new error counter.
@@ -20,8 +20,8 @@ func NewErrorCounter(max uint, isCriticalError func(error) bool) *ErrorCounter {
 }
 
 func (ec *ErrorCounter) TooManyErrs(err error) bool {
-	ec.Lock()
-	defer ec.Unlock()
+	ec.mu.Lock()
+	defer ec.mu.Unlock()
 	if err == nil || !ec.isCriticalError(err) {
 		ec.count = 0 // reset if other errors or no errors
 		return false
