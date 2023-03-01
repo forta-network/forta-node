@@ -57,15 +57,6 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 		return nil, false, err
 	}
 
-	// if the scan node is disabled, it must run no agents
-	isEnabledScanner, err := rs.rc.IsEnabledScanner(scanner)
-	if err != nil {
-		return nil, false, fmt.Errorf("failed to check if scanner is enabled: %v", err)
-	}
-	if !isEnabledScanner {
-		return []*config.AgentConfig{}, true, nil
-	}
-
 	shouldUpdate := rs.lastCompletedVersion != hash.Hash || time.Since(rs.lastUpdate) > 1*time.Hour
 	if !shouldUpdate {
 		return nil, false, nil
