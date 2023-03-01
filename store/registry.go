@@ -297,9 +297,17 @@ func NewRegistryStore(ctx context.Context, cfg config.Config, ethClient ethereum
 
 	// make sure the registry client is refreshed and in sync.
 	go func() {
-		for err := range registry.ListenToUpgrades(ctx, rc, blockFeed) {
-			if err != nil {
-				log.WithError(err).Warn("error while listening to contract upgrades")
+		ticker := time.NewTicker(time.Minute * 15)
+		for {
+			select {
+			case <-ticker.C:
+				err := rc.RefreshContracts()
+				if err != nil {
+					log.WithError(err).Warn("error while refreshing the registry contracts")
+				}
+
+			case <-ctx.Done():
+				return
 			}
 		}
 	}()
