@@ -18,6 +18,7 @@ import (
 	"github.com/forta-network/forta-core-go/utils"
 
 	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/nodeutils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -25,6 +26,7 @@ var (
 	errNotAvailable = errors.New("new release not available")
 
 	defaultUpdateCheckIntervalSeconds = 60
+	maxConsecutiveUpdateErrors        = 60
 )
 
 // UpdaterService receives the release updates.
@@ -45,6 +47,8 @@ type UpdaterService struct {
 
 	updateDelay         time.Duration
 	updateCheckInterval time.Duration
+
+	errCounter *nodeutils.ErrorCounter
 
 	lastChecked        health.TimeTracker
 	lastErr            health.ErrorTracker
@@ -69,6 +73,9 @@ func NewUpdaterService(ctx context.Context, registryClient registry.Client, rele
 		trackPrereleases:    trackPrereleases,
 		updateDelay:         time.Duration(updateDelaySeconds) * time.Second,
 		updateCheckInterval: time.Duration(updateCheckIntervalSeconds) * time.Second,
+		errCounter: nodeutils.NewErrorCounter(uint(maxConsecutiveUpdateErrors), func(err error) bool {
+			return err != nil // all non-nil errors are critical errors
+		}),
 	}
 }
 
@@ -116,6 +123,9 @@ func (updater *UpdaterService) Start() error {
 				return
 			case <-t.C:
 				err := updater.updateLatestReleaseWithDelay(updater.updateDelay)
+				if updater.errCounter.TooManyErrs(err) {
+					log.WithError(err).Panic("too many update errors - exiting")
+				}
 				updater.lastErr.Set(err)
 				updater.lastChecked.Set()
 				if err != nil {
