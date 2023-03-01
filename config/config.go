@@ -99,7 +99,7 @@ type AutoUpdateConfig struct {
 	Disable              bool `yaml:"disable" json:"disable"`
 	UpdateDelay          *int `yaml:"updateDelay" json:"updateDelay"`
 	TrackPrereleases     bool `yaml:"trackPrereleases" json:"trackPrereleases"`
-	CheckIntervalSeconds int  `yaml:"checkIntervalSeconds" json:"checkIntervalSeconds" default:"900"` // 15m
+	CheckIntervalSeconds int  `yaml:"checkIntervalSeconds" json:"checkIntervalSeconds" default:"60"` // 1m
 }
 
 type AgentLogsConfig struct {
