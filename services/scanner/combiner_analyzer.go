@@ -90,7 +90,7 @@ func (aas *CombinerAlertAnalyzerService) findingToAlert(result *CombinationAlert
 }
 
 func (aas *CombinerAlertAnalyzerService) createBloomFilter(finding *protocol.Finding) (bloomFilter *protocol.BloomFilter, err error) {
-	return createBloomFilter(finding.Addresses)
+	return utils.CreateBloomFilter(finding.Addresses, utils.AddressBloomFilterFPRate)
 }
 
 func (aas *CombinerAlertAnalyzerService) Start() error {

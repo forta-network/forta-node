@@ -103,7 +103,7 @@ func (t *TxAnalyzerService) createBloomFilter(finding *protocol.Finding, event *
 		allAddresses = append(allAddresses, reduceMapToArr(event.Addresses)...)
 	}
 
-	return createBloomFilter(allAddresses)
+	return utils.CreateBloomFilter(finding.Addresses, utils.AddressBloomFilterFPRate)
 }
 
 func (t *TxAnalyzerService) Start() error {

@@ -1,12 +1,8 @@
 package scanner
 
 import (
-	"bytes"
-	"encoding/base64"
-	"math/big"
 	"sort"
 
-	"github.com/bits-and-blooms/bloom"
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-core-go/utils"
@@ -48,55 +44,18 @@ type AgentPool interface {
 	CombinationAlertResults() <-chan *CombinationAlertResult
 }
 
-const (
-	maxAddressesLength       = 50
-	addressBloomFilterFPRate = 1e-3
-)
-
 func truncateFinding(finding *protocol.Finding) (truncated bool) {
 	sort.Strings(finding.Addresses)
 
 	// truncate finding addresses
 	lenFindingAddrs := len(finding.Addresses)
-	if lenFindingAddrs > maxAddressesLength {
-		finding.Addresses = finding.Addresses[:maxAddressesLength]
+
+	if lenFindingAddrs > utils.NumMaxAddressesPerAlert {
+		finding.Addresses = finding.Addresses[:utils.NumMaxAddressesPerAlert]
 		truncated = true
 	}
 
 	return truncated
-}
-
-func createBloomFilter(allAddresses []string) (*protocol.BloomFilter, error) {
-
-	// create bloom filter from all addresses
-	bf := bloom.NewWithEstimates(uint(len(allAddresses)), addressBloomFilterFPRate)
-	for _, address := range allAddresses {
-		bf.Add([]byte(address))
-	}
-
-	// extract bitset from bloom filter
-	var b bytes.Buffer
-
-	_, err := bf.WriteTo(&b)
-	if err != nil {
-		return nil, err
-	}
-
-	// create bloom filter
-	bitset := base64.StdEncoding.EncodeToString(b.Bytes())
-
-	kBigInt := new(big.Int).SetUint64(uint64(bf.K()))
-	mBigInt := new(big.Int).SetUint64(uint64(bf.Cap()))
-
-	kHexStr := utils.BigIntToHex(kBigInt)
-	mHexStr := utils.BigIntToHex(mBigInt)
-
-	return &protocol.BloomFilter{
-		K:         kHexStr,
-		M:         mHexStr,
-		Bitset:    bitset,
-		ItemCount: uint32(len(allAddresses)),
-	}, nil
 }
 
 func reduceMapToArr(m map[string]bool) (result []string) {
