@@ -219,11 +219,15 @@ func (s *Suite) SetupTest() {
 
 	// point ENS to mock
 	ensOverrides := map[string]string{
-		ens.DispatchContract:           mockRegistryAddr.Hex(),
-		ens.AgentRegistryContract:      mockRegistryAddr.Hex(),
-		ens.ScannerRegistryContract:    mockRegistryAddr.Hex(),
-		ens.ScannerNodeVersionContract: mockRegistryAddr.Hex(),
-		ens.StakingContract:            mockRegistryAddr.Hex(),
+		ens.DispatchContract:            mockRegistryAddr.Hex(),
+		ens.AgentRegistryContract:       mockRegistryAddr.Hex(),
+		ens.ScannerRegistryContract:     mockRegistryAddr.Hex(),
+		ens.ScannerPoolRegistryContract: mockRegistryAddr.Hex(),
+		ens.ScannerNodeVersionContract:  mockRegistryAddr.Hex(),
+		ens.StakingContract:             mockRegistryAddr.Hex(),
+		ens.RewardsContract:             mockRegistryAddr.Hex(),
+		ens.StakeAllocatorContract:      mockRegistryAddr.Hex(),
+		ens.MigrationContract:           mockRegistryAddr.Hex(),
 	}
 	b, _ := json.MarshalIndent(ensOverrides, "", "  ")
 	s.r.NoError(ioutil.WriteFile(".forta/ens-override.json", b, 0644))

@@ -152,9 +152,10 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 	// add release info if it's available
 	if pub.cfg.ReleaseSummary != nil {
 		batch.ScannerVersion = &protocol.ScannerVersion{
-			Commit:  pub.cfg.ReleaseSummary.Commit,
-			Ipfs:    pub.cfg.ReleaseSummary.IPFS,
-			Version: pub.cfg.ReleaseSummary.Version,
+			Commit:      pub.cfg.ReleaseSummary.Commit,
+			Ipfs:        pub.cfg.ReleaseSummary.IPFS,
+			Version:     pub.cfg.ReleaseSummary.Version,
+			AutoUpdates: !pub.cfg.Config.AutoUpdate.Disable,
 		}
 	}
 	lastBatchRef, err := pub.batchRefStore.Get()

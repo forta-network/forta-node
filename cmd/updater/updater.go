@@ -96,7 +96,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 
 	updaterService := updater.NewUpdaterService(
 		ctx, registryClient, releaseClient, config.DefaultContainerPort,
-		developmentMode, cfg.AutoUpdate.TrackPrereleases, updateDelay, 0,
+		developmentMode, cfg.AutoUpdate.TrackPrereleases, updateDelay, cfg.AutoUpdate.CheckIntervalSeconds,
 	)
 
 	return []services.Service{

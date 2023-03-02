@@ -13,6 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/forta-network/forta-node/metrics"
+	"github.com/forta-network/forta-node/nodeutils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -47,7 +48,7 @@ type Agent struct {
 	combinationRequests chan *CombinationRequest // never closed - deallocated when agent is discarded
 	combinationResults  chan<- *scanner.CombinationAlertResult
 
-	errCounter *errorCounter
+	errCounter *nodeutils.ErrorCounter
 	msgClient  clients.MessageClient
 
 	client    clients.AgentClient
@@ -113,7 +114,7 @@ func New(ctx context.Context, agentCfg config.AgentConfig, msgClient clients.Mes
 		blockResults:        blockResults,
 		combinationRequests: make(chan *CombinationRequest, DefaultBufferSize),
 		combinationResults:  alertResults,
-		errCounter:          NewErrorCounter(3, isCriticalErr),
+		errCounter:          nodeutils.NewErrorCounter(3, isCriticalErr),
 		msgClient:           msgClient,
 		ready:               make(chan struct{}),
 		closed:              make(chan struct{}),

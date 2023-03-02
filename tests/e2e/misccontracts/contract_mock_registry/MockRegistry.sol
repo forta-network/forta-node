@@ -30,6 +30,10 @@ contract MockRegistry {
         _agentManifest = __agentManifest;
     }
 
+    function ownerOf(uint256 id) public view returns (address) {
+        return address(0x0);
+    }
+
     function getAgent(uint256 agentId)
     public view
     returns (bool registered, address owner,uint256 agentVersion, string memory metadata, uint256[] memory chainIds) {
@@ -53,21 +57,13 @@ contract MockRegistry {
         return scannerNode;
     }
 
-    function getScanner(uint256 scannerId)
-        external
-        view
-        returns (
-            bool registered,
-            address owner,
-            uint256 chainId,
-            string memory metadata
-        )
-    {
-        return (true, address(0x0), 137, "");
-    }
-
     /// dev: for both of scanners and agents - anything is enabled
     function isEnabled(uint256 id) public view returns (bool) {
+        return true;
+    }
+
+    /// dev: just for scanners (ScannerPoolRegistry)
+    function isScannerOperational(address id) public view returns (bool) {
         return true;
     }
 

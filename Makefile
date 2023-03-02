@@ -37,8 +37,8 @@ perf-test:
 
 MOCKREG = $$(pwd)/tests/e2e/misccontracts/contract_mock_registry
 
-.PHONY: e2e-test-recompile-mock
-e2e-test-recompile-mock:
+.PHONY: e2e-test-mock
+e2e-test-mock:
 	solc --bin --abi -o $(MOCKREG) --include-path . --base-path $(MOCKREG) --overwrite --input-file $(MOCKREG)/MockRegistry.sol
 	abigen --out $(MOCKREG)/mock_registry.go --pkg contract_mock_registry --type MockRegistry --abi $(MOCKREG)/MockRegistry.abi --bin $(MOCKREG)/MockRegistry.bin
 
