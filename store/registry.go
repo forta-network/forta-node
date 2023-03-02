@@ -12,6 +12,7 @@ import (
 	"github.com/ipfs/go-cid"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/forta-network/forta-core-go/ens"
 	"github.com/forta-network/forta-core-go/ethereum"
 	"github.com/forta-network/forta-core-go/feeds"
 	"github.com/forta-network/forta-core-go/manifest"
@@ -431,10 +432,11 @@ func NewPrivateRegistryStore(ctx context.Context, cfg config.Config) (*privateRe
 // GetRegistryClient checks the config and returns the suitaable registry.
 func GetRegistryClient(ctx context.Context, cfg config.Config, registryClientCfg registry.ClientConfig) (registry.Client, error) {
 	if cfg.ENSConfig.Override {
-		ensStore, err := NewENSOverrideStore(cfg)
+		ensResolver, err := NewENSOverrideResolver(cfg)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create ens override store: %v", err)
+			return nil, fmt.Errorf("failed to create ens override resolver: %v", err)
 		}
+		ensStore := ens.NewENStoreWithResolver(ensResolver)
 		return registry.NewClientWithENSStore(ctx, registryClientCfg, ensStore)
 	}
 	return registry.NewClient(ctx, registryClientCfg)
