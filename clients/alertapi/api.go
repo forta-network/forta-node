@@ -33,7 +33,10 @@ func (c *client) post(path string, body interface{}, headers map[string]string, 
 		return err
 	}
 	defer resp.Body.Close()
-	b, _ := io.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		log.WithFields(log.Fields{
 			"apiUrl":   c.apiUrl,
