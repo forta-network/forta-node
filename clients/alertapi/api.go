@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"github.com/forta-network/forta-core-go/domain"
+	"github.com/forta-network/forta-core-go/utils/httpclient"
 	"github.com/goccy/go-json"
 	log "github.com/sirupsen/logrus"
 )
@@ -28,15 +28,12 @@ func (c *client) post(path string, body interface{}, headers map[string]string, 
 	for n, v := range headers {
 		req.Header[n] = []string{v}
 	}
-	hClient := &http.Client{
-		Timeout: 30 * time.Second,
-	}
-	resp, err := hClient.Do(req)
+	resp, err := httpclient.Default.Do(req)
 	if err != nil {
 		return err
 	}
-	b, _ := io.ReadAll(resp.Body)
 	defer resp.Body.Close()
+	b, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		log.WithFields(log.Fields{
 			"apiUrl":   c.apiUrl,
