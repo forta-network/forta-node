@@ -3,8 +3,8 @@ package ipfsclient
 import (
 	"context"
 	"io"
-	"net/http"
 
+	"github.com/forta-network/forta-core-go/utils/httpclient"
 	ipfsapi "github.com/ipfs/go-ipfs-api"
 )
 
@@ -15,7 +15,7 @@ type Client struct {
 
 // New creates a new client.
 func New(ipfsURL string) *Client {
-	return &Client{Shell: ipfsapi.NewShellWithClient(ipfsURL, http.DefaultClient)}
+	return &Client{Shell: ipfsapi.NewShellWithClient(ipfsURL, httpclient.Default)}
 }
 
 // RepoGC triggers garbage collection on the repo.

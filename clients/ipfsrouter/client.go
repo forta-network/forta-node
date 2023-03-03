@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/forta-network/forta-core-go/utils/httpclient"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/sirupsen/logrus"
 )
@@ -50,7 +51,7 @@ func (client *routerClient) Provide(ctx context.Context, scanner, peerID, bloomF
 	if err != nil {
 		return fmt.Errorf("failed to create request: %v", err)
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpclient.Default.Do(req)
 	if err != nil {
 		return fmt.Errorf("provide request failed: %v", err)
 	}
