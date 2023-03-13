@@ -1,9 +1,10 @@
 package store
 
 import (
-	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type StringStore interface {
@@ -26,7 +27,7 @@ func (fss *fileStringStore) Put(body string) error {
 func (fss *fileStringStore) Get() (string, error) {
 	b, err := ioutil.ReadFile(fss.path)
 	if err != nil {
-		log.WithError(err).Warn("failed to read the last batch file")
+		log.WithError(err).Debug("failed to read the last batch file")
 		return "", nil
 	}
 	return strings.TrimSpace(string(b)), nil

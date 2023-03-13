@@ -141,3 +141,21 @@ func (client *Client) PublishProto(subject string, payload proto.Message) {
 	}
 	logger.Debugf("published: %s", string(data))
 }
+
+type nopClient struct{}
+
+func NewNopClient() *nopClient {
+	return &nopClient{}
+}
+
+func (sc *nopClient) Subscribe(subject string, handler interface{}) {
+
+}
+
+func (sc *nopClient) Publish(subject string, payload interface{}) {
+
+}
+
+func (sc *nopClient) PublishProto(subject string, payload proto.Message) {
+
+}

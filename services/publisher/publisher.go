@@ -56,7 +56,7 @@ type Publisher struct {
 	ipfs              ipfs.Client
 	storage           protocol.StorageClient
 	metricsAggregator *AgentMetricsAggregator
-	messageClient     *messaging.Client
+	messageClient     clients.MessageClient
 	alertClient       clients.AlertAPIClient
 	localAlertClient  LocalAlertClient
 
@@ -808,9 +808,9 @@ func (pub *Publisher) Health() health.Reports {
 }
 
 func NewPublisher(ctx context.Context, cfg config.Config) (*Publisher, error) {
-	mc := messaging.NewClient("metrics", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
+	msgClient := messaging.NewClient("metrics", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 
-	key, err := security.LoadKey(config.DefaultContainerKeyDirPath)
+	key, err := config.LoadKeyInContainer(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -824,12 +824,15 @@ func NewPublisher(ctx context.Context, cfg config.Config) (*Publisher, error) {
 
 	apiClient := alertapi.NewClient(cfg.Publish.APIURL)
 
-	storageClient, err := storagegrpc.DialContext(ctx, fmt.Sprintf("%s:%s", config.DockerStorageContainerName, config.DefaultStoragePort))
-	if err != nil {
-		return nil, fmt.Errorf("failed to dial the storage client: %v", err)
+	var storageClient protocol.StorageClient
+	if !cfg.LocalModeConfig.Enable {
+		storageClient, err = storagegrpc.DialContext(ctx, fmt.Sprintf("%s:%s", config.DockerStorageContainerName, config.DefaultStoragePort))
+		if err != nil {
+			return nil, fmt.Errorf("failed to dial the storage client: %v", err)
+		}
 	}
 
-	return initPublisher(ctx, mc, apiClient, storageClient, PublisherConfig{
+	return initPublisher(ctx, msgClient, apiClient, storageClient, PublisherConfig{
 		ChainID:         cfg.ChainID,
 		Key:             key,
 		PublisherConfig: cfg.Publish,
@@ -838,7 +841,7 @@ func NewPublisher(ctx context.Context, cfg config.Config) (*Publisher, error) {
 	})
 }
 
-func initPublisher(ctx context.Context, mc *messaging.Client, alertClient clients.AlertAPIClient, storageClient StorageClient, cfg PublisherConfig) (*Publisher, error) {
+func initPublisher(ctx context.Context, mc clients.MessageClient, alertClient clients.AlertAPIClient, storageClient StorageClient, cfg PublisherConfig) (*Publisher, error) {
 	ipfsClient, err := ipfs.NewClient(fmt.Sprintf("http://%s:5001", config.DockerIpfsContainerName))
 	if err != nil {
 		return nil, err
@@ -862,10 +865,16 @@ func initPublisher(ctx context.Context, mc *messaging.Client, alertClient client
 			return nil, fmt.Errorf("failed to create local alert webhook client: %s", localAlertDest)
 		}
 	}
-	if cfg.Config.LocalModeConfig.Enable && len(localAlertDest) == 0 {
+	if cfg.Config.LocalModeConfig.Enable && len(localAlertDest) == 0 && !cfg.Config.LocalModeConfig.LogToStdout {
 		localAlertClient, err = webhooklog.NewLogger(cfg.Config.LocalModeConfig.LogFileName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create local alert logger: %s", localAlertDest)
+		}
+	}
+	if cfg.Config.LocalModeConfig.Enable && len(localAlertDest) == 0 && cfg.Config.LocalModeConfig.LogToStdout {
+		localAlertClient, err = webhooklog.NewStdoutLogger()
+		if err != nil {
+			return nil, fmt.Errorf("failed to create local alert stdout logger: %s", localAlertDest)
 		}
 	}
 

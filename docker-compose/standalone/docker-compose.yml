@@ -1,0 +1,103 @@
+# get the images ready by doing `make containers` at the root
+# the run this like `docker compose up --remove-orphans --abort-on-container-exit`
+
+# default logging settings to apply to all containers
+# you can modify these as you wish
+x-logging: &default-logging
+  options:
+    max-size: "50m"
+    max-file: "10"
+
+services:
+  # forta service container definitions
+  # you can skip the services if you are not sure about how to modify
+
+  service-forta-nats:
+    container_name: forta-nats
+    logging: *default-logging
+    image: nats:2.3.2
+    ports:
+      - 4222:4222
+      - 6222:6222
+      - 8222:8222
+    networks:
+      - forta-node
+
+  service-forta-json-rpc:
+    container_name: forta-json-rpc
+    logging: *default-logging
+    # build this image by doing `make containers` at the root first
+    image: forta-network/forta-node:latest
+    command: /forta-node json-rpc
+    networks:
+      - forta-node
+    # this file is mounted as an alternative form of the forta node config file
+    volumes:
+      - ${PWD}:/.forta
+      - ${PWD}/docker-compose.yml:/.forta/wrapped-config.yml
+    depends_on:
+      - service-forta-nats
+
+  service-forta-scanner:
+    container_name: forta-scanner
+    logging: *default-logging
+    # build this image by doing `make containers` at the root first
+    image: forta-network/forta-node:latest
+    command: /forta-node scanner
+    networks:
+      - forta-node
+    # this file is mounted as an alternative form of the forta node config file
+    volumes:
+      - ${PWD}:/.forta
+      - ${PWD}/docker-compose.yml:/.forta/wrapped-config.yml
+    depends_on:
+      - service-forta-nats
+      - service-forta-json-rpc
+      # make sure that scanner depends on all of the bots so it succeeds to attach
+      - bot-1
+      #- bot-2
+
+  # forta bot definitions
+
+  bot-1:
+    container_name: forta-bot-1
+    logging: *default-logging
+    # oz-gnosis-events bot
+    image: disco.forta.network/bafybeibgyyvbzgbldqculjl4n4hyotlhqn6o3ft2n7hdobvwbt64ouzbri@sha256:a869950a3b8a8af09b95318745e07f8e7a16957c34173595813bb21093badd91
+    networks:
+      - forta-node
+  
+  # bot-2:
+  #   container_name: forta-bot-2
+  #   logging: *default-logging
+  #   image: some-other-bot-image:latest
+  #   networks:
+  #     - forta-node
+
+networks:
+  forta-node: {}
+
+# specify the forta node config here!
+# this is known to the scanner as a "wrapped config".
+x-forta-config:
+  chainId: 137
+
+  scan:
+    jsonRpc:
+      url: https://rpc.ankr.com/polygon
+
+  localMode:
+    enable: true
+    # webhook alerts are sent with a JWT which is signed using this key
+    privateKeyHex: 9e3c1e3ef3fc5669b6d469dafe2aa80b3986c5c59715ebcafb7e02076475a68c
+    logToStdout: true
+    # define if it is necessary to use a block range
+    # runtimeLimits:
+    #   startBlock: 40293984
+    #   stopBlock: 40293988
+    standalone:
+      enable: true
+      # make sure that the scanner knows the bot container names so it can attach
+      botContainers:
+        - forta-bot-1
+        #- forta-bot-2

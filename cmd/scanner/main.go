@@ -21,7 +21,6 @@ import (
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/ethereum"
 	"github.com/forta-network/forta-core-go/feeds"
-	"github.com/forta-network/forta-core-go/security"
 	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/messaging"
@@ -57,7 +56,7 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 
 	var maxAgePtr *time.Duration
 	// support scanning old block ranges in local mode
-	hasLocalModeBlockRange := cfg.LocalModeConfig.Enable && cfg.LocalModeConfig.RuntimeLimits.StopBlock > 0
+	hasLocalModeBlockRange := cfg.LocalModeConfig.Enable && cfg.LocalModeConfig.RuntimeLimits.StopBlock != nil
 	if !hasLocalModeBlockRange && cfg.Scan.BlockMaxAgeSeconds > 0 {
 		maxAge := time.Duration(cfg.Scan.BlockMaxAgeSeconds) * time.Second
 		maxAgePtr = &maxAge
@@ -69,12 +68,16 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 	)
 	if cfg.LocalModeConfig.Enable {
 		runtimeLimits := cfg.LocalModeConfig.RuntimeLimits
-		if runtimeLimits.StartBlock > 0 {
-			startBlock = big.NewInt(0).SetUint64(runtimeLimits.StartBlock)
+		if runtimeLimits.StartBlock != nil {
+			startBlock = big.NewInt(0).SetUint64(*runtimeLimits.StartBlock)
 		}
-		if runtimeLimits.StopBlock > 0 {
-			stopBlock = big.NewInt(0).SetUint64(runtimeLimits.StopBlock)
+		if runtimeLimits.StopBlock != nil {
+			stopBlock = big.NewInt(0).SetUint64(*runtimeLimits.StopBlock)
 		}
+	}
+
+	if startBlock != nil && stopBlock != nil && !(stopBlock.Cmp(startBlock) > 0) {
+		log.Fatal("stop block is not greater than the start block - please check the runtime limits")
 	}
 
 	ethClient.SetRetryInterval(time.Second * time.Duration(cfg.Scan.RetryIntervalSeconds))
@@ -148,7 +151,7 @@ func getBlockOffset(cfg config.Config) int {
 	return chainSettings.DefaultOffset
 }
 
-func initCombinationStream(ctx context.Context, msgClient *messaging.Client, cfg config.Config) (*scanner.CombinerAlertStreamService, feeds.AlertFeed, error) {
+func initCombinationStream(ctx context.Context, msgClient clients.MessageClient, cfg config.Config) (*scanner.CombinerAlertStreamService, feeds.AlertFeed, error) {
 	combinerFeed, err := feeds.NewCombinerFeed(
 		ctx, feeds.CombinerFeedConfig{
 			APIUrl:            cfg.CombinerConfig.AlertAPIURL,
@@ -258,7 +261,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	cfg.LocalModeConfig.WebhookURL = utils.ConvertToDockerHostURL(cfg.LocalModeConfig.WebhookURL)
 	msgClient := messaging.NewClient("scanner", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 
-	key, err := security.LoadKey(config.DefaultContainerKeyDirPath)
+	key, err := config.LoadKeyInContainer(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -268,7 +271,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 
-	as, err := initAlertSender(ctx, key, publisherSvc, cfg)
+	alertSender, err := initAlertSender(ctx, key, publisherSvc, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -288,6 +291,33 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 
+	var waitBots int
+	if cfg.LocalModeConfig.Enable {
+		waitBots += len(cfg.LocalModeConfig.BotImages)
+		waitBots += len(cfg.LocalModeConfig.Standalone.BotContainers)
+		// sharded bots spawn on multiple containers, so total "wait bot" count is shards * target
+		for _, bot := range cfg.LocalModeConfig.ShardedBots {
+			if bot != nil {
+				waitBots += int(bot.Target * bot.Shards)
+			}
+		}
+	}
+
+	agentPool := agentpool.NewAgentPool(ctx, cfg, msgClient, waitBots)
+	txAnalyzer, err := initTxAnalyzer(ctx, cfg, alertSender, txStream, agentPool, msgClient)
+	if err != nil {
+		return nil, err
+	}
+	blockAnalyzer, err := initBlockAnalyzer(ctx, cfg, alertSender, txStream, agentPool, msgClient)
+	if err != nil {
+		return nil, err
+	}
+
+	// Start the main block feed so all transaction feeds can start consuming.
+	if !cfg.Scan.DisableAutostart {
+		blockFeed.Start()
+	}
+
 	combinationStream, combinationFeed, err := initCombinationStream(ctx, msgClient, cfg)
 	if err != nil {
 		return nil, err
@@ -299,35 +329,9 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	}
 	registryService := registry.New(cfg, key.Address, msgClient, registryClient, blockFeed)
 
-	var waitBots int
-	if cfg.LocalModeConfig.Enable {
-		waitBots = len(cfg.LocalModeConfig.BotImages)
-		// sharded bots spawn on multiple containers, so total "wait bot" count is shards * target
-		for _, bot := range cfg.LocalModeConfig.ShardedBots {
-			if bot != nil {
-				waitBots += int(bot.Target * bot.Shards)
-			}
-		}
-	}
-
-	agentPool := agentpool.NewAgentPool(ctx, cfg.Scan, msgClient, waitBots)
-	txAnalyzer, err := initTxAnalyzer(ctx, cfg, as, txStream, agentPool, msgClient)
+	combinationAnalyzer, err := initCombinerAlertAnalyzer(ctx, cfg, alertSender, combinationStream, agentPool, msgClient)
 	if err != nil {
 		return nil, err
-	}
-	blockAnalyzer, err := initBlockAnalyzer(ctx, cfg, as, txStream, agentPool, msgClient)
-	if err != nil {
-		return nil, err
-	}
-
-	combinationAnalyzer, err := initCombinerAlertAnalyzer(ctx, cfg, as, combinationStream, agentPool, msgClient)
-	if err != nil {
-		return nil, err
-	}
-
-	// Start the main block feed so all transaction feeds can start consuming.
-	if !cfg.Scan.DisableAutostart {
-		blockFeed.Start()
 	}
 
 	svcs := []services.Service{
@@ -341,8 +345,6 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		blockAnalyzer,
 		combinationStream,
 		combinationAnalyzer,
-		scanner.NewScannerAPI(ctx, blockFeed),
-		scanner.NewTxLogger(ctx),
 		publisherSvc,
 	}
 

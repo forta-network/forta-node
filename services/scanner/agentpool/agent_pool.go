@@ -24,6 +24,7 @@ import (
 // interact with.
 type AgentPool struct {
 	ctx                     context.Context
+	cfg                     config.Config
 	agents                  []*poolagent.Agent
 	txResults               chan *scanner.TxResult
 	blockResults            chan *scanner.BlockResult
@@ -35,13 +36,14 @@ type AgentPool struct {
 }
 
 // NewAgentPool creates a new agent pool.
-func NewAgentPool(ctx context.Context, _ config.ScannerConfig, msgClient clients.MessageClient, waitBots int) *AgentPool {
+func NewAgentPool(ctx context.Context, cfg config.Config, msgClient clients.MessageClient, waitBots int) *AgentPool {
 	agentPool := &AgentPool{
-		ctx:                       ctx,
-		txResults:                 make(chan *scanner.TxResult),
-		blockResults:              make(chan *scanner.BlockResult),
-		combinationAlertResults:   make(chan *scanner.CombinationAlertResult),
-		msgClient:                 msgClient,
+		ctx:                     ctx,
+		cfg:                     cfg,
+		txResults:               make(chan *scanner.TxResult),
+		blockResults:            make(chan *scanner.BlockResult),
+		combinationAlertResults: make(chan *scanner.CombinationAlertResult),
+		msgClient:               msgClient,
 		dialer: func(ac config.AgentConfig) (clients.AgentClient, error) {
 			client := agentgrpc.NewClient()
 			if err := client.Dial(ac); err != nil {
@@ -395,6 +397,12 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 	if len(agentsToStop) > 0 {
 		ap.msgClient.Publish(messaging.SubjectAgentsActionStop, agentsToStop)
 	}
+
+	// the bots are already running so just complete the start flow
+	if len(agentsToRun) > 0 && ap.cfg.LocalModeConfig.IsStandalone() {
+		ap.msgClient.Publish(messaging.SubjectAgentsStatusRunning, agentsToRun)
+	}
+
 	return nil
 }
 

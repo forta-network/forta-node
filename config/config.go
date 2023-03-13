@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path"
 
@@ -113,11 +114,11 @@ type ContainerRegistryConfig struct {
 }
 
 type RuntimeLimits struct {
-	StartBlock         uint64 `yaml:"startBlock" json:"startBlock"`
-	StopBlock          uint64 `yaml:"stopBlock" json:"stopBlock" validate:"omitempty,gtfield=StartBlock"`
-	StopTimeoutSeconds int    `yaml:"stopTimeoutSeconds" json:"stopTimeoutSeconds" default:"30"`
-	StartCombiner      uint64 `yaml:"startCombiner" json:"startCombiner"`
-	StopCombiner       uint64 `yaml:"stopCombiner" json:"stopCombiner"`
+	StartBlock         *uint64 `yaml:"startBlock" json:"startBlock"`
+	StopBlock          *uint64 `yaml:"stopBlock" json:"stopBlock" validate:"omitempty,gtfield=StartBlock"`
+	StopTimeoutSeconds int     `yaml:"stopTimeoutSeconds" json:"stopTimeoutSeconds" default:"30"`
+	StartCombiner      uint64  `yaml:"startCombiner" json:"startCombiner"`
+	StopCombiner       uint64  `yaml:"stopCombiner" json:"stopCombiner"`
 }
 
 type RedisConfig struct {
@@ -138,6 +139,11 @@ type DeduplicationConfig struct {
 	RedisCluster *RedisClusterConfig `yaml:"redisCluster" json:"redisCluster"`
 }
 
+type StandaloneModeConfig struct {
+	Enable        bool     `yaml:"enable" json:"enable"`
+	BotContainers []string `yaml:"botContainers" json:"botContainers"`
+}
+
 type LocalModeConfig struct {
 	Enable                bool                     `yaml:"enable" json:"enable"`
 	IncludeMetrics        bool                     `yaml:"includeMetrics" json:"includeMetrics"`
@@ -145,11 +151,20 @@ type LocalModeConfig struct {
 	BotImages             []string                 `yaml:"botImages" json:"botImages"`
 	WebhookURL            string                   `yaml:"webhookUrl" json:"webhookUrl"`
 	LogFileName           string                   `yaml:"logFileName" json:"logFileName"`
+	LogToStdout           bool                     `yaml:"logToStdout" json:"logToStdout"`
 	ContainerRegistry     *ContainerRegistryConfig `yaml:"containerRegistry" json:"containerRegistry"`
 	RuntimeLimits         RuntimeLimits            `yaml:"runtimeLimits" json:"runtimeLimits"`
 	ForceEnableInspection bool                     `yaml:"forceEnableInspection" json:"forceEnableInspection"`
 	Deduplication         *DeduplicationConfig     `yaml:"deduplication" json:"deduplication"`
 	ShardedBots           []*LocalShardedBot       `yaml:"shardedBots" json:"shardedBots"`
+	PrivateKeyHex         string                   `yaml:"privateKeyHex" json:"privateKeyHex"`
+	Standalone            StandaloneModeConfig     `yaml:"standalone" json:"standalone"`
+}
+
+// IsStandalone checks if the node is in standalone mode. It should only be available
+// as another local mode setting.
+func (lmc LocalModeConfig) IsStandalone() bool {
+	return lmc.Enable && lmc.Standalone.Enable
 }
 
 type LocalShardedBot struct {
@@ -217,12 +232,7 @@ func (cfg *Config) ConfigFilePath() string {
 
 // GetConfigForContainer is how a container gets the forta configuration (file or env var)
 func GetConfigForContainer() (Config, error) {
-	var cfg Config
-	if _, err := os.Stat(DefaultContainerConfigPath); os.IsNotExist(err) {
-		return cfg, errors.New("config file not found")
-	}
-
-	cfg, err := getConfigFromFile(DefaultContainerConfigPath)
+	cfg, err := getConfigFromFile()
 	if err != nil {
 		return Config{}, err
 	}
@@ -259,13 +269,70 @@ func applyContextDefaults(cfg *Config) {
 	cfg.CombinerConfig.CombinerCachePath = path.Join(cfg.FortaDir, DefaultCombinerCacheFileName)
 }
 
-func getConfigFromFile(filename string) (Config, error) {
-	var cfg Config
-	if err := readFile(filename, &cfg); err != nil {
-		return Config{}, err
+func getConfigFromFile() (cfg Config, err error) {
+	var (
+		successfullyLoadedTimes int
+		wrappedErr              error
+	)
+
+	// if the default config file exists, load from there
+	if err = checkIfConfigFileExists(DefaultContainerConfigPath); err == nil {
+		if err = readYamlFile(DefaultContainerConfigPath, &cfg); err != nil {
+			return
+		}
+		successfullyLoadedTimes++
 	}
-	if err := defaults.Set(&cfg); err != nil {
-		return Config{}, err
+	if err != nil {
+		wrappedErr = err
 	}
-	return cfg, nil
+
+	// if the wrapped config file exists, load from there
+	if err = checkIfConfigFileExists(DefaultContainerWrappedConfigPath); err == nil {
+		var wrapped map[string]Config
+		if err = readYamlFile(DefaultContainerWrappedConfigPath, &wrapped); err != nil {
+			return
+		}
+		var found bool
+		cfg, found = wrapped[DefaultConfigWrapperKey]
+		if !found {
+			err = fmt.Errorf("wrapped config file was found but did not have the config under '%s'", DefaultConfigWrapperKey)
+			return
+		}
+		successfullyLoadedTimes++
+	}
+	if err != nil {
+		wrappedErr = fmt.Errorf("%v, %v", wrappedErr, err)
+	}
+
+	// at this point we expect that at least one of the config files were loaded without errors
+	switch successfullyLoadedTimes {
+	case 2:
+		err = errors.New("multiple config files found in the forta dir - please use only one of them")
+		return
+
+	case 0:
+		err = fmt.Errorf("failed to load any of the config files: %v", wrappedErr)
+		return
+
+	case 1:
+		// yay! (ignore)
+
+	default:
+		err = fmt.Errorf("successfully loaded unexpected amount of config files (%d) - errors: %w", successfullyLoadedTimes, wrappedErr)
+	}
+
+	// finally set the defaults
+	err = defaults.Set(&cfg)
+	return
+}
+
+func checkIfConfigFileExists(configPath string) error {
+	_, err := os.Stat(configPath)
+	if os.IsNotExist(err) {
+		return errors.New("config file not found")
+	}
+	if err != nil {
+		return fmt.Errorf("failed to check if config file exists: %w", err)
+	}
+	return nil
 }
