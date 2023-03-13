@@ -1,3 +1,6 @@
+# get the images ready by doing `make containers` at the root
+# the run this like `docker compose up --remove-orphans --abort-on-container-exit`
+
 # default logging settings to apply to all containers
 # you can modify these as you wish
 x-logging: &default-logging
