@@ -427,6 +427,7 @@ func NewPrivateRegistryStore(ctx context.Context, cfg config.Config) (*privateRe
 		JsonRpcUrl: cfg.Registry.JsonRpc.Url,
 		ENSAddress: cfg.ENSConfig.ContractAddress,
 		Name:       "registry-store",
+		NoRefresh:  cfg.LocalModeConfig.IsStandalone(),
 	})
 	if err != nil {
 		return nil, err
