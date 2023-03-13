@@ -10,10 +10,11 @@ import (
 	"github.com/forta-network/forta-core-go/clients/webhook/client/operations"
 	"github.com/forta-network/forta-node/config"
 	"github.com/goccy/go-json"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
-// Logger logs the test alerts to a log file.
+// Logger logs the alerts to a log file.
 type Logger struct {
 	file *os.File
 }
@@ -60,5 +61,25 @@ func (logger *Logger) SendAlerts(params *operations.SendAlertsParams, opts ...op
 	if err != nil {
 		return nil, fmt.Errorf("failed to write the webhook alert log: %v", err)
 	}
+	return &operations.SendAlertsOK{}, nil
+}
+
+// StdoutLogger logs the alerts to stdout.
+type StdoutLogger struct{}
+
+// NewStdoutLogger creates a new logger.
+func NewStdoutLogger() (*StdoutLogger, error) {
+	return &StdoutLogger{}, nil
+}
+
+// Close implemenets io.Closer.
+func (logger *StdoutLogger) Close() error {
+	return nil
+}
+
+// SendAlerts logs the webhook alert to a line-delimited file by marshalling to JSON.
+func (logger *StdoutLogger) SendAlerts(params *operations.SendAlertsParams, opts ...operations.ClientOption) (*operations.SendAlertsOK, error) {
+	b, _ := json.Marshal(params.Payload)
+	logrus.Info(string(b))
 	return &operations.SendAlertsOK{}, nil
 }

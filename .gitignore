@@ -32,3 +32,8 @@ coverage
 forta-test
 node_modules
 test-bot-*
+
+# ignore other files under the docker-compose directory
+docker-compose/*/**
+# but keep any docker compose files itself
+!docker-compose.yml

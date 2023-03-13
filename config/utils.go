@@ -32,7 +32,7 @@ func InitLogLevel(cfg Config) error {
 	return nil
 }
 
-func readFile(filename string, cfg *Config) error {
+func readYamlFile(filename string, v interface{}) error {
 	f, err := os.Open(filename)
 	if f != nil {
 		defer f.Close()
@@ -42,5 +42,5 @@ func readFile(filename string, cfg *Config) error {
 	}
 
 	decoder := yaml.NewDecoder(f)
-	return decoder.Decode(cfg)
+	return decoder.Decode(v)
 }

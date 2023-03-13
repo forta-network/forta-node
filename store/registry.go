@@ -388,6 +388,16 @@ func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]*config.Ag
 		}
 	}
 
+	// load the standalone bot configs that are already running
+	if rs.cfg.LocalModeConfig.IsStandalone() {
+		for _, runningBot := range rs.cfg.LocalModeConfig.Standalone.BotContainers {
+			agentConfigs = append(agentConfigs, &config.AgentConfig{
+				ID:           runningBot,
+				IsStandalone: true,
+			})
+		}
+	}
+
 	return agentConfigs, true, nil
 }
 

@@ -13,14 +13,15 @@ const (
 )
 
 type AgentConfig struct {
-	ID          string  `yaml:"id" json:"id"`
-	Image       string  `yaml:"image" json:"image"`
-	Manifest    string  `yaml:"manifest" json:"manifest"`
-	IsLocal     bool    `yaml:"isLocal" json:"isLocal"`
-	StartBlock  *uint64 `yaml:"startBlock" json:"startBlock,omitempty"`
-	StopBlock   *uint64 `yaml:"stopBlock" json:"stopBlock,omitempty"`
-	AlertConfig *protocol.AlertConfig
-	ShardConfig *ShardConfig
+	ID           string  `yaml:"id" json:"id"`
+	Image        string  `yaml:"image" json:"image"`
+	Manifest     string  `yaml:"manifest" json:"manifest"`
+	IsLocal      bool    `yaml:"isLocal" json:"isLocal"`
+	IsStandalone bool    `yaml:"isStandalone" json:"isStandalone"`
+	StartBlock   *uint64 `yaml:"startBlock" json:"startBlock,omitempty"`
+	StopBlock    *uint64 `yaml:"stopBlock" json:"stopBlock,omitempty"`
+	AlertConfig  *protocol.AlertConfig
+	ShardConfig  *ShardConfig
 }
 
 type ShardConfig struct {
@@ -28,6 +29,7 @@ type ShardConfig struct {
 	Shards  uint `yaml:"shards" json:"shards"`
 	Target  uint `yaml:"target" json:"target"`
 }
+
 // ToAgentInfo transforms the agent config to the agent info.
 func (ac AgentConfig) ToAgentInfo() *protocol.AgentInfo {
 	return &protocol.AgentInfo{
@@ -44,10 +46,14 @@ func (ac AgentConfig) ImageHash() string {
 }
 
 func (ac AgentConfig) ContainerName() string {
-	_, digest := utils.SplitImageRef(ac.Image)
+	if ac.IsStandalone {
+		// the container is already running - don't mess with the name
+		return ac.ID
+	}
 	if ac.IsLocal {
 		return fmt.Sprintf("%s-agent-%s", ContainerNamePrefix, utils.ShortenString(ac.ID, 8))
 	}
+	_, digest := utils.SplitImageRef(ac.Image)
 	return fmt.Sprintf(
 		"%s-agent-%s-%s", ContainerNamePrefix, utils.ShortenString(ac.ID, 8), utils.ShortenString(digest, 4),
 	)
