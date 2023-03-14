@@ -223,7 +223,7 @@ func (s *Suite) runLocalModeAlertHandler(webhookURL, logFileName string, readAle
 		ioutil.WriteFile(
 			configFilePath,
 			[]byte(fmt.Sprintf(
-				localModeAlertConfig, webhookURL, logFileName, 0, 0,
+				localModeAlertConfig, webhookURL, logFileName, 0, 1,
 			)),
 			0777,
 		),
