@@ -32,7 +32,7 @@ import (
 const (
 	DefaultBufferSize             = 2000
 	AgentTimeout                  = 30 * time.Second
-	MaxFindings                   = 10
+	MaxFindings                   = 50
 	DefaultAgentInitializeTimeout = 5 * time.Minute
 )
 
