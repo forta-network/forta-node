@@ -1,5 +1,8 @@
 #!/bin/bash
 
+set -ex
+set -o pipefail
+
 mkdir -p /home/forta/.forta/
 chown -R forta.forta /home/forta
 configPath=/home/forta/.forta/config.yml

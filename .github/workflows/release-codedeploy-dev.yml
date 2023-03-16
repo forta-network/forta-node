@@ -21,6 +21,8 @@ jobs:
       - name: Validate and test Go code
         id: go
         uses: ./.github/actions/go
+        with:
+          COVERAGE_THRESHOLD: ${{ vars.COVERAGE_THRESHOLD }}
 
   e2e:
     name: E2E Test
@@ -33,7 +35,7 @@ jobs:
         id: setup
         uses: ./.github/actions/setup
         with:
-          cache: 'false'
+          cache: "false"
       - name: E2E Test
         id: e2e
         uses: ./.github/actions/e2e
@@ -48,9 +50,7 @@ jobs:
       node-release-cid: ${{ steps.write-output.outputs.node-release-cid }}
     strategy:
       matrix:
-        image-name: [
-          "node"
-        ]
+        image-name: ["node"]
     steps:
       - name: Clear artifacts
         uses: kolpav/purge-artifacts-action@v1

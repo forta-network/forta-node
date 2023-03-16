@@ -12,16 +12,16 @@ import (
 	"google.golang.org/grpc"
 )
 
-const defaultAgentResponseMaxByteCount = 50000 // 50K
+const defaultAgentResponseMaxByteCount = 250000 // 250K
 
 // Method is gRPC method type.
 type Method string
 
 // Agent gRPC methods
 const (
-	MethodInitialize          Method = "/network.forta.Agent/Initialize"
-	MethodEvaluateTx          Method = "/network.forta.Agent/EvaluateTx"
-	MethodEvaluateBlock       Method = "/network.forta.Agent/EvaluateBlock"
+	MethodInitialize    Method = "/network.forta.Agent/Initialize"
+	MethodEvaluateTx    Method = "/network.forta.Agent/EvaluateTx"
+	MethodEvaluateBlock Method = "/network.forta.Agent/EvaluateBlock"
 	MethodEvaluateAlert Method = "/network.forta.Agent/EvaluateAlert"
 )
 

@@ -16,3 +16,5 @@ jobs:
       - name: Validate and test Go code
         id: go
         uses: ./.github/actions/go
+        with:
+          COVERAGE_THRESHOLD: ${{ vars.COVERAGE_THRESHOLD }}
