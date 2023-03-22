@@ -21,6 +21,7 @@ import (
 	"github.com/forta-network/forta-node/metrics"
 	jwt_provider "github.com/forta-network/forta-node/services/jwt-provider"
 	"github.com/rs/cors"
+	"github.com/sirupsen/logrus"
 )
 
 // PublicAPIProxy proxies requests from agents to json-rpc endpoint
@@ -48,6 +49,7 @@ func (p *PublicAPIProxy) Start() error {
 
 	d := rp.Director
 	rp.Director = func(r *http.Request) {
+		log := logrus.WithField("addr", r.RemoteAddr)
 		d(r)
 		r.Host = rpcUrl.Host
 		r.URL = rpcUrl
@@ -55,8 +57,9 @@ func (p *PublicAPIProxy) Start() error {
 			r.Header.Set(h, v)
 		}
 
-		bot, found := p.botAuthenticator.FindAgentFromRemoteAddr(r.Host)
-		if found {
+		bot, found := p.botAuthenticator.FindAgentFromRemoteAddr(r.RemoteAddr)
+		if !found {
+			log.Warn("can't find bot with address")
 			return
 		}
 
@@ -64,6 +67,7 @@ func (p *PublicAPIProxy) Start() error {
 
 		jwtToken, err := jwt_provider.CreateBotJWT(p.Key, bot.ID, claims)
 		if err != nil {
+			log.WithError(err).Warn("can't create bot jwt")
 			return
 		}
 
