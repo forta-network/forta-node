@@ -115,6 +115,7 @@ func (rs *RegistryService) publishLatestAgents() error {
 		if err != nil {
 			return fmt.Errorf("failed to get the scanner list agents version: %v", err)
 		}
+
 		if changed {
 			rs.lastChangeDetected.Set()
 			log.WithField("count", len(agts)).Infof("publishing list of agents")

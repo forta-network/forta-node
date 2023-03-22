@@ -20,6 +20,7 @@ type AgentConfig struct {
 	IsStandalone bool    `yaml:"isStandalone" json:"isStandalone"`
 	StartBlock   *uint64 `yaml:"startBlock" json:"startBlock,omitempty"`
 	StopBlock    *uint64 `yaml:"stopBlock" json:"stopBlock,omitempty"`
+	Owner        string `yaml:"owner "json:"owner"`
 	AlertConfig  *protocol.AlertConfig
 	ShardConfig  *ShardConfig
 }
