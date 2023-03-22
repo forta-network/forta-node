@@ -1,4 +1,4 @@
-package json_rpc_test
+package ratelimiter_test
 
 import (
 	"testing"
