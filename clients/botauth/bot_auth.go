@@ -30,10 +30,12 @@ func (p *BotAuthenticator) MsgClient() clients.MessageClient {
 
 
 func (p *BotAuthenticator) FindAgentFromRemoteAddr(hostPort string) (*config.AgentConfig, bool) {
-	containerName, err := p.dockerClient.FindContainerNameFromRemoteAddr(p.ctx, hostPort)
+	agentContainer, err := p.dockerClient.FindContainerNameFromRemoteAddr(p.ctx, hostPort)
 	if err != nil {
 		return nil, false
 	}
+
+	containerName := agentContainer.Names[0][1:]
 
 	p.agentConfigMu.RLock()
 	defer p.agentConfigMu.RUnlock()

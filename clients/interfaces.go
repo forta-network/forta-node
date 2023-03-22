@@ -40,7 +40,7 @@ type DockerClient interface {
 	HasLocalImage(ctx context.Context, ref string) bool
 	EnsureLocalImage(ctx context.Context, name, ref string) error
 	GetContainerLogs(ctx context.Context, containerID, tail string, truncate int) (string, error)
-	FindContainerNameFromRemoteAddr(ctx context.Context, hostPort string) (string, error)
+	FindContainerNameFromRemoteAddr(ctx context.Context, hostPort string) (*types.Container, error)
 }
 
 // MessageClient receives and publishes messages.

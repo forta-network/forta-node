@@ -100,6 +100,21 @@ func (mr *MockDockerClientMockRecorder) EnsureLocalImage(ctx, name, ref interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureLocalImage", reflect.TypeOf((*MockDockerClient)(nil).EnsureLocalImage), ctx, name, ref)
 }
 
+// FindContainerNameFromRemoteAddr mocks base method.
+func (m *MockDockerClient) FindContainerNameFromRemoteAddr(ctx context.Context, hostPort string) (*types.Container, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindContainerNameFromRemoteAddr", ctx, hostPort)
+	ret0, _ := ret[0].(*types.Container)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FindContainerNameFromRemoteAddr indicates an expected call of FindContainerNameFromRemoteAddr.
+func (mr *MockDockerClientMockRecorder) FindContainerNameFromRemoteAddr(ctx, hostPort interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindContainerNameFromRemoteAddr", reflect.TypeOf((*MockDockerClient)(nil).FindContainerNameFromRemoteAddr), ctx, hostPort)
+}
+
 // GetContainerByID mocks base method.
 func (m *MockDockerClient) GetContainerByID(ctx context.Context, id string) (*types.Container, error) {
 	m.ctrl.T.Helper()
