@@ -102,6 +102,7 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 			}
 
 			botCfg.ShardConfig = &config.ShardConfig{ShardID: shardID, Shards: shards, Target: target}
+			botCfg.Owner = bot.Owner
 			loadedBots = append(loadedBots, botCfg) // remember for next time
 			logger.Info("successfully loaded bot")
 
@@ -260,6 +261,7 @@ func loadBot(ctx context.Context, cfg config.Config, mc manifest.Client, agentID
 		if err == nil {
 			break
 		}
+
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to load the bot manifest: %v", err)
