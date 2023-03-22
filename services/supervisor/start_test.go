@@ -78,7 +78,6 @@ func (m configMatcher) Matches(x interface{}) bool {
 			return false
 		} else {
 			if v1 != v2 {
-				fmt.Printf("expected %s but got %s", v2, v1)
 				return false
 			}
 		}
