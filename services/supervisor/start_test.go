@@ -29,6 +29,7 @@ const (
 	testInspectorContainerID   = "test-inspector-container-id"
 	testScannerContainerID     = "test-scanner-container-id"
 	testProxyContainerID       = "test-proxy-container-id"
+	testPublicAPIContainerID       = "test-public-api-container-id"
 	testSupervisorContainerID  = "test-supervisor-container-id"
 	testAgentID                = "test-agent"
 	testAgentContainerName     = "forta-agent-test-age-cdd4" // This is a result
@@ -133,6 +134,13 @@ func (s *Suite) SetupTest() {
 			},
 		),
 	).Return(&clients.DockerContainer{ID: testProxyContainerID}, nil)
+	s.dockerClient.EXPECT().StartContainer(
+		service.ctx, (configMatcher)(
+			clients.DockerContainerConfig{
+				Name: config.DockerPublicAPIProxyContainerName,
+			},
+		),
+	).Return(&clients.DockerContainer{ID: testPublicAPIContainerID}, nil)
 	s.dockerClient.EXPECT().StartContainer(
 		service.ctx, (configMatcher)(
 			clients.DockerContainerConfig{
