@@ -2,12 +2,13 @@ package json_rpc
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"time"
 
-	"github.com/forta-network/forta-node/clients/botauth"
+	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/ratelimiter"
 	"github.com/rs/cors"
 
@@ -23,19 +24,18 @@ import (
 
 // JsonRpcProxy proxies requests from agents to json-rpc endpoint
 type JsonRpcProxy struct {
-	ctx    context.Context
-	cfg    config.JsonRpcConfig
-	server *http.Server
+	ctx       context.Context
+	cfg       config.JsonRpcConfig
+	server    *http.Server
+	msgClient clients.MessageClient
 
 	rateLimiter *ratelimiter.RateLimiter
 
 	lastErr          health.ErrorTracker
-	botAuthenticator *botauth.BotAuthenticator
+	botAuthenticator clients.BotAuthenticator
 }
 
 func (p *JsonRpcProxy) Start() error {
-	p.botAuthenticator.RegisterMessageHandlers()
-
 	rpcUrl, err := url.Parse(p.cfg.Url)
 	if err != nil {
 		return err
@@ -71,7 +71,7 @@ func (p *JsonRpcProxy) metricHandler(h http.Handler) http.Handler {
 		agentConfig, foundAgent := p.botAuthenticator.FindAgentFromRemoteAddr(req.RemoteAddr)
 		if foundAgent && p.rateLimiter.ExceedsLimit(agentConfig.ID) {
 			writeTooManyReqsErr(w, req)
-			p.botAuthenticator.MsgClient().PublishProto(
+			p.msgClient.PublishProto(
 				messaging.SubjectMetricAgent, &protocol.AgentMetricList{
 					Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, 0, 1, 0),
 				},
@@ -83,7 +83,7 @@ func (p *JsonRpcProxy) metricHandler(h http.Handler) http.Handler {
 
 		if foundAgent {
 			duration := time.Since(t)
-			p.botAuthenticator.MsgClient().PublishProto(
+			p.msgClient.PublishProto(
 				messaging.SubjectMetricAgent, &protocol.AgentMetricList{
 					Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, 1, 0, duration),
 				},
@@ -134,7 +134,9 @@ func NewJsonRpcProxy(ctx context.Context, cfg config.Config) (*JsonRpcProxy, err
 		rateLimiting = (*config.RateLimitConfig)(settings.GetChainSettings(cfg.ChainID).JsonRpcRateLimiting)
 	}
 
-	botAuthenticator, err := botauth.NewBotAuthenticator(ctx, cfg)
+	msgClient := messaging.NewClient("json-rpc", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
+
+	botAuthenticator, err := clients.NewBotAuthenticator(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -143,6 +145,7 @@ func NewJsonRpcProxy(ctx context.Context, cfg config.Config) (*JsonRpcProxy, err
 		ctx:              ctx,
 		cfg:              jCfg,
 		botAuthenticator: botAuthenticator,
+		msgClient:        msgClient,
 		rateLimiter: ratelimiter.NewRateLimiter(
 			rateLimiting.Rate,
 			rateLimiting.Burst,
