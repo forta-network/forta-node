@@ -69,6 +69,21 @@ func (m configMatcher) Matches(x interface{}) bool {
 	}
 	c2 := m
 
+	if c2.Env != nil && c1.Env == nil {
+		return false
+	}
+
+	for k2, v2 := range c2.Env {
+		if v1, ok := c1.Env[k2]; !ok {
+			return false
+		} else {
+			if v1 != v2 {
+				return false
+			}
+		}
+
+	}
+
 	return c1.Name == c2.Name
 }
 
@@ -97,6 +112,7 @@ func (s *Suite) SetupTest() {
 	}
 	service.config.Config.TelemetryConfig.Disable = true
 	service.config.Config.Log.Level = "debug"
+	service.config.Config.ChainID = 1
 	s.service = service
 
 	s.releaseClient.EXPECT().GetReleaseManifest(gomock.Any(), gomock.Any()).Return(&release.ReleaseManifest{}, nil).AnyTimes()
@@ -217,8 +233,9 @@ func (s *Suite) initialContainerCheck() {
 
 func testAgentData() (config.AgentConfig, messaging.AgentPayload) {
 	agentConfig := config.AgentConfig{
-		ID:    testAgentID,
-		Image: testImageRef,
+		ID:      testAgentID,
+		Image:   testImageRef,
+		ChainID: 1,
 	}
 	return agentConfig, messaging.AgentPayload{
 		agentConfig,
@@ -238,6 +255,9 @@ func (s *Suite) TestAgentRun() {
 		ctx, (configMatcher)(
 			clients.DockerContainerConfig{
 				Name: agentConfig.ContainerName(),
+				Env: map[string]string{
+					config.EnvFortaChainID: "1",
+				},
 			},
 		),
 	).Return(&clients.DockerContainer{Name: agentConfig.ContainerName(), ID: testAgentContainerID}, nil)
