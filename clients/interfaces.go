@@ -62,3 +62,7 @@ type AgentClient interface {
 type AlertAPIClient interface {
 	PostBatch(batch *domain.AlertBatchRequest, token string) (*domain.AlertBatchResponse, error)
 }
+
+type BotAuthenticator interface {
+	FindAgentFromRemoteAddr(hostPort string) (*config.AgentConfig, bool)
+}

@@ -634,3 +634,41 @@ func (mr *MockAlertAPIClientMockRecorder) PostBatch(batch, token interface{}) *g
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostBatch", reflect.TypeOf((*MockAlertAPIClient)(nil).PostBatch), batch, token)
 }
+
+// MockBotAuthenticator is a mock of BotAuthenticator interface.
+type MockBotAuthenticator struct {
+	ctrl     *gomock.Controller
+	recorder *MockBotAuthenticatorMockRecorder
+}
+
+// MockBotAuthenticatorMockRecorder is the mock recorder for MockBotAuthenticator.
+type MockBotAuthenticatorMockRecorder struct {
+	mock *MockBotAuthenticator
+}
+
+// NewMockBotAuthenticator creates a new mock instance.
+func NewMockBotAuthenticator(ctrl *gomock.Controller) *MockBotAuthenticator {
+	mock := &MockBotAuthenticator{ctrl: ctrl}
+	mock.recorder = &MockBotAuthenticatorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockBotAuthenticator) EXPECT() *MockBotAuthenticatorMockRecorder {
+	return m.recorder
+}
+
+// FindAgentFromRemoteAddr mocks base method.
+func (m *MockBotAuthenticator) FindAgentFromRemoteAddr(hostPort string) (*config.AgentConfig, bool) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindAgentFromRemoteAddr", hostPort)
+	ret0, _ := ret[0].(*config.AgentConfig)
+	ret1, _ := ret[1].(bool)
+	return ret0, ret1
+}
+
+// FindAgentFromRemoteAddr indicates an expected call of FindAgentFromRemoteAddr.
+func (mr *MockBotAuthenticatorMockRecorder) FindAgentFromRemoteAddr(hostPort interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindAgentFromRemoteAddr", reflect.TypeOf((*MockBotAuthenticator)(nil).FindAgentFromRemoteAddr), hostPort)
+}
