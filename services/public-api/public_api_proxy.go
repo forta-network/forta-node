@@ -14,7 +14,7 @@ import (
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-core-go/security"
 	"github.com/forta-network/forta-core-go/utils"
-	"github.com/forta-network/forta-node/clients/botauth"
+	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/clients/ratelimiter"
 	"github.com/forta-network/forta-node/config"
@@ -24,56 +24,40 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type contextKey int
+
+const authenticatedBotKey contextKey = 0
+
 // PublicAPIProxy proxies requests from agents to json-rpc endpoint
 type PublicAPIProxy struct {
-	ctx context.Context
-	cfg config.JsonRpcConfig
-	Key *keystore.Key
+	ctx       context.Context
+	cfg       config.PublicAPIProxyConfig
+	Key       *keystore.Key
+	msgClient clients.MessageClient
 
 	server *http.Server
 
 	rateLimiter *ratelimiter.RateLimiter
 
 	lastErr          health.ErrorTracker
-	botAuthenticator *botauth.BotAuthenticator
+	botAuthenticator clients.BotAuthenticator
 }
 
 func (p *PublicAPIProxy) Start() error {
-	p.botAuthenticator.RegisterMessageHandlers()
-
-	rpcUrl, err := url.Parse(p.cfg.Url)
+	apiURL, err := url.Parse(p.cfg.Url)
 	if err != nil {
 		return err
 	}
-	rp := httputil.NewSingleHostReverseProxy(rpcUrl)
+	rp := httputil.NewSingleHostReverseProxy(apiURL)
 
 	d := rp.Director
 	rp.Director = func(r *http.Request) {
-		log := logrus.WithField("addr", r.RemoteAddr)
 		d(r)
-		r.Host = rpcUrl.Host
-		r.URL = rpcUrl
+		r.Host = apiURL.Host
+		r.URL = apiURL
 		for h, v := range p.cfg.Headers {
 			r.Header.Set(h, v)
 		}
-
-		bot, found := p.botAuthenticator.FindAgentFromRemoteAddr(r.RemoteAddr)
-		if !found {
-			log.Warn("can't find bot with address")
-			return
-		}
-
-		claims := map[string]interface{}{"owner": bot.Owner}
-
-		jwtToken, err := jwt_provider.CreateBotJWT(p.Key, bot.ID, claims)
-		if err != nil {
-			log.WithError(err).Warn("can't create bot jwt")
-			return
-		}
-
-		bearerToken := fmt.Sprintf("Bearer %s", jwtToken)
-
-		r.Header.Set("Authorization", bearerToken)
 	}
 
 	c := cors.New(
@@ -85,20 +69,22 @@ func (p *PublicAPIProxy) Start() error {
 
 	p.server = &http.Server{
 		Addr:    ":8545",
-		Handler: p.metricHandler(c.Handler(rp)),
+		Handler: p.authMiddleware(p.metricMiddleware(c.Handler(rp))),
 	}
+
 	utils.GoListenAndServe(p.server)
+
 	return nil
 }
 
-func (p *PublicAPIProxy) metricHandler(h http.Handler) http.Handler {
+func (p *PublicAPIProxy) metricMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, req *http.Request) {
 			t := time.Now()
-			agentConfig, foundAgent := p.botAuthenticator.FindAgentFromRemoteAddr(req.RemoteAddr)
+			agentConfig, foundAgent := getBotFromContext(req.Context())
 			if foundAgent && p.rateLimiter.ExceedsLimit(agentConfig.ID) {
 				writeTooManyReqsErr(w, req)
-				p.botAuthenticator.MsgClient().PublishProto(
+				p.msgClient.PublishProto(
 					messaging.SubjectMetricAgent, &protocol.AgentMetricList{
 						Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, 0, 1, 0),
 					},
@@ -110,7 +96,7 @@ func (p *PublicAPIProxy) metricHandler(h http.Handler) http.Handler {
 
 			if foundAgent {
 				duration := time.Since(t)
-				p.botAuthenticator.MsgClient().PublishProto(
+				p.msgClient.PublishProto(
 					messaging.SubjectMetricAgent, &protocol.AgentMetricList{
 						Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, 1, 0, duration),
 					},
@@ -118,6 +104,54 @@ func (p *PublicAPIProxy) metricHandler(h http.Handler) http.Handler {
 			}
 		},
 	)
+}
+
+func (p *PublicAPIProxy) authMiddleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(
+		func(w http.ResponseWriter, req *http.Request) {
+			botReq, ok := p.authenticateBotRequest(req)
+			if !ok {
+				writeAuthError(w, req)
+				return
+			}
+
+			p.setAuthBearer(botReq)
+
+			h.ServeHTTP(w, botReq)
+		},
+	)
+}
+
+func (p *PublicAPIProxy) authenticateBotRequest(req *http.Request) (*http.Request, bool) {
+	agentConfig, foundAgent := p.botAuthenticator.FindAgentFromRemoteAddr(req.RemoteAddr)
+	// request source is not a bot
+	if !foundAgent {
+		return req, false
+	}
+
+	ctxWithBoth := context.WithValue(req.Context(), authenticatedBotKey, agentConfig)
+	botReq := req.WithContext(ctxWithBoth)
+	return botReq, true
+}
+
+func (p *PublicAPIProxy) setAuthBearer(r *http.Request) {
+	log := logrus.WithField("addr", r.RemoteAddr)
+	bot, ok := getBotFromContext(r.Context())
+	if !ok {
+		return
+	}
+
+	claims := map[string]interface{}{"owner": bot.Owner}
+
+	jwtToken, err := jwt_provider.CreateBotJWT(p.Key, bot.ID, claims)
+	if err != nil {
+		log.WithError(err).Warn("can't create bot jwt")
+		return
+	}
+
+	bearerToken := fmt.Sprintf("Bearer %s", jwtToken)
+
+	r.Header.Set("Authorization", bearerToken)
 }
 
 func (p *PublicAPIProxy) Stop() error {
@@ -129,6 +163,17 @@ func (p *PublicAPIProxy) Stop() error {
 
 func (p *PublicAPIProxy) Name() string {
 	return "json-rpc-proxy"
+}
+
+func getBotFromContext(ctx context.Context) (*config.AgentConfig, bool) {
+	botCtxVal := ctx.Value(authenticatedBotKey)
+	if botCtxVal == nil {
+		return nil, false
+	}
+
+	bot, ok := botCtxVal.(*config.AgentConfig)
+
+	return bot, ok
 }
 
 // Health implements health.Reporter interface.
@@ -157,15 +202,20 @@ func NewPublicAPIProxy(ctx context.Context, cfg config.Config) (*PublicAPIProxy,
 		return nil, err
 	}
 
-	botAuthenticator, err := botauth.NewBotAuthenticator(ctx, cfg)
+	botAuthenticator, err := clients.NewBotAuthenticator(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
 
+	msgClient := messaging.NewClient("public-api", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
+
 	return &PublicAPIProxy{
 		ctx:              ctx,
+		cfg:              cfg.PublicAPIProxy,
 		botAuthenticator: botAuthenticator,
+		msgClient:        msgClient,
 		Key:              key,
+		// TODO: adjust rate limiting
 		rateLimiter: ratelimiter.NewRateLimiter(
 			1000,
 			1,
