@@ -24,7 +24,7 @@ type botAuthenticator struct {
 }
 
 func (p *botAuthenticator) FindAgentFromRemoteAddr(hostPort string) (*config.AgentConfig, bool) {
-	agentContainer, err := p.dockerClient.FindContainerNameFromRemoteAddr(p.ctx, hostPort)
+	agentContainer, err := p.dockerClient.GetContainerFromRemoteAddr(p.ctx, hostPort)
 	if err != nil {
 		return nil, false
 	}

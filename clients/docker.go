@@ -742,7 +742,7 @@ func (d *dockerClient) labelFilter() filters.Args {
 	return filter
 }
 
-func (d *dockerClient) FindContainerNameFromRemoteAddr(ctx context.Context, hostPort string) (*types.Container, error) {
+func (d *dockerClient) GetContainerFromRemoteAddr(ctx context.Context, hostPort string) (*types.Container, error) {
 	containers, err := d.GetContainers(ctx)
 	if err != nil {
 		return nil, err

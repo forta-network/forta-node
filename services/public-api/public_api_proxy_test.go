@@ -45,7 +45,7 @@ func TestPublicAPIProxy_setAuthBearer(t *testing.T) {
 
 	jwtToken, err := security.VerifyScannerJWT(token)
 	assert.NoError(t, err)
-	assert.Equal(t, jwtToken.Token.Claims.(jwt.MapClaims)["owner"], "test-owner")
+	assert.Equal(t, jwtToken.Token.Claims.(jwt.MapClaims)["bot-owner"], "test-owner")
 	assert.Equal(t, jwtToken.Token.Claims.(jwt.MapClaims)["bot-id"], "test-id")
 }
 

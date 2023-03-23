@@ -27,7 +27,7 @@ import (
 type contextKey int
 
 const authenticatedBotKey contextKey = 0
-
+const claimKeyBotOwner = "bot-owner"
 // PublicAPIProxy proxies requests from agents to json-rpc endpoint
 type PublicAPIProxy struct {
 	ctx       context.Context
@@ -141,7 +141,7 @@ func (p *PublicAPIProxy) setAuthBearer(r *http.Request) {
 		return
 	}
 
-	claims := map[string]interface{}{"owner": bot.Owner}
+	claims := map[string]interface{}{claimKeyBotOwner: bot.Owner}
 
 	jwtToken, err := jwt_provider.CreateBotJWT(p.Key, bot.ID, claims)
 	if err != nil {
