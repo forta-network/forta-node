@@ -12,16 +12,34 @@ type requestPayload struct {
 }
 
 type errorResponse struct {
-	JSONRPC string       `json:"jsonrpc"`
-	ID      int          `json:"id"`
-	Error   jsonRpcError `json:"error"`
+	ID    int                 `json:"id"`
+	Error publicAPIProxyError `json:"error"`
 }
 
-type jsonRpcError struct {
+type publicAPIProxyError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
 
+func writeAuthError(w http.ResponseWriter, req *http.Request) {
+	w.WriteHeader(http.StatusUnauthorized)
+
+	var reqPayload requestPayload
+	if err := json.NewDecoder(req.Body).Decode(&reqPayload); err != nil {
+		log.WithError(err).Error("failed to decode jsonrpc request body")
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(&errorResponse{
+		ID:      reqPayload.ID,
+		Error: publicAPIProxyError{
+			Code:    -33000,
+			Message: "request source is not a deployed agent",
+		},
+	}); err != nil {
+		log.WithError(err).Error("failed to write jsonrpc error response body")
+	}
+}
 func writeTooManyReqsErr(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusTooManyRequests)
 
@@ -32,11 +50,10 @@ func writeTooManyReqsErr(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if err := json.NewEncoder(w).Encode(&errorResponse{
-		JSONRPC: "2.0",
 		ID:      reqPayload.ID,
-		Error: jsonRpcError{
+		Error: publicAPIProxyError{
 			Code:    -32000,
-			Message: "agent exceeds scan node request limit",
+			Message: "bot exceeds request rate limit",
 		},
 	}); err != nil {
 		log.WithError(err).Error("failed to write jsonrpc error response body")
