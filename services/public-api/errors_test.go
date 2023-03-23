@@ -28,6 +28,6 @@ func TestTooManyReqsError(t *testing.T) {
 	var errResp errorResponse
 	r.NoError(json.NewDecoder(resp.Body).Decode(&errResp))
 	r.Equal(testRequestID, errResp.ID)
-	r.Equal(-33000, errResp.Error.Code)
+	r.Equal(-32000, errResp.Error.Code)
 	r.Contains(errResp.Error.Message, "exceeds")
 }
