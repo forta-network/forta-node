@@ -55,6 +55,7 @@ func (p *PublicAPIProxy) Start() error {
 		d(r)
 		r.Host = apiURL.Host
 		r.URL = apiURL
+		r.Header.Set("User-Agent","forta-scan-node")
 		for h, v := range p.cfg.Headers {
 			r.Header.Set(h, v)
 		}
