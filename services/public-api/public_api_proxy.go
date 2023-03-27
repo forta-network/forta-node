@@ -99,7 +99,7 @@ func (p *PublicAPIProxy) metricMiddleware(h http.Handler) http.Handler {
 				duration := time.Since(t)
 				p.msgClient.PublishProto(
 					messaging.SubjectMetricAgent, &protocol.AgentMetricList{
-						Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, 1, 0, duration),
+						Metrics: metrics.GetPublicAPIMetrics(*agentConfig, t, 1, 0, duration),
 					},
 				)
 			}

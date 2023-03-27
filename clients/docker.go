@@ -761,8 +761,9 @@ func (d *dockerClient) GetContainerFromRemoteAddr(ctx context.Context, hostPort 
 			break
 		}
 	}
+
 	if agentContainer == nil {
-		log.WithField("agentIpAddr", ipAddr).Warn()
+		log.WithField("sourceIp", ipAddr).Warn("not a known bot")
 		return nil, fmt.Errorf("could not found agent container from ip address: %s", hostPort)
 	}
 
