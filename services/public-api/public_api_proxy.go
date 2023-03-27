@@ -48,6 +48,7 @@ func (p *PublicAPIProxy) Start() error {
 	if err != nil {
 		return err
 	}
+
 	rp := httputil.NewSingleHostReverseProxy(apiURL)
 
 	d := rp.Director
@@ -69,7 +70,7 @@ func (p *PublicAPIProxy) Start() error {
 	)
 
 	p.server = &http.Server{
-		Addr:    ":8545",
+		Addr:    fmt.Sprintf(":%s", config.DefaultPublicAPIProxyPort),
 		Handler: p.authMiddleware(p.metricMiddleware(c.Handler(rp))),
 	}
 

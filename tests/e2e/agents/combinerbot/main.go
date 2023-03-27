@@ -69,10 +69,12 @@ func (as *agentServer) EvaluateBlock(ctx context.Context, txRequest *protocol.Ev
 	return response, nil
 }
 func (as *agentServer) EvaluateAlert(ctx context.Context, request *protocol.EvaluateAlertRequest) (*protocol.EvaluateAlertResponse, error) {
+	logrus.Infof("evaluating alert %s", request.Event.Alert.Hash)
 	response := &protocol.EvaluateAlertResponse{Status: protocol.ResponseStatus_SUCCESS}
 
 	err := queryPublicAPI(ctx)
 	if err != nil {
+		logrus.WithError(err).Warn("failed to fetch latest alerts")
 		return &protocol.EvaluateAlertResponse{Status: protocol.ResponseStatus_ERROR}, err
 	}
 
@@ -100,7 +102,7 @@ func (as *agentServer) EvaluateAlert(ctx context.Context, request *protocol.Eval
 
 func queryPublicAPI(ctx context.Context) error {
 	jwtProviderAddr := fmt.Sprintf(
-		"%s:%s", os.Getenv(config.EnvPublicAPIProxyHost), os.Getenv(config.EnvPublicAPIProxyPort),
+		"http://%s:%s", os.Getenv(config.EnvPublicAPIProxyHost), os.Getenv(config.EnvPublicAPIProxyPort),
 	)
 	graphqlClient := graphql.NewClient(jwtProviderAddr)
 

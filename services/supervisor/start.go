@@ -303,6 +303,9 @@ ipfs config Datastore.StorageMax '1GB'
 			Ports: map[string]string{
 				"": config.DefaultHealthPort, // random host port
 			},
+			Files: map[string][]byte{
+				"passphrase": []byte(sup.config.Passphrase),
+			},
 			DialHost:       true,
 			NetworkID:      nodeNetworkID,
 			LinkNetworkIDs: []string{natsNetworkID},

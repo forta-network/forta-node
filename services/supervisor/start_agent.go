@@ -72,10 +72,10 @@ func (sup *SupervisorService) startAgent(ctx context.Context, agent config.Agent
 		return err
 	}
 
-	// Attach the scanner, JWT Provider and the JSON-RPC proxy to the agent's network.
+	// Attach the scanner, JWT Provider, Public API Proxy and the JSON-RPC proxy to the agent's network.
 	for _, containerID := range []string{
 		sup.scannerContainer.ID, sup.jsonRpcContainer.ID,
-		sup.jwtProviderContainer.ID,
+		sup.jwtProviderContainer.ID, sup.publicAPIContainer.ID,
 	} {
 		err := sup.client.AttachNetwork(ctx, containerID, nwID)
 		if err != nil {
