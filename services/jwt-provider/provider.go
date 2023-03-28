@@ -21,7 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// JWTProvider provides jwt tokens to bots, signed with node's private key..
+// JWTProvider provides jwt tokens to bots, signed with node's private key.
 type JWTProvider struct {
 	botConfigs      []config.AgentConfig
 	botConfigsMutex sync.RWMutex

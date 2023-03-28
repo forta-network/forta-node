@@ -6,7 +6,7 @@ import (
 )
 
 // CheckProxyAgainstScan checks given proxy URL against the scan API.
-// The proxy API must specified as HTTP(s) when the scan API is WebSocket.
+// The proxy API must specify as HTTP(s) when the scan API is WebSocket.
 func CheckProxyAgainstScan(scan, proxy string) error {
 	scanUrl, err := url.Parse(scan)
 	if err != nil {
