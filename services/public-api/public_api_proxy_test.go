@@ -2,6 +2,7 @@ package public_api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -60,10 +61,10 @@ func TestPublicAPIProxy_authenticateBotRequest(t *testing.T) {
 	req.RemoteAddr = botRemoteAddr
 
 	proxy := PublicAPIProxy{botAuthenticator: authenticator}
-	authenticator.EXPECT().FindAgentFromRemoteAddr(botRemoteAddr).Return(botCfg, true)
-	req, ok := proxy.authenticateBotRequest(req)
+	authenticator.EXPECT().FindAgentFromRemoteAddr(botRemoteAddr).Return(botCfg, nil)
+	req, err := proxy.authenticateBotRequest(req)
 	assert.NotNil(t, req)
-	assert.True(t, ok)
+	assert.NoError(t, err)
 
 	bot, ok := getBotFromContext(req.Context())
 	assert.True(t, ok)
@@ -75,10 +76,10 @@ func TestPublicAPIProxy_authenticateBotRequest(t *testing.T) {
 	req.RemoteAddr = botRemoteAddr
 
 	proxy = PublicAPIProxy{botAuthenticator: authenticator}
-	authenticator.EXPECT().FindAgentFromRemoteAddr(botRemoteAddr).Return(nil, false)
-	req, ok = proxy.authenticateBotRequest(req)
+	authenticator.EXPECT().FindAgentFromRemoteAddr(botRemoteAddr).Return(nil, fmt.Errorf("can't find"))
+	req, err = proxy.authenticateBotRequest(req)
 	assert.NotNil(t, req)
-	assert.False(t, ok)
+	assert.Error(t, err)
 
 	bot, ok = getBotFromContext(req.Context())
 	assert.False(t, ok)

@@ -9,7 +9,6 @@ import (
 	"github.com/forta-network/forta-core-go/protocol/settings"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/config"
-	log "github.com/sirupsen/logrus"
 )
 
 // BotAuthenticator makes sure ip is an assigned bot
@@ -23,10 +22,10 @@ type botAuthenticator struct {
 	agentConfigMu sync.RWMutex
 }
 
-func (p *botAuthenticator) FindAgentFromRemoteAddr(hostPort string) (*config.AgentConfig, bool) {
+func (p *botAuthenticator) FindAgentFromRemoteAddr(hostPort string) (*config.AgentConfig, error) {
 	agentContainer, err := p.dockerClient.GetContainerFromRemoteAddr(p.ctx, hostPort)
 	if err != nil {
-		return nil, false
+		return nil, err
 	}
 
 	containerName := agentContainer.Names[0][1:]
@@ -36,18 +35,11 @@ func (p *botAuthenticator) FindAgentFromRemoteAddr(hostPort string) (*config.Age
 
 	for _, agentConfig := range p.agentConfigs {
 		if agentConfig.ContainerName() == containerName {
-			return &agentConfig, true
+			return &agentConfig, nil
 		}
 	}
 
-	log.WithFields(
-		log.Fields{
-			"sourceAddr":    hostPort,
-			"containerName": containerName,
-		},
-	).Warn("could not find agent config for container")
-
-	return nil, false
+	return nil, err
 }
 
 func (p *botAuthenticator) handleAgentVersionsUpdate(payload messaging.AgentPayload) error {

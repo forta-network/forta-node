@@ -659,11 +659,11 @@ func (m *MockBotAuthenticator) EXPECT() *MockBotAuthenticatorMockRecorder {
 }
 
 // FindAgentFromRemoteAddr mocks base method.
-func (m *MockBotAuthenticator) FindAgentFromRemoteAddr(hostPort string) (*config.AgentConfig, bool) {
+func (m *MockBotAuthenticator) FindAgentFromRemoteAddr(hostPort string) (*config.AgentConfig, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FindAgentFromRemoteAddr", hostPort)
 	ret0, _ := ret[0].(*config.AgentConfig)
-	ret1, _ := ret[1].(bool)
+	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 

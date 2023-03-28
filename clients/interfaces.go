@@ -64,5 +64,5 @@ type AlertAPIClient interface {
 }
 
 type BotAuthenticator interface {
-	FindAgentFromRemoteAddr(hostPort string) (*config.AgentConfig, bool)
+	FindAgentFromRemoteAddr(hostPort string) (*config.AgentConfig, error)
 }

@@ -68,8 +68,8 @@ func (p *JsonRpcProxy) Start() error {
 func (p *JsonRpcProxy) metricHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		t := time.Now()
-		agentConfig, foundAgent := p.botAuthenticator.FindAgentFromRemoteAddr(req.RemoteAddr)
-		if foundAgent && p.rateLimiter.ExceedsLimit(agentConfig.ID) {
+		agentConfig, err := p.botAuthenticator.FindAgentFromRemoteAddr(req.RemoteAddr)
+		if err == nil && p.rateLimiter.ExceedsLimit(agentConfig.ID) {
 			writeTooManyReqsErr(w, req)
 			p.msgClient.PublishProto(
 				messaging.SubjectMetricAgent, &protocol.AgentMetricList{
@@ -81,7 +81,7 @@ func (p *JsonRpcProxy) metricHandler(h http.Handler) http.Handler {
 
 		h.ServeHTTP(w, req)
 
-		if foundAgent {
+		if err == nil {
 			duration := time.Since(t)
 			p.msgClient.PublishProto(
 				messaging.SubjectMetricAgent, &protocol.AgentMetricList{

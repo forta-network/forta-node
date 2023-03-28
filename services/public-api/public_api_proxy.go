@@ -111,8 +111,9 @@ func (p *PublicAPIProxy) metricMiddleware(h http.Handler) http.Handler {
 func (p *PublicAPIProxy) authMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, req *http.Request) {
-			botReq, ok := p.authenticateBotRequest(req)
-			if !ok {
+			botReq, err := p.authenticateBotRequest(req)
+			if err != nil {
+				logrus.WithError(err).Warn("failed to authenticate bot request")
 				writeAuthError(w, req)
 				return
 			}
@@ -124,16 +125,16 @@ func (p *PublicAPIProxy) authMiddleware(h http.Handler) http.Handler {
 	)
 }
 
-func (p *PublicAPIProxy) authenticateBotRequest(req *http.Request) (*http.Request, bool) {
-	agentConfig, foundAgent := p.botAuthenticator.FindAgentFromRemoteAddr(req.RemoteAddr)
+func (p *PublicAPIProxy) authenticateBotRequest(req *http.Request) (*http.Request, error) {
+	agentConfig, err := p.botAuthenticator.FindAgentFromRemoteAddr(req.RemoteAddr)
 	// request source is not a bot
-	if !foundAgent {
-		return req, false
+	if err != nil {
+		return req, err
 	}
 
 	ctxWithBoth := context.WithValue(req.Context(), authenticatedBotKey, agentConfig)
 	botReq := req.WithContext(ctxWithBoth)
-	return botReq, true
+	return botReq, nil
 }
 
 func (p *PublicAPIProxy) setAuthBearer(r *http.Request) {

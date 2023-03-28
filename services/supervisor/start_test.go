@@ -25,11 +25,12 @@ const (
 	testImageRef               = "some.docker.registry.io/foobar@sha256:cdd4ddccf5e9c740eb4144bcc68e3ea3a056789ec7453e94a6416dcfc80937a4"
 	testNodeNetworkID          = "node-network-id"
 	testNatsNetworkID          = "nats-network-id"
+	testPublicAPINetworkID     = "public-api-network-id"
 	testGenericContainerID     = "test-generic-container-id"
 	testInspectorContainerID   = "test-inspector-container-id"
 	testScannerContainerID     = "test-scanner-container-id"
 	testProxyContainerID       = "test-proxy-container-id"
-	testPublicAPIContainerID       = "test-public-api-container-id"
+	testPublicAPIContainerID   = "test-public-api-container-id"
 	testSupervisorContainerID  = "test-supervisor-container-id"
 	testAgentID                = "test-agent"
 	testAgentContainerName     = "forta-agent-test-age-cdd4" // This is a result
@@ -252,8 +253,8 @@ func (s *Suite) TestAgentRun() {
 
 	s.dockerClient.EXPECT().AttachNetwork(ctx, testScannerContainerID, testAgentNetworkID)
 	s.dockerClient.EXPECT().AttachNetwork(ctx, testProxyContainerID, testAgentNetworkID)
-
 	s.dockerClient.EXPECT().AttachNetwork(ctx, testJWTProviderContainerID, testAgentNetworkID)
+	s.dockerClient.EXPECT().AttachNetwork(ctx, testPublicAPIContainerID, testAgentNetworkID)
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusRunning, agentPayload)
 
 	s.r.NoError(s.service.handleAgentRunWithContext(ctx, agentPayload))
