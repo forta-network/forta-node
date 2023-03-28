@@ -280,6 +280,7 @@ func loadBot(ctx context.Context, cfg config.Config, mc manifest.Client, agentID
 		ID:       agentID,
 		Image:    image,
 		Manifest: ref,
+		ChainID:  cfg.ChainID,
 	}, nil
 }
 
@@ -396,6 +397,7 @@ func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]*config.Ag
 			agentConfigs = append(agentConfigs, &config.AgentConfig{
 				ID:           runningBot,
 				IsStandalone: true,
+				ChainID:      rs.cfg.ChainID,
 			})
 		}
 	}
@@ -416,6 +418,7 @@ func (rs *privateRegistryStore) makePrivateModeAgentConfig(
 		Image:       image,
 		IsLocal:     true,
 		ShardConfig: shardConfig,
+		ChainID:     rs.cfg.ChainID,
 	}
 }
 

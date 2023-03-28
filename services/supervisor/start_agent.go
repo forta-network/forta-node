@@ -58,6 +58,7 @@ func (sup *SupervisorService) startAgent(ctx context.Context, agent config.Agent
 				config.EnvAgentGrpcPort:      agent.GrpcPort(),
 				config.EnvFortaBotID:         agent.ID,
 				config.EnvFortaBotOwner:      agent.Owner,
+				config.EnvFortaChainID:    fmt.Sprintf("%d", agent.ChainID),
 			},
 			MaxLogFiles: sup.maxLogFiles,
 			MaxLogSize:  sup.maxLogSize,
