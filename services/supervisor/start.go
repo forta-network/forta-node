@@ -481,6 +481,7 @@ func (sup *SupervisorService) removeOldContainers() error {
 		config.DockerInspectorContainerName,
 		config.DockerJSONRPCProxyContainerName,
 		config.DockerJWTProviderContainerName,
+		config.DockerPublicAPIProxyContainerName,
 		config.DockerNatsContainerName,
 		config.DockerIpfsContainerName,
 		config.DockerStorageContainerName,

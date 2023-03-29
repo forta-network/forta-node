@@ -635,31 +635,60 @@ func (mr *MockAlertAPIClientMockRecorder) PostBatch(batch, token interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostBatch", reflect.TypeOf((*MockAlertAPIClient)(nil).PostBatch), batch, token)
 }
 
-// MockBotAuthenticator is a mock of BotAuthenticator interface.
-type MockBotAuthenticator struct {
+// MockIPAuthenticator is a mock of IPAuthenticator interface.
+type MockIPAuthenticator struct {
 	ctrl     *gomock.Controller
-	recorder *MockBotAuthenticatorMockRecorder
+	recorder *MockIPAuthenticatorMockRecorder
 }
 
-// MockBotAuthenticatorMockRecorder is the mock recorder for MockBotAuthenticator.
-type MockBotAuthenticatorMockRecorder struct {
-	mock *MockBotAuthenticator
+// MockIPAuthenticatorMockRecorder is the mock recorder for MockIPAuthenticator.
+type MockIPAuthenticatorMockRecorder struct {
+	mock *MockIPAuthenticator
 }
 
-// NewMockBotAuthenticator creates a new mock instance.
-func NewMockBotAuthenticator(ctrl *gomock.Controller) *MockBotAuthenticator {
-	mock := &MockBotAuthenticator{ctrl: ctrl}
-	mock.recorder = &MockBotAuthenticatorMockRecorder{mock}
+// NewMockIPAuthenticator creates a new mock instance.
+func NewMockIPAuthenticator(ctrl *gomock.Controller) *MockIPAuthenticator {
+	mock := &MockIPAuthenticator{ctrl: ctrl}
+	mock.recorder = &MockIPAuthenticatorMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockBotAuthenticator) EXPECT() *MockBotAuthenticatorMockRecorder {
+func (m *MockIPAuthenticator) EXPECT() *MockIPAuthenticatorMockRecorder {
 	return m.recorder
 }
 
+// Authenticate mocks base method.
+func (m *MockIPAuthenticator) Authenticate(ctx context.Context, hostPort string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Authenticate", ctx, hostPort)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Authenticate indicates an expected call of Authenticate.
+func (mr *MockIPAuthenticatorMockRecorder) Authenticate(ctx, hostPort interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Authenticate", reflect.TypeOf((*MockIPAuthenticator)(nil).Authenticate), ctx, hostPort)
+}
+
+// FindAgentByContainerName mocks base method.
+func (m *MockIPAuthenticator) FindAgentByContainerName(containerName string) (*config.AgentConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindAgentByContainerName", containerName)
+	ret0, _ := ret[0].(*config.AgentConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FindAgentByContainerName indicates an expected call of FindAgentByContainerName.
+func (mr *MockIPAuthenticatorMockRecorder) FindAgentByContainerName(containerName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindAgentByContainerName", reflect.TypeOf((*MockIPAuthenticator)(nil).FindAgentByContainerName), containerName)
+}
+
 // FindAgentFromRemoteAddr mocks base method.
-func (m *MockBotAuthenticator) FindAgentFromRemoteAddr(hostPort string) (*config.AgentConfig, error) {
+func (m *MockIPAuthenticator) FindAgentFromRemoteAddr(hostPort string) (*config.AgentConfig, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FindAgentFromRemoteAddr", hostPort)
 	ret0, _ := ret[0].(*config.AgentConfig)
@@ -668,7 +697,22 @@ func (m *MockBotAuthenticator) FindAgentFromRemoteAddr(hostPort string) (*config
 }
 
 // FindAgentFromRemoteAddr indicates an expected call of FindAgentFromRemoteAddr.
-func (mr *MockBotAuthenticatorMockRecorder) FindAgentFromRemoteAddr(hostPort interface{}) *gomock.Call {
+func (mr *MockIPAuthenticatorMockRecorder) FindAgentFromRemoteAddr(hostPort interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindAgentFromRemoteAddr", reflect.TypeOf((*MockBotAuthenticator)(nil).FindAgentFromRemoteAddr), hostPort)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindAgentFromRemoteAddr", reflect.TypeOf((*MockIPAuthenticator)(nil).FindAgentFromRemoteAddr), hostPort)
+}
+
+// FindContainerNameFromRemoteAddr mocks base method.
+func (m *MockIPAuthenticator) FindContainerNameFromRemoteAddr(ctx context.Context, hostPort string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindContainerNameFromRemoteAddr", ctx, hostPort)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FindContainerNameFromRemoteAddr indicates an expected call of FindContainerNameFromRemoteAddr.
+func (mr *MockIPAuthenticatorMockRecorder) FindContainerNameFromRemoteAddr(ctx, hostPort interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindContainerNameFromRemoteAddr", reflect.TypeOf((*MockIPAuthenticator)(nil).FindContainerNameFromRemoteAddr), ctx, hostPort)
 }

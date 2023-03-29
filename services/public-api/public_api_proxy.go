@@ -26,8 +26,13 @@ import (
 
 type contextKey int
 
-const authenticatedBotKey contextKey = 0
+const (
+	botIDKey    contextKey = 0
+	botOwnerKey contextKey = 1
+)
+
 const claimKeyBotOwner = "bot-owner"
+
 // PublicAPIProxy proxies requests from agents to json-rpc endpoint
 type PublicAPIProxy struct {
 	ctx       context.Context
@@ -39,8 +44,8 @@ type PublicAPIProxy struct {
 
 	rateLimiter *ratelimiter.RateLimiter
 
-	lastErr          health.ErrorTracker
-	botAuthenticator clients.BotAuthenticator
+	lastErr       health.ErrorTracker
+	authenticator clients.IPAuthenticator
 }
 
 func (p *PublicAPIProxy) Start() error {
@@ -83,12 +88,12 @@ func (p *PublicAPIProxy) metricMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, req *http.Request) {
 			t := time.Now()
-			agentConfig, foundAgent := getBotFromContext(req.Context())
-			if foundAgent && p.rateLimiter.ExceedsLimit(agentConfig.ID) {
+			botID, _, foundAgent := getBotFromContext(req.Context())
+			if foundAgent && p.rateLimiter.ExceedsLimit(botID) {
 				writeTooManyReqsErr(w, req)
 				p.msgClient.PublishProto(
 					messaging.SubjectMetricAgent, &protocol.AgentMetricList{
-						Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, 0, 1, 0),
+						Metrics: metrics.GetPublicAPIMetrics(botID, t, 0, 1, 0),
 					},
 				)
 				return
@@ -100,7 +105,7 @@ func (p *PublicAPIProxy) metricMiddleware(h http.Handler) http.Handler {
 				duration := time.Since(t)
 				p.msgClient.PublishProto(
 					messaging.SubjectMetricAgent, &protocol.AgentMetricList{
-						Metrics: metrics.GetPublicAPIMetrics(*agentConfig, t, 1, 0, duration),
+						Metrics: metrics.GetPublicAPIMetrics(botID, t, 1, 0, duration),
 					},
 				)
 			}
@@ -111,7 +116,7 @@ func (p *PublicAPIProxy) metricMiddleware(h http.Handler) http.Handler {
 func (p *PublicAPIProxy) authMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, req *http.Request) {
-			botReq, err := p.authenticateBotRequest(req)
+			botReq, err := p.authenticateRequest(req)
 			if err != nil {
 				logrus.WithError(err).Warn("failed to authenticate bot request")
 				writeAuthError(w, req)
@@ -125,28 +130,49 @@ func (p *PublicAPIProxy) authMiddleware(h http.Handler) http.Handler {
 	)
 }
 
-func (p *PublicAPIProxy) authenticateBotRequest(req *http.Request) (*http.Request, error) {
-	agentConfig, err := p.botAuthenticator.FindAgentFromRemoteAddr(req.RemoteAddr)
-	// request source is not a bot
+func (p *PublicAPIProxy) authenticateRequest(req *http.Request) (*http.Request, error) {
+	containerName, err := p.authenticator.FindContainerNameFromRemoteAddr(req.Context(), req.RemoteAddr)
 	if err != nil {
 		return req, err
 	}
 
-	ctxWithBoth := context.WithValue(req.Context(), authenticatedBotKey, agentConfig)
-	botReq := req.WithContext(ctxWithBoth)
+	var botID, botOwner string
+
+	// combiner feed authorization
+	if containerName == config.DockerScannerContainerName {
+		botID = req.Header.Get("bot-id")
+		botOwner = req.Header.Get("bot-owner")
+	} else {
+		// bot authorization
+		agentConfig, err := p.authenticator.FindAgentByContainerName(containerName)
+		// request source is not a bot
+		if err != nil {
+			return req, err
+		}
+
+		botID = agentConfig.ID
+		botOwner = agentConfig.Owner
+	}
+
+	// set authorization values as context to use in next middlewares
+	ctxWithBot := context.WithValue(req.Context(), botIDKey, botID)
+	ctxWithBot = context.WithValue(ctxWithBot, botOwnerKey, botOwner)
+
+	botReq := req.WithContext(ctxWithBot)
+
 	return botReq, nil
 }
 
 func (p *PublicAPIProxy) setAuthBearer(r *http.Request) {
 	log := logrus.WithField("addr", r.RemoteAddr)
-	bot, ok := getBotFromContext(r.Context())
+	botID, botOwner, ok := getBotFromContext(r.Context())
 	if !ok {
 		return
 	}
 
-	claims := map[string]interface{}{claimKeyBotOwner: bot.Owner}
+	claims := map[string]interface{}{claimKeyBotOwner: botOwner}
 
-	jwtToken, err := jwt_provider.CreateBotJWT(p.Key, bot.ID, claims)
+	jwtToken, err := jwt_provider.CreateBotJWT(p.Key, botID, claims)
 	if err != nil {
 		log.WithError(err).Warn("can't create bot jwt")
 		return
@@ -168,15 +194,28 @@ func (p *PublicAPIProxy) Name() string {
 	return "json-rpc-proxy"
 }
 
-func getBotFromContext(ctx context.Context) (*config.AgentConfig, bool) {
-	botCtxVal := ctx.Value(authenticatedBotKey)
-	if botCtxVal == nil {
-		return nil, false
+func getBotFromContext(ctx context.Context) (string, string, bool) {
+	botIdVal := ctx.Value(botIDKey)
+	if botIdVal == nil {
+		return "", "", false
 	}
 
-	bot, ok := botCtxVal.(*config.AgentConfig)
+	botID, ok := botIdVal.(string)
+	if !ok {
+		return "", "", false
+	}
 
-	return bot, ok
+	botOwnerVal := ctx.Value(botOwnerKey)
+	if botOwnerVal == nil {
+		return "", "", false
+	}
+
+	botOwner, ok := botOwnerVal.(string)
+	if !ok {
+		return "", "", false
+	}
+
+	return botID, botOwner, ok
 }
 
 // Health implements health.Reporter interface.
@@ -213,11 +252,11 @@ func NewPublicAPIProxy(ctx context.Context, cfg config.Config) (*PublicAPIProxy,
 	msgClient := messaging.NewClient("public-api", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 
 	return &PublicAPIProxy{
-		ctx:              ctx,
-		cfg:              cfg.PublicAPIProxy,
-		botAuthenticator: botAuthenticator,
-		msgClient:        msgClient,
-		Key:              key,
+		ctx:           ctx,
+		cfg:           cfg.PublicAPIProxy,
+		authenticator: botAuthenticator,
+		msgClient:     msgClient,
+		Key:           key,
 		// TODO: adjust rate limiting
 		rateLimiter: ratelimiter.NewRateLimiter(
 			1000,

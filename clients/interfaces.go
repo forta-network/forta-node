@@ -63,6 +63,9 @@ type AlertAPIClient interface {
 	PostBatch(batch *domain.AlertBatchRequest, token string) (*domain.AlertBatchResponse, error)
 }
 
-type BotAuthenticator interface {
+type IPAuthenticator interface {
+	Authenticate(ctx context.Context, hostPort string) error
 	FindAgentFromRemoteAddr(hostPort string) (*config.AgentConfig, error)
+	FindContainerNameFromRemoteAddr(ctx context.Context, hostPort string) (string, error)
+	FindAgentByContainerName(containerName string) (*config.AgentConfig, error)
 }
