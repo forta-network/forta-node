@@ -1,6 +1,7 @@
 package messaging
 
 import (
+	"github.com/forta-network/forta-core-go/feeds"
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-node/config"
 )
@@ -27,13 +28,10 @@ type AgentPayload []config.AgentConfig
 // AgentMetricPayload is the message payload for metrics.
 type AgentMetricPayload *protocol.AgentMetricList
 
-// CombinerBotSubscription contains subscription data of a bot.
-type CombinerBotSubscription struct {
-	Subscription *protocol.CombinerBotSubscription `json:"subscription"`
-}
+
 
 // SubscriptionPayload is the message payload for combiner bot subscriptions.
-type SubscriptionPayload []CombinerBotSubscription
+type SubscriptionPayload []*feeds.CombinerBotSubscription
 
 // ScannerPayload is the message payload for general scanner info.
 type ScannerPayload struct {

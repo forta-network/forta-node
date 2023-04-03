@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/forta-network/forta-core-go/feeds"
 	"github.com/forta-network/forta-node/metrics"
 
 	"github.com/forta-network/forta-core-go/clients/health"
@@ -413,8 +414,8 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	// If an agent was added before and just started to run, we should mark as ready.
 	var agentsToStop []config.AgentConfig
 	var agentsReady []config.AgentConfig
-	var newSubscriptions []messaging.CombinerBotSubscription
-	var removedSubscriptions []messaging.CombinerBotSubscription
+	var newSubscriptions []feeds.CombinerBotSubscription
+	var removedSubscriptions []feeds.CombinerBotSubscription
 
 	for _, agentCfg := range payload {
 		for _, agent := range ap.agents {
@@ -430,7 +431,15 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 					agentsToStop = append(agentsToStop, agent.Config())
 					if agent.IsCombinerBot() {
 						for _, subscription := range agent.AlertConfig().Subscriptions {
-							removedSubscriptions = append(removedSubscriptions, messaging.CombinerBotSubscription{Subscription: subscription})
+							removedSubscriptions = append(
+								removedSubscriptions, feeds.CombinerBotSubscription{
+									Subscription: subscription,
+									Subscriber: feeds.Subscriber{
+										BotID:    agent.Config().ID,
+										BotOwner: agent.Config().Owner,
+									},
+								},
+							)
 						}
 					}
 					continue
@@ -443,7 +452,15 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 
 				if agent.IsCombinerBot() {
 					for _, subscription := range agent.AlertConfig().Subscriptions {
-						newSubscriptions = append(newSubscriptions, messaging.CombinerBotSubscription{Subscription: subscription})
+						newSubscriptions = append(
+							newSubscriptions, feeds.CombinerBotSubscription{
+								Subscription: subscription,
+								Subscriber: feeds.Subscriber{
+									BotID:    agent.Config().ID,
+									BotOwner: agent.Config().Owner,
+								},
+							},
+						)
 					}
 				}
 

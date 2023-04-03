@@ -101,12 +101,12 @@ func (as *agentServer) EvaluateAlert(ctx context.Context, request *protocol.Eval
 }
 
 func queryPublicAPI(ctx context.Context) error {
-	jwtProviderAddr := fmt.Sprintf(
+	publicAPIAddr := fmt.Sprintf(
 		"http://%s:%s", os.Getenv(config.EnvPublicAPIProxyHost), os.Getenv(config.EnvPublicAPIProxyPort),
 	)
-	graphqlClient := graphql.NewClient(jwtProviderAddr)
+	graphqlClient := graphql.NewClient(publicAPIAddr)
 
-	_, err := graphqlClient.GetAlerts(ctx, &graphql.AlertsInput{Bots: []string{subscribedBot}})
+	_, err := graphqlClient.GetAlerts(ctx, &graphql.AlertsInput{Bots: []string{subscribedBot}}, nil)
 
 	return err
 }

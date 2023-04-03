@@ -96,23 +96,23 @@ func (t *CombinerAlertStreamService) Health() health.Reports {
 }
 
 func (t *CombinerAlertStreamService) handleMessageSubscribe(payload messaging.SubscriptionPayload) error {
-	for _, cfg := range payload {
-		if payload == nil {
+	for _, subscription := range payload {
+		if subscription == nil {
 			continue
 		}
-		t.alertFeed.AddSubscription(cfg.Subscription)
+		t.alertFeed.AddSubscription(subscription)
 	}
 
 	return nil
 }
 
 func (t *CombinerAlertStreamService) handleMessageUnsubscribe(payload messaging.SubscriptionPayload) error {
-	for _, cfg := range payload {
-		if payload == nil {
+	for _, subscription := range payload {
+		if subscription == nil {
 			continue
 		}
 
-		t.alertFeed.RemoveSubscription(cfg.Subscription)
+		t.alertFeed.RemoveSubscription(subscription)
 	}
 
 	return nil
