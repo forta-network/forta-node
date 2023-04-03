@@ -52,6 +52,7 @@ type SupervisorService struct {
 	scannerContainer     *clients.DockerContainer
 	inspectorContainer   *clients.DockerContainer
 	jsonRpcContainer     *clients.DockerContainer
+	publicAPIContainer   *clients.DockerContainer
 	jwtProviderContainer *clients.DockerContainer
 	storageContainer     *clients.DockerContainer
 	containers           []*Container
@@ -289,6 +290,34 @@ ipfs config Datastore.StorageMax '1GB'
 	}
 	sup.addContainerUnsafe(sup.jsonRpcContainer)
 
+	sup.publicAPIContainer, err = sup.client.StartContainer(
+		sup.ctx, clients.DockerContainerConfig{
+			Name:  config.DockerPublicAPIProxyContainerName,
+			Image: commonNodeImage,
+			Cmd:   []string{config.DefaultFortaNodeBinaryPath, "public-api"},
+			Volumes: map[string]string{
+				// give access to host docker
+				"/var/run/docker.sock": "/var/run/docker.sock",
+				hostFortaDir:           config.DefaultContainerFortaDirPath,
+			},
+			Ports: map[string]string{
+				"": config.DefaultHealthPort, // random host port
+			},
+			Files: map[string][]byte{
+				"passphrase": []byte(sup.config.Passphrase),
+			},
+			DialHost:       true,
+			NetworkID:      nodeNetworkID,
+			LinkNetworkIDs: []string{natsNetworkID},
+			MaxLogFiles:    sup.maxLogFiles,
+			MaxLogSize:     sup.maxLogSize,
+		},
+	)
+	if err != nil {
+		return err
+	}
+	sup.addContainerUnsafe(sup.publicAPIContainer)
+
 	shouldInspectAtStartup := sup.config.Config.InspectionConfig.InspectAtStartup
 	if sup.config.Config.LocalModeConfig.Enable {
 		shouldInspectAtStartup = shouldInspectAtStartup && sup.config.Config.LocalModeConfig.ForceEnableInspection
@@ -452,6 +481,7 @@ func (sup *SupervisorService) removeOldContainers() error {
 		config.DockerInspectorContainerName,
 		config.DockerJSONRPCProxyContainerName,
 		config.DockerJWTProviderContainerName,
+		config.DockerPublicAPIProxyContainerName,
 		config.DockerNatsContainerName,
 		config.DockerIpfsContainerName,
 		config.DockerStorageContainerName,
