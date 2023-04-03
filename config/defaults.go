@@ -9,9 +9,8 @@ const (
 	DefaultNatsPort              = "4222"
 	DefaultContainerPort         = "8089"
 	DefaultHealthPort            = "8090"
-	DefaultJWTProviderPort       = "8515"
-	DefaultStoragePort           = "8525"
-	DefaultPublicAPIProxyPort    = "8535"
 	DefaultJSONRPCProxyPort      = "8545"
+	DefaultStoragePort           = "8525"
+	DefaultJWTProviderPort       = "8515"
 	DefaultFortaNodeBinaryPath   = "/forta-node" // the path for the common binary in the container image
 )

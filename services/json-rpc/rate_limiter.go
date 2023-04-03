@@ -1,4 +1,4 @@
-package ratelimiter
+package json_rpc
 
 import (
 	"sync"

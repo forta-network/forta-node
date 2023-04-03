@@ -40,7 +40,6 @@ type DockerClient interface {
 	HasLocalImage(ctx context.Context, ref string) bool
 	EnsureLocalImage(ctx context.Context, name, ref string) error
 	GetContainerLogs(ctx context.Context, containerID, tail string, truncate int) (string, error)
-	GetContainerFromRemoteAddr(ctx context.Context, hostPort string) (*types.Container, error)
 }
 
 // MessageClient receives and publishes messages.
@@ -61,11 +60,4 @@ type AgentClient interface {
 // AlertAPIClient calls an http api on the analyzer to store alerts
 type AlertAPIClient interface {
 	PostBatch(batch *domain.AlertBatchRequest, token string) (*domain.AlertBatchResponse, error)
-}
-
-type IPAuthenticator interface {
-	Authenticate(ctx context.Context, hostPort string) error
-	FindAgentFromRemoteAddr(hostPort string) (*config.AgentConfig, error)
-	FindContainerNameFromRemoteAddr(ctx context.Context, hostPort string) (string, error)
-	FindAgentByContainerName(containerName string) (*config.AgentConfig, error)
 }

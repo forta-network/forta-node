@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
 
-	"github.com/forta-network/forta-core-go/clients/graphql"
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/tests/e2e/agents/combinerbot/combinerbotalertid"
@@ -69,14 +67,7 @@ func (as *agentServer) EvaluateBlock(ctx context.Context, txRequest *protocol.Ev
 	return response, nil
 }
 func (as *agentServer) EvaluateAlert(ctx context.Context, request *protocol.EvaluateAlertRequest) (*protocol.EvaluateAlertResponse, error) {
-	logrus.Infof("evaluating alert %s", request.Event.Alert.Hash)
 	response := &protocol.EvaluateAlertResponse{Status: protocol.ResponseStatus_SUCCESS}
-
-	err := queryPublicAPI(ctx)
-	if err != nil {
-		logrus.WithError(err).Warn("failed to fetch latest alerts")
-		return &protocol.EvaluateAlertResponse{Status: protocol.ResponseStatus_ERROR}, err
-	}
 
 	response.Findings = append(
 		response.Findings, &protocol.Finding{
@@ -98,15 +89,4 @@ func (as *agentServer) EvaluateAlert(ctx context.Context, request *protocol.Eval
 	logrus.WithField("alert", "combiner alert").Warn(response.Findings)
 
 	return response, nil
-}
-
-func queryPublicAPI(ctx context.Context) error {
-	jwtProviderAddr := fmt.Sprintf(
-		"http://%s:%s", os.Getenv(config.EnvPublicAPIProxyHost), os.Getenv(config.EnvPublicAPIProxyPort),
-	)
-	graphqlClient := graphql.NewClient(jwtProviderAddr)
-
-	_, err := graphqlClient.GetAlerts(ctx, &graphql.AlertsInput{Bots: []string{subscribedBot}})
-
-	return err
 }
