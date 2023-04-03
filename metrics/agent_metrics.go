@@ -12,32 +12,36 @@ import (
 )
 
 const (
-	MetricFinding          = "finding"
-	MetricTxRequest        = "tx.request"
-	MetricTxLatency        = "tx.latency"
-	MetricTxError          = "tx.error"
-	MetricTxSuccess        = "tx.success"
-	MetricTxDrop           = "tx.drop"
-	MetricTxBlockAge       = "tx.block.age"
-	MetricTxEventAge       = "tx.event.age"
-	MetricBlockBlockAge    = "block.block.age"
-	MetricBlockEventAge    = "block.event.age"
-	MetricBlockRequest     = "block.request"
-	MetricBlockLatency     = "block.latency"
-	MetricBlockError       = "block.error"
-	MetricBlockSuccess     = "block.success"
-	MetricBlockDrop        = "block.drop"
-	MetricStop             = "agent.stop"
-	MetricJSONRPCLatency   = "jsonrpc.latency"
-	MetricJSONRPCRequest   = "jsonrpc.request"
-	MetricJSONRPCSuccess   = "jsonrpc.success"
-	MetricJSONRPCThrottled = "jsonrpc.throttled"
-	MetricFindingsDropped  = "findings.dropped"
-	MetricCombinerRequest  = "combiner.request"
-	MetricCombinerLatency  = "combiner.latency"
-	MetricCombinerError    = "combiner.error"
-	MetricCombinerSuccess  = "combiner.success"
-	MetricCombinerDrop     = "combiner.drop"
+	MetricFinding                 = "finding"
+	MetricTxRequest               = "tx.request"
+	MetricTxLatency               = "tx.latency"
+	MetricTxError                 = "tx.error"
+	MetricTxSuccess               = "tx.success"
+	MetricTxDrop                  = "tx.drop"
+	MetricTxBlockAge              = "tx.block.age"
+	MetricTxEventAge              = "tx.event.age"
+	MetricBlockBlockAge           = "block.block.age"
+	MetricBlockEventAge           = "block.event.age"
+	MetricBlockRequest            = "block.request"
+	MetricBlockLatency            = "block.latency"
+	MetricBlockError              = "block.error"
+	MetricBlockSuccess            = "block.success"
+	MetricBlockDrop               = "block.drop"
+	MetricStop                    = "agent.stop"
+	MetricJSONRPCLatency          = "jsonrpc.latency"
+	MetricJSONRPCRequest          = "jsonrpc.request"
+	MetricJSONRPCSuccess          = "jsonrpc.success"
+	MetricJSONRPCThrottled        = "jsonrpc.throttled"
+	MetricPublicAPIProxyLatency   = "publicapi.latency"
+	MetricPublicAPIProxyRequest   = "publicapi.request"
+	MetricPublicAPIProxySuccess   = "publicapi.success"
+	MetricPublicAPIProxyThrottled = "publicapi.throttled"
+	MetricFindingsDropped         = "findings.dropped"
+	MetricCombinerRequest         = "combiner.request"
+	MetricCombinerLatency         = "combiner.latency"
+	MetricCombinerError           = "combiner.error"
+	MetricCombinerSuccess         = "combiner.success"
+	MetricCombinerDrop            = "combiner.drop"
 )
 
 func SendAgentMetrics(client clients.MessageClient, ms []*protocol.AgentMetric) {
@@ -138,6 +142,22 @@ func GetJSONRPCMetrics(agt config.AgentConfig, at time.Time, success, throttled 
 	if throttled > 0 {
 		values[MetricJSONRPCThrottled] = float64(throttled)
 		values[MetricJSONRPCRequest] += float64(throttled)
+	}
+	return createMetrics(agt.ID, at.Format(time.RFC3339), values)
+}
+
+func GetPublicAPIMetrics(agt config.AgentConfig, at time.Time, success, throttled int, latencyMs time.Duration) []*protocol.AgentMetric {
+	values := make(map[string]float64)
+	if latencyMs > 0 {
+		values[MetricPublicAPIProxyLatency] = float64(latencyMs.Milliseconds())
+	}
+	if success > 0 {
+		values[MetricPublicAPIProxySuccess] = float64(success)
+		values[MetricPublicAPIProxyRequest] += float64(success)
+	}
+	if throttled > 0 {
+		values[MetricPublicAPIProxyThrottled] = float64(throttled)
+		values[MetricPublicAPIProxyRequest] += float64(throttled)
 	}
 	return createMetrics(agt.ID, at.Format(time.RFC3339), values)
 }

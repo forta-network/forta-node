@@ -35,6 +35,7 @@ geth init --datadir "$ETHEREUM_DIR" "$ETHEREUM_GENESIS_FILE"
 # rpc.gascap=0 means infinite
 geth \
 	--nodiscover \
+	--miner.etherbase $ETHEREUM_NODE_ADDRESS \
 	--rpc.allow-unprotected-txs \
 	--rpc.gascap 0 \
 	--networkid 137 \

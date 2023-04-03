@@ -49,13 +49,15 @@ func (sup *SupervisorService) startAgent(ctx context.Context, agent config.Agent
 			NetworkID:      nwID,
 			LinkNetworkIDs: []string{},
 			Env: map[string]string{
-				config.EnvJsonRpcHost:     config.DockerJSONRPCProxyContainerName,
-				config.EnvJsonRpcPort:     config.DefaultJSONRPCProxyPort,
-				config.EnvJWTProviderHost: config.DockerJWTProviderContainerName,
-				config.EnvJWTProviderPort: config.DefaultJWTProviderPort,
-				config.EnvAgentGrpcPort:   agent.GrpcPort(),
-				config.EnvFortaBotID:      agent.ID,
-				config.EnvFortaBotOwner:   agent.Owner,
+				config.EnvJsonRpcHost:        config.DockerJSONRPCProxyContainerName,
+				config.EnvJsonRpcPort:        config.DefaultJSONRPCProxyPort,
+				config.EnvJWTProviderHost:    config.DockerJWTProviderContainerName,
+				config.EnvJWTProviderPort:    config.DefaultJWTProviderPort,
+				config.EnvPublicAPIProxyHost: config.DockerPublicAPIProxyContainerName,
+				config.EnvPublicAPIProxyPort: config.DefaultPublicAPIProxyPort,
+				config.EnvAgentGrpcPort:      agent.GrpcPort(),
+				config.EnvFortaBotID:         agent.ID,
+				config.EnvFortaBotOwner:      agent.Owner,
 				config.EnvFortaChainID:    fmt.Sprintf("%d", agent.ChainID),
 			},
 			MaxLogFiles: sup.maxLogFiles,
@@ -71,10 +73,10 @@ func (sup *SupervisorService) startAgent(ctx context.Context, agent config.Agent
 		return err
 	}
 
-	// Attach the scanner, JWT Provider and the JSON-RPC proxy to the agent's network.
+	// Attach the scanner, JWT Provider, Public API Proxy and the JSON-RPC proxy to the agent's network.
 	for _, containerID := range []string{
 		sup.scannerContainer.ID, sup.jsonRpcContainer.ID,
-		sup.jwtProviderContainer.ID,
+		sup.jwtProviderContainer.ID, sup.publicAPIContainer.ID,
 	} {
 		err := sup.client.AttachNetwork(ctx, containerID, nwID)
 		if err != nil {

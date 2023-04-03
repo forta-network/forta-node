@@ -21,6 +21,7 @@ var (
 	DockerScannerContainerName        = fmt.Sprintf("%s-scanner", ContainerNamePrefix)
 	DockerInspectorContainerName      = fmt.Sprintf("%s-inspector", ContainerNamePrefix)
 	DockerJSONRPCProxyContainerName   = fmt.Sprintf("%s-json-rpc", ContainerNamePrefix)
+	DockerPublicAPIProxyContainerName = fmt.Sprintf("%s-public-api", ContainerNamePrefix)
 	DockerJWTProviderContainerName    = fmt.Sprintf("%s-jwt-provider", ContainerNamePrefix)
 	DockerStorageContainerName        = fmt.Sprintf("%s-storage", ContainerNamePrefix)
 
