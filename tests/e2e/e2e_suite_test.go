@@ -205,8 +205,9 @@ func (s *Suite) SetupTest() {
 	s.agentManifestCid = s.ipfsFilesAdd("/agent", s.agentManifest)
 
 	agentContainerID = config.AgentConfig{
-		ID:    agentID,
-		Image: agentImageRef,
+		ID:      agentID,
+		Image:   agentImageRef,
+		ChainID: int(networkID),
 	}.ContainerName()
 
 	// deploy mock contract with release and bot info
