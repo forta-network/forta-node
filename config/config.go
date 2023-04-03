@@ -191,7 +191,7 @@ type StorageConfig struct {
 }
 
 type CombinerConfig struct {
-	AlertAPIURL       string `yaml:"alertApiUrl" json:"alertApiUrl" default:"https://api.forta.network/graphql" validate:"url"`
+	AlertAPIURL       string `yaml:"alertApiUrl" json:"alertApiUrl" default:"http://forta-public-api:8535" validate:"url"`
 	CombinerCachePath string `yaml:"alertCachePath" json:"alert_cache_path"`
 }
 
