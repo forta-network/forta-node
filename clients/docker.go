@@ -742,45 +742,15 @@ func (d *dockerClient) labelFilter() filters.Args {
 	return filter
 }
 
-func (d *dockerClient) GetContainerFromRemoteAddr(ctx context.Context, hostPort string) (*types.Container, error) {
-	containers, err := d.GetContainers(ctx)
-	if err != nil {
-		return nil, err
-	}
-	ipAddr := strings.Split(hostPort, ":")[0]
-
-	var agentContainer *types.Container
-	for _, container := range containers {
-		for _, network := range container.NetworkSettings.Networks {
-			if network.IPAddress == ipAddr {
-				agentContainer = &container
-				break
-			}
-		}
-		if agentContainer != nil {
-			break
-		}
-	}
-
-	if agentContainer == nil {
-		log.WithField("sourceIp", ipAddr).Warn("not a known bot")
-		return nil, fmt.Errorf("could not found agent container from ip address: %s", hostPort)
-	}
-
-	return agentContainer, nil
-}
-
 func initLabels(name string) []dockerLabel {
 	if len(name) == 0 {
 		return defaultLabels
 	}
 
-	return append(
-		defaultLabels, dockerLabel{
-			Name:  DockerLabelFortaSupervisor,
-			Value: name,
-		},
-	)
+	return append(defaultLabels, dockerLabel{
+		Name:  DockerLabelFortaSupervisor,
+		Value: name,
+	})
 }
 
 func labelsToMap(labels []dockerLabel) map[string]string {

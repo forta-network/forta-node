@@ -4,7 +4,6 @@ import (
 	inspector "github.com/forta-network/forta-node/cmd/inspector"
 	json_rpc "github.com/forta-network/forta-node/cmd/json-rpc"
 	jwt_provider "github.com/forta-network/forta-node/cmd/jwt-provider"
-	public_api "github.com/forta-network/forta-node/cmd/public-api"
 	"github.com/forta-network/forta-node/cmd/publisher"
 	"github.com/forta-network/forta-node/cmd/scanner"
 	"github.com/forta-network/forta-node/cmd/storage"
@@ -78,14 +77,6 @@ var (
 		},
 	}
 
-	cmdPublicAPI = &cobra.Command{
-		Use: "public-api",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			public_api.Run()
-			return nil
-		},
-	}
-
 	cmdStorage = &cobra.Command{
 		Use: "storage",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -102,7 +93,6 @@ func init() {
 	cmdFortaNode.AddCommand(cmdPublisher)
 	cmdFortaNode.AddCommand(cmdInspector)
 	cmdFortaNode.AddCommand(cmdJsonRpc)
-	cmdFortaNode.AddCommand(cmdPublicAPI)
 	cmdFortaNode.AddCommand(cmdJWTProvider)
 	cmdFortaNode.AddCommand(cmdStorage)
 }

@@ -6,17 +6,20 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strings"
+	"sync"
 	"time"
 
-	"github.com/forta-network/forta-node/clients"
-	"github.com/forta-network/forta-node/clients/ratelimiter"
+	"github.com/docker/docker/api/types"
 	"github.com/rs/cors"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/ethereum"
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-core-go/protocol/settings"
 	"github.com/forta-network/forta-core-go/utils"
+	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/metrics"
@@ -24,18 +27,23 @@ import (
 
 // JsonRpcProxy proxies requests from agents to json-rpc endpoint
 type JsonRpcProxy struct {
-	ctx       context.Context
-	cfg       config.JsonRpcConfig
-	server    *http.Server
-	msgClient clients.MessageClient
+	ctx          context.Context
+	cfg          config.JsonRpcConfig
+	server       *http.Server
+	dockerClient clients.DockerClient
+	msgClient    clients.MessageClient
 
-	rateLimiter *ratelimiter.RateLimiter
+	agentConfigs  []config.AgentConfig
+	agentConfigMu sync.RWMutex
 
-	lastErr          health.ErrorTracker
-	botAuthenticator clients.IPAuthenticator
+	rateLimiter *RateLimiter
+
+	lastErr health.ErrorTracker
 }
 
 func (p *JsonRpcProxy) Start() error {
+	p.registerMessageHandlers()
+
 	rpcUrl, err := url.Parse(p.cfg.Url)
 	if err != nil {
 		return err
@@ -68,28 +76,73 @@ func (p *JsonRpcProxy) Start() error {
 func (p *JsonRpcProxy) metricHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		t := time.Now()
-		agentConfig, err := p.botAuthenticator.FindAgentFromRemoteAddr(req.RemoteAddr)
-		if err == nil && p.rateLimiter.ExceedsLimit(agentConfig.ID) {
+		agentConfig, foundAgent := p.findAgentFromRemoteAddr(req.RemoteAddr)
+		if foundAgent && p.rateLimiter.ExceedsLimit(agentConfig.ID) {
 			writeTooManyReqsErr(w, req)
-			p.msgClient.PublishProto(
-				messaging.SubjectMetricAgent, &protocol.AgentMetricList{
-					Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, 0, 1, 0),
-				},
-			)
+			p.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{
+				Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, 0, 1, 0),
+			})
 			return
 		}
 
 		h.ServeHTTP(w, req)
 
-		if err == nil {
+		if foundAgent {
 			duration := time.Since(t)
-			p.msgClient.PublishProto(
-				messaging.SubjectMetricAgent, &protocol.AgentMetricList{
-					Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, 1, 0, duration),
-				},
-			)
+			p.msgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{
+				Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, 1, 0, duration),
+			})
 		}
 	})
+}
+
+func (p *JsonRpcProxy) findAgentFromRemoteAddr(hostPort string) (*config.AgentConfig, bool) {
+	containers, err := p.dockerClient.GetContainers(p.ctx)
+	if err != nil {
+		log.WithError(err).Error("failed to get the container list")
+		return nil, false
+	}
+	ipAddr := strings.Split(hostPort, ":")[0]
+
+	var agentContainer *types.Container
+	for _, container := range containers {
+		for _, network := range container.NetworkSettings.Networks {
+			if network.IPAddress == ipAddr {
+				agentContainer = &container
+				break
+			}
+		}
+		if agentContainer != nil {
+			break
+		}
+	}
+	if agentContainer == nil {
+		log.WithField("agentIpAddr", ipAddr).Warn("could not found agent container from ip address")
+		return nil, false
+	}
+
+	p.agentConfigMu.RLock()
+	defer p.agentConfigMu.RUnlock()
+
+	containerName := agentContainer.Names[0][1:]
+	for _, agentConfig := range p.agentConfigs {
+		if agentConfig.ContainerName() == containerName {
+			return &agentConfig, true
+		}
+	}
+
+	log.WithFields(log.Fields{
+		"agentIpAddr":   ipAddr,
+		"containerName": containerName,
+	}).Warn("could not find agent config for container")
+	return nil, false
+}
+
+func (p *JsonRpcProxy) handleAgentVersionsUpdate(payload messaging.AgentPayload) error {
+	p.agentConfigMu.Lock()
+	p.agentConfigs = payload
+	p.agentConfigMu.Unlock()
+	return nil
 }
 
 func (p *JsonRpcProxy) Stop() error {
@@ -123,30 +176,32 @@ func (p *JsonRpcProxy) testAPI() {
 	p.lastErr.Set(err)
 }
 
+func (p *JsonRpcProxy) registerMessageHandlers() {
+	p.msgClient.Subscribe(messaging.SubjectAgentsVersionsLatest, messaging.AgentsHandler(p.handleAgentVersionsUpdate))
+}
+
 func NewJsonRpcProxy(ctx context.Context, cfg config.Config) (*JsonRpcProxy, error) {
 	jCfg := cfg.Scan.JsonRpc
 	if len(cfg.JsonRpcProxy.JsonRpc.Url) > 0 {
 		jCfg = cfg.JsonRpcProxy.JsonRpc
 	}
+	globalClient, err := clients.NewDockerClient("")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create the global docker client: %v", err)
+	}
+	msgClient := messaging.NewClient("json-rpc-proxy", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 
 	rateLimiting := cfg.JsonRpcProxy.RateLimitConfig
 	if rateLimiting == nil {
 		rateLimiting = (*config.RateLimitConfig)(settings.GetChainSettings(cfg.ChainID).JsonRpcRateLimiting)
 	}
 
-	msgClient := messaging.NewClient("json-rpc", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
-
-	botAuthenticator, err := clients.NewBotAuthenticator(ctx, cfg)
-	if err != nil {
-		return nil, err
-	}
-
 	return &JsonRpcProxy{
-		ctx:              ctx,
-		cfg:              jCfg,
-		botAuthenticator: botAuthenticator,
-		msgClient:        msgClient,
-		rateLimiter: ratelimiter.NewRateLimiter(
+		ctx:          ctx,
+		cfg:          jCfg,
+		dockerClient: globalClient,
+		msgClient:    msgClient,
+		rateLimiter: NewRateLimiter(
 			rateLimiting.Rate,
 			rateLimiting.Burst,
 		),
