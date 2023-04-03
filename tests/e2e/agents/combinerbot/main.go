@@ -102,7 +102,7 @@ func (as *agentServer) EvaluateAlert(ctx context.Context, request *protocol.Eval
 
 func queryPublicAPI(ctx context.Context) error {
 	publicAPIAddr := fmt.Sprintf(
-		"http://%s:%s", os.Getenv(config.EnvPublicAPIProxyHost), os.Getenv(config.EnvPublicAPIProxyPort),
+		"http://%s:%s/graphql", os.Getenv(config.EnvPublicAPIProxyHost), os.Getenv(config.EnvPublicAPIProxyPort),
 	)
 	graphqlClient := graphql.NewClient(publicAPIAddr)
 
