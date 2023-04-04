@@ -12,7 +12,6 @@ type errorResponse struct {
 }
 
 type publicAPIProxyError struct {
-	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
 
@@ -22,7 +21,6 @@ func writeAuthError(w http.ResponseWriter, req *http.Request) {
 
 	if err := json.NewEncoder(w).Encode(&errorResponse{
 		Error: publicAPIProxyError{
-			Code:    -33000,
 			Message: "request source is not a deployed agent",
 		},
 	}); err != nil {
@@ -34,7 +32,6 @@ func writeTooManyReqsErr(w http.ResponseWriter, req *http.Request) {
 
 	if err := json.NewEncoder(w).Encode(&errorResponse{
 		Error: publicAPIProxyError{
-			Code:    -32000,
 			Message: "bot exceeds request rate limit",
 		},
 	}); err != nil {

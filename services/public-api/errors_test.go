@@ -1,9 +1,7 @@
 package public_api
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,13 +9,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const testRequestID = 123
-
 func TestTooManyReqsError(t *testing.T) {
 	r := require.New(t)
 
-	buf := bytes.NewBuffer([]byte(fmt.Sprintf(`{"id":%d}`, testRequestID)))
-	req, err := http.NewRequest("POST", "http://asdf.asdf", buf)
+	req, err := http.NewRequest("POST", "http://asdf.asdf", nil)
 	r.NoError(err)
 	recorder := httptest.NewRecorder()
 
@@ -27,6 +22,21 @@ func TestTooManyReqsError(t *testing.T) {
 	r.Equal(http.StatusTooManyRequests, resp.StatusCode)
 	var errResp errorResponse
 	r.NoError(json.NewDecoder(resp.Body).Decode(&errResp))
-	r.Equal(-32000, errResp.Error.Code)
 	r.Contains(errResp.Error.Message, "exceeds")
+}
+
+func TestAuthError(t *testing.T) {
+	r := require.New(t)
+
+	req, err := http.NewRequest("POST", "http://asdf.asdf", nil)
+	r.NoError(err)
+	recorder := httptest.NewRecorder()
+
+	writeAuthError(recorder, req)
+
+	resp := recorder.Result()
+	r.Equal(http.StatusUnauthorized, resp.StatusCode)
+	var errResp errorResponse
+	r.NoError(json.NewDecoder(resp.Body).Decode(&errResp))
+	r.Contains(errResp.Error.Message, "request source is not a deployed agent")
 }
