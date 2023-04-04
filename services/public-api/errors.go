@@ -24,9 +24,10 @@ func writeAuthError(w http.ResponseWriter, req *http.Request) {
 			Message: "request source is not a deployed agent",
 		},
 	}); err != nil {
-		log.WithError(err).Error("failed to write jsonrpc error response body")
+		log.WithError(err).Error("failed to write error response body")
 	}
 }
+
 func writeTooManyReqsErr(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusTooManyRequests)
 
@@ -35,6 +36,6 @@ func writeTooManyReqsErr(w http.ResponseWriter, req *http.Request) {
 			Message: "bot exceeds request rate limit",
 		},
 	}); err != nil {
-		log.WithError(err).Error("failed to write jsonrpc error response body")
+		log.WithError(err).Error("failed to write error response body")
 	}
 }
