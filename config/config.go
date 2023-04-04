@@ -218,7 +218,7 @@ type Config struct {
 	Registry         RegistryConfig       `yaml:"registry" json:"registry"`
 	Publish          PublisherConfig      `yaml:"publish" json:"publish"`
 	JsonRpcProxy     JsonRpcProxyConfig   `yaml:"jsonRpcProxy" json:"jsonRpcProxy"`
-	PublicAPIProxy   PublicAPIProxyConfig `yaml:"publicAPIProxy" json:"publicAPIProxy"`
+	PublicAPIProxy   PublicAPIProxyConfig `yaml:"publicApiProxy" json:"publicApiProxy"`
 	Log              LogConfig            `yaml:"log" json:"log"`
 	ResourcesConfig  ResourcesConfig      `yaml:"resources" json:"resources"`
 	ENSConfig        ENSConfig            `yaml:"ens" json:"ens"`
