@@ -11,8 +11,9 @@ import (
 )
 
 type PublicAPIProxyConfig struct {
-	Url     string            `yaml:"url" json:"url" validate:"omitempty,url" default:"https://api.forta.network"`
-	Headers map[string]string `yaml:"headers" json:"headers"`
+	Url             string            `yaml:"url" json:"url" validate:"omitempty,url" default:"https://api.forta.network"`
+	Headers         map[string]string `yaml:"headers" json:"headers"`
+	RateLimitConfig *RateLimitConfig  `yaml:"rateLimit" json:"rateLimit"`
 }
 type JsonRpcConfig struct {
 	Url     string            `yaml:"url" json:"url" validate:"omitempty,url"`
@@ -191,7 +192,7 @@ type StorageConfig struct {
 }
 
 type CombinerConfig struct {
-	AlertAPIURL       string `yaml:"alertApiUrl" json:"alertApiUrl" default:"https://api.forta.network/graphql" validate:"url"`
+	AlertAPIURL       string `yaml:"alertApiUrl" json:"alertApiUrl" default:"http://forta-public-api:8535" validate:"url"`
 	CombinerCachePath string `yaml:"alertCachePath" json:"alert_cache_path"`
 }
 
@@ -217,7 +218,7 @@ type Config struct {
 	Registry         RegistryConfig       `yaml:"registry" json:"registry"`
 	Publish          PublisherConfig      `yaml:"publish" json:"publish"`
 	JsonRpcProxy     JsonRpcProxyConfig   `yaml:"jsonRpcProxy" json:"jsonRpcProxy"`
-	PublicAPIProxy   PublicAPIProxyConfig `yaml:"publicAPIProxy" json:"publicAPIProxy"`
+	PublicAPIProxy   PublicAPIProxyConfig `yaml:"publicApiProxy" json:"publicApiProxy"`
 	Log              LogConfig            `yaml:"log" json:"log"`
 	ResourcesConfig  ResourcesConfig      `yaml:"resources" json:"resources"`
 	ENSConfig        ENSConfig            `yaml:"ens" json:"ens"`

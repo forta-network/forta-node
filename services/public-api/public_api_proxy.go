@@ -28,6 +28,7 @@ type contextKey int
 
 const authenticatedBotKey contextKey = 0
 const claimKeyBotOwner = "bot-owner"
+
 // PublicAPIProxy proxies requests from agents to json-rpc endpoint
 type PublicAPIProxy struct {
 	ctx       context.Context
@@ -37,16 +38,17 @@ type PublicAPIProxy struct {
 
 	server *http.Server
 
-	rateLimiter *ratelimiter.RateLimiter
+	rateLimiter ratelimiter.RateLimiter
 
 	lastErr          health.ErrorTracker
 	botAuthenticator clients.BotAuthenticator
 }
 
-func (p *PublicAPIProxy) Start() error {
+
+func (p *PublicAPIProxy) newReverseProxy() http.Handler {
 	apiURL, err := url.Parse(p.cfg.Url)
 	if err != nil {
-		return err
+		logrus.WithError(err).Panic("bad public api proxy configuration")
 	}
 
 	rp := httputil.NewSingleHostReverseProxy(apiURL)
@@ -56,27 +58,23 @@ func (p *PublicAPIProxy) Start() error {
 		d(r)
 		r.Host = apiURL.Host
 		r.URL.Host = apiURL.Host
-		r.Header.Set("User-Agent","forta-scan-node")
 		for h, v := range p.cfg.Headers {
 			r.Header.Set(h, v)
 		}
+		r.Header.Set("User-Agent", "forta-scan-node")
 	}
 
+	return rp
+}
+
+func (p *PublicAPIProxy) createPublicAPIProxyHandler() http.Handler {
 	c := cors.New(
 		cors.Options{
 			AllowedOrigins:   []string{"*"},
 			AllowCredentials: true,
 		},
 	)
-
-	p.server = &http.Server{
-		Addr:    fmt.Sprintf(":%s", config.DefaultPublicAPIProxyPort),
-		Handler: p.authMiddleware(p.metricMiddleware(c.Handler(rp))),
-	}
-
-	utils.GoListenAndServe(p.server)
-
-	return nil
+	return p.authMiddleware(p.metricMiddleware(c.Handler(p.newReverseProxy())))
 }
 
 func (p *PublicAPIProxy) metricMiddleware(h http.Handler) http.Handler {
@@ -84,7 +82,7 @@ func (p *PublicAPIProxy) metricMiddleware(h http.Handler) http.Handler {
 		func(w http.ResponseWriter, req *http.Request) {
 			t := time.Now()
 			agentConfig, foundAgent := getBotFromContext(req.Context())
-			if foundAgent && p.rateLimiter.ExceedsLimit(agentConfig.ID) {
+			if foundAgent && p.rateLimiter != nil && p.rateLimiter.ExceedsLimit(agentConfig.ID) {
 				writeTooManyReqsErr(w, req)
 				p.msgClient.PublishProto(
 					messaging.SubjectMetricAgent, &protocol.AgentMetricList{
@@ -157,17 +155,6 @@ func (p *PublicAPIProxy) setAuthBearer(r *http.Request) {
 	r.Header.Set("Authorization", bearerToken)
 }
 
-func (p *PublicAPIProxy) Stop() error {
-	if p.server != nil {
-		return p.server.Close()
-	}
-	return nil
-}
-
-func (p *PublicAPIProxy) Name() string {
-	return "json-rpc-proxy"
-}
-
 func getBotFromContext(ctx context.Context) (*config.AgentConfig, bool) {
 	botCtxVal := ctx.Value(authenticatedBotKey)
 	if botCtxVal == nil {
@@ -177,6 +164,30 @@ func getBotFromContext(ctx context.Context) (*config.AgentConfig, bool) {
 	bot, ok := botCtxVal.(*config.AgentConfig)
 
 	return bot, ok
+}
+
+
+
+func (p *PublicAPIProxy) Start() error {
+	p.server = &http.Server{
+		Addr:    fmt.Sprintf(":%s", config.DefaultPublicAPIProxyPort),
+		Handler: p.createPublicAPIProxyHandler(),
+	}
+
+	utils.GoListenAndServe(p.server)
+
+	return nil
+}
+
+func (p *PublicAPIProxy) Stop() error {
+	if p.server != nil {
+		return p.server.Close()
+	}
+	return nil
+}
+
+func (p *PublicAPIProxy) Name() string {
+	return "json-rpc-proxy"
 }
 
 // Health implements health.Reporter interface.
@@ -212,16 +223,25 @@ func NewPublicAPIProxy(ctx context.Context, cfg config.Config) (*PublicAPIProxy,
 
 	msgClient := messaging.NewClient("public-api", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 
+	rateLimiting := cfg.PublicAPIProxy.RateLimitConfig
+	if rateLimiting == nil {
+		rateLimiting = &config.RateLimitConfig{Rate: 1000, Burst: 1}
+	}
+
+	return newPublicAPIProxy(ctx, cfg.PublicAPIProxy, botAuthenticator, ratelimiter.NewRateLimiter(rateLimiting.Rate, rateLimiting.Burst), key, msgClient)
+}
+
+func newPublicAPIProxy(
+	ctx context.Context, cfg config.PublicAPIProxyConfig, botAuthenticator clients.BotAuthenticator, rateLimiter ratelimiter.RateLimiter, key *keystore.Key, msgClient clients.MessageClient,
+) (
+	*PublicAPIProxy, error,
+) {
 	return &PublicAPIProxy{
 		ctx:              ctx,
-		cfg:              cfg.PublicAPIProxy,
+		cfg:              cfg,
 		botAuthenticator: botAuthenticator,
 		msgClient:        msgClient,
 		Key:              key,
-		// TODO: adjust rate limiting
-		rateLimiter: ratelimiter.NewRateLimiter(
-			1000,
-			1,
-		),
+		rateLimiter:      rateLimiter,
 	}, nil
 }
