@@ -108,7 +108,7 @@ agentLogs:
 combiner:
   alertApiUrl: https://api-dev.forta.network/graphql
 
-publicAPIProxy:
+publicApiProxy:
   url: https://api-dev.forta.network
 
 log:
