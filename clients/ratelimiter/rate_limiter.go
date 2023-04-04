@@ -8,8 +8,12 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// RateLimiter rate limits requests.
-type RateLimiter struct {
+type RateLimiter interface {
+	ExceedsLimit(clientID string) bool
+}
+
+// rateLimiter rate limits requests.
+type rateLimiter struct {
 	rate           float64
 	burst          int
 	clientLimiters map[string]*clientLimiter
@@ -22,11 +26,11 @@ type clientLimiter struct {
 }
 
 // NewRateLimiter creates a new rate limiter.
-func NewRateLimiter(rateN float64, burst int) *RateLimiter {
+func NewRateLimiter(rateN float64, burst int) RateLimiter {
 	if rateN <= 0 {
 		log.Panic("non-positive rate limiter arg")
 	}
-	rl := &RateLimiter{
+	rl := &rateLimiter{
 		rate:           rateN,
 		burst:          burst,
 		clientLimiters: make(map[string]*clientLimiter),
@@ -37,7 +41,7 @@ func NewRateLimiter(rateN float64, burst int) *RateLimiter {
 
 // ExceedsLimit tries adding a request to the limiting channel and returns boolean to signal
 // if we hit the rate limit.
-func (rl *RateLimiter) ExceedsLimit(clientID string) bool {
+func (rl *rateLimiter) ExceedsLimit(clientID string) bool {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 	limiter := rl.clientLimiters[clientID]
@@ -50,7 +54,7 @@ func (rl *RateLimiter) ExceedsLimit(clientID string) bool {
 }
 
 // deallocate inactive limiters
-func (rl *RateLimiter) autoCleanup() {
+func (rl *rateLimiter) autoCleanup() {
 	ticker := time.NewTicker(time.Hour)
 	for range ticker.C {
 		rl.mu.Lock()
