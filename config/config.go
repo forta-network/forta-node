@@ -11,8 +11,9 @@ import (
 )
 
 type PublicAPIProxyConfig struct {
-	Url     string            `yaml:"url" json:"url" validate:"omitempty,url" default:"https://api.forta.network"`
-	Headers map[string]string `yaml:"headers" json:"headers"`
+	Url             string            `yaml:"url" json:"url" validate:"omitempty,url" default:"https://api.forta.network"`
+	Headers         map[string]string `yaml:"headers" json:"headers"`
+	RateLimitConfig *RateLimitConfig  `yaml:"rateLimit" json:"rateLimit"`
 }
 type JsonRpcConfig struct {
 	Url     string            `yaml:"url" json:"url" validate:"omitempty,url"`

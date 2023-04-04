@@ -212,6 +212,11 @@ func NewPublicAPIProxy(ctx context.Context, cfg config.Config) (*PublicAPIProxy,
 
 	msgClient := messaging.NewClient("public-api", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 
+	rateLimiting := cfg.PublicAPIProxy.RateLimitConfig
+	if rateLimiting == nil {
+		rateLimiting = &config.RateLimitConfig{Rate: 1000, Burst: 1}
+	}
+
 	return &PublicAPIProxy{
 		ctx:              ctx,
 		cfg:              cfg.PublicAPIProxy,
@@ -220,8 +225,7 @@ func NewPublicAPIProxy(ctx context.Context, cfg config.Config) (*PublicAPIProxy,
 		Key:              key,
 		// TODO: adjust rate limiting
 		rateLimiter: ratelimiter.NewRateLimiter(
-			1000,
-			1,
+			rateLimiting.Rate, rateLimiting.Burst,
 		),
 	}, nil
 }
