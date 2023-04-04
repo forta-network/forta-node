@@ -29,7 +29,7 @@ type JsonRpcProxy struct {
 	server    *http.Server
 	msgClient clients.MessageClient
 
-	rateLimiter *ratelimiter.RateLimiter
+	rateLimiter ratelimiter.RateLimiter
 
 	lastErr          health.ErrorTracker
 	botAuthenticator clients.BotAuthenticator
