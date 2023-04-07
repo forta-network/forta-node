@@ -146,7 +146,7 @@ func GetJSONRPCMetrics(agt config.AgentConfig, at time.Time, success, throttled 
 	return createMetrics(agt.ID, at.Format(time.RFC3339), values)
 }
 
-func GetPublicAPIMetrics(agt config.AgentConfig, at time.Time, success, throttled int, latencyMs time.Duration) []*protocol.AgentMetric {
+func GetPublicAPIMetrics(botID string, at time.Time, success, throttled int, latencyMs time.Duration) []*protocol.AgentMetric {
 	values := make(map[string]float64)
 	if latencyMs > 0 {
 		values[MetricPublicAPIProxyLatency] = float64(latencyMs.Milliseconds())
@@ -159,5 +159,5 @@ func GetPublicAPIMetrics(agt config.AgentConfig, at time.Time, success, throttle
 		values[MetricPublicAPIProxyThrottled] = float64(throttled)
 		values[MetricPublicAPIProxyRequest] += float64(throttled)
 	}
-	return createMetrics(agt.ID, at.Format(time.RFC3339), values)
+	return createMetrics(botID, at.Format(time.RFC3339), values)
 }

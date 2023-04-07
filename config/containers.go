@@ -13,7 +13,7 @@ var (
 	DockerUpdaterImage    = "forta-network/forta-node:latest"
 	UseDockerImages       = "local"
 
-	DockerSupervisorManagedContainers = 7
+	DockerSupervisorManagedContainers = 8
 	DockerUpdaterContainerName        = fmt.Sprintf("%s-updater", ContainerNamePrefix)
 	DockerSupervisorContainerName     = fmt.Sprintf("%s-supervisor", ContainerNamePrefix)
 	DockerNatsContainerName           = fmt.Sprintf("%s-nats", ContainerNamePrefix)

@@ -44,7 +44,8 @@ func TestPublicAPIProxy_setAuthBearer(t *testing.T) {
 
 	// Case 1: proxying a bot request
 	req := httptest.NewRequest(http.MethodPost, "/", nil)
-	ctx := context.WithValue(req.Context(), authenticatedBotKey, testBotCfg)
+	ctx := context.WithValue(req.Context(), botIDKey, "test-id")
+	ctx = context.WithValue(ctx, botOwnerKey, "test-owner")
 	req = req.WithContext(ctx)
 
 	proxy := PublicAPIProxy{Key: key}
@@ -60,44 +61,66 @@ func TestPublicAPIProxy_setAuthBearer(t *testing.T) {
 	assert.Equal(t, jwtToken.Token.Claims.(jwt.MapClaims)["bot-id"], "test-id")
 }
 
-func TestPublicAPIProxy_authenticateBotRequest(t *testing.T) {
+func TestPublicAPIProxy_authenticateRequest(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	authenticator := mock_clients.NewMockBotAuthenticator(ctrl)
+	authenticator := mock_clients.NewMockIPAuthenticator(ctrl)
 
 	// Case 1: proxying a bot request
 	req := httptest.NewRequest(http.MethodPost, "/", nil)
 	botRemoteAddr := "1.1.1.1:1111"
 	req.RemoteAddr = botRemoteAddr
 
-	proxy := PublicAPIProxy{botAuthenticator: authenticator}
-	authenticator.EXPECT().FindAgentFromRemoteAddr(botRemoteAddr).Return(testBotCfg, nil)
-	req, err := proxy.authenticateBotRequest(req)
+	proxy := PublicAPIProxy{authenticator: authenticator}
+	authenticator.EXPECT().FindContainerNameFromRemoteAddr(gomock.Any(), botRemoteAddr).Return("forta-bot-1", nil)
+	authenticator.EXPECT().FindAgentByContainerName("forta-bot-1").Return(testBotCfg, nil)
+	req, err := proxy.authenticateRequest(req)
 	assert.NotNil(t, req)
 	assert.NoError(t, err)
 
-	bot, ok := getBotFromContext(req.Context())
+	botID, botOwner, ok := getBotFromContext(req.Context())
 	assert.True(t, ok)
-	assert.Equal(t, bot.ID, "test-id")
+	assert.Equal(t, botID, "test-id")
+	assert.Equal(t, botOwner, "test-owner")
 
-	// Case 1: proxying an arbitrary request
+	// Case 2: proxying handle alert request
+	botCfg := &config.AgentConfig{Owner: "test-combiner-owner", ID: "test-combiner-id"}
+	req = httptest.NewRequest(http.MethodPost, "/", nil)
+	remoteAddr := "1.1.1.1:1111"
+	req.RemoteAddr = remoteAddr
+	req.Header.Set("bot-id", botCfg.ID)
+	req.Header.Set("bot-owner", botCfg.Owner)
+
+	proxy = PublicAPIProxy{authenticator: authenticator}
+	authenticator.EXPECT().FindContainerNameFromRemoteAddr(gomock.Any(), remoteAddr).Return("forta-scanner", nil)
+	req, err = proxy.authenticateRequest(req)
+	assert.NotNil(t, req)
+	assert.NoError(t, err)
+
+	botID, botOwner, ok = getBotFromContext(req.Context())
+	assert.True(t, ok)
+	assert.Equal(t, botID, botCfg.ID)
+	assert.Equal(t, botOwner, botCfg.Owner)
+
+	// Case 3: proxying an arbitrary request
 	req = httptest.NewRequest(http.MethodPost, "/", nil)
 	botRemoteAddr = "1.1.1.1:1111"
 	req.RemoteAddr = botRemoteAddr
 
-	proxy = PublicAPIProxy{botAuthenticator: authenticator}
-	authenticator.EXPECT().FindAgentFromRemoteAddr(botRemoteAddr).Return(nil, fmt.Errorf("can't find"))
-	req, err = proxy.authenticateBotRequest(req)
+	proxy = PublicAPIProxy{authenticator: authenticator}
+	authenticator.EXPECT().FindContainerNameFromRemoteAddr(gomock.Any(), botRemoteAddr).Return("", fmt.Errorf("can't find"))
+	req, err = proxy.authenticateRequest(req)
 	assert.NotNil(t, req)
 	assert.Error(t, err)
 
-	bot, ok = getBotFromContext(req.Context())
+	botID, botOwner, ok = getBotFromContext(req.Context())
 	assert.False(t, ok)
-	assert.Nil(t, bot)
+	assert.Empty(t, botID)
+	assert.Empty(t, botOwner)
 }
 
 func TestPublicAPIProxy(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	authenticator := mock_clients.NewMockBotAuthenticator(ctrl)
+	authenticator := mock_clients.NewMockIPAuthenticator(ctrl)
 	messageClient := mock_clients.NewMockMessageClient(ctrl)
 	ratelimiter := mock_ratelimiter.NewMockRateLimiter(ctrl)
 	messageClient.EXPECT().PublishProto(gomock.Any(), gomock.Any()).AnyTimes()
@@ -111,7 +134,7 @@ func TestPublicAPIProxy(t *testing.T) {
 	server := httptest.NewServer(p.createPublicAPIProxyHandler())
 
 	// case 1: unauthorized request
-	authenticator.EXPECT().FindAgentFromRemoteAddr(gomock.Any()).Return(nil, fmt.Errorf("can't find"))
+	authenticator.EXPECT().FindContainerNameFromRemoteAddr(gomock.Any(), gomock.Any()).Return("", fmt.Errorf("can't find"))
 
 	resp, err := http.Get(server.URL)
 	assert.NoError(t, err)
@@ -119,7 +142,8 @@ func TestPublicAPIProxy(t *testing.T) {
 	assert.Equal(t, resp.StatusCode, http.StatusUnauthorized)
 
 	// case 2: authorized request
-	authenticator.EXPECT().FindAgentFromRemoteAddr(gomock.Any()).Return(testBotCfg, nil)
+	authenticator.EXPECT().FindContainerNameFromRemoteAddr(gomock.Any(), gomock.Any()).Return("forta-bot-1", nil)
+	authenticator.EXPECT().FindAgentByContainerName(gomock.Any()).Return(testBotCfg, nil)
 	ratelimiter.EXPECT().ExceedsLimit(gomock.Any()).Return(false)
 
 	resp, err = http.Get(server.URL)
@@ -128,7 +152,8 @@ func TestPublicAPIProxy(t *testing.T) {
 	assert.Equal(t, resp.StatusCode, http.StatusOK)
 
 	// case 2: authorized, but rate limited request
-	authenticator.EXPECT().FindAgentFromRemoteAddr(gomock.Any()).Return(testBotCfg, nil)
+	authenticator.EXPECT().FindContainerNameFromRemoteAddr(gomock.Any(), gomock.Any()).Return("forta-bot-1", nil)
+	authenticator.EXPECT().FindAgentByContainerName(gomock.Any()).Return(testBotCfg, nil)
 	ratelimiter.EXPECT().ExceedsLimit(gomock.Any()).Return(true)
 	resp, err = http.Get(server.URL)
 	assert.NoError(t, err)

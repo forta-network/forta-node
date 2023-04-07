@@ -161,7 +161,7 @@ func initCombinationStream(ctx context.Context, msgClient clients.MessageClient,
 		},
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to create combiner feed: %v", err)
 	}
 
 	combinerStream, err := scanner.NewCombinerAlertStreamService(
@@ -259,6 +259,8 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	cfg.Publish.IPFS.APIURL = utils.ConvertToDockerHostURL(cfg.Publish.IPFS.APIURL)
 	cfg.Publish.IPFS.GatewayURL = utils.ConvertToDockerHostURL(cfg.Publish.IPFS.GatewayURL)
 	cfg.LocalModeConfig.WebhookURL = utils.ConvertToDockerHostURL(cfg.LocalModeConfig.WebhookURL)
+	cfg.CombinerConfig.AlertAPIURL = utils.ConvertToDockerHostURL(cfg.CombinerConfig.AlertAPIURL)
+	cfg.PublicAPIProxy.Url = utils.ConvertToDockerHostURL(cfg.PublicAPIProxy.Url)
 	msgClient := messaging.NewClient("scanner", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 
 	key, err := config.LoadKeyInContainer(cfg)
@@ -268,27 +270,27 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 
 	publisherSvc, err := publisher.NewPublisher(ctx, cfg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create publisher: %v", err)
 	}
 
 	alertSender, err := initAlertSender(ctx, key, publisherSvc, cfg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to initialize alert sender: %v", err)
 	}
 
 	ethClient, err := ethereum.NewStreamEthClient(ctx, "chain", cfg.Scan.JsonRpc.Url)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create stream eth client: %v", err)
 	}
 
 	traceClient, err := ethereum.NewStreamEthClient(ctx, "trace", cfg.Trace.JsonRpc.Url)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create trace stream eth client: %v", err)
 	}
 
 	txStream, blockFeed, err := initTxStream(ctx, ethClient, traceClient, cfg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create tx stream: %v", err)
 	}
 
 	var waitBots int
@@ -306,11 +308,11 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	agentPool := agentpool.NewAgentPool(ctx, cfg, msgClient, waitBots)
 	txAnalyzer, err := initTxAnalyzer(ctx, cfg, alertSender, txStream, agentPool, msgClient)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to initialize tx analyzer: %v", err)
 	}
 	blockAnalyzer, err := initBlockAnalyzer(ctx, cfg, alertSender, txStream, agentPool, msgClient)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to initialize block analyzer: %v", err)
 	}
 
 	// Start the main block feed so all transaction feeds can start consuming.
@@ -320,18 +322,18 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 
 	combinationStream, combinationFeed, err := initCombinationStream(ctx, msgClient, cfg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to initialize combiner stream: %v", err)
 	}
 
 	registryClient, err := ethereum.NewStreamEthClient(ctx, "registry", cfg.Registry.JsonRpc.Url)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to initialize registry client stream: %v", err)
 	}
 	registryService := registry.New(cfg, key.Address, msgClient, registryClient, blockFeed)
 
 	combinationAnalyzer, err := initCombinerAlertAnalyzer(ctx, cfg, alertSender, combinationStream, agentPool, msgClient)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to initialize combiner analyzer: %v", err)
 	}
 
 	svcs := []services.Service{

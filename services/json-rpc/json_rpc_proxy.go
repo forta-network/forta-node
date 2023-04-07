@@ -32,7 +32,7 @@ type JsonRpcProxy struct {
 	rateLimiter ratelimiter.RateLimiter
 
 	lastErr          health.ErrorTracker
-	botAuthenticator clients.BotAuthenticator
+	botAuthenticator clients.IPAuthenticator
 }
 
 func (p *JsonRpcProxy) Start() error {

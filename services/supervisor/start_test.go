@@ -204,6 +204,7 @@ func (s *Suite) initialContainerCheck() {
 		config.DockerInspectorContainerName,
 		config.DockerJSONRPCProxyContainerName,
 		config.DockerJWTProviderContainerName,
+		config.DockerPublicAPIProxyContainerName,
 		config.DockerNatsContainerName,
 		config.DockerIpfsContainerName,
 		config.DockerStorageContainerName,

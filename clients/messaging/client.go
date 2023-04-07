@@ -61,7 +61,7 @@ func (client *Client) Subscribe(subject string, handler interface{}) {
 	// TODO: Configure redelivery options somehow.
 	logger := client.logger.WithField("subject", subject)
 	_, err := client.nc.Subscribe(subject, func(m *nats.Msg) {
-		logger.Debugf("received: %s", string(m.Data))
+		logger.Tracef("received: %s", string(m.Data))
 
 		var err error
 		switch h := handler.(type) {
@@ -129,7 +129,7 @@ func (client *Client) Publish(subject string, payload interface{}) {
 	if err := client.nc.Publish(subject, data); err != nil {
 		logger.Errorf("failed to publish msg: %v", err)
 	}
-	logger.Debugf("published: %s", string(data))
+	logger.Tracef("published: %s", string(data))
 }
 
 // PublishProto publishes new messages.
