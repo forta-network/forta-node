@@ -106,13 +106,13 @@ agentLogs:
   disable: true
 
 combiner:
-  alertApiUrl: https://api-dev.forta.network/graphql
+  alertApiUrl: http://forta-public-api:8535
 
 publicApiProxy:
-  url: https://api-dev.forta.network
+  url: http://localhost:42000
 
 log:
-  level: trace
+  level: debug
 `
 
 const localModeDir = ".forta-local"
