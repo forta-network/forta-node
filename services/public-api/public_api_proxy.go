@@ -27,8 +27,9 @@ import (
 type contextKey int
 
 const (
-	botIDKey    contextKey = 0
-	botOwnerKey contextKey = 1
+	botIDKey contextKey = iota
+	botOwnerKey
+	isScannerKey
 )
 
 const claimKeyBotOwner = "bot-owner"
@@ -84,8 +85,8 @@ func (p *PublicAPIProxy) metricMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, req *http.Request) {
 			t := time.Now()
-			botID, _, foundAgent := getBotFromContext(req.Context())
-			if foundAgent && p.rateLimiter.ExceedsLimit(botID) {
+			botID, _, isScanner, foundAgent := getBotFromContext(req.Context())
+			if foundAgent && !isScanner && p.rateLimiter.ExceedsLimit(botID) {
 				writeTooManyReqsErr(w, req)
 				p.msgClient.PublishProto(
 					messaging.SubjectMetricAgent, &protocol.AgentMetricList{
@@ -134,8 +135,10 @@ func (p *PublicAPIProxy) authenticateRequest(req *http.Request) (*http.Request, 
 
 	var botID, botOwner string
 
+	isScanner := false
 	// combiner feed authorization
 	if containerName == config.DockerScannerContainerName {
+		isScanner = true
 		botID = req.Header.Get("bot-id")
 		botOwner = req.Header.Get("bot-owner")
 	} else {
@@ -153,6 +156,7 @@ func (p *PublicAPIProxy) authenticateRequest(req *http.Request) (*http.Request, 
 	// set authorization values as context to use in next middlewares
 	ctxWithBot := context.WithValue(req.Context(), botIDKey, botID)
 	ctxWithBot = context.WithValue(ctxWithBot, botOwnerKey, botOwner)
+	ctxWithBot = context.WithValue(ctxWithBot, isScannerKey, isScanner)
 
 	botReq := req.WithContext(ctxWithBot)
 
@@ -161,7 +165,7 @@ func (p *PublicAPIProxy) authenticateRequest(req *http.Request) (*http.Request, 
 
 func (p *PublicAPIProxy) setAuthBearer(r *http.Request) {
 	log := logrus.WithField("addr", r.RemoteAddr)
-	botID, botOwner, ok := getBotFromContext(r.Context())
+	botID, botOwner, _, ok := getBotFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -201,28 +205,38 @@ func (p *PublicAPIProxy) Name() string {
 	return "json-rpc-proxy"
 }
 
-func getBotFromContext(ctx context.Context) (string, string, bool) {
+func getBotFromContext(ctx context.Context) (string, string, bool, bool) {
 	botIdVal := ctx.Value(botIDKey)
 	if botIdVal == nil {
-		return "", "", false
+		return "", "", false, false
 	}
 
 	botID, ok := botIdVal.(string)
 	if !ok {
-		return "", "", false
+		return "", "", false, false
 	}
 
 	botOwnerVal := ctx.Value(botOwnerKey)
 	if botOwnerVal == nil {
-		return "", "", false
+		return "", "", false, false
 	}
 
 	botOwner, ok := botOwnerVal.(string)
 	if !ok {
-		return "", "", false
+		return "", "", false, false
 	}
 
-	return botID, botOwner, ok
+	isScannerVal := ctx.Value(isScannerKey)
+	if botOwnerVal == nil {
+		return "", "", false, false
+	}
+
+	isScanner, ok := isScannerVal.(bool)
+	if !ok {
+		return "", "", false, false
+	}
+
+	return botID, botOwner, isScanner, ok
 }
 
 // Health implements health.Reporter interface.
