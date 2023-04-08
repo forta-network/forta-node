@@ -100,7 +100,11 @@ func (t *CombinerAlertStreamService) handleMessageSubscribe(payload messaging.Su
 		if subscription == nil {
 			continue
 		}
-		t.alertFeed.AddSubscription(subscription)
+		err := t.alertFeed.AddSubscription(subscription)
+		if err != nil {
+			log.WithError(err).Warnf("can not add subscription %s", subscription)
+			continue
+		}
 	}
 
 	return nil

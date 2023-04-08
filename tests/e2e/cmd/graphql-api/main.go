@@ -41,6 +41,7 @@ type AlertData struct {
 	PageInfo PageInfo `json:"pageInfo"`
 	Alerts   []Alert  `json:"alerts"`
 }
+
 type AlertResponse struct {
 	Alerts AlertData `json:"alerts"`
 }
