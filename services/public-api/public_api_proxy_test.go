@@ -46,6 +46,7 @@ func TestPublicAPIProxy_setAuthBearer(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/", nil)
 	ctx := context.WithValue(req.Context(), botIDKey, "test-id")
 	ctx = context.WithValue(ctx, botOwnerKey, "test-owner")
+	ctx = context.WithValue(ctx, isScannerKey, true)
 	req = req.WithContext(ctx)
 
 	proxy := PublicAPIProxy{Key: key}
@@ -77,7 +78,7 @@ func TestPublicAPIProxy_authenticateRequest(t *testing.T) {
 	assert.NotNil(t, req)
 	assert.NoError(t, err)
 
-	botID, botOwner, ok := getBotFromContext(req.Context())
+	botID, botOwner, _, ok := getBotFromContext(req.Context())
 	assert.True(t, ok)
 	assert.Equal(t, botID, "test-id")
 	assert.Equal(t, botOwner, "test-owner")
@@ -96,7 +97,7 @@ func TestPublicAPIProxy_authenticateRequest(t *testing.T) {
 	assert.NotNil(t, req)
 	assert.NoError(t, err)
 
-	botID, botOwner, ok = getBotFromContext(req.Context())
+	botID, botOwner, _, ok = getBotFromContext(req.Context())
 	assert.True(t, ok)
 	assert.Equal(t, botID, botCfg.ID)
 	assert.Equal(t, botOwner, botCfg.Owner)
@@ -112,7 +113,7 @@ func TestPublicAPIProxy_authenticateRequest(t *testing.T) {
 	assert.NotNil(t, req)
 	assert.Error(t, err)
 
-	botID, botOwner, ok = getBotFromContext(req.Context())
+	botID, botOwner, _, ok = getBotFromContext(req.Context())
 	assert.False(t, ok)
 	assert.Empty(t, botID)
 	assert.Empty(t, botOwner)
