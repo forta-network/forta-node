@@ -1,15 +1,16 @@
-package main
+package graphql_api
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
-	"github.com/forta-network/forta-node/tests/e2e"
+	"github.com/forta-network/forta-core-go/utils/apiutils"
+	"github.com/gorilla/mux"
 )
 
 type Alert struct {
@@ -52,9 +53,43 @@ type Response struct {
 	Data AlertResponse `json:"data"`
 }
 
-func main() {
-	http.HandleFunc("/graphql", authMiddleware(dataHandler))
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", e2e.DefaultMockGraphqlAPIPort), nil))
+type GraphQLAPI struct {
+	ctx    context.Context
+	cancel func()
+	port   int
+	router *mux.Router
+}
+
+// Start starts the server.
+func (q *GraphQLAPI) Start() {
+	apiutils.ListenAndServe(
+		q.ctx, &http.Server{
+			Handler:      q.router,
+			Addr:         fmt.Sprintf("0.0.0.0:%d", q.port),
+			WriteTimeout: 15 * time.Second,
+			ReadTimeout:  15 * time.Second,
+		}, "started graphql api",
+	)
+}
+
+// Close closes the server.
+func (q *GraphQLAPI) Close() error {
+	q.cancel()
+	return nil
+}
+
+func New(ctx context.Context, port int) *GraphQLAPI {
+	api := &GraphQLAPI{
+		port: port,
+	}
+
+	api.ctx, api.cancel = context.WithCancel(ctx)
+
+	r := mux.NewRouter()
+	r.HandleFunc("/graphql", authMiddleware(dataHandler)).Methods("POST")
+	api.router = r
+
+	return api
 }
 
 func authMiddleware(next http.HandlerFunc) http.HandlerFunc {

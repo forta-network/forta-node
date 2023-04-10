@@ -28,10 +28,12 @@ import (
 	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/tests/e2e"
 	"github.com/forta-network/forta-node/tests/e2e/ethaccounts"
 	"github.com/forta-network/forta-node/tests/e2e/misccontracts/contract_mock_registry"
 	"github.com/forta-network/forta-node/tests/e2e/misccontracts/contract_transparent_upgradeable_proxy"
 	"github.com/forta-network/forta-node/testutils/alertserver"
+	graphql_api "github.com/forta-network/forta-node/testutils/graphql-api"
 	ipfsapi "github.com/ipfs/go-ipfs-api"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -88,6 +90,7 @@ type Suite struct {
 	r   *require.Assertions
 
 	alertServer *alertserver.AlertServer
+	graphqlAPI  *graphql_api.GraphQLAPI
 
 	ipfsClient   *ipfsapi.Shell
 	ethClient    *ethclient.Client
@@ -237,6 +240,10 @@ func (s *Suite) SetupTest() {
 	// start the fake alert server
 	s.alertServer = alertserver.New(s.ctx, 9090)
 	go s.alertServer.Start()
+
+	// start fake graphql api
+	s.graphqlAPI = graphql_api.New(s.ctx, e2e.DefaultMockGraphqlAPIPort)
+	go s.graphqlAPI.Start()
 }
 
 func attachCmdOutput(cmd *exec.Cmd) {
@@ -368,7 +375,11 @@ func (s *Suite) TearDownTest() {
 	if s.alertServer != nil {
 		s.alertServer.Close()
 	}
+	if s.graphqlAPI != nil {
+		s.graphqlAPI.Close()
+	}
 }
+
 func (s *Suite) tearDownProcess(process *os.Process) {
 	process.Signal(syscall.SIGINT)
 	process.Wait()

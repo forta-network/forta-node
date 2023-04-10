@@ -21,10 +21,6 @@ set -e
 which geth docker ipfs disco
 set +e
 
-# spawn mock graphql api
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o mock-graphql-api $TEST_DIR/cmd/graphql-api/main.go
-./mock-graphql-api &
-
 # ignore error from 'ipfs init' here since it might be failing due to reusing ipfs dir from previous run.
 # this is useful for making container-related steps faster in local development.
 ipfs init
