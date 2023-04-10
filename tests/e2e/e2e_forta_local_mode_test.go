@@ -106,9 +106,6 @@ telemetry:
 agentLogs:
   disable: true
 
-combiner:
-  alertApiUrl: http://forta-public-api:8535
-
 publicApiProxy:
   url: http://localhost:%d
 
