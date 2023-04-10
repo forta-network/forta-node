@@ -58,8 +58,8 @@ func TestPublicAPIProxy_setAuthBearer(t *testing.T) {
 
 	jwtToken, err := security.VerifyScannerJWT(token)
 	assert.NoError(t, err)
-	assert.Equal(t, jwtToken.Token.Claims.(jwt.MapClaims)["bot-owner"], "test-owner")
-	assert.Equal(t, jwtToken.Token.Claims.(jwt.MapClaims)["bot-id"], "test-id")
+	assert.Equal(t, "test-owner", jwtToken.Token.Claims.(jwt.MapClaims)["bot-owner"])
+	assert.Equal(t, "test-id", jwtToken.Token.Claims.(jwt.MapClaims)["bot-id"])
 }
 
 func TestPublicAPIProxy_authenticateRequest(t *testing.T) {
@@ -80,8 +80,8 @@ func TestPublicAPIProxy_authenticateRequest(t *testing.T) {
 
 	botID, botOwner, _, ok := getBotFromContext(req.Context())
 	assert.True(t, ok)
-	assert.Equal(t, botID, "test-id")
-	assert.Equal(t, botOwner, "test-owner")
+	assert.Equal(t, "test-id", botID)
+	assert.Equal(t, "test-owner", botOwner)
 
 	// Case 2: proxying handle alert request
 	botCfg := &config.AgentConfig{Owner: "test-combiner-owner", ID: "test-combiner-id"}
@@ -99,8 +99,8 @@ func TestPublicAPIProxy_authenticateRequest(t *testing.T) {
 
 	botID, botOwner, _, ok = getBotFromContext(req.Context())
 	assert.True(t, ok)
-	assert.Equal(t, botID, botCfg.ID)
-	assert.Equal(t, botOwner, botCfg.Owner)
+	assert.Equal(t, botCfg.ID, botID)
+	assert.Equal(t, botCfg.Owner, botOwner)
 
 	// Case 3: proxying an arbitrary request
 	req = httptest.NewRequest(http.MethodPost, "/", nil)
@@ -140,7 +140,7 @@ func TestPublicAPIProxy(t *testing.T) {
 	resp, err := http.Get(server.URL)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
-	assert.Equal(t, resp.StatusCode, http.StatusUnauthorized)
+	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 
 	// case 2: authorized request
 	authenticator.EXPECT().FindContainerNameFromRemoteAddr(gomock.Any(), gomock.Any()).Return("forta-bot-1", nil)
@@ -150,7 +150,7 @@ func TestPublicAPIProxy(t *testing.T) {
 	resp, err = http.Get(server.URL)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
-	assert.Equal(t, resp.StatusCode, http.StatusOK)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	// case 2: authorized, but rate limited request
 	authenticator.EXPECT().FindContainerNameFromRemoteAddr(gomock.Any(), gomock.Any()).Return("forta-bot-1", nil)
@@ -159,7 +159,7 @@ func TestPublicAPIProxy(t *testing.T) {
 	resp, err = http.Get(server.URL)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
-	assert.Equal(t, resp.StatusCode, http.StatusTooManyRequests)
+	assert.Equal(t, http.StatusTooManyRequests, resp.StatusCode)
 }
 
 func TestPublicAPIProxy_newReverseProxy(t *testing.T) {
