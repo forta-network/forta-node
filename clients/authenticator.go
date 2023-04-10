@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/forta-network/forta-core-go/protocol/settings"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/config"
 )
@@ -90,17 +89,12 @@ func (p *ipAuthenticator) handleAgentVersionsUpdate(payload messaging.AgentPaylo
 	return nil
 }
 
-func NewBotAuthenticator(ctx context.Context, cfg config.Config) (IPAuthenticator, error) {
+func NewBotAuthenticator(ctx context.Context) (IPAuthenticator, error) {
 	globalClient, err := NewDockerClient("")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the global docker client: %v", err)
 	}
 	msgClient := messaging.NewClient("bot-auth", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
-
-	rateLimiting := cfg.JsonRpcProxy.RateLimitConfig
-	if rateLimiting == nil {
-		rateLimiting = (*config.RateLimitConfig)(settings.GetChainSettings(cfg.ChainID).JsonRpcRateLimiting)
-	}
 
 	b := &ipAuthenticator{
 		ctx:          ctx,

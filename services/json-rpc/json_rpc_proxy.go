@@ -136,7 +136,7 @@ func NewJsonRpcProxy(ctx context.Context, cfg config.Config) (*JsonRpcProxy, err
 
 	msgClient := messaging.NewClient("json-rpc", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 
-	botAuthenticator, err := clients.NewBotAuthenticator(ctx, cfg)
+	botAuthenticator, err := clients.NewBotAuthenticator(ctx)
 	if err != nil {
 		return nil, err
 	}

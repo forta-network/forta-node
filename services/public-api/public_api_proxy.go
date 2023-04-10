@@ -265,7 +265,7 @@ func NewPublicAPIProxy(ctx context.Context, cfg config.Config) (*PublicAPIProxy,
 		return nil, err
 	}
 
-	botAuthenticator, err := clients.NewBotAuthenticator(ctx, cfg)
+	botAuthenticator, err := clients.NewBotAuthenticator(ctx)
 	if err != nil {
 		return nil, err
 	}
