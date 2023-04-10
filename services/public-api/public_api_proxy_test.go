@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/forta-network/forta-core-go/security"
 	mock_clients "github.com/forta-network/forta-node/clients/mocks"
-	mock_ratelimiter "github.com/forta-network/forta-node/clients/rate_limiter/mocks"
+	mock_ratelimiter "github.com/forta-network/forta-node/clients/ratelimiter/mocks"
 	"github.com/forta-network/forta-node/config"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/golang/mock/gomock"

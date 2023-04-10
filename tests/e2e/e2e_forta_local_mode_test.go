@@ -11,6 +11,7 @@ import (
 
 	"github.com/forta-network/forta-core-go/clients/webhook/client/models"
 	"github.com/forta-network/forta-core-go/security"
+	"github.com/forta-network/forta-node/tests/e2e"
 	"github.com/forta-network/forta-node/tests/e2e/agents/combinerbot/combinerbotalertid"
 	"github.com/forta-network/forta-node/tests/e2e/agents/txdetectoragent/testbotalertid"
 )
@@ -109,7 +110,7 @@ combiner:
   alertApiUrl: http://forta-public-api:8535
 
 publicApiProxy:
-  url: http://localhost:42000
+  url: http://localhost:%d
 
 log:
   level: debug
@@ -224,7 +225,7 @@ func (s *Suite) runLocalModeAlertHandler(webhookURL, logFileName string, readAle
 		ioutil.WriteFile(
 			configFilePath,
 			[]byte(fmt.Sprintf(
-				localModeAlertConfig, webhookURL, logFileName,
+				localModeAlertConfig, webhookURL, logFileName, e2e.DefaultMockGraphqlAPIPort,
 			)),
 			0777,
 		),

@@ -8,6 +8,8 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/forta-network/forta-node/tests/e2e"
 )
 
 type Alert struct {
@@ -52,7 +54,7 @@ type Response struct {
 
 func main() {
 	http.HandleFunc("/graphql", authMiddleware(dataHandler))
-	log.Fatal(http.ListenAndServe(":42000", nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", e2e.DefaultMockGraphqlAPIPort), nil))
 }
 
 func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
