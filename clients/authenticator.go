@@ -3,7 +3,6 @@ package clients
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"sync"
 
 	"github.com/forta-network/forta-node/clients/messaging"
@@ -13,7 +12,6 @@ import (
 // IPAuthenticator makes sure ip is an assigned bot or a managed container
 type ipAuthenticator struct {
 	ctx          context.Context
-	server       *http.Server
 	dockerClient DockerClient
 	msgClient    MessageClient
 
