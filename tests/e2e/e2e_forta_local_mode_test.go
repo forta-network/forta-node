@@ -86,7 +86,10 @@ localMode:
   includeMetrics: true
   webhookUrl: %s
   logFileName: %s
-  botImages:
+# following will deploy 2 different bots with same image, but the first one will be treated
+# as if it has a valid data fee subscription
+  botImages:  
+    - forta-e2e-alert-test-agent
     - forta-e2e-alert-test-agent
   runtimeLimits:
     stopTimeoutSeconds: 30
@@ -249,6 +252,11 @@ func (s *Suite) runLocalModeAlertHandler(webhookURL, logFileName string, readAle
 	var (
 		combinationAlert *models.Alert
 	)
+
+	// only the bot with data fee subscription should submit alert, other bot shouldn't be fed any alerts
+	for _, alert := range webhookAlerts.Alerts {
+		s.r.Equal(alert.Source.Bot.ID, botWithDataFeeSubscription)
+	}
 
 	for _, alert := range webhookAlerts.Alerts {
 		if alert.AlertID == combinerbotalertid.CombinationAlertID {
