@@ -368,6 +368,7 @@ func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]*config.Ag
 			continue
 		}
 
+		agtCfg.Owner = agt.Owner
 		agentConfigs = append(agentConfigs, agtCfg)
 	}
 
