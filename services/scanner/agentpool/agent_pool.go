@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/forta-network/forta-core-go/feeds"
+	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-node/metrics"
 
 	"github.com/forta-network/forta-core-go/clients/health"
@@ -255,9 +255,12 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 // should be processing the alert.
 func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest) {
 	startTime := time.Now()
-	lg := log.WithFields(log.Fields{
-		"component": "pool",
-	})
+	lg := log.WithFields(
+		log.Fields{
+			"component": "pool",
+			"target":    req.TargetBotId,
+		},
+	)
 	lg.Debug("SendEvaluateAlertRequest")
 
 	if req.Event.Alert == nil || req.Event.Alert.Source == nil || req.Event.Alert.Source.Bot == nil {
@@ -280,39 +283,66 @@ func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest
 	}
 
 	var metricsList []*protocol.AgentMetric
+
+	var target *poolagent.Agent
+
+	// find target bot for the event
 	for _, agent := range agents {
-		if !agent.IsReady() || !agent.ShouldProcessAlert(req.Event) {
+		if agent.Config().ID != req.TargetBotId {
 			continue
 		}
 
-		lg.WithFields(log.Fields{
-			"agent":    agent.Config().ID,
-			"duration": time.Since(startTime),
-		}).Debug("sending alert request to evalAlertCh")
-
-		// unblock req send if agent is closed
-		select {
-		case <-agent.Closed():
-			ap.discardAgent(agent)
-		case agent.CombinationRequestCh() <- &poolagent.CombinationRequest{
-			Original: req,
-			Encoded:  encoded,
-		}:
-		default: // do not try to send if the buffer is full
-			lg.WithField("agent", agent.Config().ID).Warn("agent alert request buffer is full - skipping")
-			metricsList = append(metricsList, metrics.CreateAgentMetric(agent.Config().ID, metrics.MetricCombinerDrop, 1))
+		if !agent.IsReady() {
+			continue
 		}
-		lg.WithFields(log.Fields{
-			"agent":    agent.Config().ID,
-			"duration": time.Since(startTime),
-		}).Debug("sent alert request to evalAlertCh")
+		target = agent
 	}
+
+	// return if can't find the target bot, or it's not ready yet
+	if target == nil {
+		lg.Warn("failed to find subscriber")
+		return
+	}
+
+	// filter out bad events
+	if !target.ShouldProcessAlert(req.Event) {
+		return
+	}
+
+	lg.WithFields(
+		log.Fields{
+			"agent":    target.Config().ID,
+			"duration": time.Since(startTime),
+		},
+	).Debug("sending alert request to evalAlertCh")
+
+	// unblock req send if agent is closed
+	select {
+	case <-target.Closed():
+		ap.discardAgent(target)
+	case target.CombinationRequestCh() <- &poolagent.CombinationRequest{
+		Original: req,
+		Encoded:  encoded,
+	}:
+	default: // do not try to send if the buffer is full
+		lg.WithField("agent", target.Config().ID).Warn("agent alert request buffer is full - skipping")
+		metricsList = append(metricsList, metrics.CreateAgentMetric(target.Config().ID, metrics.MetricCombinerDrop, 1))
+	}
+
+	lg.WithFields(
+		log.Fields{
+			"agent":    target.Config().ID,
+			"duration": time.Since(startTime),
+		},
+	).Debug("sent alert request to evalAlertCh")
 
 	ap.msgClient.Publish(messaging.SubjectScannerAlert, &messaging.ScannerPayload{})
 	metrics.SendAgentMetrics(ap.msgClient, metricsList)
-	lg.WithFields(log.Fields{
-		"duration": time.Since(startTime),
-	}).Debug("Finished SendEvaluateAlertRequest")
+	lg.WithFields(
+		log.Fields{
+			"duration": time.Since(startTime),
+		},
+	).Debug("Finished SendEvaluateAlertRequest")
 }
 
 // CombinationAlertResults returns the receive-only alert results channel.
@@ -414,8 +444,8 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	// If an agent was added before and just started to run, we should mark as ready.
 	var agentsToStop []config.AgentConfig
 	var agentsReady []config.AgentConfig
-	var newSubscriptions []feeds.CombinerBotSubscription
-	var removedSubscriptions []feeds.CombinerBotSubscription
+	var newSubscriptions []domain.CombinerBotSubscription
+	var removedSubscriptions []domain.CombinerBotSubscription
 
 	for _, agentCfg := range payload {
 		for _, agent := range ap.agents {
@@ -432,9 +462,9 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 					if agent.IsCombinerBot() {
 						for _, subscription := range agent.AlertConfig().Subscriptions {
 							removedSubscriptions = append(
-								removedSubscriptions, feeds.CombinerBotSubscription{
+								removedSubscriptions, domain.CombinerBotSubscription{
 									Subscription: subscription,
-									Subscriber: &feeds.Subscriber{
+									Subscriber: &domain.Subscriber{
 										BotID:    agent.Config().ID,
 										BotOwner: agent.Config().Owner,
 									},
@@ -453,9 +483,9 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 				if agent.IsCombinerBot() {
 					for _, subscription := range agent.AlertConfig().Subscriptions {
 						newSubscriptions = append(
-							newSubscriptions, feeds.CombinerBotSubscription{
+							newSubscriptions, domain.CombinerBotSubscription{
 								Subscription: subscription,
-								Subscriber: &feeds.Subscriber{
+								Subscriber: &domain.Subscriber{
 									BotID:    agent.Config().ID,
 									BotOwner: agent.Config().Owner,
 								},

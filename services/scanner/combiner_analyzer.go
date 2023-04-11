@@ -154,7 +154,7 @@ func (aas *CombinerAlertAnalyzerService) Start() error {
 
 			// create a request
 			requestId := uuid.Must(uuid.NewUUID())
-			request := &protocol.EvaluateAlertRequest{RequestId: requestId.String(), Event: alertEvt}
+			request := &protocol.EvaluateAlertRequest{RequestId: requestId.String(), Event: alertEvt, TargetBotId: alert.Subscriber.BotID}
 
 			// forward to the pool
 			aas.cfg.AgentPool.SendEvaluateAlertRequest(request)
