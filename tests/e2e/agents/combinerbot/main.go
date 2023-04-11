@@ -35,7 +35,7 @@ type agentServer struct {
 }
 
 var (
-	subscribedBot = "0x2bee737433c0c8cdbd924bbb68306cfd8abcf0e46a6ce8994fa7d474361bb186"
+	subscribedBot = "0xbe1872858e63b6ed4ef7b84fc453970dc8d89968715797662a4f43c01d598aab"
 	// alertSubscriptions subscribes to police bot alerts
 	alertSubscriptions = []*protocol.CombinerBotSubscription{
 		{
@@ -69,14 +69,16 @@ func (as *agentServer) EvaluateBlock(ctx context.Context, txRequest *protocol.Ev
 	return response, nil
 }
 func (as *agentServer) EvaluateAlert(ctx context.Context, request *protocol.EvaluateAlertRequest) (*protocol.EvaluateAlertResponse, error) {
-	logrus.Infof("evaluating alert %s", request.Event.Alert.Hash)
+	logrus.WithField("source", "handle alert feed").Infof("incoming alert %s for bot %s", request.Event.Alert.Hash, subscribedBot)
 	response := &protocol.EvaluateAlertResponse{Status: protocol.ResponseStatus_SUCCESS}
 
-	err := queryPublicAPI(ctx)
+	alerts, err := queryPublicAPI(ctx, subscribedBot)
 	if err != nil {
 		logrus.WithError(err).Warn("failed to fetch latest alerts")
 		return &protocol.EvaluateAlertResponse{Status: protocol.ResponseStatus_ERROR}, err
 	}
+
+	logrus.WithField("source", "public api proxy").Infof("succesfully fetched %d alerts for bot %s", len(alerts), subscribedBot)
 
 	response.Findings = append(
 		response.Findings, &protocol.Finding{
@@ -100,13 +102,11 @@ func (as *agentServer) EvaluateAlert(ctx context.Context, request *protocol.Eval
 	return response, nil
 }
 
-func queryPublicAPI(ctx context.Context) error {
+func queryPublicAPI(ctx context.Context, bot string) ([]*protocol.AlertEvent, error) {
 	publicAPIAddr := fmt.Sprintf(
 		"http://%s:%s/graphql", os.Getenv(config.EnvPublicAPIProxyHost), os.Getenv(config.EnvPublicAPIProxyPort),
 	)
 	graphqlClient := graphql.NewClient(publicAPIAddr)
 
-	_, err := graphqlClient.GetAlerts(ctx, &graphql.AlertsInput{Bots: []string{subscribedBot}}, nil)
-
-	return err
+	return graphqlClient.GetAlerts(ctx, &graphql.AlertsInput{Bots: []string{bot}}, nil)
 }

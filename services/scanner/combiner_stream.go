@@ -97,10 +97,20 @@ func (t *CombinerAlertStreamService) Health() health.Reports {
 
 func (t *CombinerAlertStreamService) handleMessageSubscribe(payload messaging.SubscriptionPayload) error {
 	for _, subscription := range payload {
-		if subscription == nil {
+		if subscription == nil || subscription.Subscription == nil || subscription.Subscriber == nil {
 			continue
 		}
-		t.alertFeed.AddSubscription(subscription)
+
+		err := t.alertFeed.AddSubscription(subscription)
+		if err != nil {
+			log.WithFields(
+				log.Fields{
+					"subscriberBot": subscription.Subscriber.BotID,
+					"subscribesTo":  subscription.Subscription.BotId,
+				},
+			).WithError(err).Warn("can not add subscription")
+			continue
+		}
 	}
 
 	return nil

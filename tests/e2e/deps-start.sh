@@ -1,10 +1,10 @@
 #!/bin/bash
 
-./tests/e2e/deps-stop.sh
-
 export RUNNER_TRACKING_ID=""
 
 TEST_DIR=$(dirname "${BASH_SOURCE[0]}")
+$TEST_DIR/deps-stop.sh
+
 export IPFS_PATH="$TEST_DIR/.ipfs"
 export REGISTRY_CONFIGURATION_PATH="$TEST_DIR/disco.config.yml"
 export IPFS_URL="http://localhost:5002"
@@ -20,7 +20,6 @@ ETHEREUM_NODE_ADDRESS="0x1111e291778AE830cfE4e34185e4e560E94047c7"
 set -e
 which geth docker ipfs disco
 set +e
-
 
 # ignore error from 'ipfs init' here since it might be failing due to reusing ipfs dir from previous run.
 # this is useful for making container-related steps faster in local development.

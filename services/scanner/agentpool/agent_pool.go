@@ -434,7 +434,7 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 							removedSubscriptions = append(
 								removedSubscriptions, feeds.CombinerBotSubscription{
 									Subscription: subscription,
-									Subscriber: feeds.Subscriber{
+									Subscriber: &feeds.Subscriber{
 										BotID:    agent.Config().ID,
 										BotOwner: agent.Config().Owner,
 									},
@@ -455,7 +455,7 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 						newSubscriptions = append(
 							newSubscriptions, feeds.CombinerBotSubscription{
 								Subscription: subscription,
-								Subscriber: feeds.Subscriber{
+								Subscriber: &feeds.Subscriber{
 									BotID:    agent.Config().ID,
 									BotOwner: agent.Config().Owner,
 								},

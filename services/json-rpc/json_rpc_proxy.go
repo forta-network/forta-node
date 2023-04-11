@@ -32,7 +32,7 @@ type JsonRpcProxy struct {
 	rateLimiter ratelimiter.RateLimiter
 
 	lastErr          health.ErrorTracker
-	botAuthenticator clients.BotAuthenticator
+	botAuthenticator clients.IPAuthenticator
 }
 
 func (p *JsonRpcProxy) Start() error {
@@ -136,7 +136,7 @@ func NewJsonRpcProxy(ctx context.Context, cfg config.Config) (*JsonRpcProxy, err
 
 	msgClient := messaging.NewClient("json-rpc", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 
-	botAuthenticator, err := clients.NewBotAuthenticator(ctx, cfg)
+	botAuthenticator, err := clients.NewBotAuthenticator(ctx)
 	if err != nil {
 		return nil, err
 	}
