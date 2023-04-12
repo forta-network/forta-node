@@ -353,6 +353,7 @@ func (agent *Agent) processTransaction(lg *log.Entry, request *TxRequest) (exit 
 
 		return false
 	}
+
 	lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking agent")
 	if agent.errCounter.TooManyErrs(err) {
 		lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down agent")
@@ -483,7 +484,7 @@ func (agent *Agent) processCombinationAlert(lg *log.Entry, request *CombinationR
 
 	startTime := time.Now()
 	if agent.IsClosed() {
-		agent.mu.RUnlock()
+		return true
 	}
 
 	ctx, cancel := context.WithTimeout(agent.ctx, AgentTimeout)

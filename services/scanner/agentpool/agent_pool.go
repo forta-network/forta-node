@@ -296,6 +296,7 @@ func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest
 			continue
 		}
 		target = agent
+		break
 	}
 
 	// return if can't find the target bot, or it's not ready yet
