@@ -84,6 +84,28 @@ func (agent *Agent) IsCombinerBot() bool {
 
 	return len(agent.config.AlertConfig.Subscriptions) > 0
 }
+func (agent *Agent) CombinerBotSubscriptions() []domain.CombinerBotSubscription {
+	agent.mu.RLock()
+	defer agent.mu.RUnlock()
+
+	var subscriptions []domain.CombinerBotSubscription
+	if agent.IsCombinerBot() {
+		return subscriptions
+	}
+	
+	for _, subscription := range agent.AlertConfig().Subscriptions {
+		subscriptions = append(
+			subscriptions, domain.CombinerBotSubscription{
+				Subscription: subscription,
+				Subscriber: &domain.Subscriber{
+					BotID:    agent.Config().ID,
+					BotOwner: agent.Config().Owner,
+				},
+			},
+		)
+	}
+	return subscriptions
+}
 
 // TxRequest contains the original request data and the encoded message.
 type TxRequest struct {

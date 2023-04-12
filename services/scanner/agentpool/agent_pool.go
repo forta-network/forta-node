@@ -460,19 +460,7 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 				if err != nil {
 					log.WithField("agent", agent.Config().ID).WithError(err).Error("handleStatusRunning: error while dialing")
 					agentsToStop = append(agentsToStop, agent.Config())
-					if agent.IsCombinerBot() {
-						for _, subscription := range agent.AlertConfig().Subscriptions {
-							removedSubscriptions = append(
-								removedSubscriptions, domain.CombinerBotSubscription{
-									Subscription: subscription,
-									Subscriber: &domain.Subscriber{
-										BotID:    agent.Config().ID,
-										BotOwner: agent.Config().Owner,
-									},
-								},
-							)
-						}
-					}
+					removedSubscriptions = append(removedSubscriptions, agent.CombinerBotSubscriptions()...)
 					continue
 				}
 
@@ -481,25 +469,14 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 				agent.StartProcessing()
 				agent.WaitInitialization()
 
-				if agent.IsCombinerBot() {
-					for _, subscription := range agent.AlertConfig().Subscriptions {
-						newSubscriptions = append(
-							newSubscriptions, domain.CombinerBotSubscription{
-								Subscription: subscription,
-								Subscriber: &domain.Subscriber{
-									BotID:    agent.Config().ID,
-									BotOwner: agent.Config().Owner,
-								},
-							},
-						)
-					}
-				}
+				newSubscriptions = append(newSubscriptions, agent.CombinerBotSubscriptions()...)
 
 				logger.WithField("image", agent.Config().Image).Info("attached")
 				agentsReady = append(agentsReady, agent.Config())
 			}
 		}
 	}
+
 	if len(agentsReady) > 0 {
 		ap.msgClient.Publish(messaging.SubjectAgentsStatusAttached, agentsReady)
 		if ap.botWaitGroup != nil {
@@ -524,6 +501,7 @@ func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
 	defer ap.mu.Unlock()
 
 	var newAgents []*poolagent.Agent
+	var removedSubscriptions []domain.CombinerBotSubscription
 	for _, agent := range ap.agents {
 		var stopped bool
 		for _, agentCfg := range payload {
@@ -531,6 +509,7 @@ func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
 				agent.Close()
 				log.WithField("agent", agent.Config().ID).WithField("image", agent.Config().Image).Info("detached")
 				stopped = true
+				removedSubscriptions = append(removedSubscriptions, agent.CombinerBotSubscriptions()...)
 				break
 			}
 		}
@@ -539,6 +518,11 @@ func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
 			newAgents = append(newAgents, agent)
 		}
 	}
+
+	if len(removedSubscriptions) > 0 {
+		ap.msgClient.Publish(messaging.SubjectAgentsAlertUnsubscribe, removedSubscriptions)
+	}
+
 	ap.agents = newAgents
 	return nil
 }
