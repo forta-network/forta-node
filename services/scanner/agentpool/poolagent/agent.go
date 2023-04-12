@@ -89,7 +89,7 @@ func (agent *Agent) CombinerBotSubscriptions() []domain.CombinerBotSubscription 
 	defer agent.mu.RUnlock()
 
 	var subscriptions []domain.CombinerBotSubscription
-	if agent.IsCombinerBot() {
+	if !agent.IsCombinerBot() {
 		return subscriptions
 	}
 	
