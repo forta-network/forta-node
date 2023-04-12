@@ -2,13 +2,23 @@ package jwt_provider
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/forta-network/forta-core-go/security"
 	"github.com/golang-jwt/jwt/v4"
 )
+
+// requestHash used for "hash" claim in JWT token
+func requestHash(uri string, payload []byte) common.Hash {
+	requestStr := fmt.Sprintf("%s%s", uri, payload)
+
+	return crypto.Keccak256Hash([]byte(requestStr))
+}
 
 func Test_createBotJWT(t *testing.T) {
 	dir := t.TempDir()
