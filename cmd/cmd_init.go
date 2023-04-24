@@ -111,7 +111,7 @@ trace:
 # If not set, defaults to scan.jsonRpc.url value above
 # jsonRpcProxy:
 #   jsonRpc:
-#     url: <enter-if-different-from-scan value>
+#     url: <enter-if-different-from-scan-value>
 
 # Adjust log level and sizes of scan node service containers
 # log:
