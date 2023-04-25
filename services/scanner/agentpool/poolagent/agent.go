@@ -278,20 +278,17 @@ func (agent *Agent) initialize() {
 	ctx, cancel := context.WithTimeout(agent.ctx, DefaultAgentInitializeTimeout)
 	defer cancel()
 
-	// invoke initialize method of bot.
-	initializeResponse, err := agent.client.Initialize(
-		ctx, &protocol.InitializeRequest{
+	// invoke initialize method of the bot
+	initializeResponse, err := agent.client.Initialize(ctx, &protocol.InitializeRequest{
 			AgentId:   agent.config.ID,
 			ProxyHost: config.DockerJSONRPCProxyContainerName,
-		},
-	)
+		})
 
-	// it is not mandatory to implement a initialize method
+	// it is not mandatory to implement a initialize method, safe to skip
 	if status.Code(err) == codes.Unimplemented {
 		logger.WithError(err).Info("initialize() method not implemented in bot - safe to ignore")
 		return
 	}
-
 	if err != nil {
 		logger.WithError(err).Warn("bot initialization failed")
 		return
@@ -302,7 +299,7 @@ func (agent *Agent) initialize() {
 		return
 	}
 
-	// pass new alert subscriptions to pool
+	// pass new alert subscriptions to the agent pool
 	if initializeResponse != nil && initializeResponse.AlertConfig != nil {
 		agent.SetAlertConfig(initializeResponse.AlertConfig)
 	}
