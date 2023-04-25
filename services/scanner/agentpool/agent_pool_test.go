@@ -78,6 +78,8 @@ func (s *Suite) TestStartProcessStop() {
 	}
 	emptyPayload := messaging.AgentPayload{}
 
+	// Prior to invoking initialize method, agent.start metric should be emitted.
+	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent,gomock.Any())
 	s.agentClient.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 	// Given that there are no agents running
