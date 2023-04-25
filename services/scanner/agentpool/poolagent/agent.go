@@ -255,21 +255,43 @@ func (agent *Agent) StartProcessing() {
 func (agent *Agent) initialize() {
 	defer agent.initWait.Done()
 
-	logger := log.WithFields(log.Fields{
-		"agent": agent.config.ID,
-	})
+	// public bot.start metric to track bot starts/restarts.
+	agent.msgClient.PublishProto(
+		messaging.SubjectMetricAgent, &protocol.AgentMetricList{
+			Metrics: []*protocol.AgentMetric{
+				{
+					AgentId:   agent.config.ID,
+					Timestamp: time.Now().Format(time.RFC3339),
+					Name:      metrics.MetricBotStarted,
+					Value:     1,
+				},
+			},
+		},
+	)
+
+	logger := log.WithFields(
+		log.Fields{
+			"agent": agent.config.ID,
+		},
+	)
 
 	ctx, cancel := context.WithTimeout(agent.ctx, DefaultAgentInitializeTimeout)
 	defer cancel()
-	initializeResponse, err := agent.client.Initialize(ctx, &protocol.InitializeRequest{
-		AgentId:   agent.config.ID,
-		ProxyHost: config.DockerJSONRPCProxyContainerName,
-	})
 
+	// invoke initialize method of bot.
+	initializeResponse, err := agent.client.Initialize(
+		ctx, &protocol.InitializeRequest{
+			AgentId:   agent.config.ID,
+			ProxyHost: config.DockerJSONRPCProxyContainerName,
+		},
+	)
+
+	// it is not mandatory to implement a initialize method
 	if status.Code(err) == codes.Unimplemented {
 		logger.WithError(err).Info("initialize() method not implemented in bot - safe to ignore")
 		return
 	}
+
 	if err != nil {
 		logger.WithError(err).Warn("bot initialization failed")
 		return

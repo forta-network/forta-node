@@ -42,6 +42,7 @@ const (
 	MetricCombinerError           = "combiner.error"
 	MetricCombinerSuccess         = "combiner.success"
 	MetricCombinerDrop            = "combiner.drop"
+	MetricBotStarted              = "agent.start"
 )
 
 func SendAgentMetrics(client clients.MessageClient, ms []*protocol.AgentMetric) {
