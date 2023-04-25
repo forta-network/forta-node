@@ -255,6 +255,10 @@ func (agent *Agent) StartProcessing() {
 func (agent *Agent) initialize() {
 	defer agent.initWait.Done()
 
+	logger := log.WithFields(log.Fields{
+			"agent": agent.config.ID,
+	})
+
 	// public bot.start metric to track bot starts/restarts.
 	agent.msgClient.PublishProto(
 		messaging.SubjectMetricAgent, &protocol.AgentMetricList{
@@ -269,20 +273,14 @@ func (agent *Agent) initialize() {
 		},
 	)
 
-	logger := log.WithFields(
-		log.Fields{
-			"agent": agent.config.ID,
-		},
-	)
-
 	ctx, cancel := context.WithTimeout(agent.ctx, DefaultAgentInitializeTimeout)
 	defer cancel()
 
 	// invoke initialize method of the bot
 	initializeResponse, err := agent.client.Initialize(ctx, &protocol.InitializeRequest{
-			AgentId:   agent.config.ID,
-			ProxyHost: config.DockerJSONRPCProxyContainerName,
-		})
+		AgentId:   agent.config.ID,
+		ProxyHost: config.DockerJSONRPCProxyContainerName,
+	})
 
 	// it is not mandatory to implement a initialize method, safe to skip
 	if status.Code(err) == codes.Unimplemented {
