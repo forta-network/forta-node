@@ -28,6 +28,7 @@ const (
 	MetricBlockSuccess            = "block.success"
 	MetricBlockDrop               = "block.drop"
 	MetricStop                    = "agent.stop"
+	MetricStart                   = "agent.start"
 	MetricJSONRPCLatency          = "jsonrpc.latency"
 	MetricJSONRPCRequest          = "jsonrpc.request"
 	MetricJSONRPCSuccess          = "jsonrpc.success"
@@ -42,7 +43,6 @@ const (
 	MetricCombinerError           = "combiner.error"
 	MetricCombinerSuccess         = "combiner.success"
 	MetricCombinerDrop            = "combiner.drop"
-	MetricBotStarted              = "agent.start"
 )
 
 func SendAgentMetrics(client clients.MessageClient, ms []*protocol.AgentMetric) {

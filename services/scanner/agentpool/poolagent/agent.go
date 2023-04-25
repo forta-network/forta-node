@@ -266,7 +266,7 @@ func (agent *Agent) initialize() {
 				{
 					AgentId:   agent.config.ID,
 					Timestamp: time.Now().Format(time.RFC3339),
-					Name:      metrics.MetricBotStarted,
+					Name:      metrics.MetricStart,
 					Value:     1,
 				},
 			},
