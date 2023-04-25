@@ -79,6 +79,10 @@ func (q *GraphQLAPI) Close() error {
 }
 
 func New(ctx context.Context, port int) *GraphQLAPI {
+	return NewWithAuthMiddleware(ctx, port, authMiddleware)
+}
+
+func NewWithAuthMiddleware(ctx context.Context, port int, authorizer func(handlerFunc http.HandlerFunc) http.HandlerFunc) *GraphQLAPI {
 	api := &GraphQLAPI{
 		port: port,
 	}
@@ -86,7 +90,7 @@ func New(ctx context.Context, port int) *GraphQLAPI {
 	api.ctx, api.cancel = context.WithCancel(ctx)
 
 	r := mux.NewRouter()
-	r.HandleFunc("/graphql", authMiddleware(dataHandler)).Methods("POST")
+	r.HandleFunc("/graphql", authorizer(dataHandler)).Methods("POST")
 	api.router = r
 
 	return api

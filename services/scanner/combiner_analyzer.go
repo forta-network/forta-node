@@ -144,17 +144,27 @@ func (aas *CombinerAlertAnalyzerService) Start() error {
 	// Gear 1: loops over alerts and distributes to all agents
 	go func() {
 		// for each alert
-		for alert := range aas.cfg.AlertChannel {
+		for alertEvt := range aas.cfg.AlertChannel {
+			logger := log.WithFields(
+				log.Fields{
+					"component": "combinerAnalyzer",
+					"target":    alertEvt.Subscriber.BotID,
+					"source":    alertEvt.Event.Alert.Source.Bot.Id,
+				},
+			)
+
+			logger.Debug("received alert")
+
 			// convert to message
-			alertEvt, err := alert.ToMessage()
+			alertEvtMsg, err := alertEvt.ToMessage()
 			if err != nil {
-				log.WithError(err).Error("error converting alert event to message (skipping)")
+				logger.WithError(err).Error("error converting alert event to message (skipping)")
 				continue
 			}
 
 			// create a request
 			requestId := uuid.Must(uuid.NewUUID())
-			request := &protocol.EvaluateAlertRequest{RequestId: requestId.String(), Event: alertEvt}
+			request := &protocol.EvaluateAlertRequest{RequestId: requestId.String(), Event: alertEvtMsg, TargetBotId: alertEvt.Subscriber.BotID}
 
 			// forward to the pool
 			aas.cfg.AgentPool.SendEvaluateAlertRequest(request)

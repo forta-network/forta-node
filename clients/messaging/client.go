@@ -139,7 +139,7 @@ func (client *Client) PublishProto(subject string, payload proto.Message) {
 	if err := client.nc.Publish(subject, data); err != nil {
 		logger.Errorf("failed to publish msg: %v", err)
 	}
-	logger.Debugf("published: %s", string(data))
+	logger.Tracef("published: %s", string(data))
 }
 
 type nopClient struct{}

@@ -25,6 +25,7 @@ import (
 	"github.com/forta-network/forta-core-go/ens"
 	"github.com/forta-network/forta-core-go/manifest"
 	"github.com/forta-network/forta-core-go/release"
+	"github.com/forta-network/forta-core-go/security"
 	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/config"
@@ -34,14 +35,17 @@ import (
 	"github.com/forta-network/forta-node/tests/e2e/misccontracts/contract_transparent_upgradeable_proxy"
 	"github.com/forta-network/forta-node/testutils/alertserver"
 	graphql_api "github.com/forta-network/forta-node/testutils/graphql-api"
+	"github.com/golang-jwt/jwt/v4"
 	ipfsapi "github.com/ipfs/go-ipfs-api"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
 const (
-	smallTimeout = time.Minute * 3
-	largeTimeout = time.Minute * 5
+	smallTimeout                  = time.Minute * 3
+	largeTimeout                  = time.Minute * 5
+	botWithDataFeeSubscription    = "1"
+	botWithoutDataFeeSubscription = "2"
 )
 
 var (
@@ -242,7 +246,32 @@ func (s *Suite) SetupTest() {
 	go s.alertServer.Start()
 
 	// start fake graphql api
-	s.graphqlAPI = graphql_api.New(s.ctx, e2e.DefaultMockGraphqlAPIPort)
+	s.graphqlAPI = graphql_api.NewWithAuthMiddleware(
+		s.ctx, e2e.DefaultMockGraphqlAPIPort, func(handlerFunc http.HandlerFunc) http.HandlerFunc {
+			return func(w http.ResponseWriter, r *http.Request) {
+				// extract bot id information
+				authHeader := r.Header.Get("Authorization")
+				token := strings.Split(authHeader, "Bearer ")[1]
+				t, err := security.VerifyScannerJWT(token)
+				if err != nil {
+					http.Error(w, "Unauthorized", http.StatusUnauthorized)
+					return
+				}
+				c := t.Token.Claims.(jwt.MapClaims)
+				botID := c["bot-id"]
+
+				// only allow requests from the bot with subscription
+				if botID == botWithDataFeeSubscription {
+					handlerFunc.ServeHTTP(w, r)
+					return
+				}
+
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+		},
+	)
+
 	go s.graphqlAPI.Start()
 }
 

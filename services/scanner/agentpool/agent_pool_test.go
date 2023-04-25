@@ -112,12 +112,14 @@ func (s *Suite) TestStartProcessStop() {
 	blockReq := &protocol.EvaluateBlockRequest{Event: &protocol.BlockEvent{BlockNumber: "123123"}}
 	blockResp := &protocol.EvaluateBlockResponse{Metadata: map[string]string{"imageHash": ""}}
 	combinerReq := &protocol.EvaluateAlertRequest{
+		TargetBotId: testAgentID,
 		Event: &protocol.AlertEvent{
 			Alert: &protocol.AlertEvent_Alert{
-				Hash:   "123123",
-				Source: &protocol.AlertEvent_Alert_Source{Bot: &protocol.AlertEvent_Alert_Bot{Id: testCombinerSourceBot}},
+				Hash:      "123123",
+				Source:    &protocol.AlertEvent_Alert_Source{Bot: &protocol.AlertEvent_Alert_Bot{Id: testCombinerSourceBot}},
 				CreatedAt: time.Now().Format(time.RFC3339Nano),
 			},
+
 		},
 	}
 	// save combiner subscription

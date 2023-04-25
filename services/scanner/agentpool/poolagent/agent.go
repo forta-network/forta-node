@@ -84,6 +84,28 @@ func (agent *Agent) IsCombinerBot() bool {
 
 	return len(agent.config.AlertConfig.Subscriptions) > 0
 }
+func (agent *Agent) CombinerBotSubscriptions() []domain.CombinerBotSubscription {
+	agent.mu.RLock()
+	defer agent.mu.RUnlock()
+
+	var subscriptions []domain.CombinerBotSubscription
+	if !agent.IsCombinerBot() {
+		return subscriptions
+	}
+	
+	for _, subscription := range agent.AlertConfig().Subscriptions {
+		subscriptions = append(
+			subscriptions, domain.CombinerBotSubscription{
+				Subscription: subscription,
+				Subscriber: &domain.Subscriber{
+					BotID:    agent.Config().ID,
+					BotOwner: agent.Config().Owner,
+				},
+			},
+		)
+	}
+	return subscriptions
+}
 
 // TxRequest contains the original request data and the encoded message.
 type TxRequest struct {
@@ -353,6 +375,7 @@ func (agent *Agent) processTransaction(lg *log.Entry, request *TxRequest) (exit 
 
 		return false
 	}
+
 	lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking agent")
 	if agent.errCounter.TooManyErrs(err) {
 		lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down agent")
@@ -483,7 +506,7 @@ func (agent *Agent) processCombinationAlert(lg *log.Entry, request *CombinationR
 
 	startTime := time.Now()
 	if agent.IsClosed() {
-		agent.mu.RUnlock()
+		return true
 	}
 
 	ctx, cancel := context.WithTimeout(agent.ctx, AgentTimeout)
@@ -632,42 +655,28 @@ func (agent *Agent) ShouldProcessAlert(event *protocol.AlertEvent) bool {
 		return false
 	}
 
-	for _, subscription := range agent.config.AlertConfig.Subscriptions {
-		// bot is subscribed to the bot id
-		subscribedToBot := subscription.BotId == "" || subscription.BotId == event.Alert.Source.Bot.Id
-		// bot is subscribed to the alert id
-		subscribedToAlert := subscription.AlertId == "" || subscription.AlertId == event.Alert.AlertId
-		// correct chain id
-		correctChainID := subscription.ChainId == 0 || subscription.ChainId == event.Alert.ChainId
+	// handle sharding
+	alertCreatedAt, err := time.Parse(time.RFC3339Nano, event.Alert.CreatedAt)
+	if err != nil {
+		log.WithFields(
+			log.Fields{
+				"alertHash": event.Alert.Hash,
+				"createdAt": event.Alert.CreatedAt,
+				"botId":     agent.config.ID,
+			},
+		).Warn("failed to parse created at for sharding calculation")
 
-		// handle sharding
-		alertCreatedAt, err := time.Parse(time.RFC3339Nano, event.Alert.CreatedAt)
-		if err != nil {
-			log.WithFields(
-				log.Fields{
-					"alertHash": event.Alert.Hash,
-					"createdAt": event.Alert.CreatedAt,
-					"botId":     agent.config.ID,
-				},
-			).Warn("failed to parse created at for sharding calculation")
-
-			return false
-		}
-
-		var isOnThisShard bool
-		if agent.IsSharded() {
-			isOnThisShard = uint(alertCreatedAt.Unix())%agent.config.ShardConfig.Shards == agent.config.ShardConfig.ShardID
-		} else {
-			isOnThisShard = true
-		}
-
-		// if matches at least one subscription of the bot
-		if subscribedToBot && subscribedToAlert && correctChainID && isOnThisShard {
-			return true
-		}
+		return false
 	}
 
-	return false
+	var isOnThisShard bool
+	if agent.IsSharded() {
+		isOnThisShard = uint(alertCreatedAt.Unix())%agent.config.ShardConfig.Shards == agent.config.ShardConfig.ShardID
+	} else {
+		isOnThisShard = true
+	}
+
+	return isOnThisShard
 }
 
 func (agent *Agent) SetShardConfig(cfg config.AgentConfig) {
