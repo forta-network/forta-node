@@ -41,6 +41,7 @@ type DockerClient interface {
 	EnsureLocalImage(ctx context.Context, name, ref string) error
 	GetContainerLogs(ctx context.Context, containerID, tail string, truncate int) (string, error)
 	GetContainerFromRemoteAddr(ctx context.Context, hostPort string) (*types.Container, error)
+	SetContainerEnvironmentVariable(ctx context.Context, containerID, key, value string) error
 }
 
 // MessageClient receives and publishes messages.
