@@ -704,7 +704,7 @@ func (agent *Agent) SetShardConfig(cfg config.AgentConfig) error {
 	if err != nil {
 		return err
 	}
-	err = dc.SetContainerEnvironmentVariable(context.Background(), agent.Config().ContainerName(), "SHARD_ID", cfg.ShardConfig.ShardID)
+	err = dc.SetContainerEnvironmentVariable(context.Background(), agent.Config().ContainerName(), config.EnvFortaShardID, fmt.Sprintf("%d", cfg.ShardConfig.ShardID))
 	if err != nil {
 		return err
 	}
