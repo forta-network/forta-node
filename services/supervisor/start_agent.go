@@ -60,6 +60,7 @@ func (sup *SupervisorService) startAgent(ctx context.Context, agent config.Agent
 				config.EnvFortaBotOwner:      agent.Owner,
 				config.EnvFortaChainID:       fmt.Sprintf("%d", agent.ChainID),
 				config.EnvFortaShardID:       fmt.Sprintf("%d", agent.ShardConfig.ShardID),
+				config.EnvFortaShardCount:    fmt.Sprintf("%d", agent.ShardConfig.Shards),
 			},
 			MaxLogFiles: sup.maxLogFiles,
 			MaxLogSize:  sup.maxLogSize,
