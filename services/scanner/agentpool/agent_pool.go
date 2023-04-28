@@ -2,6 +2,7 @@ package agentpool
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"sync"
 	"time"
@@ -373,67 +374,30 @@ func (ap *AgentPool) BlockResults() <-chan *scanner.BlockResult {
 	return ap.blockResults
 }
 
+// handleAgentVersionsUpdate updates the list of agents in the AgentPool based on the latest
+// versions provided in the payload. It finds the missing agents in the pool and adds them to a new
+// agents list. Then, it sends a "run" message for the newly added agents. It also finds the missing
+// agents in the latest versions and sends a "stop" message for those. The agents that already exist
+// in the pool and the latest versions will remain in the pool. Finally, it publishes the "run" and "stop"
+// actions along with any necessary subscription updates.
 func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) error {
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
 
 	latestVersions := payload
 
-	// The agents list which we completely replace with the old ones.
-	var newAgents []*poolagent.Agent
-
 	// Find the missing agents in the pool, add them to the new agents list
 	// and send a "run" message.
-	var agentsToRun []config.AgentConfig
-	for _, agentCfg := range latestVersions {
-		var found bool
-		for _, agent := range ap.agents {
-			if agent.Config().ContainerName() == agentCfg.ContainerName() {
-				found = true
-				agent.SetShardConfig(agentCfg)
-				break
-			}
-		}
-		if !found {
-			newAgents = append(newAgents, poolagent.New(ap.ctx, agentCfg, ap.msgClient, ap.txResults, ap.blockResults, ap.combinationAlertResults))
-			agentsToRun = append(agentsToRun, agentCfg)
-			log.WithField("agent", agentCfg.ID).Info("will trigger start")
-		}
-	}
+	// newAgents is the updated list of all agents
+	// agentsToRun is the list of missing agents
+	newAgents, agentsToRun := ap.updateAgentsAndFindMissing(latestVersions)
 
-	// Find the missing agents in the latest versions and send a "stop" message.
-	// Otherwise, add to the new agents list, so we keep on running.
-	var agentsToStop []config.AgentConfig
-	for _, agent := range ap.agents {
-		var found bool
-		var agentCfg config.AgentConfig
-		for _, agentCfg = range latestVersions {
-			found = found || (agent.Config().ContainerName() == agentCfg.ContainerName())
-			if found {
-				break
-			}
-		}
-		if !found {
-			agent.Close()
-			agentsToStop = append(agentsToStop, agent.Config())
-			log.WithField("agent", agent.Config().ID).WithField("image", agent.Config().Image).Info("will trigger stop")
-		} else {
-			newAgents = append(newAgents, agent)
-		}
-	}
+	// Find agents that are already deployed but doesn't exist in the latest versions payload
+	agentsToStop := ap.findMissingAgentsInLatestVersions(latestVersions, newAgents)
 
 	ap.agents = newAgents
-	if len(agentsToRun) > 0 {
-		ap.msgClient.Publish(messaging.SubjectAgentsActionRun, agentsToRun)
-	}
-	if len(agentsToStop) > 0 {
-		ap.msgClient.Publish(messaging.SubjectAgentsActionStop, agentsToStop)
-	}
 
-	// the bots are already running so just complete the start flow
-	if len(agentsToRun) > 0 && ap.cfg.LocalModeConfig.IsStandalone() {
-		ap.msgClient.Publish(messaging.SubjectAgentsStatusRunning, agentsToRun)
-	}
+	ap.publishActions(agentsToRun, nil, agentsToStop, nil, nil)
 
 	return nil
 }
@@ -449,11 +413,10 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	var removedSubscriptions []domain.CombinerBotSubscription
 
 	for _, agentCfg := range payload {
-		for _, agent := range ap.agents {
-			if agent.Config().ContainerName() == agentCfg.ContainerName() {
-				logger := log.WithField("agent", agent.Config().ID)
+		_ = ap.findAgentAndHandle(
+			agentCfg, func(agent *poolagent.Agent, logger *log.Entry) error {
 				if agent.IsReady() {
-					continue
+					return nil
 				}
 
 				c, err := ap.dialer(agent.Config())
@@ -461,7 +424,7 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 					log.WithField("agent", agent.Config().ID).WithError(err).Error("handleStatusRunning: error while dialing")
 					agentsToStop = append(agentsToStop, agent.Config())
 					removedSubscriptions = append(removedSubscriptions, agent.CombinerBotSubscriptions()...)
-					continue
+					return nil
 				}
 
 				agent.SetClient(c)
@@ -473,24 +436,15 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 
 				logger.WithField("image", agent.Config().Image).Info("attached")
 				agentsReady = append(agentsReady, agent.Config())
-			}
-		}
+				return nil
+			},
+		)
 	}
 
-	if len(agentsReady) > 0 {
-		ap.msgClient.Publish(messaging.SubjectAgentsStatusAttached, agentsReady)
-		if ap.botWaitGroup != nil {
-			ap.botWaitGroup.Add(-len(agentsReady))
-		}
-	}
-	if len(agentsToStop) > 0 {
-		ap.msgClient.Publish(messaging.SubjectAgentsActionStop, agentsToStop)
-	}
-	if len(newSubscriptions) > 0 {
-		ap.msgClient.Publish(messaging.SubjectAgentsAlertSubscribe, newSubscriptions)
-	}
-	if len(removedSubscriptions) > 0 {
-		ap.msgClient.Publish(messaging.SubjectAgentsAlertUnsubscribe, removedSubscriptions)
+	ap.publishActions(nil, agentsReady, agentsToStop, newSubscriptions, removedSubscriptions)
+
+	if ap.botWaitGroup != nil && len(agentsReady) > 0 {
+		ap.botWaitGroup.Add(-len(agentsReady))
 	}
 
 	return nil
@@ -525,6 +479,87 @@ func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
 
 	ap.agents = newAgents
 	return nil
+}
+
+func (ap *AgentPool) updateAgentsAndFindMissing(latestVersions messaging.AgentPayload) ([]*poolagent.Agent, []config.AgentConfig) {
+	var agents []*poolagent.Agent
+	var agentsToRun []config.AgentConfig
+
+	for _, agentCfg := range latestVersions {
+		err := ap.findAgentAndHandle(
+			agentCfg, func(agent *poolagent.Agent, _ *log.Entry) error {
+				agent.SetShardConfig(agentCfg)
+				agents = append(agents, agent)
+				return nil
+			},
+		)
+		if err != nil {
+			newAgent := poolagent.New(ap.ctx, agentCfg, ap.msgClient, ap.txResults, ap.blockResults, ap.combinationAlertResults)
+			agents = append(agents, newAgent)
+			agentsToRun = append(agentsToRun, agentCfg)
+			log.WithField("agent", agentCfg.ID).Info("will trigger start")
+		}
+	}
+
+	return agents, agentsToRun
+}
+
+func (ap *AgentPool) findMissingAgentsInLatestVersions(latestVersions messaging.AgentPayload, newAgents []*poolagent.Agent) []config.AgentConfig {
+	var agentsToStop []config.AgentConfig
+
+	for _, agent := range ap.agents {
+		cfg := agent.Config()
+		found := false
+		for _, agentCfg := range latestVersions {
+			if agentCfg.ContainerName() == agent.Config().ContainerName() {
+				found = true
+				break
+			}
+		}
+		if !found {
+			_ = agent.Close()
+			agentsToStop = append(agentsToStop, cfg)
+			log.WithField("agent", cfg.ID).WithField("image", cfg.Image).Info("will trigger stop")
+		} else {
+			newAgents = append(newAgents, agent)
+		}
+	}
+
+	return agentsToStop
+}
+
+func (ap *AgentPool) findAgentAndHandle(cfg config.AgentConfig, handler func(agent *poolagent.Agent, logger *log.Entry) error) error {
+	for _, agent := range ap.agents {
+		if cfg.ContainerName() == agent.Config().ContainerName() {
+			logger := log.WithField("agent", agent.Config().ID)
+			return handler(agent, logger)
+		}
+	}
+	return fmt.Errorf("agent not found: %v", cfg.ID)
+}
+
+func (ap *AgentPool) publishActions(
+	agentsToRun, agentsReady, agentsToStop []config.AgentConfig, newSubscriptions, removedSubscriptions []domain.CombinerBotSubscription,
+) {
+	if len(agentsToRun) > 0 {
+		ap.msgClient.Publish(messaging.SubjectAgentsActionRun, agentsToRun)
+	}
+	if len(agentsReady) > 0 {
+		ap.msgClient.Publish(messaging.SubjectAgentsStatusAttached, agentsToRun)
+	}
+	if len(agentsToStop) > 0 {
+		ap.msgClient.Publish(messaging.SubjectAgentsActionStop, agentsToStop)
+	}
+	if len(newSubscriptions) > 0 {
+		ap.msgClient.Publish(messaging.SubjectAgentsAlertSubscribe, newSubscriptions)
+	}
+	if len(removedSubscriptions) > 0 {
+		ap.msgClient.Publish(messaging.SubjectAgentsAlertUnsubscribe, removedSubscriptions)
+	}
+
+	if len(agentsToRun) > 0 && ap.cfg.LocalModeConfig.IsStandalone() {
+		ap.msgClient.Publish(messaging.SubjectAgentsStatusRunning, agentsToRun)
+	}
 }
 
 func (ap *AgentPool) registerMessageHandlers() {
