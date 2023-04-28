@@ -696,27 +696,11 @@ func (agent *Agent) ShouldProcessAlert(event *protocol.AlertEvent) bool {
 	return isOnThisShard
 }
 
-func (agent *Agent) SetShardConfig(cfg config.AgentConfig) error {
+func (agent *Agent) SetShardConfig(cfg config.AgentConfig) {
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
 
-	dc, err := clients.NewDockerClient(agent.Config().ContainerName())
-	if err != nil {
-		return err
-	}
-
-	err = dc.SetContainerEnvironmentVariable(context.Background(), agent.Config().ContainerName(), config.EnvFortaShardID, fmt.Sprintf("%d", cfg.ShardConfig.ShardID))
-	if err != nil {
-		return err
-	}
-
-	err = dc.SetContainerEnvironmentVariable(context.Background(), agent.Config().ContainerName(), config.EnvFortaShardCount, fmt.Sprintf("%d", cfg.ShardConfig.Shards))
-	if err != nil {
-		return err
-	}
-
 	agent.config.ShardConfig = cfg.ShardConfig
-	return nil
 }
 
 func (agent *Agent) IsSharded() bool {

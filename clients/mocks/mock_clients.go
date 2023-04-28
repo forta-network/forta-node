@@ -303,20 +303,6 @@ func (mr *MockDockerClientMockRecorder) RemoveNetworkByName(ctx, networkName int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveNetworkByName", reflect.TypeOf((*MockDockerClient)(nil).RemoveNetworkByName), ctx, networkName)
 }
 
-// SetContainerEnvironmentVariable mocks base method.
-func (m *MockDockerClient) SetContainerEnvironmentVariable(ctx context.Context, containerID, key, value string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetContainerEnvironmentVariable", ctx, containerID, key, value)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// SetContainerEnvironmentVariable indicates an expected call of SetContainerEnvironmentVariable.
-func (mr *MockDockerClientMockRecorder) SetContainerEnvironmentVariable(ctx, containerID, key, value interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetContainerEnvironmentVariable", reflect.TypeOf((*MockDockerClient)(nil).SetContainerEnvironmentVariable), ctx, containerID, key, value)
-}
-
 // StartContainer mocks base method.
 func (m *MockDockerClient) StartContainer(ctx context.Context, config clients.DockerContainerConfig) (*clients.DockerContainer, error) {
 	m.ctrl.T.Helper()

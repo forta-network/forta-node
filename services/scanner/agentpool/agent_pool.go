@@ -390,10 +390,7 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 		for _, agent := range ap.agents {
 			if agent.Config().ContainerName() == agentCfg.ContainerName() {
 				found = true
-				err := agent.SetShardConfig(agentCfg)
-				if err != nil {
-					log.WithError(err).Warn("can't set shard config")
-				}
+				agent.SetShardConfig(agentCfg)
 				break
 			}
 		}

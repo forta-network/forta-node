@@ -559,33 +559,9 @@ func (d *dockerClient) stopContainer(ctx context.Context, containerID, signal st
 
 // RemoveContainer kills and a container by ID.
 func (d *dockerClient) RemoveContainer(ctx context.Context, containerID string) error {
-	return d.cli.ContainerRemove(
-		ctx, containerID, types.ContainerRemoveOptions{
-			Force: true,
-		},
-	)
-}
-
-func (d *dockerClient) SetContainerEnvironmentVariable(ctx context.Context, containerID, key, value string) error {
-	env := []string{fmt.Sprintf("%s=%s", key, value)}
-	cmd := []string{"export", fmt.Sprintf("%s=%s", key, value)}
-
-	createResp, err := d.cli.ContainerExecCreate(
-		ctx, containerID, types.ExecConfig{
-			Cmd: cmd,
-			Env: env,
-		},
-	)
-	if err != nil {
-		return err
-	}
-
-	err = d.cli.ContainerExecStart(ctx, createResp.ID, types.ExecStartCheck{})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return d.cli.ContainerRemove(ctx, containerID, types.ContainerRemoveOptions{
+		Force: true,
+	})
 }
 
 func isNoSuchContainerErr(err error) bool {
