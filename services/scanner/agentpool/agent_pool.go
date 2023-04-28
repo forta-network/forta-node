@@ -390,10 +390,10 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 	// and send a "run" message.
 	// newAgents is the updated list of all agents
 	// agentsToRun is the list of missing agents
-	newAgents, agentsToRun := ap.updateAgentsAndFindMissing(latestVersions)
+	newAgents, agentsToRun := ap.updateAgentsOrFindMissing(latestVersions)
 
 	// Find agents that are already deployed but doesn't exist in the latest versions payload
-	agentsToStop := ap.findMissingAgentsInLatestVersions(latestVersions, newAgents)
+	agentsToStop := ap.findMissingAgentsInLatestVersions(latestVersions)
 
 	ap.agents = newAgents
 
@@ -481,7 +481,10 @@ func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
 	return nil
 }
 
-func (ap *AgentPool) updateAgentsAndFindMissing(latestVersions messaging.AgentPayload) ([]*poolagent.Agent, []config.AgentConfig) {
+// updateAgentsOrFindMissing updates existing agents in the pool with the latest configuration
+// and finds the missing agents in the pool to add them as new agents.
+// Returns the updated list of agents and the configurations for the missing agents to start.
+func (ap *AgentPool) updateAgentsOrFindMissing(latestVersions messaging.AgentPayload) ([]*poolagent.Agent, []config.AgentConfig) {
 	var agents []*poolagent.Agent
 	var agentsToRun []config.AgentConfig
 
@@ -494,6 +497,7 @@ func (ap *AgentPool) updateAgentsAndFindMissing(latestVersions messaging.AgentPa
 			},
 		)
 		if err != nil {
+			// If the agent is missing in the pool, add it as a new agent.
 			newAgent := poolagent.New(ap.ctx, agentCfg, ap.msgClient, ap.txResults, ap.blockResults, ap.combinationAlertResults)
 			agents = append(agents, newAgent)
 			agentsToRun = append(agentsToRun, agentCfg)
@@ -504,7 +508,9 @@ func (ap *AgentPool) updateAgentsAndFindMissing(latestVersions messaging.AgentPa
 	return agents, agentsToRun
 }
 
-func (ap *AgentPool) findMissingAgentsInLatestVersions(latestVersions messaging.AgentPayload, newAgents []*poolagent.Agent) []config.AgentConfig {
+// findMissingAgentsInLatestVersions finds agents in the pool that are not in the latest versions payload,
+// and returns the list of these agents to stop.
+func (ap *AgentPool) findMissingAgentsInLatestVersions(latestVersions messaging.AgentPayload) []config.AgentConfig {
 	var agentsToStop []config.AgentConfig
 
 	for _, agent := range ap.agents {
@@ -516,12 +522,11 @@ func (ap *AgentPool) findMissingAgentsInLatestVersions(latestVersions messaging.
 				break
 			}
 		}
+		
 		if !found {
 			_ = agent.Close()
 			agentsToStop = append(agentsToStop, cfg)
 			log.WithField("agent", cfg.ID).WithField("image", cfg.Image).Info("will trigger stop")
-		} else {
-			newAgents = append(newAgents, agent)
 		}
 	}
 
