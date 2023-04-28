@@ -388,7 +388,7 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 	for _, agentCfg := range latestVersions {
 		var found bool
 		for _, agent := range ap.agents {
-			if agent.Config().ContainerName() == agentCfg.ContainerName() {
+			if agent.Config().Equal(agentCfg){
 				found = true
 				agent.SetShardConfig(agentCfg)
 				break
@@ -408,7 +408,7 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 		var found bool
 		var agentCfg config.AgentConfig
 		for _, agentCfg = range latestVersions {
-			found = found || (agent.Config().ContainerName() == agentCfg.ContainerName())
+			found = found || agent.Config().Equal(agentCfg)
 			if found {
 				break
 			}
@@ -450,7 +450,7 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 
 	for _, agentCfg := range payload {
 		for _, agent := range ap.agents {
-			if agent.Config().ContainerName() == agentCfg.ContainerName() {
+			if agent.Config().Equal(agentCfg) {
 				logger := log.WithField("agent", agent.Config().ID)
 				if agent.IsReady() {
 					continue
@@ -505,7 +505,7 @@ func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
 	for _, agent := range ap.agents {
 		var stopped bool
 		for _, agentCfg := range payload {
-			if agent.Config().ContainerName() == agentCfg.ContainerName() {
+			if agent.Config().Equal(agentCfg) {
 				agent.Close()
 				log.WithField("agent", agent.Config().ID).WithField("image", agent.Config().Image).Info("detached")
 				stopped = true
