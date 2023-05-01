@@ -15,7 +15,9 @@ const (
 	EnvAgentGrpcPort      = "AGENT_GRPC_PORT"
 	EnvFortaBotID         = "FORTA_BOT_ID"
 	EnvFortaBotOwner      = "FORTA_BOT_OWNER"
-	EnvFortaChainID    = "FORTA_CHAIN_ID"
+	EnvFortaChainID       = "FORTA_CHAIN_ID"
+	EnvFortaShardID       = "FORTA_SHARD_ID"
+	EnvFortaShardCount    = "FORTA_SHARD_COUNT"
 )
 
 // EnvDefaults contain default values for one env.

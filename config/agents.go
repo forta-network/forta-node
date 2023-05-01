@@ -33,6 +33,23 @@ type ShardConfig struct {
 	Target  uint `yaml:"target" json:"target"`
 }
 
+func (ac AgentConfig) Equal(b AgentConfig) bool {
+	sameID := strings.EqualFold(ac.ID, b.ID)
+	sameManifest := strings.EqualFold(ac.Manifest, b.Manifest)
+	if !sameID || !sameManifest {
+		return false
+	}
+
+	noSharding := ac.ShardConfig == nil && b.ShardConfig == nil
+	if noSharding {
+		return true
+	}
+	sameShardID :=  ac.ShardConfig.ShardID == b.ShardConfig.ShardID
+	sameShardCount := ac.ShardConfig.Shards == b.ShardConfig.Shards
+
+	return sameShardID && sameShardCount
+}
+
 // ToAgentInfo transforms the agent config to the agent info.
 func (ac AgentConfig) ToAgentInfo() *protocol.AgentInfo {
 	return &protocol.AgentInfo{
@@ -60,13 +77,6 @@ func (ac AgentConfig) ContainerName() string {
 	return fmt.Sprintf(
 		"%s-agent-%s-%s", ContainerNamePrefix, utils.ShortenString(ac.ID, 8), utils.ShortenString(digest, 4),
 	)
-}
-
-func (ac AgentConfig) IsEqual(b AgentConfig) bool {
-	sameID := strings.EqualFold(ac.ID, b.ID)
-	sameDigest := strings.EqualFold(ac.Image, b.Image)
-
-	return sameID && sameDigest
 }
 
 func (ac AgentConfig) GrpcPort() string {

@@ -459,7 +459,7 @@ func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
 	for _, agent := range ap.agents {
 		var stopped bool
 		for _, agentCfg := range payload {
-			if agent.Config().ContainerName() == agentCfg.ContainerName() {
+			if agent.Config().Equal(agentCfg) {
 				agent.Close()
 				log.WithField("agent", agent.Config().ID).WithField("image", agent.Config().Image).Info("detached")
 				stopped = true
