@@ -517,7 +517,7 @@ func (ap *AgentPool) findMissingAgentsInLatestVersions(latestVersions messaging.
 		cfg := agent.Config()
 		found := false
 		for _, agentCfg := range latestVersions {
-			if agentCfg.ContainerName() == agent.Config().ContainerName() {
+			if agentCfg.Equal(agent.Config()) {
 				found = true
 				break
 			}
@@ -535,7 +535,7 @@ func (ap *AgentPool) findMissingAgentsInLatestVersions(latestVersions messaging.
 
 func (ap *AgentPool) findAgentAndHandle(cfg config.AgentConfig, handler func(agent *poolagent.Agent, logger *log.Entry) error) error {
 	for _, agent := range ap.agents {
-		if cfg.ContainerName() == agent.Config().ContainerName() {
+		if cfg.Equal(agent.Config()) {
 			logger := log.WithField("agent", agent.Config().ID)
 			return handler(agent, logger)
 		}
