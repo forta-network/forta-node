@@ -202,7 +202,7 @@ func (p *PublicAPIProxy) Stop() error {
 }
 
 func (p *PublicAPIProxy) Name() string {
-	return "json-rpc-proxy"
+	return "public-api-proxy"
 }
 
 func getBotFromContext(ctx context.Context) (string, string, bool, bool) {
