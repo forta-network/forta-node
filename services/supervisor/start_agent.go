@@ -42,11 +42,6 @@ func (sup *SupervisorService) startAgent(ctx context.Context, agent config.Agent
 
 	limits := config.GetAgentResourceLimits(sup.config.Config.ResourcesConfig)
 
-	var shardID, shardCount uint
-	if agent.ShardConfig != nil {
-		shardID = agent.ShardConfig.ShardID
-		shardCount = agent.ShardConfig.Shards
-	}
 	agentContainer, err := sup.client.StartContainer(
 		ctx, clients.DockerContainerConfig{
 			Name:           agent.ContainerName(),
@@ -64,8 +59,6 @@ func (sup *SupervisorService) startAgent(ctx context.Context, agent config.Agent
 				config.EnvFortaBotID:         agent.ID,
 				config.EnvFortaBotOwner:      agent.Owner,
 				config.EnvFortaChainID:       fmt.Sprintf("%d", agent.ChainID),
-				config.EnvFortaShardID:       fmt.Sprintf("%d", shardID),
-				config.EnvFortaShardCount:    fmt.Sprintf("%d", shardCount),
 			},
 			MaxLogFiles: sup.maxLogFiles,
 			MaxLogSize:  sup.maxLogSize,
