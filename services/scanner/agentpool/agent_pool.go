@@ -459,7 +459,7 @@ func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
 	for _, agent := range ap.agents {
 		var stopped bool
 		for _, agentCfg := range payload {
-			if agent.Config().Equal(agentCfg) {
+			if agent.Config().ContainerName() == agentCfg.ContainerName() {
 				agent.Close()
 				log.WithField("agent", agent.Config().ID).WithField("image", agent.Config().Image).Info("detached")
 				stopped = true
@@ -517,7 +517,7 @@ func (ap *AgentPool) findMissingAgentsInLatestVersions(latestVersions messaging.
 		cfg := agent.Config()
 		found := false
 		for _, agentCfg := range latestVersions {
-			if agentCfg.Equal(agent.Config()) {
+			if agentCfg.ContainerName() == agent.Config().ContainerName() {
 				found = true
 				break
 			}
@@ -535,7 +535,7 @@ func (ap *AgentPool) findMissingAgentsInLatestVersions(latestVersions messaging.
 
 func (ap *AgentPool) findAgentAndHandle(cfg config.AgentConfig, handler func(agent *poolagent.Agent, logger *log.Entry) error) error {
 	for _, agent := range ap.agents {
-		if cfg.Equal(agent.Config()) {
+		if cfg.ContainerName() == agent.Config().ContainerName() {
 			logger := log.WithField("agent", agent.Config().ID)
 			return handler(agent, logger)
 		}
