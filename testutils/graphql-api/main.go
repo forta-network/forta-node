@@ -11,6 +11,7 @@ import (
 
 	"github.com/forta-network/forta-core-go/utils/apiutils"
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 )
 
 type Alert struct {
@@ -62,7 +63,7 @@ type GraphQLAPI struct {
 
 // Start starts the server.
 func (q *GraphQLAPI) Start() {
-	apiutils.ListenAndServe(
+	err := apiutils.ListenAndServe(
 		q.ctx, &http.Server{
 			Handler:      q.router,
 			Addr:         fmt.Sprintf("0.0.0.0:%d", q.port),
@@ -70,6 +71,9 @@ func (q *GraphQLAPI) Start() {
 			ReadTimeout:  15 * time.Second,
 		}, "started graphql api",
 	)
+	if err != nil {
+		log.WithError(err).Warn("mock graphql api exited with error")
+	}
 }
 
 // Close closes the server.
