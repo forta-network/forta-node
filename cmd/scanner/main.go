@@ -158,6 +158,7 @@ func initCombinationStream(ctx context.Context, msgClient clients.MessageClient,
 			Start:             cfg.LocalModeConfig.RuntimeLimits.StartCombiner,
 			End:               cfg.LocalModeConfig.RuntimeLimits.StopCombiner,
 			CombinerCachePath: cfg.CombinerConfig.CombinerCachePath,
+			QueryInterval:     cfg.CombinerConfig.QueryInterval,
 		},
 	)
 	if err != nil {

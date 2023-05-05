@@ -114,6 +114,8 @@ publicApiProxy:
 
 log:
   level: debug
+combiner:
+  queryInterval: 3000
 `
 
 const localModeDir = ".forta-local"
