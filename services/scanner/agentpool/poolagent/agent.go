@@ -100,6 +100,7 @@ func (agent *Agent) CombinerBotSubscriptions() []domain.CombinerBotSubscription 
 				Subscriber: &domain.Subscriber{
 					BotID:    agent.Config().ID,
 					BotOwner: agent.Config().Owner,
+					BotImage: agent.Config().Image,
 				},
 			},
 		)
