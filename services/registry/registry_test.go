@@ -105,7 +105,21 @@ func (s *Suite) TestPublishChanges() {
 	s.NoError(s.service.publishLatestAgents())
 }
 
-func (s *Suite) TestDoNotPublishChanges() {
+func (s *Suite) TestDoNotPublishChangesIfNil() {
 	s.registryStore.EXPECT().GetAgentsIfChanged(s.service.scannerAddress.Hex()).Return(nil, false, nil)
+	s.NoError(s.service.publishLatestAgents())
+}
+
+func (s *Suite) TestPublishEvenIfNoChanges() {
+	configs := (agentConfigs)([]*config.AgentConfig{
+		{
+			ID:    testAgentIDStr,
+			Image: fmt.Sprintf("%s/%s", testContainerRegistry, testImageRef),
+		},
+	})
+
+	s.registryStore.EXPECT().GetAgentsIfChanged(s.service.scannerAddress.Hex()).Return(configs, false, nil)
+	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, configs)
+
 	s.NoError(s.service.publishLatestAgents())
 }
