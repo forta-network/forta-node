@@ -105,11 +105,6 @@ func (s *Suite) TestPublishChanges() {
 	s.NoError(s.service.publishLatestAgents())
 }
 
-func (s *Suite) TestDoNotPublishChangesIfNil() {
-	s.registryStore.EXPECT().GetAgentsIfChanged(s.service.scannerAddress.Hex()).Return(nil, false, nil)
-	s.NoError(s.service.publishLatestAgents())
-}
-
 func (s *Suite) TestPublishEvenIfNoChanges() {
 	configs := (agentConfigs)([]*config.AgentConfig{
 		{
@@ -118,8 +113,13 @@ func (s *Suite) TestPublishEvenIfNoChanges() {
 		},
 	})
 
-	s.registryStore.EXPECT().GetAgentsIfChanged(s.service.scannerAddress.Hex()).Return(configs, false, nil)
+	// first refresh
+	s.registryStore.EXPECT().GetAgentsIfChanged(s.service.scannerAddress.Hex()).Return(configs, true, nil)
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, configs)
+	s.NoError(s.service.publishLatestAgents())
 
+	// second refresh should also trigger same publish
+	s.registryStore.EXPECT().GetAgentsIfChanged(s.service.scannerAddress.Hex()).Return(nil, false, nil)
+	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, configs)
 	s.NoError(s.service.publishLatestAgents())
 }

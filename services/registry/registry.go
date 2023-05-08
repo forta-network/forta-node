@@ -116,21 +116,15 @@ func (rs *RegistryService) publishLatestAgents() error {
 			return fmt.Errorf("failed to get the scanner list agents version: %v", err)
 		}
 
-		if agts != nil {
-			rs.agentsConfigs = agts
-		}
-
 		if changed {
 			rs.lastChangeDetected.Set()
+			rs.agentsConfigs = agts
 			log.WithField("count", len(agts)).Infof("publishing list of agents")
 		} else {
 			log.Info("registry: no agent changes detected")
 		}
 
-		if rs.agentsConfigs != nil {
-			rs.msgClient.Publish(messaging.SubjectAgentsVersionsLatest, rs.agentsConfigs)
-		}
-
+		rs.msgClient.Publish(messaging.SubjectAgentsVersionsLatest, rs.agentsConfigs)
 	}
 	return nil
 }
