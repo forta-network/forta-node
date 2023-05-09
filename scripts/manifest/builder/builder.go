@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	beginReleaseConfiguration = "# BEGIN RELEASE CONFIGURATION"
-	endReleaseConfiguration   = "# END RELEASE CONFIGURATION"
+	beginReleaseConfiguration = "# @begin release_config"
+	endReleaseConfiguration   = "# @end release_config"
 )
 
 // BuildManifest builds a release manifest from given inputs.
