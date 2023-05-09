@@ -35,8 +35,8 @@ type AgentPool struct {
 	dialer                  func(config.AgentConfig) (clients.AgentClient, error)
 	mu                      sync.RWMutex
 	botWaitGroup            *sync.WaitGroup
+	botReports              []*health.Report
 }
-
 // NewAgentPool creates a new agent pool.
 func NewAgentPool(ctx context.Context, cfg config.Config, msgClient clients.MessageClient, waitBots int) *AgentPool {
 	agentPool := &AgentPool{
@@ -81,7 +81,8 @@ func (ap *AgentPool) Health() health.Reports {
 	if agentCount == 0 {
 		status = health.StatusFailing
 	}
-	return health.Reports{
+
+	reports := health.Reports{
 		&health.Report{
 			Name:    "agents.total",
 			Status:  status,
@@ -93,6 +94,15 @@ func (ap *AgentPool) Health() health.Reports {
 			Details: strconv.Itoa(fullCount),
 		},
 	}
+
+	// add and reset existing reports
+	for _, report := range ap.botReports {
+		reports = append(reports, report)
+	}
+
+	ap.botReports = []*health.Report{}
+
+	return reports
 }
 
 // Name implements health.Reporter interface.
@@ -547,22 +557,76 @@ func (ap *AgentPool) publishActions(
 	agentsToRun, agentsReady, agentsToStop []config.AgentConfig, newSubscriptions, removedSubscriptions []domain.CombinerBotSubscription,
 ) {
 	if len(agentsToRun) > 0 {
+		for _, agentConfig := range agentsToRun {
+			ap.botReports = append(
+				ap.botReports, health.Report{
+					Name:    messaging.SubjectAgentsActionRun,
+					Status:  health.StatusInfo,
+					Details: agentConfig.ID,
+				},
+			)
+		}
 		ap.msgClient.Publish(messaging.SubjectAgentsActionRun, agentsToRun)
 	}
 	if len(agentsReady) > 0 {
+		for _, agentConfig := range agentsReady {
+			ap.botReports = append(
+				ap.botReports, health.Report{
+					Name:    messaging.SubjectAgentsStatusAttached,
+					Status:  health.StatusInfo,
+					Details: agentConfig.ID,
+				},
+			)
+		}
 		ap.msgClient.Publish(messaging.SubjectAgentsStatusAttached, agentsToRun)
 	}
 	if len(agentsToStop) > 0 {
+		for _, agentConfig := range agentsToStop {
+			ap.botReports = append(
+				ap.botReports, health.Report{
+					Name:    messaging.SubjectAgentsActionStop,
+					Status:  health.StatusInfo,
+					Details: agentConfig.ID,
+				},
+			)
+		}
 		ap.msgClient.Publish(messaging.SubjectAgentsActionStop, agentsToStop)
 	}
 	if len(newSubscriptions) > 0 {
+		for _, subscription := range newSubscriptions {
+			ap.botReports = append(
+				ap.botReports, health.Report{
+					Name:    messaging.SubjectAgentsAlertSubscribe,
+					Status:  health.StatusInfo,
+					Details: subscription.Subscriber.BotID,
+				},
+			)
+		}
 		ap.msgClient.Publish(messaging.SubjectAgentsAlertSubscribe, newSubscriptions)
 	}
 	if len(removedSubscriptions) > 0 {
+		for _, subscription := range removedSubscriptions {
+			ap.botReports = append(
+				ap.botReports, health.Report{
+					Name:    messaging.SubjectAgentsAlertUnsubscribe,
+					Status:  health.StatusInfo,
+					Details: subscription.Subscriber.BotID,
+				},
+			)
+		}
 		ap.msgClient.Publish(messaging.SubjectAgentsAlertUnsubscribe, removedSubscriptions)
 	}
 
 	if len(agentsToRun) > 0 && ap.cfg.LocalModeConfig.IsStandalone() {
+		for _, agentConfig := range agentsToRun {
+			ap.botReports = append(
+				ap.botReports, health.Report{
+					Name:    messaging.SubjectAgentsStatusRunning,
+					Status:  health.StatusInfo,
+					Details: agentConfig.ID,
+				},
+			)
+		}
 		ap.msgClient.Publish(messaging.SubjectAgentsStatusRunning, agentsToRun)
 	}
 }
