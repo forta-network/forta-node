@@ -33,6 +33,17 @@ const (
 	SupervisorStrategyVersion = "2"
 )
 
+var knownServiceContainerNames = []string{
+	config.DockerScannerContainerName,
+	config.DockerInspectorContainerName,
+	config.DockerJSONRPCProxyContainerName,
+	config.DockerJWTProviderContainerName,
+	config.DockerPublicAPIProxyContainerName,
+	config.DockerNatsContainerName,
+	config.DockerIpfsContainerName,
+	config.DockerStorageContainerName,
+}
+
 // SupervisorService manages the scanner node's service and agent containers.
 type SupervisorService struct {
 	ctx context.Context
@@ -165,44 +176,46 @@ func (sup *SupervisorService) start() error {
 		return fmt.Errorf("failed to attach supervisor container to nats network: %v", err)
 	}
 
-	prepareIpfsDir()
-	ipfsContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
-		Name:  config.DockerIpfsContainerName,
-		Image: "ipfs/kubo:v0.16.0",
-		Ports: map[string]string{
-			"5001": "5001",
-		},
-		Files: map[string][]byte{
-			"/container-init.d/001-init.sh": []byte(`
-#!/bin/sh
-
-set -xe
-
-ipfs config --bool Discovery.MDNS.Enabled 'false' && \
-ipfs config --json Routing '{"Type":"none"}' && \
-ipfs config --json Addresses.Swarm '[]' && \
-ipfs config --json Bootstrap '[]' && \
-ipfs config Datastore.StorageMax '1GB'
-`),
-		},
-		Volumes: map[string]string{
-			path.Join(hostFortaDir, ".ipfs"): "/data/ipfs",
-		},
-		NetworkID:   nodeNetworkID,
-		MaxLogFiles: sup.maxLogFiles,
-		MaxLogSize:  sup.maxLogSize,
-		Cmd: []string{
-			// default CMD - taken from https://hub.docker.com/layers/ipfs/kubo/master-latest/images/sha256-65b4c19a75987bd9bb677e8d9b1b1dafb81eec2335ba65f73dfb8256f6b3d22a?context=explore
-			"daemon", "--migrate=true", "--agent-version-suffix=docker",
-			// extra flags
-			"--offline",
-		},
-		CPUQuota: config.CPUsToMicroseconds(0.5),
-	})
-	if err != nil {
-		return err
+	manageIpfsDir(sup.config.Config)
+	if sup.config.Config.AdvancedConfig.IPFSExperiment {
+		ipfsContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
+			Name:  config.DockerIpfsContainerName,
+			Image: "ipfs/kubo:v0.16.0",
+			Ports: map[string]string{
+				"5001": "5001",
+			},
+			Files: map[string][]byte{
+				"/container-init.d/001-init.sh": []byte(`
+	#!/bin/sh
+	
+	set -xe
+	
+	ipfs config --bool Discovery.MDNS.Enabled 'false' && \
+	ipfs config --json Routing '{"Type":"none"}' && \
+	ipfs config --json Addresses.Swarm '[]' && \
+	ipfs config --json Bootstrap '[]' && \
+	ipfs config Datastore.StorageMax '1GB'
+	`),
+			},
+			Volumes: map[string]string{
+				path.Join(hostFortaDir, ".ipfs"): "/data/ipfs",
+			},
+			NetworkID:   nodeNetworkID,
+			MaxLogFiles: sup.maxLogFiles,
+			MaxLogSize:  sup.maxLogSize,
+			Cmd: []string{
+				// default CMD - taken from https://hub.docker.com/layers/ipfs/kubo/master-latest/images/sha256-65b4c19a75987bd9bb677e8d9b1b1dafb81eec2335ba65f73dfb8256f6b3d22a?context=explore
+				"daemon", "--migrate=true", "--agent-version-suffix=docker",
+				// extra flags
+				"--offline",
+			},
+			CPUQuota: config.CPUsToMicroseconds(0.5),
+		})
+		if err != nil {
+			return err
+		}
+		sup.addContainerUnsafe(ipfsContainer)
 	}
-	sup.addContainerUnsafe(ipfsContainer)
 
 	// start nats, wait for it and connect from the supervisor
 	natsContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
@@ -231,38 +244,40 @@ ipfs config Datastore.StorageMax '1GB'
 	}
 	sup.registerMessageHandlers()
 
-	sup.storageContainer, err = sup.client.StartContainer(
-		sup.ctx, clients.DockerContainerConfig{
-			Name:  config.DockerStorageContainerName,
-			Image: commonNodeImage,
-			Cmd:   []string{config.DefaultFortaNodeBinaryPath, "storage"},
-			Env: map[string]string{
-				config.EnvReleaseInfo: releaseInfo.String(),
+	if sup.config.Config.AdvancedConfig.IPFSExperiment {
+		sup.storageContainer, err = sup.client.StartContainer(
+			sup.ctx, clients.DockerContainerConfig{
+				Name:  config.DockerStorageContainerName,
+				Image: commonNodeImage,
+				Cmd:   []string{config.DefaultFortaNodeBinaryPath, "storage"},
+				Env: map[string]string{
+					config.EnvReleaseInfo: releaseInfo.String(),
+				},
+				Volumes: map[string]string{
+					// give access to host docker
+					"/var/run/docker.sock": "/var/run/docker.sock",
+					hostFortaDir:           config.DefaultContainerFortaDirPath,
+				},
+				Ports: map[string]string{
+					"": config.DefaultHealthPort, // random host port
+				},
+				Files: map[string][]byte{
+					"passphrase": []byte(sup.config.Passphrase),
+				},
+				DialHost:    true,
+				NetworkID:   nodeNetworkID,
+				MaxLogFiles: sup.maxLogFiles,
+				MaxLogSize:  sup.maxLogSize,
 			},
-			Volumes: map[string]string{
-				// give access to host docker
-				"/var/run/docker.sock": "/var/run/docker.sock",
-				hostFortaDir:           config.DefaultContainerFortaDirPath,
-			},
-			Ports: map[string]string{
-				"": config.DefaultHealthPort, // random host port
-			},
-			Files: map[string][]byte{
-				"passphrase": []byte(sup.config.Passphrase),
-			},
-			DialHost:    true,
-			NetworkID:   nodeNetworkID,
-			MaxLogFiles: sup.maxLogFiles,
-			MaxLogSize:  sup.maxLogSize,
-		},
-	)
-	if err != nil {
-		return err
-	}
-	sup.addContainerUnsafe(sup.storageContainer)
+		)
+		if err != nil {
+			return err
+		}
+		sup.addContainerUnsafe(sup.storageContainer)
 
-	if err := sup.client.WaitContainerStart(sup.ctx, sup.storageContainer.ID); err != nil {
-		return fmt.Errorf("failed while waiting for the storage container to start: %v", err)
+		if err := sup.client.WaitContainerStart(sup.ctx, sup.storageContainer.ID); err != nil {
+			return fmt.Errorf("failed while waiting for the storage container to start: %v", err)
+		}
 	}
 
 	sup.jsonRpcContainer, err = sup.client.StartContainer(
@@ -428,7 +443,12 @@ ipfs config Datastore.StorageMax '1GB'
 	return nil
 }
 
-func prepareIpfsDir() error {
+func manageIpfsDir(cfg config.Config) error {
+	if !cfg.AdvancedConfig.IPFSExperiment {
+		// purge the dir if the experiment is disabled
+		os.RemoveAll(path.Join(config.DefaultContainerFortaDirPath, ".ipfs"))
+		return nil
+	}
 	if err := os.MkdirAll(path.Join(config.DefaultContainerFortaDirPath, ".ipfs"), 0700); err != nil {
 		return fmt.Errorf("failed to create ipfs dir: %v", err)
 	}
@@ -476,16 +496,7 @@ func (sup *SupervisorService) removeOldContainers() error {
 	var containersToRemove []*containerDefinition
 
 	// gather old service containers
-	for _, containerName := range []string{
-		config.DockerScannerContainerName,
-		config.DockerInspectorContainerName,
-		config.DockerJSONRPCProxyContainerName,
-		config.DockerJWTProviderContainerName,
-		config.DockerPublicAPIProxyContainerName,
-		config.DockerNatsContainerName,
-		config.DockerIpfsContainerName,
-		config.DockerStorageContainerName,
-	} {
+	for _, containerName := range knownServiceContainerNames {
 		container, err := sup.client.GetContainerByName(sup.ctx, containerName)
 		if err != nil {
 			log.WithError(err).WithField("containerName", containerName).Info("did not find old service container - ignoring")

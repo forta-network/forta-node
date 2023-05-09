@@ -335,20 +335,22 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 			"receipt": string(b),
 		})
 
-		ctx, cancel := context.WithTimeout(pub.ctx, time.Second*10)
-		defer cancel()
-		putResp, err := pub.storage.Put(ctx, &protocol.PutRequest{
-			User:  scannerAddr,
-			Kind:  storage.KindBatchReceipt,
-			Bytes: b,
-		})
-		if err != nil {
-			logger.WithError(err).Warn("failed to store batch receipt")
-		} else {
-			logger = logger.WithFields(log.Fields{
-				"storedReceiptRef":  putResp.ContentId,
-				"storedReceiptPath": putResp.ContentPath,
+		if pub.cfg.Config.AdvancedConfig.IPFSExperiment {
+			ctx, cancel := context.WithTimeout(pub.ctx, time.Second*10)
+			defer cancel()
+			putResp, err := pub.storage.Put(ctx, &protocol.PutRequest{
+				User:  scannerAddr,
+				Kind:  storage.KindBatchReceipt,
+				Bytes: b,
 			})
+			if err != nil {
+				logger.WithError(err).Warn("failed to store batch receipt")
+			} else {
+				logger = logger.WithFields(log.Fields{
+					"storedReceiptRef":  putResp.ContentId,
+					"storedReceiptPath": putResp.ContentPath,
+				})
+			}
 		}
 	}
 
@@ -825,7 +827,7 @@ func NewPublisher(ctx context.Context, cfg config.Config) (*Publisher, error) {
 	apiClient := alertapi.NewClient(cfg.Publish.APIURL)
 
 	var storageClient protocol.StorageClient
-	if !cfg.LocalModeConfig.Enable {
+	if !cfg.LocalModeConfig.Enable && cfg.AdvancedConfig.IPFSExperiment {
 		storageClient, err = storagegrpc.DialContext(ctx, fmt.Sprintf("%s:%s", config.DockerStorageContainerName, config.DefaultStoragePort))
 		if err != nil {
 			return nil, fmt.Errorf("failed to dial the storage client: %v", err)
