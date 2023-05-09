@@ -4,6 +4,7 @@ on:
   push:
     branches: [master]
   workflow_dispatch:
+  pull_request:
 
 env:
   DEFAULT_DEV_VERSION: v0.0.1
@@ -73,130 +74,130 @@ jobs:
           echo "::set-output name=${{ matrix.image-name }}-release-cid::${{ steps.build-and-push.outputs.release-cid }}"
           echo "::set-output name=${{ matrix.image-name }}-image-ref::${{ steps.build-and-push.outputs.image-reference }}"
 
-  publish-hash:
-    name: Publish Hash to Contract
-    needs: containers
-    runs-on: ubuntu-latest
-    environment: dev
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Echo Hash
-        run: |
-          echo "release-cid=${{ needs.containers.outputs.node-release-cid }}"
-      - name: Publish Hash
-        run: |
-          ./scripts/publish-release.sh ${{ needs.containers.outputs.node-release-cid }} ${{ secrets.DEV_PUBLISH_AUTOTASK_KEY }} ${{ secrets.DEV_PUBLISH_AUTOTASK_URL }}
+  # publish-hash:
+  #   name: Publish Hash to Contract
+  #   needs: containers
+  #   runs-on: ubuntu-latest
+  #   environment: dev
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+  #     - name: Echo Hash
+  #       run: |
+  #         echo "release-cid=${{ needs.containers.outputs.node-release-cid }}"
+  #     - name: Publish Hash
+  #       run: |
+  #         ./scripts/publish-release.sh ${{ needs.containers.outputs.node-release-cid }} ${{ secrets.DEV_PUBLISH_AUTOTASK_KEY }} ${{ secrets.DEV_PUBLISH_AUTOTASK_URL }}
 
-  publish-hash-beta:
-    name: Publish Hash (Beta) to Contract
-    needs: containers
-    runs-on: ubuntu-latest
-    environment: dev
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Echo Hash
-        run: |
-          echo "release-cid=${{ needs.containers.outputs.node-release-cid }}"
-      - name: Publish Hash
-        run: |
-          ./scripts/publish-release.sh ${{ needs.containers.outputs.node-release-cid }} ${{ secrets.DEV_PUBLISH_AUTOTASK_KEY }} ${{ secrets.DEV_PUBLISH_BETA_AUTOTASK_URL }}
+  # publish-hash-beta:
+  #   name: Publish Hash (Beta) to Contract
+  #   needs: containers
+  #   runs-on: ubuntu-latest
+  #   environment: dev
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+  #     - name: Echo Hash
+  #       run: |
+  #         echo "release-cid=${{ needs.containers.outputs.node-release-cid }}"
+  #     - name: Publish Hash
+  #       run: |
+  #         ./scripts/publish-release.sh ${{ needs.containers.outputs.node-release-cid }} ${{ secrets.DEV_PUBLISH_AUTOTASK_KEY }} ${{ secrets.DEV_PUBLISH_BETA_AUTOTASK_URL }}
 
-  build-deploy:
-    name: Build and deploy
-    needs: [containers]
-    runs-on: ubuntu-20.04
-    environment: dev
-    steps:
-      - name: Echo Image References
-        run: |
-          echo "node=${{ needs.containers.outputs.node-image-ref }}"
-      - name: Clear artifacts
-        uses: kolpav/purge-artifacts-action@v1
-        continue-on-error: true
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          expire-in: 7days
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Set up Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.19
-      - name: Create build for revision
-        run: |
-          ./scripts/build.sh ${{ needs.containers.outputs.node-image-ref }} \
-            'remote' ${{ needs.containers.outputs.node-release-cid }} ${{ github.sha }} ${{ env.DEFAULT_DEV_VERSION }}
-          chmod 755 forta
-      - name: Configure AWS credentials (build artifact -> S3)
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.DEV_RELEASE_AWS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.DEV_RELEASE_AWS_SECRET_KEY }}
-          aws-region: us-east-1
-      - name: Copy build to build artifacts bucket
-        env:
-          BUCKET_NAME: ${{ secrets.DEV_BUILD_ARTIFACTS_BUCKET_NAME }}
-          REVISION: ${{ github.sha }}
-        run: |
-          aws s3 cp forta "s3://$BUCKET_NAME/forta-$REVISION"
-      - name: Prepare Distribution
-        run: |
-          mkdir dist
-          cp forta dist/
-          cp appspec.yml dist/
-          cp -R scripts dist/
-      - name: Zip Distribution
-        uses: vimtor/action-zip@v1
-        with:
-          files: dist/
-          dest: deploy.zip
-      - uses: actions/upload-artifact@v1
-        with:
-          name: deploy-artifact
-          path: ${{ github.workspace }}/deploy.zip
+  # build-deploy:
+  #   name: Build and deploy
+  #   needs: [containers]
+  #   runs-on: ubuntu-20.04
+  #   environment: dev
+  #   steps:
+  #     - name: Echo Image References
+  #       run: |
+  #         echo "node=${{ needs.containers.outputs.node-image-ref }}"
+  #     - name: Clear artifacts
+  #       uses: kolpav/purge-artifacts-action@v1
+  #       continue-on-error: true
+  #       with:
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #         expire-in: 7days
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+  #     - name: Set up Go
+  #       uses: actions/setup-go@v2
+  #       with:
+  #         go-version: 1.19
+  #     - name: Create build for revision
+  #       run: |
+  #         ./scripts/build.sh ${{ needs.containers.outputs.node-image-ref }} \
+  #           'remote' ${{ needs.containers.outputs.node-release-cid }} ${{ github.sha }} ${{ env.DEFAULT_DEV_VERSION }}
+  #         chmod 755 forta
+  #     - name: Configure AWS credentials (build artifact -> S3)
+  #       uses: aws-actions/configure-aws-credentials@v1
+  #       with:
+  #         aws-access-key-id: ${{ secrets.DEV_RELEASE_AWS_ACCESS_KEY }}
+  #         aws-secret-access-key: ${{ secrets.DEV_RELEASE_AWS_SECRET_KEY }}
+  #         aws-region: us-east-1
+  #     - name: Copy build to build artifacts bucket
+  #       env:
+  #         BUCKET_NAME: ${{ secrets.DEV_BUILD_ARTIFACTS_BUCKET_NAME }}
+  #         REVISION: ${{ github.sha }}
+  #       run: |
+  #         aws s3 cp forta "s3://$BUCKET_NAME/forta-$REVISION"
+  #     - name: Prepare Distribution
+  #       run: |
+  #         mkdir dist
+  #         cp forta dist/
+  #         cp appspec.yml dist/
+  #         cp -R scripts dist/
+  #     - name: Zip Distribution
+  #       uses: vimtor/action-zip@v1
+  #       with:
+  #         files: dist/
+  #         dest: deploy.zip
+  #     - uses: actions/upload-artifact@v1
+  #       with:
+  #         name: deploy-artifact
+  #         path: ${{ github.workspace }}/deploy.zip
 
-      - name: Configure AWS credentials (CodeDeploy)
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.DEV_DEPLOY_AWS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.DEV_DEPLOY_AWS_SECRET_KEY }}
-          aws-region: us-east-1
-      - name: AWS CodeDeploy
-        uses: sourcetoad/aws-codedeploy-action@v1
-        with:
-          aws_access_key: ${{ secrets.DEV_DEPLOY_AWS_ACCESS_KEY }}
-          aws_secret_key: ${{ secrets.DEV_DEPLOY_AWS_SECRET_KEY }}
-          aws_region: us-east-1
-          codedeploy_name: dev-forta-node
-          codedeploy_group: dev-forta-deploy-group
-          s3_bucket: dev-forta-codedeploy
-          s3_folder: dev
-          directory: ./dist/
+  #     - name: Configure AWS credentials (CodeDeploy)
+  #       uses: aws-actions/configure-aws-credentials@v1
+  #       with:
+  #         aws-access-key-id: ${{ secrets.DEV_DEPLOY_AWS_ACCESS_KEY }}
+  #         aws-secret-access-key: ${{ secrets.DEV_DEPLOY_AWS_SECRET_KEY }}
+  #         aws-region: us-east-1
+  #     - name: AWS CodeDeploy
+  #       uses: sourcetoad/aws-codedeploy-action@v1
+  #       with:
+  #         aws_access_key: ${{ secrets.DEV_DEPLOY_AWS_ACCESS_KEY }}
+  #         aws_secret_key: ${{ secrets.DEV_DEPLOY_AWS_SECRET_KEY }}
+  #         aws_region: us-east-1
+  #         codedeploy_name: dev-forta-node
+  #         codedeploy_group: dev-forta-deploy-group
+  #         s3_bucket: dev-forta-codedeploy
+  #         s3_folder: dev
+  #         directory: ./dist/
 
-  release:
-    name: Release dev
-    #if: ${{ github.ref_name == 'master' }}
-    runs-on: ubuntu-20.04
-    needs: [build-deploy]
-    environment: dev
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Release
-        id: release
-        uses: ./.github/actions/release
-        with:
-          version: ${{ env.DEFAULT_DEV_VERSION }}
-          revision: ${{ github.sha }}
-          aws_access_key: ${{ secrets.DEV_RELEASE_AWS_ACCESS_KEY }}
-          aws_secret_key: ${{ secrets.DEV_RELEASE_AWS_SECRET_KEY }}
-          build_artifacts_bucket_name: dev-forta-build-artifacts
-          release_artifacts_bucket_name: dev-forta-releases
-          release_artifacts_url: https://dist-dev.forta.network/artifacts
-          dist_base_url: https://dist-dev.forta.network
-          pgp_key_name: ${{ secrets.DEV_PGP_KEY_NAME }}
-          pgp_private_key: ${{ secrets.DEV_PGP_PRIVATE_KEY }}
-          pgp_public_key: ${{ secrets.DEV_PGP_PUBLIC_KEY }}
-          pgp_passphrase: ${{ secrets.DEV_PGP_PASSPHRASE }}
+  # release:
+  #   name: Release dev
+  #   #if: ${{ github.ref_name == 'master' }}
+  #   runs-on: ubuntu-20.04
+  #   needs: [build-deploy]
+  #   environment: dev
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+  #     - name: Release
+  #       id: release
+  #       uses: ./.github/actions/release
+  #       with:
+  #         version: ${{ env.DEFAULT_DEV_VERSION }}
+  #         revision: ${{ github.sha }}
+  #         aws_access_key: ${{ secrets.DEV_RELEASE_AWS_ACCESS_KEY }}
+  #         aws_secret_key: ${{ secrets.DEV_RELEASE_AWS_SECRET_KEY }}
+  #         build_artifacts_bucket_name: dev-forta-build-artifacts
+  #         release_artifacts_bucket_name: dev-forta-releases
+  #         release_artifacts_url: https://dist-dev.forta.network/artifacts
+  #         dist_base_url: https://dist-dev.forta.network
+  #         pgp_key_name: ${{ secrets.DEV_PGP_KEY_NAME }}
+  #         pgp_private_key: ${{ secrets.DEV_PGP_PRIVATE_KEY }}
+  #         pgp_public_key: ${{ secrets.DEV_PGP_PUBLIC_KEY }}
+  #         pgp_passphrase: ${{ secrets.DEV_PGP_PASSPHRASE }}
