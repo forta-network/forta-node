@@ -431,7 +431,7 @@ func (sup *SupervisorService) start() error {
 }
 
 func manageIpfsDir(cfg config.Config) error {
-	if cfg.AdvancedConfig.IPFSExperiment {
+	if !cfg.AdvancedConfig.IPFSExperiment {
 		// purge the dir if the experiment is disabled
 		os.RemoveAll(path.Join(config.DefaultContainerFortaDirPath, ".ipfs"))
 		return nil
