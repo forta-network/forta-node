@@ -556,68 +556,58 @@ func (ap *AgentPool) findAgentAndHandle(cfg config.AgentConfig, handler func(age
 func (ap *AgentPool) publishActions(
 	agentsToRun, agentsReady, agentsToStop []config.AgentConfig, newSubscriptions, removedSubscriptions []domain.CombinerBotSubscription,
 ) {
-	if len(agentsToRun) > 0 {
-		for _, agentConfig := range agentsToRun {
-			ap.botReports = append(
-				ap.botReports, &health.Report{
-					Name:    messaging.SubjectAgentsActionRun,
-					Status:  health.StatusInfo,
-					Details: agentConfig.ID,
-				},
-			)
+	// Iterate over agentsToRun, agentsReady, and agentsToStop slices to publish agent actions.
+	for _, action := range []struct{
+		bots []config.AgentConfig
+		subject string
+	}{
+		{agentsToRun, messaging.SubjectAgentsActionRun},
+		{agentsReady, messaging.SubjectAgentsStatusAttached},
+		{agentsToStop, messaging.SubjectAgentsActionStop},
+	} {
+		if len(action.bots) > 0 {
+			// Append health reports for each agent action.
+			for _, agentConfig := range action.bots {
+				ap.botReports = append(
+					ap.botReports, &health.Report{
+						Name:    action.subject,
+						Status:  health.StatusInfo,
+						Details: agentConfig.ID,
+					},
+				)
+			}
+			// Publish agent actions to the corresponding messaging subject.
+			ap.msgClient.Publish(action.subject, action.bots)
 		}
-		ap.msgClient.Publish(messaging.SubjectAgentsActionRun, agentsToRun)
-	}
-	if len(agentsReady) > 0 {
-		for _, agentConfig := range agentsReady {
-			ap.botReports = append(
-				ap.botReports, &health.Report{
-					Name:    messaging.SubjectAgentsStatusAttached,
-					Status:  health.StatusInfo,
-					Details: agentConfig.ID,
-				},
-			)
-		}
-		ap.msgClient.Publish(messaging.SubjectAgentsStatusAttached, agentsToRun)
-	}
-	if len(agentsToStop) > 0 {
-		for _, agentConfig := range agentsToStop {
-			ap.botReports = append(
-				ap.botReports, &health.Report{
-					Name:    messaging.SubjectAgentsActionStop,
-					Status:  health.StatusInfo,
-					Details: agentConfig.ID,
-				},
-			)
-		}
-		ap.msgClient.Publish(messaging.SubjectAgentsActionStop, agentsToStop)
-	}
-	if len(newSubscriptions) > 0 {
-		for _, subscription := range newSubscriptions {
-			ap.botReports = append(
-				ap.botReports, &health.Report{
-					Name:    messaging.SubjectAgentsAlertSubscribe,
-					Status:  health.StatusInfo,
-					Details: subscription.Subscriber.BotID,
-				},
-			)
-		}
-		ap.msgClient.Publish(messaging.SubjectAgentsAlertSubscribe, newSubscriptions)
-	}
-	if len(removedSubscriptions) > 0 {
-		for _, subscription := range removedSubscriptions {
-			ap.botReports = append(
-				ap.botReports, &health.Report{
-					Name:    messaging.SubjectAgentsAlertUnsubscribe,
-					Status:  health.StatusInfo,
-					Details: subscription.Subscriber.BotID,
-				},
-			)
-		}
-		ap.msgClient.Publish(messaging.SubjectAgentsAlertUnsubscribe, removedSubscriptions)
 	}
 
+	// Iterate over newSubscriptions and removedSubscriptions slices to publish alert subscriptions.
+	for _, action := range []struct{
+		subscriptions []domain.CombinerBotSubscription
+		subject       string
+	}{
+		{newSubscriptions, messaging.SubjectAgentsAlertSubscribe},
+		{removedSubscriptions, messaging.SubjectAgentsAlertUnsubscribe},
+	} {
+		if len(action.subscriptions) > 0 {
+			// Append health reports for each alert subscription.
+			for _, subscription := range action.subscriptions {
+				ap.botReports = append(
+					ap.botReports, &health.Report{
+						Name:    action.subject,
+						Status:  health.StatusInfo,
+						Details: subscription.Subscriber.BotID,
+					},
+				)
+			}
+			// Publish alert subscriptions to the corresponding messaging subject.
+			ap.msgClient.Publish(action.subject, action.subscriptions)
+		}
+	}
+
+	// If agentsToRun slice is not empty and the app is running in standalone mode, publish status reports for running agents.
 	if len(agentsToRun) > 0 && ap.cfg.LocalModeConfig.IsStandalone() {
+		// Append health reports for each running agent.
 		for _, agentConfig := range agentsToRun {
 			ap.botReports = append(
 				ap.botReports, &health.Report{
@@ -627,6 +617,7 @@ func (ap *AgentPool) publishActions(
 				},
 			)
 		}
+		// Publish status reports for running agents to the corresponding messaging subject.
 		ap.msgClient.Publish(messaging.SubjectAgentsStatusRunning, agentsToRun)
 	}
 }
