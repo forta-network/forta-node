@@ -559,7 +559,7 @@ func (ap *AgentPool) publishActions(
 	if len(agentsToRun) > 0 {
 		for _, agentConfig := range agentsToRun {
 			ap.botReports = append(
-				ap.botReports, health.Report{
+				ap.botReports, &health.Report{
 					Name:    messaging.SubjectAgentsActionRun,
 					Status:  health.StatusInfo,
 					Details: agentConfig.ID,
@@ -571,7 +571,7 @@ func (ap *AgentPool) publishActions(
 	if len(agentsReady) > 0 {
 		for _, agentConfig := range agentsReady {
 			ap.botReports = append(
-				ap.botReports, health.Report{
+				ap.botReports, &health.Report{
 					Name:    messaging.SubjectAgentsStatusAttached,
 					Status:  health.StatusInfo,
 					Details: agentConfig.ID,
@@ -583,7 +583,7 @@ func (ap *AgentPool) publishActions(
 	if len(agentsToStop) > 0 {
 		for _, agentConfig := range agentsToStop {
 			ap.botReports = append(
-				ap.botReports, health.Report{
+				ap.botReports, &health.Report{
 					Name:    messaging.SubjectAgentsActionStop,
 					Status:  health.StatusInfo,
 					Details: agentConfig.ID,
@@ -595,7 +595,7 @@ func (ap *AgentPool) publishActions(
 	if len(newSubscriptions) > 0 {
 		for _, subscription := range newSubscriptions {
 			ap.botReports = append(
-				ap.botReports, health.Report{
+				ap.botReports, &health.Report{
 					Name:    messaging.SubjectAgentsAlertSubscribe,
 					Status:  health.StatusInfo,
 					Details: subscription.Subscriber.BotID,
@@ -607,7 +607,7 @@ func (ap *AgentPool) publishActions(
 	if len(removedSubscriptions) > 0 {
 		for _, subscription := range removedSubscriptions {
 			ap.botReports = append(
-				ap.botReports, health.Report{
+				ap.botReports, &health.Report{
 					Name:    messaging.SubjectAgentsAlertUnsubscribe,
 					Status:  health.StatusInfo,
 					Details: subscription.Subscriber.BotID,
@@ -620,7 +620,7 @@ func (ap *AgentPool) publishActions(
 	if len(agentsToRun) > 0 && ap.cfg.LocalModeConfig.IsStandalone() {
 		for _, agentConfig := range agentsToRun {
 			ap.botReports = append(
-				ap.botReports, health.Report{
+				ap.botReports, &health.Report{
 					Name:    messaging.SubjectAgentsStatusRunning,
 					Status:  health.StatusInfo,
 					Details: agentConfig.ID,
