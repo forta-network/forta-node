@@ -33,6 +33,17 @@ const (
 	SupervisorStrategyVersion = "2"
 )
 
+var knownServiceContainerNames = []string{
+	config.DockerScannerContainerName,
+	config.DockerInspectorContainerName,
+	config.DockerJSONRPCProxyContainerName,
+	config.DockerJWTProviderContainerName,
+	config.DockerPublicAPIProxyContainerName,
+	config.DockerNatsContainerName,
+	config.DockerIpfsContainerName,
+	config.DockerStorageContainerName,
+}
+
 // SupervisorService manages the scanner node's service and agent containers.
 type SupervisorService struct {
 	ctx context.Context
@@ -485,16 +496,7 @@ func (sup *SupervisorService) removeOldContainers() error {
 	var containersToRemove []*containerDefinition
 
 	// gather old service containers
-	for _, containerName := range []string{
-		config.DockerScannerContainerName,
-		config.DockerInspectorContainerName,
-		config.DockerJSONRPCProxyContainerName,
-		config.DockerJWTProviderContainerName,
-		config.DockerPublicAPIProxyContainerName,
-		config.DockerNatsContainerName,
-		config.DockerIpfsContainerName,
-		config.DockerStorageContainerName,
-	} {
+	for _, containerName := range knownServiceContainerNames {
 		container, err := sup.client.GetContainerByName(sup.ctx, containerName)
 		if err != nil {
 			log.WithError(err).WithField("containerName", containerName).Info("did not find old service container - ignoring")

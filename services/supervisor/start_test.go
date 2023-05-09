@@ -115,6 +115,7 @@ func (s *Suite) SetupTest() {
 	service.config.Config.TelemetryConfig.Disable = true
 	service.config.Config.Log.Level = "debug"
 	service.config.Config.ChainID = 1
+	service.config.Config.AdvancedConfig.IPFSExperiment = true
 	s.service = service
 
 	s.releaseClient.EXPECT().GetReleaseManifest(gomock.Any(), gomock.Any()).Return(&release.ReleaseManifest{}, nil).AnyTimes()
@@ -199,16 +200,7 @@ func (s *Suite) SetupTest() {
 }
 
 func (s *Suite) initialContainerCheck() {
-	for _, containerName := range []string{
-		config.DockerScannerContainerName,
-		config.DockerInspectorContainerName,
-		config.DockerJSONRPCProxyContainerName,
-		config.DockerJWTProviderContainerName,
-		config.DockerPublicAPIProxyContainerName,
-		config.DockerNatsContainerName,
-		config.DockerIpfsContainerName,
-		config.DockerStorageContainerName,
-	} {
+	for _, containerName := range knownServiceContainerNames {
 		s.dockerClient.EXPECT().GetContainerByName(s.service.ctx, containerName).Return(&types.Container{ID: testGenericContainerID}, nil)
 	}
 
@@ -232,11 +224,11 @@ func (s *Suite) initialContainerCheck() {
 	)
 
 	// service containers + 1 old agent
-	for i := 0; i < config.DockerSupervisorManagedContainers+1; i++ {
+	for i := 0; i < len(knownServiceContainerNames)+1; i++ {
 		s.dockerClient.EXPECT().RemoveContainer(s.service.ctx, testGenericContainerID).Return(nil)
 		s.dockerClient.EXPECT().WaitContainerPrune(s.service.ctx, testGenericContainerID).Return(nil)
 	}
-	for i := 0; i < config.DockerSupervisorManagedContainers+1; i++ {
+	for i := 0; i < len(knownServiceContainerNames)+1; i++ {
 		s.dockerClient.EXPECT().RemoveNetworkByName(s.service.ctx, gomock.Any()).Return(nil)
 	}
 }
