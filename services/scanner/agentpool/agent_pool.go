@@ -390,14 +390,14 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 	// and send a "run" message.
 	// newAgents is the updated list of all agents
 	// agentsToRun is the list of missing agents
-	newAgents, agentsToRun := ap.updateAgentsOrFindMissing(latestVersions)
+	newAgents, agentsToRun, updatedAgents := ap.updateAgentsOrFindMissing(latestVersions)
 
 	// Find agents that are already deployed but doesn't exist in the latest versions payload
 	agentsToStop := ap.findMissingAgentsInLatestVersions(latestVersions)
 
 	ap.agents = newAgents
 
-	ap.publishActions(agentsToRun, nil, agentsToStop, nil, nil)
+	ap.publishActions(agentsToRun, nil, agentsToStop, updatedAgents, nil, nil)
 
 	return nil
 }
@@ -441,7 +441,7 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 		)
 	}
 
-	ap.publishActions(nil, agentsReady, agentsToStop, newSubscriptions, removedSubscriptions)
+	ap.publishActions(nil, agentsReady, agentsToStop, nil, newSubscriptions, removedSubscriptions)
 
 	if ap.botWaitGroup != nil && len(agentsReady) > 0 {
 		ap.botWaitGroup.Add(-len(agentsReady))
@@ -484,13 +484,17 @@ func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
 // updateAgentsOrFindMissing updates existing agents in the pool with the latest configuration
 // and finds the missing agents in the pool to add them as new agents.
 // Returns the updated list of agents and the configurations for the missing agents to start.
-func (ap *AgentPool) updateAgentsOrFindMissing(latestVersions messaging.AgentPayload) ([]*poolagent.Agent, []config.AgentConfig) {
+func (ap *AgentPool) updateAgentsOrFindMissing(latestVersions messaging.AgentPayload) ([]*poolagent.Agent, []config.AgentConfig, []config.AgentConfig) {
 	var agents []*poolagent.Agent
+	var updatedAgents []config.AgentConfig
 	var agentsToRun []config.AgentConfig
 
 	for _, agentCfg := range latestVersions {
 		err := ap.findAgentAndHandle(
 			agentCfg, func(agent *poolagent.Agent, _ *log.Entry) error {
+				if !agent.Config().Equal(agentCfg) {
+					updatedAgents = append(updatedAgents, agent.Config())
+				}
 				agent.SetShardConfig(agentCfg)
 				agents = append(agents, agent)
 				return nil
@@ -505,7 +509,7 @@ func (ap *AgentPool) updateAgentsOrFindMissing(latestVersions messaging.AgentPay
 		}
 	}
 
-	return agents, agentsToRun
+	return agents, agentsToRun, updatedAgents
 }
 
 // findMissingAgentsInLatestVersions finds agents in the pool that are not in the latest versions payload,
@@ -544,27 +548,59 @@ func (ap *AgentPool) findAgentAndHandle(cfg config.AgentConfig, handler func(age
 }
 
 func (ap *AgentPool) publishActions(
-	agentsToRun, agentsReady, agentsToStop []config.AgentConfig, newSubscriptions, removedSubscriptions []domain.CombinerBotSubscription,
+	agentsToRun, agentsReady, agentsToStop, agentsUpdated []config.AgentConfig, newSubscriptions, removedSubscriptions []domain.CombinerBotSubscription,
 ) {
+	var ms []*protocol.AgentMetric
+
 	if len(agentsToRun) > 0 {
+		for _, agentConfig := range agentsToRun {
+			ms = append(ms, metrics.CreateAgentMetric(agentConfig.ID, metrics.MetricActionRun, 1))
+		}
 		ap.msgClient.Publish(messaging.SubjectAgentsActionRun, agentsToRun)
 	}
+
 	if len(agentsReady) > 0 {
+		for _, agentConfig := range agentsReady {
+			ms = append(ms, metrics.CreateAgentMetric(agentConfig.ID, metrics.MetricStatusAttached, 1))
+		}
 		ap.msgClient.Publish(messaging.SubjectAgentsStatusAttached, agentsToRun)
 	}
+
 	if len(agentsToStop) > 0 {
+		for _, agentConfig := range agentsToStop {
+			ms = append(ms, metrics.CreateAgentMetric(agentConfig.ID, metrics.MetricActionStop, 1))
+		}
 		ap.msgClient.Publish(messaging.SubjectAgentsActionStop, agentsToStop)
 	}
+
+	if len(agentsUpdated) > 0 {
+		for _, agentConfig := range agentsUpdated {
+			ms = append(ms, metrics.CreateAgentMetric(agentConfig.ID, metrics.MetricActionUpdated, 1))
+		}
+	}
+
 	if len(newSubscriptions) > 0 {
+		for _, agentConfig := range newSubscriptions {
+			ms = append(ms, metrics.CreateAgentMetric(agentConfig.Subscriber.BotID, metrics.MetricActionSubscribe, 1))
+		}
 		ap.msgClient.Publish(messaging.SubjectAgentsAlertSubscribe, newSubscriptions)
 	}
+
 	if len(removedSubscriptions) > 0 {
+		for _, agentConfig := range removedSubscriptions {
+			ms = append(ms, metrics.CreateAgentMetric(agentConfig.Subscriber.BotID, metrics.MetricActionUnsubscribe, 1))
+		}
 		ap.msgClient.Publish(messaging.SubjectAgentsAlertUnsubscribe, removedSubscriptions)
 	}
 
 	if len(agentsToRun) > 0 && ap.cfg.LocalModeConfig.IsStandalone() {
+		for _, agentConfig := range agentsToRun {
+			ms = append(ms, metrics.CreateAgentMetric(agentConfig.ID, metrics.MetricStatusRunning, 1))
+		}
 		ap.msgClient.Publish(messaging.SubjectAgentsStatusRunning, agentsToRun)
 	}
+
+	metrics.SendAgentMetrics(ap.msgClient, ms)
 }
 
 func (ap *AgentPool) registerMessageHandlers() {

@@ -7,10 +7,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/config"
-
+	"github.com/forta-network/forta-node/metrics"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -151,6 +152,7 @@ func (sup *SupervisorService) doStartAgent(ctx context.Context, agent config.Age
 	if err == errAgentAlreadyRunning {
 		logger.Infof("agent container is already running - skipped")
 		sup.msgClient.Publish(messaging.SubjectAgentsStatusRunning, messaging.AgentPayload{agent})
+		metrics.SendAgentMetrics(sup.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agent.ID,metrics.MetricStatusRunning,1)})
 		return
 	}
 	if err != nil {
@@ -160,6 +162,7 @@ func (sup *SupervisorService) doStartAgent(ctx context.Context, agent config.Age
 
 	// Broadcast the agent status.
 	sup.msgClient.Publish(messaging.SubjectAgentsStatusRunning, messaging.AgentPayload{agent})
+	metrics.SendAgentMetrics(sup.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agent.ID,metrics.MetricStatusRunning,1)})
 }
 
 func (sup *SupervisorService) handleAgentStop(payload messaging.AgentPayload) error {
