@@ -10,6 +10,15 @@ inputs:
   version:
     description: 'Forta scan node version'
     required: true
+  aws_access_key:
+    description: 'AWS Access Key'
+    required: true
+  aws_secret_key:
+    description: 'AWS Secret Key'
+    required: true
+  release_artifacts_bucket_name:
+    description: 'Bucket to put the release manifest in'
+    required: true
 outputs:
   release-cid:
     description: 'IPFS CID of the release manifest'
@@ -24,6 +33,12 @@ runs:
       uses: actions/setup-go@v2
       with:
         go-version: 1.19
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ inputs.aws_access_key }}
+        aws-secret-access-key: ${{ inputs.aws_secret_key }}
+        aws-region: us-east-1
     - name: Build images, prepare manifest and push
       id: build-and-push
       shell: bash
@@ -33,9 +48,11 @@ runs:
         VERSION: ${{ inputs.version }}
         COMMIT_SHA: ${{ github.sha }}
         RELEASE_NOTES: ${{ github.event.release.body }}
+        BUCKET_NAME: ${{ inputs.release_artifacts_bucket_name }}
       run: |
         export IMAGE_REF=$(./scripts/docker-build-push.sh "$REGISTRY" "$IMAGE_NAME" "$COMMIT_SHA")
         echo "::set-output name=image-reference::$IMAGE_REF"
         go run scripts/manifest/main.go > manifest.json
         MANIFEST_REF=$(./scripts/ipfs-add.sh "./manifest.json")
         echo "::set-output name=release-cid::$MANIFEST_REF"
+        aws s3 cp manifest.json "s3://$BUCKET_NAME/manifests/release.json"
