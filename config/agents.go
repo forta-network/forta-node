@@ -20,7 +20,7 @@ type AgentConfig struct {
 	IsStandalone bool    `yaml:"isStandalone" json:"isStandalone"`
 	StartBlock   *uint64 `yaml:"startBlock" json:"startBlock,omitempty"`
 	StopBlock    *uint64 `yaml:"stopBlock" json:"stopBlock,omitempty"`
-	Owner        string  `yaml:"owner "json:"owner"`
+	Owner        string  `yaml:"owner" json:"owner"`
 
 	ChainID     int
 	AlertConfig *protocol.AlertConfig
@@ -44,7 +44,7 @@ func (ac AgentConfig) Equal(b AgentConfig) bool {
 	if noSharding {
 		return true
 	}
-	sameShardID :=  ac.ShardConfig.ShardID == b.ShardConfig.ShardID
+	sameShardID := ac.ShardConfig.ShardID == b.ShardConfig.ShardID
 	sameShardCount := ac.ShardConfig.Shards == b.ShardConfig.Shards
 
 	return sameShardID && sameShardCount

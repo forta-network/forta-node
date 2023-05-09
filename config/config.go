@@ -198,7 +198,8 @@ type CombinerConfig struct {
 }
 
 type AdvancedConfig struct {
-	SafeOffset bool `yaml:"safeOffset" json:"safeOffset"`
+	SafeOffset     bool `yaml:"safeOffset" json:"safeOffset"`
+	IPFSExperiment bool `yaml:"ipfsExperiment" json:"ipfsExperiment"`
 }
 
 type Config struct {
