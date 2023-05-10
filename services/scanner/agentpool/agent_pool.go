@@ -495,7 +495,7 @@ func (ap *AgentPool) updateAgentsOrFindMissing(latestVersions messaging.AgentPay
 				if !agent.Config().Equal(agentCfg) {
 					updatedAgents = append(updatedAgents, agent.Config())
 				}
-				agent.SetShardConfig(agentCfg)
+				agent.UpdateConfig(agentCfg)
 				agents = append(agents, agent)
 				return nil
 			},
