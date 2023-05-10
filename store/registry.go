@@ -53,12 +53,13 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 	// because we peg the latest block, it can be problematic if this is called concurrently
 	rs.mu.Lock()
 	defer rs.mu.Unlock()
+
 	hash, err := rs.rc.GetAssignmentHash(scanner)
 	if err != nil {
 		return nil, false, err
 	}
 
-	shouldUpdate := rs.lastCompletedVersion != hash.Hash || time.Since(rs.lastUpdate) > 1*time.Hour
+	shouldUpdate := rs.lastCompletedVersion != hash.Hash || time.Since(rs.lastUpdate) > 5 * time.Minute
 	if !shouldUpdate {
 		return nil, false, nil
 	}
@@ -73,13 +74,14 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 		invalidBots      []*registry.Agent
 		failedLoadingAny bool
 	)
+
 	err = rs.rc.ForEachAssignedAgent(scanner, func(bot *registry.Agent) error {
 		logger := log.WithField("botId", bot.AgentID)
 
 		// if already invalidated, remember it for next time
 		if rs.isInvalidBot(bot) {
 			invalidBots = append(invalidBots, bot)
-			logger.WithError(err).Warn("invalid bot - skipping")
+			logger.Warn("invalid bot - skipping")
 			return nil
 		}
 		// if already loaded, remember it for next time
