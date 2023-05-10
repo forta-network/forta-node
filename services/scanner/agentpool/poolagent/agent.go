@@ -697,11 +697,12 @@ func (agent *Agent) ShouldProcessAlert(event *protocol.AlertEvent) bool {
 	return isOnThisShard
 }
 
-func (agent *Agent) SetShardConfig(cfg config.AgentConfig) {
+func (agent *Agent) UpdateConfig(cfg config.AgentConfig) {
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
 
 	agent.config.ShardConfig = cfg.ShardConfig
+	agent.config.Manifest = cfg.Manifest
 }
 
 func (agent *Agent) IsSharded() bool {
