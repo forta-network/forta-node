@@ -37,19 +37,24 @@ func BuildManifestWithTimestamp(ts time.Time, version, commitSha, nodeImage, rel
 		Supervisor: nodeImage,
 	}
 
-	var err error
-	releaseInfo.DeprecationPolicy, err = parseDeprecationPolicy(releaseNotes)
+	releaseConfig, err := parseReleaseConfig(releaseNotes)
 	if err != nil {
 		return "", err
 	}
 
-	// set the default deprecation policy
-	if releaseInfo.DeprecationPolicy == nil {
-		releaseInfo.DeprecationPolicy = &release.DeprecationPolicy{
-			SupportedVersions: []string{version},
-			ActivatesInHours:  release.DefaultDeprecationHours,
-		}
+	// set config defaults
+
+	if releaseConfig.DeprecationPolicy.ActivatesInHours == 0 {
+		releaseConfig.DeprecationPolicy.ActivatesInHours = release.DefaultDeprecationHours
 	}
+	if len(releaseConfig.DeprecationPolicy.SupportedVersions) == 0 {
+		releaseConfig.DeprecationPolicy.SupportedVersions = []string{version}
+	}
+	if releaseConfig.AutoUpdateInHours == 0 {
+		releaseConfig.AutoUpdateInHours = release.DefaultAutoUpdateHours
+	}
+
+	releaseInfo.Config = releaseConfig
 
 	b, err := json.MarshalIndent(&release.ReleaseManifest{
 		Release: releaseInfo,
@@ -60,24 +65,22 @@ func BuildManifestWithTimestamp(ts time.Time, version, commitSha, nodeImage, rel
 	return string(b), nil
 }
 
-func parseDeprecationPolicy(releaseNotes string) (*release.DeprecationPolicy, error) {
+func parseReleaseConfig(releaseNotes string) (release.ReleaseConfig, error) {
 	parts := strings.Split(releaseNotes, beginReleaseConfiguration)
 	if len(parts) != 2 {
-		return nil, nil
+		return release.ReleaseConfig{}, nil
 	}
 	parts = strings.Split(parts[1], endReleaseConfiguration)
 	if len(parts) != 2 {
-		return nil, nil
+		return release.ReleaseConfig{}, nil
 	}
-	policyStr := parts[0]
-	if len(policyStr) == 0 {
-		return nil, nil
+	configStr := parts[0]
+	if len(configStr) == 0 {
+		return release.ReleaseConfig{}, nil
 	}
-	var policy struct {
-		DeprecationPolicy deprecationPolicy `yaml:"deprecationPolicy"`
+	var releaseConfig release.ReleaseConfig
+	if err := yaml.Unmarshal([]byte(configStr), &releaseConfig); err != nil {
+		return release.ReleaseConfig{}, err
 	}
-	if err := yaml.Unmarshal([]byte(policyStr), &policy); err != nil {
-		return nil, err
-	}
-	return (*release.DeprecationPolicy)(&policy.DeprecationPolicy), nil
+	return releaseConfig, nil
 }

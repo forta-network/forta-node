@@ -9,7 +9,7 @@ import (
 
 const testTimestamp = "2020-01-01T12:00:00Z"
 
-const testResultWithDefaultDeprecationPolicy = `{
+const testResultWithDefaultValues = `{
   "release": {
     "timestamp": "2020-01-01T12:00:00Z",
     "repository": "https://github.com/forta-network/forta-node",
@@ -19,11 +19,14 @@ const testResultWithDefaultDeprecationPolicy = `{
       "updater": "disco.forta.network/a@sha256:b",
       "supervisor": "disco.forta.network/a@sha256:b"
     },
-    "deprecationPolicy": {
-      "supportedVersions": [
-        "v0.5.0"
-      ],
-      "activatesInHours": 168
+    "config": {
+      "autoUpdateInHours": 24,
+      "deprecationPolicy": {
+        "supportedVersions": [
+          "v0.5.0"
+        ],
+        "activatesInHours": 168
+      }
     }
   }
 }`
@@ -50,6 +53,7 @@ Bar feature
 	beginReleaseConfiguration +
 
 	`
+autoUpdateInHours: 4
 deprecationPolicy:
   supportedVersions:
     - v0.4.0
@@ -66,7 +70,7 @@ deprecationPolicy:
 - Some PR reference https://github.com/forta-network/forta-node/etc/123
 `
 
-const testResultWithCustomDeprecationPolicy = `{
+const testResultWithCustomValues = `{
   "release": {
     "timestamp": "2020-01-01T12:00:00Z",
     "repository": "https://github.com/forta-network/forta-node",
@@ -76,17 +80,20 @@ const testResultWithCustomDeprecationPolicy = `{
       "updater": "disco.forta.network/a@sha256:b",
       "supervisor": "disco.forta.network/a@sha256:b"
     },
-    "deprecationPolicy": {
-      "supportedVersions": [
-        "v0.4.0",
-        "v0.3.0"
-      ],
-      "activatesInHours": 72
+    "config": {
+      "autoUpdateInHours": 4,
+      "deprecationPolicy": {
+        "supportedVersions": [
+          "v0.4.0",
+          "v0.3.0"
+        ],
+        "activatesInHours": 72
+      }
     }
   }
 }`
 
-func TestBuildManifest_NoDeprecation(t *testing.T) {
+func TestBuildManifest_WithDefaultValues(t *testing.T) {
 	r := require.New(t)
 
 	testTs, err := time.Parse(time.RFC3339, testTimestamp)
@@ -95,10 +102,10 @@ func TestBuildManifest_NoDeprecation(t *testing.T) {
 	result, err := BuildManifestWithTimestamp(testTs, "v0.5.0", "abc", "disco.forta.network/a@sha256:b", "")
 	r.NoError(err)
 
-	r.Equal(testResultWithDefaultDeprecationPolicy, result)
+	r.Equal(testResultWithDefaultValues, result)
 }
 
-func TestBuildManifest_WithCustomDeprecation(t *testing.T) {
+func TestBuildManifest_WithCustomValues(t *testing.T) {
 	r := require.New(t)
 
 	testTs, err := time.Parse(time.RFC3339, testTimestamp)
@@ -107,5 +114,5 @@ func TestBuildManifest_WithCustomDeprecation(t *testing.T) {
 	result, err := BuildManifestWithTimestamp(testTs, "v0.5.0", "abc", "disco.forta.network/a@sha256:b", testReleaseNotes)
 	r.NoError(err)
 
-	r.Equal(testResultWithCustomDeprecationPolicy, result)
+	r.Equal(testResultWithCustomValues, result)
 }
