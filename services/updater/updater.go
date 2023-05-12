@@ -138,8 +138,12 @@ func (updater *UpdaterService) updateLatestReleaseWithDelay(delay time.Duration)
 		return err
 	}
 
+	updater.mu.RLock()
+	latestRef := updater.latestReference
+	updater.mu.RUnlock()
+
 	// if the same as before, return the value (blank isn't possible here)
-	if latest.Reference == updater.latestReference {
+	if latest.Reference == latestRef {
 		log.WithFields(log.Fields{
 			"release": latest.Reference,
 		}).Info("no change to release")
