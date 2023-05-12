@@ -57,7 +57,7 @@ func (l *lookupVersionStore) GetRelease(ctx context.Context) (*ScannerRelease, e
 		return l.cachedRelease, nil
 	}
 
-	rm, err := loadRef(ctx, l.rc, ref)
+	rm, err := loadRef(l.rc, ref)
 	if err != nil {
 		return nil, err
 	}
@@ -74,8 +74,8 @@ func (l *lookupVersionStore) GetRelease(ctx context.Context) (*ScannerRelease, e
 	return res, nil
 }
 
-func loadRef(ctx context.Context, rc release.Client, ref string) (*release.ReleaseManifest, error) {
-	res, err := rc.GetReleaseManifest(ctx, ref)
+func loadRef(rc release.Client, ref string) (*release.ReleaseManifest, error) {
+	res, err := rc.GetReleaseManifest(ref)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,9 @@ func NewScannerReleaseStore(ctx context.Context, cfg config.Config) (ScannerRele
 		return &devScannerVersionStore{}, nil
 	}
 
-	releaseClient, err := release.NewClient(cfg.Registry.IPFS.GatewayURL)
+	releaseClient, err := release.NewClient(cfg.Registry.IPFS.GatewayURL, []string{
+		cfg.Registry.ReleaseDistributionUrl,
+	})
 	if err != nil {
 		return nil, err
 	}

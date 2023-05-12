@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"github.com/forta-network/forta-core-go/release"
+	"github.com/forta-network/forta-node/config"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -12,8 +13,29 @@ type mockReleaseStore struct {
 	mockErr error
 }
 
-func (mrs *mockReleaseStore) GetReleaseManifest(ctx context.Context, reference string) (*release.ReleaseManifest, error) {
+func (mrs *mockReleaseStore) GetReleaseManifest(reference string) (*release.ReleaseManifest, error) {
 	return mrs.mockRm, mrs.mockErr
+}
+
+// TestNewScannerReleaseStore returns a release
+func TestNewScannerReleaseStore(t *testing.T) {
+	rs, err := NewScannerReleaseStore(context.Background(), config.Config{
+		Registry: config.RegistryConfig{
+			JsonRpc:                config.JsonRpcConfig{Url: "https://polygon-rpc.com"},
+			ReleaseDistributionUrl: "https://dist.forta.network/manifest/release",
+			IPFS: config.IPFSConfig{
+				GatewayURL: "https://ipfs.forta.network",
+			},
+		},
+		ENSConfig: config.ENSConfig{ContractAddress: "0x08f42fcc52a9C2F391bF507C4E8688D0b53e1bd7"},
+	})
+	assert.NoError(t, err)
+
+	rls, err := rs.GetRelease(context.Background())
+	assert.NoError(t, err)
+
+	assert.NotNil(t, rls)
+	assert.True(t, len(rls.Reference) > 0)
 }
 
 func TestLookupVersionStore_GetRelease(t *testing.T) {

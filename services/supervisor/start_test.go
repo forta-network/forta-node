@@ -118,7 +118,7 @@ func (s *Suite) SetupTest() {
 	service.config.Config.AdvancedConfig.IPFSExperiment = true
 	s.service = service
 
-	s.releaseClient.EXPECT().GetReleaseManifest(gomock.Any(), gomock.Any()).Return(&release.ReleaseManifest{}, nil).AnyTimes()
+	s.releaseClient.EXPECT().GetReleaseManifest(gomock.Any()).Return(&release.ReleaseManifest{}, nil).AnyTimes()
 
 	s.initialContainerCheck()
 	s.dockerClient.EXPECT().EnsureLocalImage(service.ctx, gomock.Any(), gomock.Any()).Times(2) // needs to get nats and ipfs
