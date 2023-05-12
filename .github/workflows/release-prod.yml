@@ -62,6 +62,9 @@ jobs:
           registry: disco.forta.network
           name: ${{ matrix.image-name }}
           version: ${{ github.ref_name }}
+          aws_access_key: ${{ secrets.PROD_RELEASE_AWS_ACCESS_KEY }}
+          aws_secret_key: ${{ secrets.PROD_RELEASE_AWS_SECRET_KEY }}
+          release_artifacts_bucket_name: prod-forta-releases
       - name: Write image reference as output
         id: write-output
         run: |

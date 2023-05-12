@@ -67,6 +67,9 @@ jobs:
           registry: disco-dev.forta.network
           name: ${{ matrix.image-name }}
           version: ${{ env.DEFAULT_DEV_VERSION }}
+          aws_access_key: ${{ secrets.DEV_RELEASE_AWS_ACCESS_KEY }}
+          aws_secret_key: ${{ secrets.DEV_RELEASE_AWS_SECRET_KEY }}
+          release_artifacts_bucket_name: dev-forta-releases
       - name: Write output values
         id: write-output
         run: |
