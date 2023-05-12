@@ -3,11 +3,8 @@ package updater
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
-	"path"
 	"strconv"
 	"sync"
 	"time"
@@ -16,15 +13,13 @@ import (
 	"github.com/forta-network/forta-core-go/registry"
 	"github.com/forta-network/forta-core-go/release"
 	"github.com/forta-network/forta-core-go/utils"
+	"github.com/forta-network/forta-node/store"
 
-	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/nodeutils"
 	log "github.com/sirupsen/logrus"
 )
 
 var (
-	errNotAvailable = errors.New("new release not available")
-
 	defaultUpdateCheckIntervalSeconds = 60
 	maxConsecutiveUpdateErrors        = 60
 )
@@ -37,10 +32,8 @@ type UpdaterService struct {
 	mu             sync.RWMutex
 	releaseClient  release.Client
 	registryClient registry.Client
+	srs            store.ScannerReleaseStore
 	server         *http.Server
-
-	developmentMode  bool
-	trackPrereleases bool
 
 	latestReference string
 	latestRelease   *release.ReleaseManifest
@@ -57,8 +50,8 @@ type UpdaterService struct {
 }
 
 // NewUpdaterService creates a new updater service.
-func NewUpdaterService(ctx context.Context, registryClient registry.Client, releaseClient release.Client,
-	port string, developmentMode bool, trackPrereleases bool, updateDelaySeconds, updateCheckIntervalSeconds int,
+func NewUpdaterService(ctx context.Context, svs store.ScannerReleaseStore,
+	port string, updateDelaySeconds, updateCheckIntervalSeconds int,
 ) *UpdaterService {
 	if updateCheckIntervalSeconds == 0 {
 		updateCheckIntervalSeconds = defaultUpdateCheckIntervalSeconds
@@ -67,10 +60,7 @@ func NewUpdaterService(ctx context.Context, registryClient registry.Client, rele
 	return &UpdaterService{
 		ctx:                 ctx,
 		port:                port,
-		releaseClient:       releaseClient,
-		registryClient:      registryClient,
-		developmentMode:     developmentMode,
-		trackPrereleases:    trackPrereleases,
+		srs:                 svs,
 		updateDelay:         time.Duration(updateDelaySeconds) * time.Second,
 		updateCheckInterval: time.Duration(updateCheckIntervalSeconds) * time.Second,
 		errCounter: nodeutils.NewErrorCounter(uint(maxConsecutiveUpdateErrors), func(err error) bool {
@@ -83,7 +73,7 @@ func (updater *UpdaterService) handleGetVersion(w http.ResponseWriter, r *http.R
 	updater.mu.RLock()
 	defer updater.mu.RUnlock()
 
-	if updater.latestRelease == nil {
+	if updater.latestRelease == nil || updater.latestReference == "" {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -106,7 +96,7 @@ func (updater *UpdaterService) Start() error {
 		Handler: http.HandlerFunc(updater.handleGetVersion),
 	}
 
-	if err := updater.updateLatestRelease(); err != nil {
+	if err := updater.updateLatestReleaseWithDelay(0); err != nil {
 		log.WithError(err).Error("error initializing release")
 		return err
 	}
@@ -139,48 +129,32 @@ func (updater *UpdaterService) Start() error {
 	return nil
 }
 
-func (updater *UpdaterService) updateLatestRelease() error {
-	return updater.updateLatestReleaseWithDelay(0)
-}
-
 func (updater *UpdaterService) updateLatestReleaseWithDelay(delay time.Duration) error {
 	log.Info("updating latest release")
 
-	updater.mu.RLock()
-	latestReference := updater.latestReference
-	updater.mu.RUnlock()
-
-	var (
-		releaseRef      string
-		releaseManifest *release.ReleaseManifest
-		err             error
-	)
-	if updater.developmentMode {
-		releaseRef, releaseManifest, err = updater.readLocalRelease(latestReference)
-	} else {
-		releaseRef, releaseManifest, err = updater.fetchNewerRelease(latestReference)
+	// note: if reference is blank, this returns an error
+	latest, err := updater.srs.GetRelease(updater.ctx)
+	if err != nil {
+		return err
 	}
-	switch err {
-	case nil:
-		// we downloaded new release info successfully
 
-	case errNotAvailable:
+	// if the same as before, return the value (blank isn't possible here)
+	if latest.Reference == updater.latestReference {
 		log.WithFields(log.Fields{
-			"release": releaseRef,
+			"release": latest.Reference,
 		}).Info("no change to release")
 		return nil
-
-	default:
-		return err
 	}
 
 	// so that all scanners don't update simultaneously, this waits a period of time
 	if delay > 0 {
 		log.WithFields(log.Fields{
-			"release": releaseRef, "delay": delay,
+			"release": latest.Reference, "delay": delay,
 		}).Info("delaying update")
 
-		if foundNew := updater.checkNewerReleaseAndWait(releaseRef, delay); foundNew {
+		// if a newer release is found while waiting, this returns and tries again
+		// (this resets the delay clock)
+		if foundNew := updater.waitForDelayOrNewerRelease(latest.Reference, delay); foundNew {
 			log.Info("detected newer release while delaying current update - aborting")
 			return nil
 		}
@@ -188,62 +162,28 @@ func (updater *UpdaterService) updateLatestReleaseWithDelay(delay time.Duration)
 		log.Info("successfully waited before version update")
 	}
 
-	updater.latestVersion.Set(releaseManifest.Release.Version)
-	updater.latestIsPrerelease.Set(strconv.FormatBool(updater.trackPrereleases))
+	updater.latestVersion.Set(latest.ReleaseManifest.Release.Version)
+	updater.latestIsPrerelease.Set(strconv.FormatBool(latest.IsPrerelease))
 
 	updater.mu.Lock()
 	defer updater.mu.Unlock()
-	updater.latestRelease = releaseManifest
-	updater.latestReference = releaseRef
+	updater.latestRelease = &latest.ReleaseManifest
+	updater.latestReference = latest.Reference
 	log.WithFields(log.Fields{
-		"release": releaseRef,
+		"release": latest.Reference,
 	}).Info("updating to release")
 
 	return nil
 }
 
-func (updater *UpdaterService) fetchNewerRelease(previousRef string) (string, *release.ReleaseManifest, error) {
-	ref, err := updater.compareScannerNodeVersion(previousRef)
-	if err != nil {
-		return ref, nil, err
-	}
-	rm, err := updater.releaseClient.GetReleaseManifest(context.Background(), ref)
-	if err != nil {
-		log.WithError(err).Error("error getting release manifest")
-		return ref, nil, fmt.Errorf("failed while downloading the release manifest: %v", err)
-	}
-	return ref, rm, nil
-}
-
-func (updater *UpdaterService) compareScannerNodeVersion(previousRef string) (newRef string, err error) {
-	if updater.developmentMode {
-		newRef, _, err = updater.readLocalRelease(previousRef)
-		return
-	}
-
-	var ref string
-	if updater.trackPrereleases {
-		ref, err = updater.registryClient.GetScannerNodePrereleaseVersion()
-	} else {
-		ref, err = updater.registryClient.GetScannerNodeVersion()
-	}
-	if err != nil {
-		log.WithError(err).Error("error getting the latest release manifest ref")
-		return "", fmt.Errorf("failed to get the latest release manifest ref: %v", err)
-	}
-	if ref == previousRef {
-		return ref, errNotAvailable
-	}
-	return ref, nil
-}
-
-func (updater *UpdaterService) checkNewerReleaseAndWait(previousRef string, delay time.Duration) (foundNew bool) {
+// returns true if a newer release is detected, otherwise waits for delay and returns false
+func (updater *UpdaterService) waitForDelayOrNewerRelease(currentRef string, delay time.Duration) bool {
 	detectedCh := make(chan struct{})
 
 	ctx, cancel := context.WithCancel(updater.ctx)
 	defer cancel()
 
-	go updater.detectNewerRelease(ctx, previousRef, detectedCh)
+	go updater.waitForNewerRelease(ctx, currentRef, detectedCh)
 
 	select {
 	case <-time.After(delay):
@@ -253,13 +193,16 @@ func (updater *UpdaterService) checkNewerReleaseAndWait(previousRef string, dela
 	}
 }
 
-func (updater *UpdaterService) detectNewerRelease(ctx context.Context, previousRef string, detectedCh chan struct{}) {
+// notifies channel is a newer version is detected
+func (updater *UpdaterService) waitForNewerRelease(ctx context.Context, currentRef string, detectedCh chan struct{}) {
 	ticker := time.NewTicker(updater.updateCheckInterval)
 	for {
 		select {
 		case <-ticker.C:
-			newRef, _ := updater.compareScannerNodeVersion(previousRef)
-			if newRef != previousRef {
+			if rel, err := updater.srs.GetRelease(updater.ctx); err != nil {
+				log.WithError(err).Error("error getting release during delay (ignoring intermittent)")
+				continue
+			} else if rel.Reference != currentRef {
 				detectedCh <- struct{}{}
 				return
 			}
@@ -267,24 +210,6 @@ func (updater *UpdaterService) detectNewerRelease(ctx context.Context, previousR
 			return
 		}
 	}
-}
-
-func (updater *UpdaterService) readLocalRelease(previousRef string) (string, *release.ReleaseManifest, error) {
-	b, err := ioutil.ReadFile(path.Join(config.DefaultContainerFortaDirPath, "local-release.json"))
-	if err != nil {
-		log.WithError(err).Info("could not read the test release manifest file - ignoring error")
-		return "", nil, err
-	}
-	var release release.ReleaseManifest
-	if err := json.Unmarshal(b, &release); err != nil {
-		log.WithError(err).Info("could not unmarshal the test release manifest - ignoring error")
-		return "", nil, err
-	}
-	currentRef := release.Release.Commit // use commit as ref (dev mode hack)
-	if currentRef == previousRef {
-		return currentRef, nil, errNotAvailable
-	}
-	return currentRef, &release, nil
 }
 
 // Name returns the name of the service.

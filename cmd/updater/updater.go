@@ -10,9 +10,6 @@ import (
 	"path"
 	"time"
 
-	"github.com/forta-network/forta-core-go/registry"
-	"github.com/forta-network/forta-core-go/release"
-
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/config"
@@ -64,23 +61,8 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	cfg.Registry.IPFS.APIURL = utils.ConvertToDockerHostURL(cfg.Registry.IPFS.APIURL)
 	cfg.Registry.IPFS.GatewayURL = utils.ConvertToDockerHostURL(cfg.Registry.IPFS.GatewayURL)
 
-	releaseClient, err := release.NewClient(cfg.Registry.IPFS.GatewayURL)
-	if err != nil {
-		return nil, err
-	}
-	registryClient, err := store.GetRegistryClient(ctx, cfg, registry.ClientConfig{
-		JsonRpcUrl: cfg.Registry.JsonRpc.Url,
-		ENSAddress: cfg.ENSConfig.ContractAddress,
-		Name:       "updater",
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	developmentMode := utils.ParseBoolEnvVar(config.EnvDevelopment)
-
 	log.WithFields(log.Fields{
-		"developmentMode": developmentMode,
+		"developmentMode": utils.ParseBoolEnvVar(config.EnvDevelopment),
 	}).Info("updater modes")
 
 	address, err := loadAddressFromKeyFile()
@@ -94,9 +76,13 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		updateDelay = *cfg.AutoUpdate.UpdateDelay
 	}
 
+	srs, err := store.NewScannerReleaseStore(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	updaterService := updater.NewUpdaterService(
-		ctx, registryClient, releaseClient, config.DefaultContainerPort,
-		developmentMode, cfg.AutoUpdate.TrackPrereleases, updateDelay, cfg.AutoUpdate.CheckIntervalSeconds,
+		ctx, srs, config.DefaultContainerPort, updateDelay, cfg.AutoUpdate.CheckIntervalSeconds,
 	)
 
 	return []services.Service{

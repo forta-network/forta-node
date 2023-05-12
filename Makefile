@@ -20,6 +20,7 @@ mocks:
 	mockgen -source services/registry/registry.go -destination services/registry/mocks/mock_registry.go
 	mockgen -source store/registry.go -destination store/mocks/mock_registry.go
 	mockgen -source services/storage/ipfs.go -destination services/storage/mocks/mock_ipfs.go
+	mockgen -source store/scanner_release.go -destination store/mocks/mock_scanner_release.go
 
 test:
 	go test -v -count=1 ./... -coverprofile=coverage.out
