@@ -3,7 +3,6 @@ package registry
 import (
 	"context"
 	"fmt"
-	"github.com/forta-network/forta-node/clients/messaging"
 	"time"
 
 	"github.com/forta-network/forta-node/store"
@@ -14,6 +13,7 @@ import (
 	"github.com/forta-network/forta-core-go/ethereum"
 	"github.com/forta-network/forta-core-go/feeds"
 	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/services/registry/regtypes"
 	log "github.com/sirupsen/logrus"
@@ -118,13 +118,12 @@ func (rs *RegistryService) publishLatestAgents() error {
 
 		if changed {
 			rs.lastChangeDetected.Set()
-			rs.agentsConfigs = agts
 			log.WithField("count", len(agts)).Infof("publishing list of agents")
+			rs.agentsConfigs = agts
+			rs.msgClient.Publish(messaging.SubjectAgentsVersionsLatest, agts)
 		} else {
 			log.Info("registry: no agent changes detected")
 		}
-
-		rs.msgClient.Publish(messaging.SubjectAgentsVersionsLatest, rs.agentsConfigs)
 	}
 	return nil
 }

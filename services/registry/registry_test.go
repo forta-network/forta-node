@@ -105,21 +105,7 @@ func (s *Suite) TestPublishChanges() {
 	s.NoError(s.service.publishLatestAgents())
 }
 
-func (s *Suite) TestPublishEvenIfNoChanges() {
-	configs := (agentConfigs)([]*config.AgentConfig{
-		{
-			ID:    testAgentIDStr,
-			Image: fmt.Sprintf("%s/%s", testContainerRegistry, testImageRef),
-		},
-	})
-
-	// first refresh
-	s.registryStore.EXPECT().GetAgentsIfChanged(s.service.scannerAddress.Hex()).Return(configs, true, nil)
-	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, configs)
-	s.NoError(s.service.publishLatestAgents())
-
-	// second refresh should also trigger same publish
+func (s *Suite) TestDoNotPublishChanges() {
 	s.registryStore.EXPECT().GetAgentsIfChanged(s.service.scannerAddress.Hex()).Return(nil, false, nil)
-	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, configs)
 	s.NoError(s.service.publishLatestAgents())
 }
