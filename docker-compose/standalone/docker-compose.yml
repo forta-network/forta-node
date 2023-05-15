@@ -29,6 +29,8 @@ services:
     # build this image by doing `make containers` at the root first
     image: forta-network/forta-node:latest
     command: /forta-node json-rpc
+    ports:
+      - 8545:8545
     networks:
       - forta-node
     # this file is mounted as an alternative form of the forta node config file
@@ -66,13 +68,27 @@ services:
     image: disco.forta.network/bafybeibgyyvbzgbldqculjl4n4hyotlhqn6o3ft2n7hdobvwbt64ouzbri@sha256:a869950a3b8a8af09b95318745e07f8e7a16957c34173595813bb21093badd91
     networks:
       - forta-node
+    environment:
+      AGENT_GRPC_PORT: 50051
+      JSON_RPC_HOST: forta-json-rpc
+      JSON_RPC_PORT: 8545
+      # FORTA_BOT_ID:
+      # FORTA_BOT_OWNER:
+      # FORTA_CHAIN_ID:
   
   # bot-2:
   #   container_name: forta-bot-2
   #   logging: *default-logging
   #   image: some-other-bot-image:latest
-  #   networks:
-  #     - forta-node
+  # networks:
+  #   - forta-node
+  # environment:
+  #   AGENT_GRPC_PORT: 50051
+  #   JSON_RPC_HOST: forta-json-rpc
+  #   JSON_RPC_PORT: 8545
+  #   # FORTA_BOT_ID:
+  #   # FORTA_BOT_OWNER:
+  #   # FORTA_CHAIN_ID:
 
 networks:
   forta-node: {}
