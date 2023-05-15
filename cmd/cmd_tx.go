@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/fatih/color"
 	"github.com/forta-network/forta-core-go/registry"
@@ -47,6 +48,15 @@ func handleFortaAuthorizePool(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create registry client: %v", err)
 	}
+
+	return authorizePoolWithRegistry(regClient, scannerKey, poolID, polygonscan, force, clean)
+}
+
+func authorizePoolWithRegistry(
+	regClient registry.Client,
+	scannerKey *keystore.Key,
+	poolID int64, polygonscan, force, clean bool,
+) error {
 	regClient.SetRegistryChainID(cfg.Registry.ChainID)
 
 	scanner, err := regClient.GetPoolScanner(scannerKey.Address.Hex())

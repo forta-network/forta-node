@@ -101,12 +101,6 @@ publishes alerts about them`,
 		},
 	}
 
-	cmdFortaBatchDecode = &cobra.Command{
-		Use:   "decode",
-		Short: "download a batch from IPFS and decode data",
-		RunE:  handleFortaBatchDecode,
-	}
-
 	cmdFortaStatus = &cobra.Command{
 		Use:   "status",
 		Short: "display statuses of node services",
@@ -148,7 +142,6 @@ func init() {
 	cmdForta.AddCommand(cmdFortaVersion)
 
 	cmdForta.AddCommand(cmdFortaBatch)
-	cmdFortaBatch.AddCommand(cmdFortaBatchDecode)
 
 	cmdForta.AddCommand(cmdFortaStatus)
 
@@ -175,12 +168,6 @@ func init() {
 
 	// forta run
 	cmdFortaRun.Flags().BoolVar(&parsedArgs.NoCheck, "no-check", false, "disable scanner registry check and just run")
-
-	// forta batch decode
-	cmdFortaBatchDecode.Flags().String("cid", "", "batch IPFS CID (content ID)")
-	cmdFortaBatchDecode.MarkFlagRequired("cid")
-	cmdFortaBatchDecode.Flags().String("o", "alert-batch.json", "output file name (default: alert-batch.json)")
-	cmdFortaBatchDecode.Flags().Bool("stdout", false, "print to stdout instead of writing to a file")
 
 	// forta status
 	cmdFortaStatus.Flags().String("format", StatusFormatPretty, "output formatting/encoding: pretty (default), oneline, json, csv")
