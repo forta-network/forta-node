@@ -390,12 +390,11 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 	// and send a "run" message.
 	// newAgents is the updated list of all agents
 	// agentsToRun is the list of missing agents
-	newAgents, agentsToRun, updatedAgents := ap.updateAgentsOrFindMissing(latestVersions)
+	_, agentsToRun, updatedAgents := ap.updateAgentsOrFindMissing(latestVersions)
 
 	// Find agents that are already deployed but doesn't exist in the latest versions payload
 	agentsToStop := ap.findMissingAgentsInLatestVersions(latestVersions)
 
-	ap.agents = newAgents
 
 	ap.publishActions(agentsToRun, nil, agentsToStop, updatedAgents, nil, nil)
 
@@ -411,11 +410,14 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	var agentsReady []config.AgentConfig
 	var newSubscriptions []domain.CombinerBotSubscription
 	var removedSubscriptions []domain.CombinerBotSubscription
+	var allHealthyAgents []*poolagent.Agent
 
 	for _, agentCfg := range payload {
 		_ = ap.findAgentAndHandle(
 			agentCfg, func(agent *poolagent.Agent, logger *log.Entry) error {
 				if agent.IsReady() {
+					// if agent is ready, it should be healthy
+					allHealthyAgents = append(allHealthyAgents, agent)
 					return nil
 				}
 
@@ -436,11 +438,14 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 
 				logger.WithField("image", agent.Config().Image).Info("attached")
 				agentsReady = append(agentsReady, agent.Config())
+				allHealthyAgents = append(allHealthyAgents, agent)
 				return nil
 			},
 		)
 	}
 
+	// set latest state of pool agents
+	ap.agents = allHealthyAgents
 	ap.publishActions(nil, agentsReady, agentsToStop, nil, newSubscriptions, removedSubscriptions)
 
 	if ap.botWaitGroup != nil && len(agentsReady) > 0 {
