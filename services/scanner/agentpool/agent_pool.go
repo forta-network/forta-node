@@ -526,7 +526,7 @@ func (ap *AgentPool) findMissingAgentsInLatestVersions(latestVersions messaging.
 				break
 			}
 		}
-		
+
 		if !found {
 			_ = agent.Close()
 			agentsToStop = append(agentsToStop, cfg)
