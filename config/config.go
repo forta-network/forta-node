@@ -59,7 +59,7 @@ type RegistryConfig struct {
 	Password               string        `yaml:"password" json:"password"`
 	Disable                bool          `yaml:"disable" json:"disable"` // for testing situations
 	CheckIntervalSeconds   int           `yaml:"checkIntervalSeconds" json:"checkIntervalSeconds" default:"15"`
-	ReleaseDistributionUrl string        `yaml:"releaseDistributionUrl" json:"releaseDistributionUrl" default:"https://dist.forta.network/manifests/releases/"`
+	ReleaseDistributionUrl string        `yaml:"releaseDistributionUrl" json:"releaseDistributionUrl" default:"https://dist.forta.network/manifests/releases"`
 }
 
 type IPFSConfig struct {
