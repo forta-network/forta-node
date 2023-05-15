@@ -24,7 +24,10 @@ func handleFortaVersion(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create the docker client: %v", err)
 	}
+	return handleFortaVersionWithDockerClient(dockerClient)
+}
 
+func handleFortaVersionWithDockerClient(dockerClient clients.DockerClient) error {
 	output, err := makeFortaVersionOutput(dockerClient)
 	if err != nil {
 		return nil

@@ -22,7 +22,7 @@ func GetAgentResourceLimits(resourcesCfg ResourcesConfig) *AgentResourceLimits {
 
 	limits.Memory = getDefaultMemoryPerAgent()
 	if resourcesCfg.AgentMaxMemoryMiB > 0 {
-		limits.Memory = int64(resourcesCfg.AgentMaxMemoryMiB * 104858)
+		limits.Memory = MiBToBytes(resourcesCfg.AgentMaxMemoryMiB)
 	}
 
 	return &limits
@@ -33,12 +33,17 @@ func CPUsToMicroseconds(cpus float64) int64 {
 	return int64(cpus * float64(100000))
 }
 
+// MiBToBytes converts given MiB amount to bytes.
+func MiBToBytes(mib int) int64 {
+	return int64(mib * 104858)
+}
+
 // getDefaultCPUQuotaPerAgent returns the default CFS microseconds value allowed per agent
 func getDefaultCPUQuotaPerAgent() int64 {
-	return 20000 // just 20%
+	return CPUsToMicroseconds(0.2)
 }
 
 // getDefaultMemoryPerAgent returns the constant default memory allowed per agent.
 func getDefaultMemoryPerAgent() int64 {
-	return 1048580000 // 1000 MiB in bytes
+	return MiBToBytes(1000)
 }

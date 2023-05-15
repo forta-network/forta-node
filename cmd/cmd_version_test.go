@@ -67,3 +67,15 @@ func TestMakeFortaVersionOutput_OnlyCLI(t *testing.T) {
 	r.NoError(err)
 	r.Equal(testCliVersionOnlyOutput, output)
 }
+
+func TestHandleFortaVersion(t *testing.T) {
+	r := require.New(t)
+
+	ctrl := gomock.NewController(t)
+	dockerClient := mock_clients.NewMockDockerClient(ctrl)
+
+	dockerClient.EXPECT().GetContainerByName(gomock.Any(), config.DockerScannerContainerName).Return(nil, errors.New("some error"))
+
+	err := handleFortaVersionWithDockerClient(dockerClient)
+	r.NoError(err)
+}
