@@ -92,7 +92,7 @@ func (agent *Agent) CombinerBotSubscriptions() []domain.CombinerBotSubscription 
 	if !agent.IsCombinerBot() {
 		return subscriptions
 	}
-	
+
 	for _, subscription := range agent.AlertConfig().Subscriptions {
 		subscriptions = append(
 			subscriptions, domain.CombinerBotSubscription{
@@ -256,8 +256,10 @@ func (agent *Agent) StartProcessing() {
 func (agent *Agent) initialize() {
 	defer agent.initWait.Done()
 
+	agentConfig := agent.Config()
+
 	logger := log.WithFields(log.Fields{
-			"agent": agent.config.ID,
+		"agent": agentConfig.ID,
 	})
 
 	// public bot.start metric to track bot starts/restarts.
@@ -265,7 +267,7 @@ func (agent *Agent) initialize() {
 		messaging.SubjectMetricAgent, &protocol.AgentMetricList{
 			Metrics: []*protocol.AgentMetric{
 				{
-					AgentId:   agent.config.ID,
+					AgentId:   agentConfig.ID,
 					Timestamp: time.Now().Format(time.RFC3339),
 					Name:      metrics.MetricStart,
 					Value:     1,
@@ -279,7 +281,7 @@ func (agent *Agent) initialize() {
 
 	// invoke initialize method of the bot
 	initializeResponse, err := agent.client.Initialize(ctx, &protocol.InitializeRequest{
-		AgentId:   agent.config.ID,
+		AgentId:   agentConfig.ID,
 		ProxyHost: config.DockerJSONRPCProxyContainerName,
 	})
 
@@ -327,7 +329,7 @@ func (agent *Agent) WaitInitialization() {
 func (agent *Agent) processTransactions() {
 	lg := log.WithFields(
 		log.Fields{
-			"agent":     agent.config.ID,
+			"agent":     agent.Config().ID,
 			"component": "agent",
 			"evaluate":  "transaction",
 		},
@@ -343,8 +345,7 @@ func (agent *Agent) processTransactions() {
 }
 
 func (agent *Agent) processTransaction(lg *log.Entry, request *TxRequest) (exit bool) {
-	agent.mu.RLock()
-	defer agent.mu.RUnlock()
+	agentConfig := agent.Config()
 
 	startTime := time.Now()
 	if agent.IsClosed() {
@@ -363,7 +364,7 @@ func (agent *Agent) processTransaction(lg *log.Entry, request *TxRequest) (exit 
 		// truncate findings
 		if len(resp.Findings) > MaxFindings {
 			dropped := len(resp.Findings) - MaxFindings
-			droppedMetric := metrics.CreateAgentMetric(agent.config.ID, metrics.MetricFindingsDropped, float64(dropped))
+			droppedMetric := metrics.CreateAgentMetric(agentConfig.ID, metrics.MetricFindingsDropped, float64(dropped))
 			agent.msgClient.PublishProto(
 				messaging.SubjectMetricAgent,
 				&protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{droppedMetric}},
@@ -377,14 +378,14 @@ func (agent *Agent) processTransaction(lg *log.Entry, request *TxRequest) (exit 
 		if resp.Metadata == nil {
 			resp.Metadata = make(map[string]string)
 		}
-		resp.Metadata["imageHash"] = agent.config.ImageHash()
+		resp.Metadata["imageHash"] = agentConfig.ImageHash()
 
 		ts := domain.TrackingTimestampsFromMessage(request.Original.Event.Timestamps)
 		ts.BotRequest = requestTime
 		ts.BotResponse = responseTime
 
 		agent.txResults <- &scanner.TxResult{
-			AgentConfig: agent.config,
+			AgentConfig: agentConfig,
 			Request:     request.Original,
 			Response:    resp,
 			Timestamps:  ts,
@@ -398,12 +399,12 @@ func (agent *Agent) processTransaction(lg *log.Entry, request *TxRequest) (exit 
 	if agent.errCounter.TooManyErrs(err) {
 		lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down agent")
 		agent.Close()
-		agent.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{agent.config})
+		agent.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{agentConfig})
 		agent.msgClient.PublishProto(
 			messaging.SubjectMetricAgent, &protocol.AgentMetricList{
 				Metrics: []*protocol.AgentMetric{
 					{
-						AgentId:   agent.config.ID,
+						AgentId:   agentConfig.ID,
 						Timestamp: time.Now().Format(time.RFC3339),
 						Name:      metrics.MetricStop,
 						Value:     1,
@@ -420,7 +421,7 @@ func (agent *Agent) processTransaction(lg *log.Entry, request *TxRequest) (exit 
 func (agent *Agent) processBlocks() {
 	lg := log.WithFields(
 		log.Fields{
-			"agent":     agent.config.ID,
+			"agent":     agent.Config().ID,
 			"component": "agent",
 			"evaluate":  "block",
 		},
@@ -436,8 +437,7 @@ func (agent *Agent) processBlocks() {
 }
 
 func (agent *Agent) processBlock(lg *log.Entry, request *BlockRequest) (exit bool) {
-	agent.mu.RLock()
-	defer agent.mu.RUnlock()
+	agentConfig := agent.Config()
 
 	startTime := time.Now()
 	if agent.IsClosed() {
@@ -456,7 +456,7 @@ func (agent *Agent) processBlock(lg *log.Entry, request *BlockRequest) (exit boo
 		if len(resp.Findings) > MaxFindings {
 			dropped := len(resp.Findings) - MaxFindings
 			droppedMetric := metrics.CreateAgentMetric(
-				agent.config.ID, metrics.MetricFindingsDropped, float64(dropped),
+				agentConfig.ID, metrics.MetricFindingsDropped, float64(dropped),
 			)
 			agent.msgClient.PublishProto(
 				messaging.SubjectMetricAgent,
@@ -471,14 +471,14 @@ func (agent *Agent) processBlock(lg *log.Entry, request *BlockRequest) (exit boo
 		if resp.Metadata == nil {
 			resp.Metadata = make(map[string]string)
 		}
-		resp.Metadata["imageHash"] = agent.config.ImageHash()
+		resp.Metadata["imageHash"] = agentConfig.ImageHash()
 
 		ts := domain.TrackingTimestampsFromMessage(request.Original.Event.Timestamps)
 		ts.BotRequest = requestTime
 		ts.BotResponse = responseTime
 
 		agent.blockResults <- &scanner.BlockResult{
-			AgentConfig: agent.config,
+			AgentConfig: agentConfig,
 			Request:     request.Original,
 			Response:    resp,
 			Timestamps:  ts,
@@ -492,7 +492,7 @@ func (agent *Agent) processBlock(lg *log.Entry, request *BlockRequest) (exit boo
 	if agent.errCounter.TooManyErrs(err) {
 		lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down agent")
 		agent.Close()
-		agent.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{agent.config})
+		agent.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{agentConfig})
 
 		return true
 	}
@@ -503,7 +503,7 @@ func (agent *Agent) processBlock(lg *log.Entry, request *BlockRequest) (exit boo
 func (agent *Agent) processCombinationAlerts() {
 	lg := log.WithFields(
 		log.Fields{
-			"agent":     agent.config.ID,
+			"agent":     agent.Config().ID,
 			"component": "agent",
 			"evaluate":  "combination",
 		},
@@ -519,8 +519,7 @@ func (agent *Agent) processCombinationAlerts() {
 }
 
 func (agent *Agent) processCombinationAlert(lg *log.Entry, request *CombinationRequest) bool {
-	agent.mu.RLock()
-	defer agent.mu.RUnlock()
+	agentConfig := agent.Config()
 
 	startTime := time.Now()
 	if agent.IsClosed() {
@@ -540,7 +539,7 @@ func (agent *Agent) processCombinationAlert(lg *log.Entry, request *CombinationR
 		if agent.errCounter.TooManyErrs(err) {
 			lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down agent")
 			agent.Close()
-			agent.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{agent.config})
+			agent.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{agentConfig})
 
 			return true
 		}
@@ -558,7 +557,7 @@ func (agent *Agent) processCombinationAlert(lg *log.Entry, request *CombinationR
 	// truncate findings
 	if len(resp.Findings) > MaxFindings {
 		dropped := len(resp.Findings) - MaxFindings
-		droppedMetric := metrics.CreateAgentMetric(agent.config.ID, metrics.MetricFindingsDropped, float64(dropped))
+		droppedMetric := metrics.CreateAgentMetric(agentConfig.ID, metrics.MetricFindingsDropped, float64(dropped))
 		agent.msgClient.PublishProto(
 			messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{droppedMetric}},
 		)
@@ -573,14 +572,14 @@ func (agent *Agent) processCombinationAlert(lg *log.Entry, request *CombinationR
 		resp.Metadata = make(map[string]string)
 	}
 
-	resp.Metadata["imageHash"] = agent.config.ImageHash()
+	resp.Metadata["imageHash"] = agentConfig.ImageHash()
 
 	ts := domain.TrackingTimestampsFromMessage(request.Original.Event.Timestamps)
 	ts.BotRequest = requestTime
 	ts.BotResponse = responseTime
 
 	agent.combinationResults <- &scanner.CombinationAlertResult{
-		AgentConfig: agent.config,
+		AgentConfig: agentConfig,
 		Request:     request.Original,
 		Response:    resp,
 		Timestamps:  ts,
@@ -706,5 +705,8 @@ func (agent *Agent) UpdateConfig(cfg config.AgentConfig) {
 }
 
 func (agent *Agent) IsSharded() bool {
+	agent.mu.RLock()
+	defer agent.mu.RUnlock()
+
 	return agent.config.ShardConfig != nil && agent.config.ShardConfig.Shards > 1
 }
