@@ -32,7 +32,7 @@ require (
 )
 
 require (
-	github.com/forta-network/forta-core-go v0.0.0-20230512211843-c5d1da8ac3ee
+	github.com/forta-network/forta-core-go v0.0.0-20230510182617-5d3505ac8750
 	github.com/libp2p/go-libp2p v0.23.2
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/rs/cors v1.7.0
