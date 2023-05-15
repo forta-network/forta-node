@@ -630,7 +630,7 @@ func (sup *SupervisorService) getFullReleaseInfo(releaseInfo *release.ReleaseInf
 	if _, err := cid.Parse(releaseInfo.IPFS); err != nil {
 		return releaseInfo, nil
 	}
-	fullReleaseManifest, err := sup.releaseClient.GetReleaseManifest(sup.ctx, releaseInfo.IPFS)
+	fullReleaseManifest, err := sup.releaseClient.GetReleaseManifest(releaseInfo.IPFS)
 	if err != nil {
 		return nil, err
 	}
@@ -734,7 +734,7 @@ func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*Su
 		return nil, fmt.Errorf("failed to create the global docker client: %v", err)
 	}
 
-	releaseClient, err := release.NewClient(cfg.Config.Registry.IPFS.GatewayURL)
+	releaseClient, err := release.NewClient(cfg.Config.Registry.IPFS.GatewayURL, []string{cfg.Config.Registry.ReleaseDistributionUrl})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the release client: %v", err)
 	}

@@ -51,14 +51,15 @@ type LogConfig struct {
 }
 
 type RegistryConfig struct {
-	ChainID              uint64        `yaml:"chainId" json:"chainId" default:"137"`
-	JsonRpc              JsonRpcConfig `yaml:"jsonRpc" json:"jsonRpc" default:"{\"url\": \"https://rpc.ankr.com/polygon\"}"`
-	IPFS                 IPFSConfig    `yaml:"ipfs" json:"ipfs"`
-	ContainerRegistry    string        `yaml:"containerRegistry" json:"containerRegistry" validate:"hostname|hostname_port" default:"disco.forta.network" `
-	Username             string        `yaml:"username" json:"username"`
-	Password             string        `yaml:"password" json:"password"`
-	Disable              bool          `yaml:"disable" json:"disable"` // for testing situations
-	CheckIntervalSeconds int           `yaml:"checkIntervalSeconds" json:"checkIntervalSeconds" default:"15"`
+	ChainID                uint64        `yaml:"chainId" json:"chainId" default:"137"`
+	JsonRpc                JsonRpcConfig `yaml:"jsonRpc" json:"jsonRpc" default:"{\"url\": \"https://rpc.ankr.com/polygon\"}"`
+	IPFS                   IPFSConfig    `yaml:"ipfs" json:"ipfs"`
+	ContainerRegistry      string        `yaml:"containerRegistry" json:"containerRegistry" validate:"hostname|hostname_port" default:"disco.forta.network" `
+	Username               string        `yaml:"username" json:"username"`
+	Password               string        `yaml:"password" json:"password"`
+	Disable                bool          `yaml:"disable" json:"disable"` // for testing situations
+	CheckIntervalSeconds   int           `yaml:"checkIntervalSeconds" json:"checkIntervalSeconds" default:"15"`
+	ReleaseDistributionUrl string        `yaml:"releaseDistributionUrl" json:"releaseDistributionUrl" default:"https://dist.forta.network/manifests/releases"`
 }
 
 type IPFSConfig struct {
