@@ -40,10 +40,16 @@ func (ac AgentConfig) Equal(b AgentConfig) bool {
 		return false
 	}
 
+	// circuit break for non-sharded bots
 	noSharding := ac.ShardConfig == nil && b.ShardConfig == nil
 	if noSharding {
 		return true
 	}
+
+	if ac.ShardConfig == nil || b.ShardConfig == nil {
+		return false
+	}
+	
 	sameShardID := ac.ShardConfig.ShardID == b.ShardConfig.ShardID
 	sameShardCount := ac.ShardConfig.Shards == b.ShardConfig.Shards
 
