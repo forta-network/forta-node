@@ -12,6 +12,7 @@ import (
 	mock_clients "github.com/forta-network/forta-node/clients/mocks"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/services/scanner"
+	"github.com/forta-network/forta-node/services/scanner/agentpool/poolagent"
 	"google.golang.org/grpc"
 
 	"github.com/golang/mock/gomock"
@@ -92,16 +93,15 @@ func (s *Suite) TestStartProcessStop() {
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusAttached, gomock.Any())
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsActionRun, gomock.Any())
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsAlertSubscribe, gomock.Any())
-	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent,gomock.Any())
+	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any())
 	s.r.NoError(s.ap.handleAgentVersionsUpdate(agentPayload))
 
-	// Given that the agent is known to the pool but it is not ready yet
-	s.r.Equal(1, len(s.ap.agents))
-	s.r.False(s.ap.agents[0].IsReady())
 	// When the agent pool receives a message saying that the agent started to run
-	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent,gomock.Any()).Times(2)
+	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any()).Times(2)
 	s.r.NoError(s.ap.handleStatusRunning(agentPayload))
-	// Then the agent must be marked ready
+
+	// Anything known to pool must be ready as well
+	s.r.Equal(1, len(s.ap.agents))
 	s.r.True(s.ap.agents[0].IsReady())
 
 	// Given that the agent is running
@@ -126,6 +126,132 @@ func (s *Suite) TestStartProcessStop() {
 				Hash:      "123123",
 				Source:    &protocol.AlertEvent_Alert_Source{Bot: &protocol.AlertEvent_Alert_Bot{Id: testCombinerSourceBot}},
 				CreatedAt: time.Now().Format(time.RFC3339Nano),
+			},
+
+		},
+	}
+	// save combiner subscription
+	combinerResp := &protocol.EvaluateAlertResponse{Metadata: map[string]string{"imageHash": ""}}
+
+	// test tx handling
+	s.agentClient.EXPECT().Invoke(
+		gomock.Any(), agentgrpc.MethodEvaluateTx,
+		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateTxResponse{}),
+	).Return(nil)
+	s.ap.dispatcher.SendEvaluateTxRequest(txReq)
+	txResult := <-s.ap.dispatcher.TxResults()
+	txResp.Timestamp = txResult.Response.Timestamp // bypass - hard to match
+
+	// test block handling
+	s.agentClient.EXPECT().Invoke(
+		gomock.Any(), agentgrpc.MethodEvaluateBlock,
+		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateBlockResponse{}),
+	).Return(nil)
+	s.msgClient.EXPECT().Publish(messaging.SubjectScannerBlock, gomock.Any())
+	s.ap.dispatcher.SendEvaluateBlockRequest(blockReq)
+	blockResult := <-s.ap.dispatcher.BlockResults()
+	blockResp.Timestamp = blockResult.Response.Timestamp // bypass - hard to match
+
+	// test combine alert handling
+	s.agentClient.EXPECT().Invoke(
+		gomock.Any(), agentgrpc.MethodEvaluateAlert,
+		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateAlertResponse{}),
+	).Return(nil)
+	s.msgClient.EXPECT().Publish(messaging.SubjectScannerAlert, gomock.Any())
+	s.ap.dispatcher.SendEvaluateAlertRequest(combinerReq)
+	alertResult := <-s.ap.dispatcher.CombinationAlertResults()
+	combinerResp.Timestamp = alertResult.Response.Timestamp // bypass - hard to match
+
+	s.r.Equal(txReq, txResult.Request)
+	s.r.Equal(txResp, txResult.Response)
+	s.r.Equal(blockReq, blockResult.Request)
+	s.r.Equal(blockResp, blockResult.Response)
+	s.r.Equal(combinerReq, alertResult.Request)
+	s.r.Equal(combinerResp, alertResult.Response)
+
+	// Given that the agent is running
+	// When an empty agent list is received
+	// Then a "stop" action should be published
+	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsActionStop, gomock.Any())
+	// And the agent must be closed
+	s.agentClient.EXPECT().Close()
+	s.r.NoError(s.ap.handleAgentVersionsUpdate(emptyPayload))
+}
+
+func (s *Suite) TestUpdateExistingAgent() {
+	agentConfig := config.AgentConfig{
+		ID: testAgentID,
+		AlertConfig: &protocol.AlertConfig{
+			Subscriptions: []*protocol.CombinerBotSubscription{
+				{
+					BotId: testCombinerSourceBot,
+				},
+			},
+		},
+	}
+	updatedAgentConfig := config.AgentConfig{
+		ID:          testAgentID,
+		ShardConfig: &config.ShardConfig{Shards: 2, Target: 1, ShardID: 0},
+		AlertConfig: &protocol.AlertConfig{
+			Subscriptions: []*protocol.CombinerBotSubscription{
+				{
+					BotId: testCombinerSourceBot,
+				},
+			},
+		},
+	}
+
+	agentPayload := messaging.AgentPayload{
+		updatedAgentConfig,
+	}
+	emptyPayload := messaging.AgentPayload{}
+
+
+	newAgent := poolagent.New(context.Background(), agentConfig, s.msgClient, s.ap.dispatcher.txResults, s.ap.dispatcher.blockResults, s.ap.dispatcher.combinationAlertResults)
+	s.ap.agents = append(s.ap.agents, newAgent)
+	// Prior to invoking initialize method, agent.start metric should be emitted.
+	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any())
+
+	// Given that there are no agents running
+	// When the latest list is received,
+	// Then a "run" action should be published
+	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusAttached, gomock.Any())
+	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsAlertSubscribe, gomock.Any())
+	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any())
+	s.r.NoError(s.ap.handleAgentVersionsUpdate(agentPayload))
+
+	// When the agent pool receives a message saying that the agent started to run
+	s.r.Equal(1, len(s.ap.agents))
+	s.agentClient.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(nil, nil)
+	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any()).Times(1)
+	s.r.NoError(s.ap.handleStatusRunning(agentPayload))
+	// Anything known to pool must be ready as well
+	s.r.Equal(1, len(s.ap.agents))
+	s.r.True(s.ap.agents[0].IsReady())
+	s.r.True(s.ap.agents[0].Config().Equal(updatedAgentConfig))
+
+	// Given that the agent is running
+	// When an evaluate requests are received
+	// Then the agent should process them
+
+	txReq := &protocol.EvaluateTxRequest{
+		Event: &protocol.TransactionEvent{
+			Block: &protocol.TransactionEvent_EthBlock{BlockNumber: "123123"},
+			Transaction: &protocol.TransactionEvent_EthTransaction{
+				Hash: "0x0",
+			},
+		},
+	}
+	txResp := &protocol.EvaluateTxResponse{Metadata: map[string]string{"imageHash": ""}}
+	blockReq := &protocol.EvaluateBlockRequest{Event: &protocol.BlockEvent{BlockNumber: "123123"}}
+	blockResp := &protocol.EvaluateBlockResponse{Metadata: map[string]string{"imageHash": ""}}
+	combinerReq := &protocol.EvaluateAlertRequest{
+		TargetBotId: testAgentID,
+		Event: &protocol.AlertEvent{
+			Alert: &protocol.AlertEvent_Alert{
+				Hash:      "123123",
+				Source:    &protocol.AlertEvent_Alert_Source{Bot: &protocol.AlertEvent_Alert_Bot{Id: testCombinerSourceBot}},
+				CreatedAt: time.Now().Truncate(time.Hour).Format(time.RFC3339Nano),
 			},
 
 		},
