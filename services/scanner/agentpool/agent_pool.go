@@ -35,6 +35,7 @@ type AgentPool struct {
 	dialer                  func(config.AgentConfig) (clients.AgentClient, error)
 	mu                      sync.RWMutex
 	botWaitGroup            *sync.WaitGroup
+	botChanges              chan []*poolagent.Agent
 }
 
 // NewAgentPool creates a new agent pool.
@@ -45,6 +46,7 @@ func NewAgentPool(ctx context.Context, cfg config.Config, msgClient clients.Mess
 		txResults:               make(chan *scanner.TxResult),
 		blockResults:            make(chan *scanner.BlockResult),
 		combinationAlertResults: make(chan *scanner.CombinationAlertResult),
+		botChanges:              make(chan []*poolagent.Agent),
 		msgClient:               msgClient,
 		dialer: func(ac config.AgentConfig) (clients.AgentClient, error) {
 			client := agentgrpc.NewClient()
@@ -62,7 +64,16 @@ func NewAgentPool(ctx context.Context, cfg config.Config, msgClient clients.Mess
 
 	agentPool.registerMessageHandlers()
 	go agentPool.logAgentChanBuffersLoop()
+	go agentPool.applyBotChanges()
 	return agentPool
+}
+
+func (ap *AgentPool) applyBotChanges() {
+	for change := range ap.botChanges {
+		ap.mu.Lock()
+		ap.agents = change
+		ap.mu.Unlock()
+	}
 }
 
 // Health implements health.Reporter interface.
@@ -110,7 +121,8 @@ func (ap *AgentPool) logBotWait() {
 // discardAgent removes the agent from the list which eventually causes the
 // request channels to be deallocated.
 func (ap *AgentPool) discardAgent(discarded *poolagent.Agent) {
-	ap.mu.Lock()
+	ap.mu.RLock()
+	defer ap.mu.Unlock()
 	var newAgents []*poolagent.Agent
 	for _, agent := range ap.agents {
 		if agent != discarded {
@@ -119,8 +131,7 @@ func (ap *AgentPool) discardAgent(discarded *poolagent.Agent) {
 			log.WithField("agent", agent.Config().ContainerName()).Info("discarded")
 		}
 	}
-	ap.agents = newAgents
-	ap.mu.Unlock()
+	ap.botChanges <- newAgents
 }
 
 // SendEvaluateTxRequest sends the request to all of the active agents which
@@ -381,9 +392,7 @@ func (ap *AgentPool) BlockResults() <-chan *scanner.BlockResult {
 // in the pool and the latest versions will remain in the pool. Finally, it publishes the "run" and "stop"
 // actions along with any necessary subscription updates.
 func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) error {
-	ap.mu.Lock()
-	defer ap.mu.Unlock()
-
+	ap.mu.RLock()
 	latestVersions := payload
 
 	// Find the missing agents in the pool, add them to the new agents list
@@ -394,8 +403,9 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 
 	// Find agents that are already deployed but doesn't exist in the latest versions payload
 	agentsToStop := ap.findMissingAgentsInLatestVersions(latestVersions)
+	ap.mu.RUnlock()
 
-	ap.agents = newAgents
+	ap.botChanges <- newAgents
 
 	ap.publishActions(agentsToRun, nil, agentsToStop, updatedAgents, nil, nil)
 
@@ -403,8 +413,8 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 }
 
 func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
-	ap.mu.Lock()
-	defer ap.mu.Unlock()
+	ap.mu.RLock()
+	defer ap.mu.RUnlock()
 
 	// If an agent was added before and just started to run, we should mark as ready.
 	var agentsToStop []config.AgentConfig
@@ -451,9 +461,8 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 }
 
 func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
-	ap.mu.Lock()
-	defer ap.mu.Unlock()
-
+	ap.mu.RLock()
+	
 	var newAgents []*poolagent.Agent
 	var removedSubscriptions []domain.CombinerBotSubscription
 	for _, agent := range ap.agents {
@@ -477,7 +486,8 @@ func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
 		ap.msgClient.Publish(messaging.SubjectAgentsAlertUnsubscribe, removedSubscriptions)
 	}
 
-	ap.agents = newAgents
+	ap.mu.RUnlock()
+	ap.botChanges <- newAgents
 	return nil
 }
 

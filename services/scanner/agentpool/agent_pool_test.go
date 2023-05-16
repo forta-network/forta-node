@@ -2,6 +2,7 @@ package agentpool
 
 import (
 	"context"
+	"github.com/forta-network/forta-node/services/scanner/agentpool/poolagent"
 	"testing"
 	"time"
 
@@ -53,11 +54,13 @@ func (s *Suite) SetupTest() {
 		txResults:               make(chan *scanner.TxResult),
 		blockResults:            make(chan *scanner.BlockResult),
 		combinationAlertResults: make(chan *scanner.CombinationAlertResult),
+		botChanges:              make(chan []*poolagent.Agent),
 		msgClient:               s.msgClient,
 		dialer: func(agentCfg config.AgentConfig) (clients.AgentClient, error) {
 			return s.agentClient, nil
 		},
 	}
+	go s.ap.applyBotChanges()
 }
 
 // TestStartProcessStop tests the starting, processing and stopping flow for an agent.
@@ -79,9 +82,8 @@ func (s *Suite) TestStartProcessStop() {
 	emptyPayload := messaging.AgentPayload{}
 
 	// Prior to invoking initialize method, agent.start metric should be emitted.
-	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent,gomock.Any())
+	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any())
 	s.agentClient.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
-
 
 	// Given that there are no agents running
 	// When the latest list is received,
@@ -89,14 +91,20 @@ func (s *Suite) TestStartProcessStop() {
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusAttached, gomock.Any())
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsActionRun, gomock.Any())
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsAlertSubscribe, gomock.Any())
-	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent,gomock.Any())
+	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any())
 	s.r.NoError(s.ap.handleAgentVersionsUpdate(agentPayload))
+
+	// wait for length to be 1 (async via channel)
+	start := time.Now()
+	for time.Since(start) < (5*time.Second) && len(s.ap.agents) != 1 {
+		time.Sleep(50 * time.Millisecond)
+	}
 
 	// Given that the agent is known to the pool but it is not ready yet
 	s.r.Equal(1, len(s.ap.agents))
 	s.r.False(s.ap.agents[0].IsReady())
 	// When the agent pool receives a message saying that the agent started to run
-	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent,gomock.Any()).Times(2)
+	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any()).Times(2)
 	s.r.NoError(s.ap.handleStatusRunning(agentPayload))
 	// Then the agent must be marked ready
 	s.r.True(s.ap.agents[0].IsReady())
@@ -124,7 +132,6 @@ func (s *Suite) TestStartProcessStop() {
 				Source:    &protocol.AlertEvent_Alert_Source{Bot: &protocol.AlertEvent_Alert_Bot{Id: testCombinerSourceBot}},
 				CreatedAt: time.Now().Format(time.RFC3339Nano),
 			},
-
 		},
 	}
 	// save combiner subscription
