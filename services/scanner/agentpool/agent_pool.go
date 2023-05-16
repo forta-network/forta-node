@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-node/metrics"
 
@@ -25,27 +24,29 @@ import (
 // AgentPool maintains the pool of agents that the scanner should
 // interact with.
 type AgentPool struct {
-	ctx                     context.Context
-	cfg                     config.Config
-	agents                  []*poolagent.Agent
-	txResults               chan *scanner.TxResult
-	blockResults            chan *scanner.BlockResult
-	combinationAlertResults chan *scanner.CombinationAlertResult
-	msgClient               clients.MessageClient
-	dialer                  func(config.AgentConfig) (clients.AgentClient, error)
-	mu                      sync.RWMutex
-	botWaitGroup            *sync.WaitGroup
+	ctx    context.Context
+	cfg    config.Config
+	agents []*poolagent.Agent
+
+	msgClient    clients.MessageClient
+	dialer       func(config.AgentConfig) (clients.AgentClient, error)
+	mu           sync.RWMutex
+	botWaitGroup *sync.WaitGroup
+	dispatcher   *Dispatcher
 }
 
 // NewAgentPool creates a new agent pool.
 func NewAgentPool(ctx context.Context, cfg config.Config, msgClient clients.MessageClient, waitBots int) *AgentPool {
 	agentPool := &AgentPool{
-		ctx:                     ctx,
-		cfg:                     cfg,
-		txResults:               make(chan *scanner.TxResult),
-		blockResults:            make(chan *scanner.BlockResult),
-		combinationAlertResults: make(chan *scanner.CombinationAlertResult),
-		msgClient:               msgClient,
+		ctx: ctx,
+		cfg: cfg,
+		dispatcher: &Dispatcher{
+			txResults:               make(chan *scanner.TxResult),
+			blockResults:            make(chan *scanner.BlockResult),
+			combinationAlertResults: make(chan *scanner.CombinationAlertResult),
+			msgClient:               msgClient,
+		},
+		msgClient: msgClient,
 		dialer: func(ac config.AgentConfig) (clients.AgentClient, error) {
 			client := agentgrpc.NewClient()
 			if err := client.Dial(ac); err != nil {
@@ -120,236 +121,8 @@ func (ap *AgentPool) discardAgent(discarded *poolagent.Agent) {
 		}
 	}
 	ap.agents = newAgents
+	ap.dispatcher.SetAgents(newAgents)
 	ap.mu.Unlock()
-}
-
-// SendEvaluateTxRequest sends the request to all of the active agents which
-// should be processing the block.
-func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
-	startTime := time.Now()
-	lg := log.WithFields(log.Fields{
-		"tx":        req.Event.Transaction.Hash,
-		"component": "pool",
-	})
-	lg.Debug("SendEvaluateTxRequest")
-
-	if ap.botWaitGroup != nil {
-		ap.botWaitGroup.Wait()
-	}
-
-	ap.mu.RLock()
-	agents := ap.agents
-	ap.mu.RUnlock()
-
-	encoded, err := agentgrpc.EncodeMessage(req)
-	if err != nil {
-		lg.WithError(err).Error("failed to encode message")
-		return
-	}
-	var metricsList []*protocol.AgentMetric
-	for _, agent := range agents {
-		if !agent.IsReady() || !agent.ShouldProcessBlock(req.Event.Block.BlockNumber) {
-			continue
-		}
-		lg.WithFields(log.Fields{
-			"agent":    agent.Config().ID,
-			"duration": time.Since(startTime),
-		}).Debug("sending tx request to evalTxCh")
-
-		// unblock req send and discard agent if agent is closed
-
-		select {
-		case <-agent.Closed():
-			ap.discardAgent(agent)
-		case agent.TxRequestCh() <- &poolagent.TxRequest{
-			Original: req,
-			Encoded:  encoded,
-		}:
-		default: // do not try to send if the buffer is full
-			lg.WithField("agent", agent.Config().ID).Debug("agent tx request buffer is full - skipping")
-			metricsList = append(metricsList, metrics.CreateAgentMetric(agent.Config().ID, metrics.MetricTxDrop, 1))
-		}
-		lg.WithFields(log.Fields{
-			"agent":    agent.Config().ID,
-			"duration": time.Since(startTime),
-		}).Debug("sent tx request to evalTxCh")
-	}
-	metrics.SendAgentMetrics(ap.msgClient, metricsList)
-
-	lg.WithFields(log.Fields{
-		"duration": time.Since(startTime),
-	}).Debug("Finished SendEvaluateTxRequest")
-}
-
-// TxResults returns the receive-only tx results channel.
-func (ap *AgentPool) TxResults() <-chan *scanner.TxResult {
-	return ap.txResults
-}
-
-// SendEvaluateBlockRequest sends the request to all of the active agents which
-// should be processing the block.
-func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest) {
-	startTime := time.Now()
-	lg := log.WithFields(log.Fields{
-		"block":     req.Event.BlockNumber,
-		"component": "pool",
-	})
-	lg.Debug("SendEvaluateBlockRequest")
-
-	if ap.botWaitGroup != nil {
-		ap.botWaitGroup.Wait()
-	}
-
-	ap.mu.RLock()
-	agents := ap.agents
-	ap.mu.RUnlock()
-
-	encoded, err := agentgrpc.EncodeMessage(req)
-	if err != nil {
-		lg.WithError(err).Error("failed to encode message")
-		return
-	}
-
-	var metricsList []*protocol.AgentMetric
-	for _, agent := range agents {
-		if !agent.IsReady() || !agent.ShouldProcessBlock(req.Event.BlockNumber) {
-			continue
-		}
-
-		lg.WithFields(log.Fields{
-			"agent":    agent.Config().ID,
-			"duration": time.Since(startTime),
-		}).Debug("sending block request to evalBlockCh")
-
-		// unblock req send if agent is closed
-		select {
-		case <-agent.Closed():
-			ap.discardAgent(agent)
-		case agent.BlockRequestCh() <- &poolagent.BlockRequest{
-			Original: req,
-			Encoded:  encoded,
-		}:
-		default: // do not try to send if the buffer is full
-			lg.WithField("agent", agent.Config().ID).Warn("agent block request buffer is full - skipping")
-			metricsList = append(metricsList, metrics.CreateAgentMetric(agent.Config().ID, metrics.MetricBlockDrop, 1))
-		}
-		lg.WithFields(
-			log.Fields{
-				"agent":    agent.Config().ID,
-				"duration": time.Since(startTime),
-			},
-		).Debug("sent tx request to evalBlockCh")
-	}
-
-	blockNumber, _ := hexutil.DecodeUint64(req.Event.BlockNumber)
-	ap.msgClient.Publish(messaging.SubjectScannerBlock, &messaging.ScannerPayload{
-		LatestBlockInput: blockNumber,
-	})
-
-	metrics.SendAgentMetrics(ap.msgClient, metricsList)
-	lg.WithFields(log.Fields{
-		"duration": time.Since(startTime),
-	}).Debug("Finished SendEvaluateBlockRequest")
-}
-
-// SendEvaluateAlertRequest sends the request to all the active agents which
-// should be processing the alert.
-func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest) {
-	startTime := time.Now()
-	lg := log.WithFields(
-		log.Fields{
-			"component": "pool",
-			"target":    req.TargetBotId,
-		},
-	)
-	lg.Debug("SendEvaluateAlertRequest")
-
-	if req.Event.Alert == nil || req.Event.Alert.Source == nil || req.Event.Alert.Source.Bot == nil {
-		lg.Warn("bad request")
-		return
-	}
-
-	if ap.botWaitGroup != nil {
-		ap.botWaitGroup.Wait()
-	}
-
-	ap.mu.RLock()
-	agents := ap.agents
-	ap.mu.RUnlock()
-
-	encoded, err := agentgrpc.EncodeMessage(req)
-	if err != nil {
-		lg.WithError(err).Error("failed to encode message")
-		return
-	}
-
-	var metricsList []*protocol.AgentMetric
-
-	var target *poolagent.Agent
-
-	// find target bot for the event
-	for _, agent := range agents {
-		if agent.Config().ID != req.TargetBotId {
-			continue
-		}
-
-		if !agent.IsReady() {
-			continue
-		}
-		target = agent
-		break
-	}
-
-	// return if can't find the target bot, or it's not ready yet
-	if target == nil {
-		lg.Warn("failed to find subscriber")
-		return
-	}
-
-	// filter out bad events
-	if !target.ShouldProcessAlert(req.Event) {
-		return
-	}
-
-	lg.WithFields(
-		log.Fields{
-			"agent":    target.Config().ID,
-			"duration": time.Since(startTime),
-		},
-	).Debug("sending alert request to evalAlertCh")
-
-	// unblock req send if agent is closed
-	select {
-	case <-target.Closed():
-		ap.discardAgent(target)
-	case target.CombinationRequestCh() <- &poolagent.CombinationRequest{
-		Original: req,
-		Encoded:  encoded,
-	}:
-	default: // do not try to send if the buffer is full
-		lg.WithField("agent", target.Config().ID).Warn("agent alert request buffer is full - skipping")
-		metricsList = append(metricsList, metrics.CreateAgentMetric(target.Config().ID, metrics.MetricCombinerDrop, 1))
-	}
-
-	lg.WithFields(
-		log.Fields{
-			"agent":    target.Config().ID,
-			"duration": time.Since(startTime),
-		},
-	).Debug("sent alert request to evalAlertCh")
-
-	ap.msgClient.Publish(messaging.SubjectScannerAlert, &messaging.ScannerPayload{})
-	metrics.SendAgentMetrics(ap.msgClient, metricsList)
-	lg.WithFields(
-		log.Fields{
-			"duration": time.Since(startTime),
-		},
-	).Debug("Finished SendEvaluateAlertRequest")
-}
-
-// CombinationAlertResults returns the receive-only alert results channel.
-func (ap *AgentPool) CombinationAlertResults() <-chan *scanner.CombinationAlertResult {
-	return ap.combinationAlertResults
 }
 
 func (ap *AgentPool) logAgentChanBuffersLoop() {
@@ -367,11 +140,6 @@ func (ap *AgentPool) logAgentStatuses() {
 	for _, agent := range agents {
 		agent.LogStatus()
 	}
-}
-
-// BlockResults returns the receive-only tx results channel.
-func (ap *AgentPool) BlockResults() <-chan *scanner.BlockResult {
-	return ap.blockResults
 }
 
 // handleAgentVersionsUpdate updates the list of agents in the AgentPool based on the latest
@@ -396,12 +164,15 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 	agentsToStop := ap.findMissingAgentsInLatestVersions(latestVersions)
 
 	ap.agents = newAgents
+	ap.dispatcher.SetAgents(newAgents)
 
 	ap.publishActions(agentsToRun, nil, agentsToStop, updatedAgents, nil, nil)
 
 	return nil
 }
+func (ap *AgentPool) SetAgents(payload []*poolagent.Agent) error {
 
+}
 func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
@@ -478,6 +249,7 @@ func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
 	}
 
 	ap.agents = newAgents
+	ap.dispatcher.SetAgents(newAgents)
 	return nil
 }
 
@@ -502,7 +274,7 @@ func (ap *AgentPool) updateAgentsOrFindMissing(latestVersions messaging.AgentPay
 		)
 		if err != nil {
 			// If the agent is missing in the pool, add it as a new agent.
-			newAgent := poolagent.New(ap.ctx, agentCfg, ap.msgClient, ap.txResults, ap.blockResults, ap.combinationAlertResults)
+			newAgent := poolagent.New(ap.ctx, agentCfg, ap.msgClient, ap.dispatcher.txResults, ap.dispatcher.blockResults, ap.dispatcher.combinationAlertResults)
 			agents = append(agents, newAgent)
 			agentsToRun = append(agentsToRun, agentCfg)
 			log.WithField("agent", agentCfg.ID).Info("will trigger start")

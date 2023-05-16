@@ -49,11 +49,14 @@ func (s *Suite) SetupTest() {
 	s.msgClient = mock_clients.NewMockMessageClient(gomock.NewController(s.T()))
 	s.agentClient = mock_clients.NewMockAgentClient(gomock.NewController(s.T()))
 	s.ap = &AgentPool{
-		ctx:                     context.Background(),
-		txResults:               make(chan *scanner.TxResult),
-		blockResults:            make(chan *scanner.BlockResult),
-		combinationAlertResults: make(chan *scanner.CombinationAlertResult),
-		msgClient:               s.msgClient,
+		ctx: context.Background(),
+		dispatcher: &Dispatcher{
+			txResults:               make(chan *scanner.TxResult),
+			blockResults:            make(chan *scanner.BlockResult),
+			combinationAlertResults: make(chan *scanner.CombinationAlertResult),
+			msgClient:               s.msgClient,
+		},
+		msgClient: s.msgClient,
 		dialer: func(agentCfg config.AgentConfig) (clients.AgentClient, error) {
 			return s.agentClient, nil
 		},
@@ -135,8 +138,8 @@ func (s *Suite) TestStartProcessStop() {
 		gomock.Any(), agentgrpc.MethodEvaluateTx,
 		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateTxResponse{}),
 	).Return(nil)
-	s.ap.SendEvaluateTxRequest(txReq)
-	txResult := <-s.ap.TxResults()
+	s.ap.dispatcher.SendEvaluateTxRequest(txReq)
+	txResult := <-s.ap.dispatcher.TxResults()
 	txResp.Timestamp = txResult.Response.Timestamp // bypass - hard to match
 
 	// test block handling
@@ -145,8 +148,8 @@ func (s *Suite) TestStartProcessStop() {
 		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateBlockResponse{}),
 	).Return(nil)
 	s.msgClient.EXPECT().Publish(messaging.SubjectScannerBlock, gomock.Any())
-	s.ap.SendEvaluateBlockRequest(blockReq)
-	blockResult := <-s.ap.BlockResults()
+	s.ap.dispatcher.SendEvaluateBlockRequest(blockReq)
+	blockResult := <-s.ap.dispatcher.BlockResults()
 	blockResp.Timestamp = blockResult.Response.Timestamp // bypass - hard to match
 
 	// test combine alert handling
@@ -155,8 +158,8 @@ func (s *Suite) TestStartProcessStop() {
 		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateAlertResponse{}),
 	).Return(nil)
 	s.msgClient.EXPECT().Publish(messaging.SubjectScannerAlert, gomock.Any())
-	s.ap.SendEvaluateAlertRequest(combinerReq)
-	alertResult := <-s.ap.CombinationAlertResults()
+	s.ap.dispatcher.SendEvaluateAlertRequest(combinerReq)
+	alertResult := <-s.ap.dispatcher.CombinationAlertResults()
 	combinerResp.Timestamp = alertResult.Response.Timestamp // bypass - hard to match
 
 	s.r.Equal(txReq, txResult.Request)
