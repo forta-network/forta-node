@@ -45,5 +45,5 @@ func getDefaultCPUQuotaPerAgent() int64 {
 
 // getDefaultMemoryPerAgent returns the constant default memory allowed per agent.
 func getDefaultMemoryPerAgent() int64 {
-	return MiBToBytes(1000)
+	return MiBToBytes(10000)
 }
