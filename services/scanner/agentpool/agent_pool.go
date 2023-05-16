@@ -46,7 +46,7 @@ func NewAgentPool(ctx context.Context, cfg config.Config, msgClient clients.Mess
 		txResults:               make(chan *scanner.TxResult),
 		blockResults:            make(chan *scanner.BlockResult),
 		combinationAlertResults: make(chan *scanner.CombinationAlertResult),
-		botChanges:              make(chan []*poolagent.Agent),
+		botChanges:              make(chan []*poolagent.Agent, 10),
 		msgClient:               msgClient,
 		dialer: func(ac config.AgentConfig) (clients.AgentClient, error) {
 			client := agentgrpc.NewClient()
@@ -64,16 +64,25 @@ func NewAgentPool(ctx context.Context, cfg config.Config, msgClient clients.Mess
 
 	agentPool.registerMessageHandlers()
 	go agentPool.logAgentChanBuffersLoop()
-	go agentPool.applyBotChanges()
+	go agentPool.listenForBotChanges()
 	return agentPool
 }
 
-func (ap *AgentPool) applyBotChanges() {
-	for change := range ap.botChanges {
-		ap.mu.Lock()
-		ap.agents = change
-		ap.mu.Unlock()
+func (ap *AgentPool) listenForBotChanges() {
+	for {
+		if ap.ctx.Err() != nil {
+			return
+		}
+		ap.applyBotChange()
 	}
+}
+
+// this is separated to make it easier for a test to invoke manually
+func (ap *AgentPool) applyBotChange() {
+	change := <-ap.botChanges
+	ap.mu.Lock()
+	ap.agents = change
+	ap.mu.Unlock()
 }
 
 // Health implements health.Reporter interface.
@@ -122,7 +131,6 @@ func (ap *AgentPool) logBotWait() {
 // request channels to be deallocated.
 func (ap *AgentPool) discardAgent(discarded *poolagent.Agent) {
 	ap.mu.RLock()
-	defer ap.mu.Unlock()
 	var newAgents []*poolagent.Agent
 	for _, agent := range ap.agents {
 		if agent != discarded {
@@ -131,6 +139,7 @@ func (ap *AgentPool) discardAgent(discarded *poolagent.Agent) {
 			log.WithField("agent", agent.Config().ContainerName()).Info("discarded")
 		}
 	}
+	ap.mu.RUnlock()
 	ap.botChanges <- newAgents
 }
 
@@ -462,7 +471,7 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 
 func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
 	ap.mu.RLock()
-	
+
 	var newAgents []*poolagent.Agent
 	var removedSubscriptions []domain.CombinerBotSubscription
 	for _, agent := range ap.agents {

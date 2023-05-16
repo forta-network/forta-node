@@ -54,13 +54,12 @@ func (s *Suite) SetupTest() {
 		txResults:               make(chan *scanner.TxResult),
 		blockResults:            make(chan *scanner.BlockResult),
 		combinationAlertResults: make(chan *scanner.CombinationAlertResult),
-		botChanges:              make(chan []*poolagent.Agent),
+		botChanges:              make(chan []*poolagent.Agent, 10),
 		msgClient:               s.msgClient,
 		dialer: func(agentCfg config.AgentConfig) (clients.AgentClient, error) {
 			return s.agentClient, nil
 		},
 	}
-	go s.ap.applyBotChanges()
 }
 
 // TestStartProcessStop tests the starting, processing and stopping flow for an agent.
@@ -94,11 +93,7 @@ func (s *Suite) TestStartProcessStop() {
 	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any())
 	s.r.NoError(s.ap.handleAgentVersionsUpdate(agentPayload))
 
-	// wait for length to be 1 (async via channel)
-	start := time.Now()
-	for time.Since(start) < (5*time.Second) && len(s.ap.agents) != 1 {
-		time.Sleep(50 * time.Millisecond)
-	}
+	s.ap.applyBotChange()
 
 	// Given that the agent is known to the pool but it is not ready yet
 	s.r.Equal(1, len(s.ap.agents))
