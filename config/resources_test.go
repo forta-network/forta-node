@@ -10,8 +10,8 @@ func TestGetAgentResourceLimits(t *testing.T) {
 	r := require.New(t)
 
 	limits := GetAgentResourceLimits(ResourcesConfig{})
-	r.Equal(getDefaultCPUQuotaPerAgent(), limits.CPUQuota)
-	r.Equal(getDefaultMemoryPerAgent(), limits.Memory)
+	r.Equal(CPUsToMicroseconds(0.2), limits.CPUQuota)
+	r.Equal(MiBToBytes(10000), limits.Memory)
 }
 
 func TestGetAgentResourceLimits_CustomValues(t *testing.T) {
