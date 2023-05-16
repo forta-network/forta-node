@@ -79,10 +79,15 @@ func (ap *AgentPool) listenForBotChanges() {
 
 // this is separated to make it easier for a test to invoke manually
 func (ap *AgentPool) applyBotChange() {
-	change := <-ap.botChanges
-	ap.mu.Lock()
-	ap.agents = change
-	ap.mu.Unlock()
+	select {
+	case change := <-ap.botChanges:
+		ap.mu.Lock()
+		ap.agents = change
+		ap.mu.Unlock()
+
+	case <-ap.ctx.Done():
+		return
+	}
 }
 
 // Health implements health.Reporter interface.
