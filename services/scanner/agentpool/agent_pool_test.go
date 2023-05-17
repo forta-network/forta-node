@@ -2,7 +2,6 @@ package agentpool
 
 import (
 	"context"
-	"github.com/forta-network/forta-node/services/scanner/agentpool/poolagent"
 	"testing"
 	"time"
 
@@ -54,7 +53,6 @@ func (s *Suite) SetupTest() {
 		txResults:               make(chan *scanner.TxResult),
 		blockResults:            make(chan *scanner.BlockResult),
 		combinationAlertResults: make(chan *scanner.CombinationAlertResult),
-		botChanges:              make(chan []*poolagent.Agent, 10),
 		msgClient:               s.msgClient,
 		dialer: func(agentCfg config.AgentConfig) (clients.AgentClient, error) {
 			return s.agentClient, nil
@@ -92,8 +90,6 @@ func (s *Suite) TestStartProcessStop() {
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsAlertSubscribe, gomock.Any())
 	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any())
 	s.r.NoError(s.ap.handleAgentVersionsUpdate(agentPayload))
-
-	s.ap.applyBotChange()
 
 	// Given that the agent is known to the pool but it is not ready yet
 	s.r.Equal(1, len(s.ap.agents))

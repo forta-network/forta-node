@@ -35,7 +35,6 @@ type AgentPool struct {
 	dialer                  func(config.AgentConfig) (clients.AgentClient, error)
 	mu                      sync.RWMutex
 	botWaitGroup            *sync.WaitGroup
-	botChanges              chan []*poolagent.Agent
 }
 
 // NewAgentPool creates a new agent pool.
@@ -46,7 +45,6 @@ func NewAgentPool(ctx context.Context, cfg config.Config, msgClient clients.Mess
 		txResults:               make(chan *scanner.TxResult),
 		blockResults:            make(chan *scanner.BlockResult),
 		combinationAlertResults: make(chan *scanner.CombinationAlertResult),
-		botChanges:              make(chan []*poolagent.Agent, 10),
 		msgClient:               msgClient,
 		dialer: func(ac config.AgentConfig) (clients.AgentClient, error) {
 			client := agentgrpc.NewClient()
@@ -64,30 +62,14 @@ func NewAgentPool(ctx context.Context, cfg config.Config, msgClient clients.Mess
 
 	agentPool.registerMessageHandlers()
 	go agentPool.logAgentChanBuffersLoop()
-	go agentPool.listenForBotChanges()
 	return agentPool
 }
 
-func (ap *AgentPool) listenForBotChanges() {
-	for {
-		if ap.ctx.Err() != nil {
-			return
-		}
-		ap.applyBotChange()
-	}
-}
-
 // this is separated to make it easier for a test to invoke manually
-func (ap *AgentPool) applyBotChange() {
-	select {
-	case change := <-ap.botChanges:
-		ap.mu.Lock()
-		ap.agents = change
-		ap.mu.Unlock()
-
-	case <-ap.ctx.Done():
-		return
-	}
+func (ap *AgentPool) setBotList(list []*poolagent.Agent) {
+	ap.mu.Lock()
+	ap.agents = list
+	ap.mu.Unlock()
 }
 
 // Health implements health.Reporter interface.
@@ -145,7 +127,7 @@ func (ap *AgentPool) discardAgent(discarded *poolagent.Agent) {
 		}
 	}
 	ap.mu.RUnlock()
-	ap.botChanges <- newAgents
+	ap.setBotList(newAgents)
 }
 
 // SendEvaluateTxRequest sends the request to all of the active agents which
@@ -419,7 +401,7 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 	agentsToStop := ap.findMissingAgentsInLatestVersions(latestVersions)
 	ap.mu.RUnlock()
 
-	ap.botChanges <- newAgents
+	ap.setBotList(newAgents)
 
 	ap.publishActions(agentsToRun, nil, agentsToStop, updatedAgents, nil, nil)
 
@@ -501,7 +483,7 @@ func (ap *AgentPool) handleStatusStopped(payload messaging.AgentPayload) error {
 	}
 
 	ap.mu.RUnlock()
-	ap.botChanges <- newAgents
+	ap.setBotList(newAgents)
 	return nil
 }
 
