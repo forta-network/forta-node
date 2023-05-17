@@ -403,8 +403,8 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 }
 
 func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
-	ap.mu.Lock()
-	defer ap.mu.Unlock()
+	ap.mu.RLock()
+	defer ap.mu.RUnlock()
 
 	// If an agent was added before and just started to run, we should mark as ready.
 	var agentsToStop []config.AgentConfig
