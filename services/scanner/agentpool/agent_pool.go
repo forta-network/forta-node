@@ -428,9 +428,17 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 				}
 
 				agent.SetClient(c)
+
+				err = agent.Initialize()
+				if err != nil {
+					log.WithField("agent", agent.Config().ID).WithError(err).Error("handleStatusRunning: error while initializing")
+					agentsToStop = append(agentsToStop, agent.Config())
+					removedSubscriptions = append(removedSubscriptions, agent.CombinerBotSubscriptions()...)
+					return nil
+				}
+
 				agent.SetReady()
 				agent.StartProcessing()
-				agent.WaitInitialization()
 
 				newSubscriptions = append(newSubscriptions, agent.CombinerBotSubscriptions()...)
 

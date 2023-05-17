@@ -56,7 +56,6 @@ type Agent struct {
 	readyOnce sync.Once
 	closed    chan struct{}
 	closeOnce sync.Once
-	initWait  sync.WaitGroup
 
 	mu sync.RWMutex
 }
@@ -245,22 +244,20 @@ func (agent *Agent) SetClient(agentClient clients.AgentClient) {
 // StartProcessing launches the goroutines to concurrently process incoming requests
 // from request channels.
 func (agent *Agent) StartProcessing() {
-	agent.initWait.Add(1)
-	go agent.initialize()
-
 	go agent.processTransactions()
 	go agent.processBlocks()
 	go agent.processCombinationAlerts()
+	return
 }
 
-func (agent *Agent) initialize() {
-	defer agent.initWait.Done()
-
+func (agent *Agent) Initialize() error {
 	agentConfig := agent.Config()
 
-	logger := log.WithFields(log.Fields{
-		"agent": agentConfig.ID,
-	})
+	logger := log.WithFields(
+		log.Fields{
+			"agent": agentConfig.ID,
+		},
+	)
 
 	// public bot.start metric to track bot starts/restarts.
 	agent.msgClient.PublishProto(
@@ -279,25 +276,25 @@ func (agent *Agent) initialize() {
 	ctx, cancel := context.WithTimeout(agent.ctx, DefaultAgentInitializeTimeout)
 	defer cancel()
 
-	// invoke initialize method of the bot
+	// invoke Initialize method of the bot
 	initializeResponse, err := agent.client.Initialize(ctx, &protocol.InitializeRequest{
 		AgentId:   agentConfig.ID,
 		ProxyHost: config.DockerJSONRPCProxyContainerName,
 	})
 
-	// it is not mandatory to implement a initialize method, safe to skip
+	// it is not mandatory to implement a Initialize method, safe to skip
 	if status.Code(err) == codes.Unimplemented {
-		logger.WithError(err).Info("initialize() method not implemented in bot - safe to ignore")
-		return
+		logger.WithError(err).Info("Initialize() method not implemented in bot - safe to ignore")
+		return nil
 	}
 	if err != nil {
 		logger.WithError(err).Warn("bot initialization failed")
-		return
+		return err
 	}
 
 	if err := validateInitializeResponse(initializeResponse); err != nil {
 		logger.WithError(err).Warn("bot initialization validation failed")
-		return
+		return err
 	}
 
 	// pass new alert subscriptions to the agent pool
@@ -306,6 +303,7 @@ func (agent *Agent) initialize() {
 	}
 
 	logger.Info("bot initialization succeeded")
+	return nil
 }
 
 func validateInitializeResponse(response *protocol.InitializeResponse) error {
@@ -322,10 +320,6 @@ func validateInitializeResponse(response *protocol.InitializeResponse) error {
 	return nil
 }
 
-func (agent *Agent) WaitInitialization() {
-	agent.initWait.Wait()
-}
-
 func (agent *Agent) processTransactions() {
 	lg := log.WithFields(
 		log.Fields{
@@ -334,8 +328,6 @@ func (agent *Agent) processTransactions() {
 			"evaluate":  "transaction",
 		},
 	)
-
-	agent.initWait.Wait()
 
 	for request := range agent.txRequests {
 		if exit := agent.processTransaction(lg, request); exit {
@@ -427,8 +419,6 @@ func (agent *Agent) processBlocks() {
 		},
 	)
 
-	agent.initWait.Wait()
-
 	for request := range agent.blockRequests {
 		if exit := agent.processBlock(lg, request); exit {
 			return
@@ -508,8 +498,6 @@ func (agent *Agent) processCombinationAlerts() {
 			"evaluate":  "combination",
 		},
 	)
-
-	agent.initWait.Wait()
 
 	for request := range agent.combinationRequests {
 		if exit := agent.processCombinationAlert(lg, request); exit {
