@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"golang.org/x/sync/semaphore"
-
-	"github.com/forta-network/forta-node/clients/messaging"
 	mock_clients "github.com/forta-network/forta-node/clients/mocks"
 	"github.com/forta-network/forta-node/config"
 	mock_store "github.com/forta-network/forta-node/store/mocks"
@@ -46,7 +43,7 @@ type Suite struct {
 	registryStore *mock_store.MockRegistryStore
 	msgClient     *mock_clients.MockMessageClient
 
-	service *RegistryService
+	service *registryService
 
 	suite.Suite
 }
@@ -56,12 +53,9 @@ func (s *Suite) SetupTest() {
 	s.r = require.New(s.T())
 	s.registryStore = mock_store.NewMockRegistryStore(gomock.NewController(s.T()))
 	s.msgClient = mock_clients.NewMockMessageClient(gomock.NewController(s.T()))
-	s.service = &RegistryService{
+	s.service = &registryService{
 		scannerAddress: testScannerAddress,
-		msgClient:      s.msgClient,
 		registryStore:  s.registryStore,
-		done:           make(chan struct{}),
-		sem:            semaphore.NewWeighted(1),
 	}
 	s.service.cfg.Registry.ContainerRegistry = testContainerRegistry
 }
@@ -91,7 +85,7 @@ func (ac agentConfigs) String() string {
 	return fmt.Sprintf("%+v", ([]*config.AgentConfig)(ac))
 }
 
-func (s *Suite) TestPublishChanges() {
+func (s *Suite) TestReturnList() {
 	configs := (agentConfigs)([]*config.AgentConfig{
 		{
 			ID:    testAgentIDStr,
@@ -100,12 +94,14 @@ func (s *Suite) TestPublishChanges() {
 	})
 
 	s.registryStore.EXPECT().GetAgentsIfChanged(s.service.scannerAddress.Hex()).Return(configs, true, nil)
-	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, configs)
 
-	s.NoError(s.service.publishLatestAgents())
+	received, err := s.service.GetLatestBots()
+	s.r.NoError(err)
+	s.r.Len(received, 1)
+	s.r.Equal(configs[0].ID, received[0].ID)
 }
 
-func (s *Suite) TestPublishEvenIfNoChanges() {
+func (s *Suite) TestReturnListEvenIfNoChanges() {
 	configs := (agentConfigs)([]*config.AgentConfig{
 		{
 			ID:    testAgentIDStr,
@@ -115,11 +111,15 @@ func (s *Suite) TestPublishEvenIfNoChanges() {
 
 	// first refresh
 	s.registryStore.EXPECT().GetAgentsIfChanged(s.service.scannerAddress.Hex()).Return(configs, true, nil)
-	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, configs)
-	s.NoError(s.service.publishLatestAgents())
+	received, err := s.service.GetLatestBots()
+	s.r.NoError(err)
+	s.r.Len(received, 1)
+	s.r.Equal(configs[0].ID, received[0].ID)
 
-	// second refresh should also trigger same publish
+	// second refresh
 	s.registryStore.EXPECT().GetAgentsIfChanged(s.service.scannerAddress.Hex()).Return(nil, false, nil)
-	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, configs)
-	s.NoError(s.service.publishLatestAgents())
+	received, err = s.service.GetLatestBots()
+	s.r.NoError(err)
+	s.r.Len(received, 1)
+	s.r.Equal(configs[0].ID, received[0].ID)
 }

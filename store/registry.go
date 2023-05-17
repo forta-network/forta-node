@@ -14,7 +14,6 @@ import (
 
 	"github.com/forta-network/forta-core-go/ens"
 	"github.com/forta-network/forta-core-go/ethereum"
-	"github.com/forta-network/forta-core-go/feeds"
 	"github.com/forta-network/forta-core-go/manifest"
 	"github.com/forta-network/forta-core-go/registry"
 	"github.com/forta-network/forta-core-go/utils"
@@ -59,7 +58,7 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConf
 		return nil, false, err
 	}
 
-	shouldUpdate := rs.lastCompletedVersion != hash.Hash || time.Since(rs.lastUpdate) > 5 * time.Minute
+	shouldUpdate := rs.lastCompletedVersion != hash.Hash || time.Since(rs.lastUpdate) > 5*time.Minute
 	if !shouldUpdate {
 		return nil, false, nil
 	}
@@ -286,7 +285,7 @@ func loadBot(ctx context.Context, cfg config.Config, mc manifest.Client, agentID
 	}, nil
 }
 
-func NewRegistryStore(ctx context.Context, cfg config.Config, ethClient ethereum.Client, blockFeed feeds.BlockFeed) (*registryStore, error) {
+func NewRegistryStore(ctx context.Context, cfg config.Config, ethClient ethereum.Client) (*registryStore, error) {
 	mc, err := manifest.NewClient(cfg.Registry.IPFS.GatewayURL)
 	if err != nil {
 		return nil, err
