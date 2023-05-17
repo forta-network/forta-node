@@ -142,6 +142,7 @@ func New(ctx context.Context, agentCfg config.AgentConfig, msgClient clients.Mes
 		msgClient:           msgClient,
 		ready:               make(chan struct{}),
 		closed:              make(chan struct{}),
+		initialized:         make(chan struct{}),
 	}
 }
 
