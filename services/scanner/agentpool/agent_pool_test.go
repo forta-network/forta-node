@@ -89,6 +89,7 @@ func (s *Suite) TestStartProcessStop() {
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusAttached, gomock.Any())
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsActionRun, gomock.Any())
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsAlertSubscribe, gomock.Any())
+	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsAlertUnsubscribe, gomock.Any())
 	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent,gomock.Any())
 	s.r.NoError(s.ap.handleAgentVersionsUpdate(agentPayload))
 

@@ -395,9 +395,25 @@ func (ap *AgentPool) handleAgentVersionsUpdate(payload messaging.AgentPayload) e
 	// Find agents that are already deployed but doesn't exist in the latest versions payload
 	agentsToStop := ap.findMissingAgentsInLatestVersions(latestVersions)
 
+	// remove subscriptions for soon-to-be-stopped bots
+	var removedSubscriptions []domain.CombinerBotSubscription
+	for _, agentConfig := range agentsToStop {
+		for _, subscription := range agentConfig.AlertConfig.Subscriptions {
+			removedSubscriptions = append(
+				removedSubscriptions, domain.CombinerBotSubscription{
+					Subscription: subscription,
+					Subscriber: &domain.Subscriber{
+						BotID:    agentConfig.ID,
+						BotOwner: agentConfig.Owner,
+						BotImage: agentConfig.Image,
+					},
+				},
+			)
+		}
+	}
 	ap.agents = newAgents
 
-	ap.publishActions(agentsToRun, nil, agentsToStop, updatedAgents, nil, nil)
+	ap.publishActions(agentsToRun, nil, agentsToStop, updatedAgents, nil, removedSubscriptions)
 
 	return nil
 }
