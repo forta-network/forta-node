@@ -409,7 +409,6 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	// If an agent was added before and just started to run, we should mark as ready.
 	var agentsToStop []config.AgentConfig
 	var agentsReady []config.AgentConfig
-	var newSubscriptions []domain.CombinerBotSubscription
 	var removedSubscriptions []domain.CombinerBotSubscription
 
 	for _, agentCfg := range payload {
@@ -429,18 +428,9 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 
 				agent.SetClient(c)
 
-				err = agent.Initialize()
-				if err != nil {
-					log.WithField("agent", agent.Config().ID).WithError(err).Error("handleStatusRunning: error while initializing")
-					agentsToStop = append(agentsToStop, agent.Config())
-					removedSubscriptions = append(removedSubscriptions, agent.CombinerBotSubscriptions()...)
-					return nil
-				}
+				go agent.Initialize()
 
-				agent.SetReady()
 				agent.StartProcessing()
-
-				newSubscriptions = append(newSubscriptions, agent.CombinerBotSubscriptions()...)
 
 				logger.WithField("image", agent.Config().Image).Info("attached")
 				agentsReady = append(agentsReady, agent.Config())
@@ -449,7 +439,7 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 		)
 	}
 
-	ap.publishActions(nil, agentsReady, agentsToStop, nil, newSubscriptions, removedSubscriptions)
+	ap.publishActions(nil, agentsReady, agentsToStop, nil, nil, removedSubscriptions)
 
 	if ap.botWaitGroup != nil && len(agentsReady) > 0 {
 		ap.botWaitGroup.Add(-len(agentsReady))

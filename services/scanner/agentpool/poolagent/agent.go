@@ -250,7 +250,7 @@ func (agent *Agent) StartProcessing() {
 	return
 }
 
-func (agent *Agent) Initialize() error {
+func (agent *Agent) Initialize() {
 	agentConfig := agent.Config()
 
 	logger := log.WithFields(
@@ -285,25 +285,29 @@ func (agent *Agent) Initialize() error {
 	// it is not mandatory to implement a Initialize method, safe to skip
 	if status.Code(err) == codes.Unimplemented {
 		logger.WithError(err).Info("Initialize() method not implemented in bot - safe to ignore")
-		return nil
+		agent.SetReady()
+		return
 	}
+
 	if err != nil {
 		logger.WithError(err).Warn("bot initialization failed")
-		return err
+		_ = agent.Close()
+		return
 	}
 
 	if err := validateInitializeResponse(initializeResponse); err != nil {
 		logger.WithError(err).Warn("bot initialization validation failed")
-		return err
+		return
 	}
 
 	// pass new alert subscriptions to the agent pool
 	if initializeResponse != nil && initializeResponse.AlertConfig != nil {
 		agent.SetAlertConfig(initializeResponse.AlertConfig)
+		agent.msgClient.Publish(messaging.SubjectAgentsAlertSubscribe, agent.CombinerBotSubscriptions())
 	}
 
 	logger.Info("bot initialization succeeded")
-	return nil
+	agent.SetReady()
 }
 
 func validateInitializeResponse(response *protocol.InitializeResponse) error {
