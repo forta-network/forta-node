@@ -51,11 +51,13 @@ type Agent struct {
 	errCounter *nodeutils.ErrorCounter
 	msgClient  clients.MessageClient
 
-	client    clients.AgentClient
-	ready     chan struct{}
-	readyOnce sync.Once
-	closed    chan struct{}
-	closeOnce sync.Once
+	client         clients.AgentClient
+	ready          chan struct{}
+	readyOnce      sync.Once
+	closed         chan struct{}
+	closeOnce      sync.Once
+	initialized    chan struct{}
+	initializeOnce sync.Once
 
 	mu sync.RWMutex
 }
@@ -196,20 +198,37 @@ func (agent *Agent) Close() error {
 		if agent.client != nil {
 			agent.client.Close()
 		}
-	})
+	},
+	)
 	return nil
 }
 
 // SetReady sets the agent ready.
 func (agent *Agent) SetReady() {
-	agent.readyOnce.Do(func() {
-		close(agent.ready) // never close this anywhere else
-	})
+	agent.readyOnce.Do(
+		func() {
+			close(agent.ready) // never close this anywhere else
+		},
+	)
+}
+
+// SetInitialized sets the agent initialized.
+func (agent *Agent) SetInitialized() {
+	agent.initializeOnce.Do(
+		func() {
+			close(agent.initialized) // never close this anywhere else
+		},
+	)
 }
 
 // Ready returns the ready channel.
 func (agent *Agent) Ready() <-chan struct{} {
 	return agent.ready
+}
+
+// Initialized returns the initialized channel.
+func (agent *Agent) Initialized() <-chan struct{} {
+	return agent.initialized
 }
 
 // Closed returns the closed channel.
@@ -220,6 +239,11 @@ func (agent *Agent) Closed() <-chan struct{} {
 // IsReady tells if the agent is ready.
 func (agent *Agent) IsReady() bool {
 	return isChanClosed(agent.ready)
+}
+
+// IsInitialized tells if the agent is initialized.
+func (agent *Agent) IsInitialized() bool {
+	return isChanClosed(agent.initialized)
 }
 
 // IsClosed tells if the agent is closed.
@@ -285,7 +309,7 @@ func (agent *Agent) Initialize() {
 	// it is not mandatory to implement a Initialize method, safe to skip
 	if status.Code(err) == codes.Unimplemented {
 		logger.WithError(err).Info("Initialize() method not implemented in bot - safe to ignore")
-		agent.SetReady()
+		agent.SetInitialized()
 		return
 	}
 
@@ -307,7 +331,7 @@ func (agent *Agent) Initialize() {
 	}
 
 	logger.Info("bot initialization succeeded")
-	agent.SetReady()
+	agent.SetInitialized()
 }
 
 func validateInitializeResponse(response *protocol.InitializeResponse) error {

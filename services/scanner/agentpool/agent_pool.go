@@ -148,7 +148,7 @@ func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 	}
 	var metricsList []*protocol.AgentMetric
 	for _, agent := range agents {
-		if !agent.IsReady() || !agent.ShouldProcessBlock(req.Event.Block.BlockNumber) {
+		if !agent.IsInitialized() || !agent.ShouldProcessBlock(req.Event.Block.BlockNumber) {
 			continue
 		}
 		lg.WithFields(log.Fields{
@@ -429,8 +429,8 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 				agent.SetClient(c)
 
 				go agent.Initialize()
-
 				agent.StartProcessing()
+				agent.SetReady()
 
 				logger.WithField("image", agent.Config().Image).Info("attached")
 				agentsReady = append(agentsReady, agent.Config())
