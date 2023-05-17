@@ -14,9 +14,48 @@ import (
 	types "github.com/ethereum/go-ethereum/core/types"
 	health "github.com/forta-network/forta-core-go/clients/health"
 	domain "github.com/forta-network/forta-core-go/domain"
+	config "github.com/forta-network/forta-node/config"
 	regtypes "github.com/forta-network/forta-node/services/registry/regtypes"
 	gomock "github.com/golang/mock/gomock"
 )
+
+// MockRegistryService is a mock of RegistryService interface.
+type MockRegistryService struct {
+	ctrl     *gomock.Controller
+	recorder *MockRegistryServiceMockRecorder
+}
+
+// MockRegistryServiceMockRecorder is the mock recorder for MockRegistryService.
+type MockRegistryServiceMockRecorder struct {
+	mock *MockRegistryService
+}
+
+// NewMockRegistryService creates a new mock instance.
+func NewMockRegistryService(ctrl *gomock.Controller) *MockRegistryService {
+	mock := &MockRegistryService{ctrl: ctrl}
+	mock.recorder = &MockRegistryServiceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockRegistryService) EXPECT() *MockRegistryServiceMockRecorder {
+	return m.recorder
+}
+
+// GetLatestBots mocks base method.
+func (m *MockRegistryService) GetLatestBots() ([]*config.AgentConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLatestBots")
+	ret0, _ := ret[0].([]*config.AgentConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetLatestBots indicates an expected call of GetLatestBots.
+func (mr *MockRegistryServiceMockRecorder) GetLatestBots() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestBots", reflect.TypeOf((*MockRegistryService)(nil).GetLatestBots))
+}
 
 // MockIPFSClient is a mock of IPFSClient interface.
 type MockIPFSClient struct {

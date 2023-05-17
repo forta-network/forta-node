@@ -14,6 +14,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// RegistryService is the registry service interface.
+type RegistryService interface {
+	GetLatestBots() ([]*config.AgentConfig, error)
+}
+
 // registryService listens to the agent scanner list changes so the node can stay in sync.
 type registryService struct {
 	cfg            config.Config
