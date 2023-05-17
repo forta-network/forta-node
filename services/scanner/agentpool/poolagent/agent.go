@@ -301,13 +301,13 @@ func (agent *Agent) Initialize() {
 	ctx, cancel := context.WithTimeout(agent.ctx, DefaultAgentInitializeTimeout)
 	defer cancel()
 
-	// invoke Initialize method of the bot
+	// invoke initialize method of the bot
 	initializeResponse, err := agent.client.Initialize(ctx, &protocol.InitializeRequest{
 		AgentId:   agentConfig.ID,
 		ProxyHost: config.DockerJSONRPCProxyContainerName,
 	})
 
-	// it is not mandatory to implement a Initialize method, safe to skip
+	// it is not mandatory to implement a initialize method, safe to skip
 	if status.Code(err) == codes.Unimplemented {
 		logger.WithError(err).Info("Initialize() method not implemented in bot - safe to ignore")
 		agent.SetInitialized()

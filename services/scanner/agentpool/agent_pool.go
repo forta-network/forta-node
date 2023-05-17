@@ -212,7 +212,7 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 
 	var metricsList []*protocol.AgentMetric
 	for _, agent := range agents {
-		if !agent.IsReady() || !agent.ShouldProcessBlock(req.Event.BlockNumber) {
+		if !agent.IsInitialized() || !agent.ShouldProcessBlock(req.Event.BlockNumber) {
 			continue
 		}
 
@@ -293,7 +293,7 @@ func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest
 			continue
 		}
 
-		if !agent.IsReady() {
+		if !agent.IsInitialized() {
 			continue
 		}
 		target = agent

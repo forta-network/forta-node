@@ -80,7 +80,6 @@ func (s *Suite) TestStartProcessStop() {
 
 	// Prior to invoking initialize method, agent.start metric should be emitted.
 	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent,gomock.Any())
-	s.agentClient.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 
 	// Given that there are no agents running
@@ -88,7 +87,6 @@ func (s *Suite) TestStartProcessStop() {
 	// Then a "run" action should be published
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusAttached, gomock.Any())
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsActionRun, gomock.Any())
-	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsAlertSubscribe, gomock.Any())
 	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent,gomock.Any())
 	s.r.NoError(s.ap.handleAgentVersionsUpdate(agentPayload))
 
@@ -97,9 +95,14 @@ func (s *Suite) TestStartProcessStop() {
 	s.r.False(s.ap.agents[0].IsReady())
 	// When the agent pool receives a message saying that the agent started to run
 	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent,gomock.Any()).Times(2)
+	s.agentClient.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(nil, nil)
+	// <- s.ap.agents[0].Initialized()
+
 	s.r.NoError(s.ap.handleStatusRunning(agentPayload))
+	<- s.ap.agents[0].Initialized()
 	// Then the agent must be marked ready
 	s.r.True(s.ap.agents[0].IsReady())
+	s.r.True(s.ap.agents[0].IsInitialized())
 
 	// Given that the agent is running
 	// When an evaluate requests are received
