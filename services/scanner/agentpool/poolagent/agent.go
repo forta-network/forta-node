@@ -357,6 +357,8 @@ func (agent *Agent) processTransactions() {
 			"evaluate":  "transaction",
 		},
 	)
+	// wait for initialization to start processing
+	<-agent.Initialized()
 
 	for request := range agent.txRequests {
 		if exit := agent.processTransaction(lg, request); exit {
@@ -447,6 +449,8 @@ func (agent *Agent) processBlocks() {
 			"evaluate":  "block",
 		},
 	)
+	// wait for initialization to start processing
+	<-agent.Initialized()
 
 	for request := range agent.blockRequests {
 		if exit := agent.processBlock(lg, request); exit {
@@ -527,6 +531,9 @@ func (agent *Agent) processCombinationAlerts() {
 			"evaluate":  "combination",
 		},
 	)
+
+	// wait for initialization to start processing
+	<-agent.Initialized()
 
 	for request := range agent.combinationRequests {
 		if exit := agent.processCombinationAlert(lg, request); exit {
