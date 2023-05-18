@@ -114,10 +114,7 @@ func (sup *SupervisorService) addContainerUnsafe(container *clients.DockerContai
 }
 
 func (sup *SupervisorService) handleAgentRun(payload messaging.AgentPayload) error {
-	startCtx, cancel := context.WithTimeout(sup.ctx, agentStartTimeout)
-	defer cancel()
-
-	return sup.handleAgentRunWithContext(startCtx, payload)
+	return sup.handleAgentRunWithContext(sup.ctx, payload)
 }
 
 func (sup *SupervisorService) handleAgentRunWithContext(ctx context.Context, payload messaging.AgentPayload) error {
@@ -144,6 +141,9 @@ func (sup *SupervisorService) handleAgentRunWithContext(ctx context.Context, pay
 
 // doStartAgent intended to use during multiple agent starts
 func (sup *SupervisorService) doStartAgent(ctx context.Context, agent config.AgentConfig, wg *sync.WaitGroup) {
+	ctx, cancel := context.WithTimeout(ctx, agentStartTimeout)
+	defer cancel()
+
 	defer wg.Done()
 
 	logger := agentLogger(agent)
