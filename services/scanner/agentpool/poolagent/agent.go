@@ -51,12 +51,13 @@ type Agent struct {
 	errCounter *nodeutils.ErrorCounter
 	msgClient  clients.MessageClient
 
-	client    clients.AgentClient
-	ready     chan struct{}
-	readyOnce sync.Once
-	closed    chan struct{}
-	closeOnce sync.Once
-	initWait  sync.WaitGroup
+	client         clients.AgentClient
+	ready          chan struct{}
+	readyOnce      sync.Once
+	closed         chan struct{}
+	closeOnce      sync.Once
+	initialized    chan struct{}
+	initializeOnce sync.Once
 
 	mu sync.RWMutex
 }
@@ -141,6 +142,7 @@ func New(ctx context.Context, agentCfg config.AgentConfig, msgClient clients.Mes
 		msgClient:           msgClient,
 		ready:               make(chan struct{}),
 		closed:              make(chan struct{}),
+		initialized:         make(chan struct{}),
 	}
 }
 
@@ -197,20 +199,37 @@ func (agent *Agent) Close() error {
 		if agent.client != nil {
 			agent.client.Close()
 		}
-	})
+	},
+	)
 	return nil
 }
 
 // SetReady sets the agent ready.
 func (agent *Agent) SetReady() {
-	agent.readyOnce.Do(func() {
-		close(agent.ready) // never close this anywhere else
-	})
+	agent.readyOnce.Do(
+		func() {
+			close(agent.ready) // never close this anywhere else
+		},
+	)
+}
+
+// SetInitialized sets the agent initialized.
+func (agent *Agent) SetInitialized() {
+	agent.initializeOnce.Do(
+		func() {
+			close(agent.initialized) // never close this anywhere else
+		},
+	)
 }
 
 // Ready returns the ready channel.
 func (agent *Agent) Ready() <-chan struct{} {
 	return agent.ready
+}
+
+// Initialized returns the initialized channel.
+func (agent *Agent) Initialized() <-chan struct{} {
+	return agent.initialized
 }
 
 // Closed returns the closed channel.
@@ -221,6 +240,11 @@ func (agent *Agent) Closed() <-chan struct{} {
 // IsReady tells if the agent is ready.
 func (agent *Agent) IsReady() bool {
 	return isChanClosed(agent.ready)
+}
+
+// IsInitialized tells if the agent is initialized.
+func (agent *Agent) IsInitialized() bool {
+	return isChanClosed(agent.initialized)
 }
 
 // IsClosed tells if the agent is closed.
@@ -245,22 +269,20 @@ func (agent *Agent) SetClient(agentClient clients.AgentClient) {
 // StartProcessing launches the goroutines to concurrently process incoming requests
 // from request channels.
 func (agent *Agent) StartProcessing() {
-	agent.initWait.Add(1)
-	go agent.initialize()
-
 	go agent.processTransactions()
 	go agent.processBlocks()
 	go agent.processCombinationAlerts()
+	return
 }
 
-func (agent *Agent) initialize() {
-	defer agent.initWait.Done()
-
+func (agent *Agent) Initialize() {
 	agentConfig := agent.Config()
 
-	logger := log.WithFields(log.Fields{
-		"agent": agentConfig.ID,
-	})
+	logger := log.WithFields(
+		log.Fields{
+			"agent": agentConfig.ID,
+		},
+	)
 
 	// public bot.start metric to track bot starts/restarts.
 	agent.msgClient.PublishProto(
@@ -287,11 +309,14 @@ func (agent *Agent) initialize() {
 
 	// it is not mandatory to implement a initialize method, safe to skip
 	if status.Code(err) == codes.Unimplemented {
-		logger.WithError(err).Info("initialize() method not implemented in bot - safe to ignore")
+		logger.WithError(err).Info("Initialize() method not implemented in bot - safe to ignore")
+		agent.SetInitialized()
 		return
 	}
+
 	if err != nil {
 		logger.WithError(err).Warn("bot initialization failed")
+		_ = agent.Close()
 		return
 	}
 
@@ -303,9 +328,11 @@ func (agent *Agent) initialize() {
 	// pass new alert subscriptions to the agent pool
 	if initializeResponse != nil && initializeResponse.AlertConfig != nil {
 		agent.SetAlertConfig(initializeResponse.AlertConfig)
+		agent.msgClient.Publish(messaging.SubjectAgentsAlertSubscribe, agent.CombinerBotSubscriptions())
 	}
 
 	logger.Info("bot initialization succeeded")
+	agent.SetInitialized()
 }
 
 func validateInitializeResponse(response *protocol.InitializeResponse) error {
@@ -322,10 +349,6 @@ func validateInitializeResponse(response *protocol.InitializeResponse) error {
 	return nil
 }
 
-func (agent *Agent) WaitInitialization() {
-	agent.initWait.Wait()
-}
-
 func (agent *Agent) processTransactions() {
 	lg := log.WithFields(
 		log.Fields{
@@ -334,8 +357,6 @@ func (agent *Agent) processTransactions() {
 			"evaluate":  "transaction",
 		},
 	)
-
-	agent.initWait.Wait()
 
 	for request := range agent.txRequests {
 		if exit := agent.processTransaction(lg, request); exit {
@@ -427,8 +448,6 @@ func (agent *Agent) processBlocks() {
 		},
 	)
 
-	agent.initWait.Wait()
-
 	for request := range agent.blockRequests {
 		if exit := agent.processBlock(lg, request); exit {
 			return
@@ -508,8 +527,6 @@ func (agent *Agent) processCombinationAlerts() {
 			"evaluate":  "combination",
 		},
 	)
-
-	agent.initWait.Wait()
 
 	for request := range agent.combinationRequests {
 		if exit := agent.processCombinationAlert(lg, request); exit {

@@ -148,7 +148,7 @@ func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 	}
 	var metricsList []*protocol.AgentMetric
 	for _, agent := range agents {
-		if !agent.IsReady() || !agent.ShouldProcessBlock(req.Event.Block.BlockNumber) {
+		if !agent.IsInitialized() || !agent.ShouldProcessBlock(req.Event.Block.BlockNumber) {
 			continue
 		}
 		lg.WithFields(log.Fields{
@@ -212,7 +212,7 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 
 	var metricsList []*protocol.AgentMetric
 	for _, agent := range agents {
-		if !agent.IsReady() || !agent.ShouldProcessBlock(req.Event.BlockNumber) {
+		if !agent.IsInitialized() || !agent.ShouldProcessBlock(req.Event.BlockNumber) {
 			continue
 		}
 
@@ -293,7 +293,7 @@ func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest
 			continue
 		}
 
-		if !agent.IsReady() {
+		if !agent.IsInitialized() {
 			continue
 		}
 		target = agent
@@ -425,7 +425,6 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 	// If an agent was added before and just started to run, we should mark as ready.
 	var agentsToStop []config.AgentConfig
 	var agentsReady []config.AgentConfig
-	var newSubscriptions []domain.CombinerBotSubscription
 	var removedSubscriptions []domain.CombinerBotSubscription
 
 	for _, agentCfg := range payload {
@@ -444,11 +443,10 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 				}
 
 				agent.SetClient(c)
-				agent.SetReady()
-				agent.StartProcessing()
-				agent.WaitInitialization()
 
-				newSubscriptions = append(newSubscriptions, agent.CombinerBotSubscriptions()...)
+				go agent.Initialize()
+				agent.StartProcessing()
+				agent.SetReady()
 
 				logger.WithField("image", agent.Config().Image).Info("attached")
 				agentsReady = append(agentsReady, agent.Config())
@@ -457,7 +455,7 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 		)
 	}
 
-	ap.publishActions(nil, agentsReady, agentsToStop, nil, newSubscriptions, removedSubscriptions)
+	ap.publishActions(nil, agentsReady, agentsToStop, nil, nil, removedSubscriptions)
 
 	if ap.botWaitGroup != nil && len(agentsReady) > 0 {
 		ap.botWaitGroup.Add(-len(agentsReady))
