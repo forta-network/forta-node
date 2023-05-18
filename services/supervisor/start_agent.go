@@ -157,6 +157,7 @@ func (sup *SupervisorService) doStartAgent(ctx context.Context, agent config.Age
 	}
 	if err != nil {
 		logger.WithError(err).Error("failed to start agent")
+		sup.msgClient.Publish(messaging.SubjectAgentsStatusStopped, messaging.AgentPayload{agent})
 		return
 	}
 
