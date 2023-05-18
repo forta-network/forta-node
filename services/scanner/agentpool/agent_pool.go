@@ -148,7 +148,7 @@ func (ap *AgentPool) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) {
 	}
 	var metricsList []*protocol.AgentMetric
 	for _, agent := range agents {
-		if !agent.IsInitialized() || !agent.ShouldProcessBlock(req.Event.Block.BlockNumber) {
+		if !agent.IsReady() || !agent.ShouldProcessBlock(req.Event.Block.BlockNumber) {
 			continue
 		}
 		lg.WithFields(log.Fields{
@@ -212,7 +212,7 @@ func (ap *AgentPool) SendEvaluateBlockRequest(req *protocol.EvaluateBlockRequest
 
 	var metricsList []*protocol.AgentMetric
 	for _, agent := range agents {
-		if !agent.IsInitialized() || !agent.ShouldProcessBlock(req.Event.BlockNumber) {
+		if !agent.IsReady() || !agent.ShouldProcessBlock(req.Event.BlockNumber) {
 			continue
 		}
 
@@ -293,7 +293,7 @@ func (ap *AgentPool) SendEvaluateAlertRequest(req *protocol.EvaluateAlertRequest
 			continue
 		}
 
-		if !agent.IsInitialized() {
+		if !agent.IsReady() {
 			continue
 		}
 		target = agent
