@@ -249,12 +249,10 @@ func (s *Suite) TestAgentRun() {
 	agentConfig, agentPayload := testAgentData()
 	// Creates the agent network, starts the agent container, attaches the scanner and the proxy to the
 	// agent network, publishes a "running" message.
-	ctx, cancel := context.WithTimeout(s.service.ctx, agentStartTimeout)
-	defer cancel()
-	s.agentImageClient.EXPECT().EnsureLocalImage(ctx, "agent test-agent", agentConfig.Image).Return(nil)
-	s.dockerClient.EXPECT().CreatePublicNetwork(ctx, testAgentContainerName).Return(testAgentNetworkID, nil)
+	s.agentImageClient.EXPECT().EnsureLocalImage(gomock.Any(), "agent test-agent", agentConfig.Image).Return(nil)
+	s.dockerClient.EXPECT().CreatePublicNetwork(gomock.Any(), testAgentContainerName).Return(testAgentNetworkID, nil)
 	s.dockerClient.EXPECT().StartContainer(
-		ctx, (configMatcher)(
+		gomock.Any(), (configMatcher)(
 			clients.DockerContainerConfig{
 				Name: agentConfig.ContainerName(),
 				Env: map[string]string{
@@ -264,14 +262,14 @@ func (s *Suite) TestAgentRun() {
 		),
 	).Return(&clients.DockerContainer{Name: agentConfig.ContainerName(), ID: testAgentContainerID}, nil)
 
-	s.dockerClient.EXPECT().AttachNetwork(ctx, testScannerContainerID, testAgentNetworkID)
-	s.dockerClient.EXPECT().AttachNetwork(ctx, testProxyContainerID, testAgentNetworkID)
-	s.dockerClient.EXPECT().AttachNetwork(ctx, testJWTProviderContainerID, testAgentNetworkID)
-	s.dockerClient.EXPECT().AttachNetwork(ctx, testPublicAPIContainerID, testAgentNetworkID)
+	s.dockerClient.EXPECT().AttachNetwork(gomock.Any(), testScannerContainerID, testAgentNetworkID)
+	s.dockerClient.EXPECT().AttachNetwork(gomock.Any(), testProxyContainerID, testAgentNetworkID)
+	s.dockerClient.EXPECT().AttachNetwork(gomock.Any(), testJWTProviderContainerID, testAgentNetworkID)
+	s.dockerClient.EXPECT().AttachNetwork(gomock.Any(), testPublicAPIContainerID, testAgentNetworkID)
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusRunning, agentPayload)
 	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any())
 
-	s.r.NoError(s.service.handleAgentRunWithContext(ctx, agentPayload))
+	s.r.NoError(s.service.handleAgentRunWithContext(s.service.ctx, agentPayload))
 }
 
 // TestAgentRunAgain tests running an agent twice.
@@ -282,15 +280,11 @@ func (s *Suite) TestAgentRunAgain() {
 
 	// Expect it to only publish a message again to ensure the subscribers that
 	// the agent is running.
-
-	startCtx, cancel := context.WithTimeout(s.service.ctx, agentStartTimeout)
-	defer cancel()
-
-	s.agentImageClient.EXPECT().EnsureLocalImage(startCtx, "agent test-agent", agentConfig.Image).Return(nil)
+	s.agentImageClient.EXPECT().EnsureLocalImage(gomock.Any(), "agent test-agent", agentConfig.Image).Return(nil)
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusRunning, agentPayload)
 	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any())
 
-	s.r.NoError(s.service.handleAgentRunWithContext(startCtx, agentPayload))
+	s.r.NoError(s.service.handleAgentRunWithContext(s.service.ctx, agentPayload))
 }
 
 // TestAgentStop tests stopping an agent.
