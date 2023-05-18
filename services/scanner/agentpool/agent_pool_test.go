@@ -87,7 +87,6 @@ func (s *Suite) TestStartProcessStop() {
 	// Then a "run" action should be published
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusAttached, gomock.Any())
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsActionRun, gomock.Any())
-	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsAlertSubscribe, gomock.Any())
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsAlertUnsubscribe, gomock.Any())
 	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent,gomock.Any())
 	s.r.NoError(s.ap.handleAgentVersionsUpdate(agentPayload))
@@ -98,7 +97,6 @@ func (s *Suite) TestStartProcessStop() {
 	// When the agent pool receives a message saying that the agent started to run
 	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent,gomock.Any()).Times(2)
 	s.agentClient.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(nil, nil)
-	// <- s.ap.agents[0].Initialized()
 
 	s.r.NoError(s.ap.handleStatusRunning(agentPayload))
 	<- s.ap.agents[0].Initialized()
