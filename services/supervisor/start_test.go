@@ -12,10 +12,11 @@ import (
 
 	mrelease "github.com/forta-network/forta-core-go/release/mocks"
 
-	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/clients/docker"
 	"github.com/forta-network/forta-node/clients/messaging"
 	mock_clients "github.com/forta-network/forta-node/clients/mocks"
 	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/services/components/containers"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -48,10 +49,9 @@ func TestSuite(t *testing.T) {
 type Suite struct {
 	r *require.Assertions
 
-	dockerClient     *mock_clients.MockDockerClient
-	globalClient     *mock_clients.MockDockerClient
-	agentImageClient *mock_clients.MockDockerClient
-	releaseClient    *mrelease.MockClient
+	dockerClient  *mock_clients.MockDockerClient
+	globalClient  *mock_clients.MockDockerClient
+	releaseClient *mrelease.MockClient
 
 	msgClient *mock_clients.MockMessageClient
 
@@ -61,11 +61,11 @@ type Suite struct {
 }
 
 // configMatcher is a wrapper to implement the Matcher interface.
-type configMatcher clients.DockerContainerConfig
+type configMatcher docker.ContainerConfig
 
 // Matches implements the gomock.Matcher interface.
 func (m configMatcher) Matches(x interface{}) bool {
-	c1, ok := x.(clients.DockerContainerConfig)
+	c1, ok := x.(docker.ContainerConfig)
 	if !ok {
 		return false
 	}
@@ -91,7 +91,7 @@ func (m configMatcher) Matches(x interface{}) bool {
 
 // String implements the gomock.Matcher interface.
 func (m configMatcher) String() string {
-	return fmt.Sprintf("%+v", (clients.DockerContainerConfig)(m))
+	return fmt.Sprintf("%+v", (docker.ContainerConfig)(m))
 }
 
 // SetupTest sets up the test.
@@ -126,60 +126,60 @@ func (s *Suite) SetupTest() {
 	s.dockerClient.EXPECT().CreateInternalNetwork(service.ctx, gomock.Any()).Return(testNatsNetworkID, nil) // for nats
 	s.dockerClient.EXPECT().StartContainer(
 		service.ctx, (configMatcher)(
-			clients.DockerContainerConfig{
+			docker.ContainerConfig{
 				Name: config.DockerIpfsContainerName,
 			},
 		),
-	).Return(&clients.DockerContainer{}, nil)
+	).Return(&docker.Container{}, nil)
 	s.dockerClient.EXPECT().StartContainer(
 		service.ctx, (configMatcher)(
-			clients.DockerContainerConfig{
+			docker.ContainerConfig{
 				Name: config.DockerStorageContainerName,
 			},
 		),
-	).Return(&clients.DockerContainer{}, nil)
+	).Return(&docker.Container{}, nil)
 	s.dockerClient.EXPECT().StartContainer(
 		service.ctx, (configMatcher)(
-			clients.DockerContainerConfig{
+			docker.ContainerConfig{
 				Name: config.DockerNatsContainerName,
 			},
 		),
-	).Return(&clients.DockerContainer{}, nil)
+	).Return(&docker.Container{}, nil)
 	s.dockerClient.EXPECT().StartContainer(
 		service.ctx, (configMatcher)(
-			clients.DockerContainerConfig{
+			docker.ContainerConfig{
 				Name: config.DockerJSONRPCProxyContainerName,
 			},
 		),
-	).Return(&clients.DockerContainer{ID: testProxyContainerID}, nil)
+	).Return(&docker.Container{ID: testProxyContainerID}, nil)
 	s.dockerClient.EXPECT().StartContainer(
 		service.ctx, (configMatcher)(
-			clients.DockerContainerConfig{
+			docker.ContainerConfig{
 				Name: config.DockerPublicAPIProxyContainerName,
 			},
 		),
-	).Return(&clients.DockerContainer{ID: testPublicAPIContainerID}, nil)
+	).Return(&docker.Container{ID: testPublicAPIContainerID}, nil)
 	s.dockerClient.EXPECT().StartContainer(
 		service.ctx, (configMatcher)(
-			clients.DockerContainerConfig{
+			docker.ContainerConfig{
 				Name: config.DockerScannerContainerName,
 			},
 		),
-	).Return(&clients.DockerContainer{ID: testScannerContainerID}, nil)
+	).Return(&docker.Container{ID: testScannerContainerID}, nil)
 	s.dockerClient.EXPECT().StartContainer(
 		service.ctx, (configMatcher)(
-			clients.DockerContainerConfig{
+			docker.ContainerConfig{
 				Name: config.DockerJWTProviderContainerName,
 			},
 		),
-	).Return(&clients.DockerContainer{ID: testJWTProviderContainerID}, nil)
+	).Return(&docker.Container{ID: testJWTProviderContainerID}, nil)
 	s.dockerClient.EXPECT().StartContainer(
 		service.ctx, (configMatcher)(
-			clients.DockerContainerConfig{
+			docker.ContainerConfig{
 				Name: config.DockerInspectorContainerName,
 			},
 		),
-	).Return(&clients.DockerContainer{ID: testProxyContainerID}, nil)
+	).Return(&docker.Container{ID: testProxyContainerID}, nil)
 	s.dockerClient.EXPECT().HasLocalImage(service.ctx, gomock.Any()).Return(true).AnyTimes()
 	s.globalClient.EXPECT().GetContainerByName(service.ctx, config.DockerSupervisorContainerName).Return(&types.Container{ID: testSupervisorContainerID}, nil).AnyTimes()
 	s.dockerClient.EXPECT().AttachNetwork(service.ctx, testSupervisorContainerID, testNodeNetworkID)
@@ -210,14 +210,14 @@ func (s *Suite) initialContainerCheck() {
 				Names: []string{"/forta-agent-name"},
 				ID:    testGenericContainerID,
 				Labels: map[string]string{
-					clients.DockerLabelFortaSupervisorStrategyVersion: SupervisorStrategyVersion,
+					docker.LabelFortaSupervisorStrategyVersion: containers.LabelValueStrategyVersion,
 				},
 			},
 			{
 				Names: []string{"/forta-agent-name"},
 				ID:    testGenericContainerID,
 				Labels: map[string]string{
-					clients.DockerLabelFortaSupervisorStrategyVersion: "old",
+					docker.LabelFortaSupervisorStrategyVersion: "old",
 				},
 			},
 		}, nil,
@@ -255,14 +255,14 @@ func (s *Suite) TestAgentRun() {
 	s.dockerClient.EXPECT().CreatePublicNetwork(ctx, testAgentContainerName).Return(testAgentNetworkID, nil)
 	s.dockerClient.EXPECT().StartContainer(
 		ctx, (configMatcher)(
-			clients.DockerContainerConfig{
+			docker.ContainerConfig{
 				Name: agentConfig.ContainerName(),
 				Env: map[string]string{
 					config.EnvFortaChainID: "1",
 				},
 			},
 		),
-	).Return(&clients.DockerContainer{Name: agentConfig.ContainerName(), ID: testAgentContainerID}, nil)
+	).Return(&docker.Container{Name: agentConfig.ContainerName(), ID: testAgentContainerID}, nil)
 
 	s.dockerClient.EXPECT().AttachNetwork(ctx, testScannerContainerID, testAgentNetworkID)
 	s.dockerClient.EXPECT().AttachNetwork(ctx, testProxyContainerID, testAgentNetworkID)

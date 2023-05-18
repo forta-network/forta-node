@@ -16,6 +16,7 @@ import (
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/security"
 	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/clients/docker"
 	"github.com/forta-network/forta-node/config"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
@@ -58,7 +59,7 @@ func NewJWTProvider(
 }
 
 func initProvider(cfg *JWTProviderConfig) (*JWTProvider, error) {
-	globalClient, err := clients.NewDockerClient("")
+	globalClient, err := docker.NewDockerClient("")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the global docker client: %v", err)
 	}

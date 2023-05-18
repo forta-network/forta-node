@@ -1,4 +1,4 @@
-package clients
+package docker
 
 import (
 	"archive/tar"
@@ -25,11 +25,12 @@ import (
 )
 
 const (
-	DockerLabelForta                          = "network.forta"
-	DockerLabelFortaSupervisor                = "network.forta.supervisor"
-	DockerLabelFortaSupervisorStrategyVersion = "network.forta.supervisor.strategy-version"
+	LabelForta                          = "network.forta"
+	LabelFortaSupervisor                = "network.forta.supervisor"
+	LabelFortaSupervisorStrategyVersion = "network.forta.supervisor.strategy-version"
+	LabelFortaIsBot                     = "network.forta.is-bot"
 
-	DockerLabelFortaSettingsAgentLogsEnable = "network.forta.settings.agent-logs.enable"
+	LabelFortaSettingsAgentLogsEnable = "network.forta.settings.agent-logs.enable"
 )
 
 type dockerLabel struct {
@@ -38,7 +39,7 @@ type dockerLabel struct {
 }
 
 var defaultLabels = []dockerLabel{
-	{Name: DockerLabelForta, Value: "true"},
+	{Name: LabelForta, Value: "true"},
 }
 
 // Client errors
@@ -46,16 +47,16 @@ var (
 	ErrContainerNotFound = errors.New("container not found")
 )
 
-// DockerContainer is a resulting container reference, including the ID and configuration
-type DockerContainer struct {
+// Container is a resulting container reference, including the ID and configuration
+type Container struct {
 	Name      string
 	ID        string
 	ImageHash string
-	Config    DockerContainerConfig
+	Config    ContainerConfig
 }
 
-// DockerContainerConfig is configuration for a particular container
-type DockerContainerConfig struct {
+// ContainerConfig is configuration for a particular container
+type ContainerConfig struct {
 	Name            string
 	Image           string
 	Env             map[string]string
@@ -74,11 +75,11 @@ type DockerContainerConfig struct {
 	Labels          map[string]string
 }
 
-// DockerContainerList contains the full container data.
-type DockerContainerList []types.Container
+// ContainerList contains the full container data.
+type ContainerList []types.Container
 
 // FindByID finds the container by the ID.
-func (dcl DockerContainerList) FindByID(id string) (*types.Container, bool) {
+func (dcl ContainerList) FindByID(id string) (*types.Container, bool) {
 	for _, c := range dcl {
 		if c.ID == id {
 			return &c, true
@@ -88,7 +89,7 @@ func (dcl DockerContainerList) FindByID(id string) (*types.Container, bool) {
 }
 
 // FindByName finds the container by the name.
-func (dcl DockerContainerList) FindByName(name string) (*types.Container, bool) {
+func (dcl ContainerList) FindByName(name string) (*types.Container, bool) {
 	for _, c := range dcl {
 		for _, n := range c.Names {
 			if n == name || n == fmt.Sprintf("/%s", name) {
@@ -100,7 +101,7 @@ func (dcl DockerContainerList) FindByName(name string) (*types.Container, bool) 
 }
 
 // ContainsAny checks is any of the containers contain this name and returns the first one.
-func (dcl DockerContainerList) ContainsAny(name string) (*types.Container, bool) {
+func (dcl ContainerList) ContainsAny(name string) (*types.Container, bool) {
 	for _, c := range dcl {
 		if strings.Contains(c.Names[0], name) {
 			return &c, true
@@ -117,7 +118,7 @@ type dockerClient struct {
 	labels   []dockerLabel
 }
 
-func (cfg DockerContainerConfig) envVars() []string {
+func (cfg ContainerConfig) envVars() []string {
 	var results []string
 	for k, v := range cfg.Env {
 		results = append(results, fmt.Sprintf("%s=%s", k, v))
@@ -273,15 +274,25 @@ func copyFile(cli *client.Client, ctx context.Context, filePath string, content 
 }
 
 // GetContainers returns all of the containers.
-func (d *dockerClient) GetContainers(ctx context.Context) (DockerContainerList, error) {
+func (d *dockerClient) GetContainers(ctx context.Context) (ContainerList, error) {
 	return d.cli.ContainerList(ctx, types.ContainerListOptions{
 		All:     true,
 		Filters: d.labelFilter(),
 	})
 }
 
+// GetContainersByLabel returns all of the containers that has the label.
+func (d *dockerClient) GetContainersByLabel(ctx context.Context, name, value string) (ContainerList, error) {
+	return d.cli.ContainerList(ctx, types.ContainerListOptions{
+		All: true,
+		Filters: makeLabelFilter([]dockerLabel{
+			{Name: name, Value: value},
+		}),
+	})
+}
+
 // GetFortaServiceContainers returns all of the non-agent forta containers.
-func (d *dockerClient) GetFortaServiceContainers(ctx context.Context) (fortaContainers DockerContainerList, err error) {
+func (d *dockerClient) GetFortaServiceContainers(ctx context.Context) (fortaContainers ContainerList, err error) {
 	containers, err := d.cli.ContainerList(ctx, types.ContainerListOptions{
 		All:     true,
 		Filters: d.labelFilter(),
@@ -383,8 +394,18 @@ func (d *dockerClient) nuke(ctx context.Context) error {
 	return nil
 }
 
+// GetContainerName returns the container name.
+func GetContainerName(container types.Container) string {
+	return container.Names[0][1:]
+}
+
+// StartContainerWithID starts an existing container.
+func (d *dockerClient) StartContainerWithID(ctx context.Context, containerID string) error {
+	return d.cli.ContainerStart(ctx, containerID, types.ContainerStartOptions{})
+}
+
 // StartContainer kicks off a container as a daemon and returns a summary of the container
-func (d *dockerClient) StartContainer(ctx context.Context, config DockerContainerConfig) (*DockerContainer, error) {
+func (d *dockerClient) StartContainer(ctx context.Context, config ContainerConfig) (*Container, error) {
 	log.WithFields(log.Fields{
 		"image": config.Image,
 		"name":  config.Name,
@@ -399,7 +420,7 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 		if len(c.Names) == 0 {
 			continue
 		}
-		foundName := c.Names[0][1:] // remove / in the beginning
+		foundName := GetContainerName(c) // remove / in the beginning
 		if foundName == config.Name {
 			foundContainer = &c
 			break
@@ -417,7 +438,7 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 			"id":   foundContainer.ID,
 			"name": config.Name,
 		}).Info("container is starting")
-		return &DockerContainer{Name: config.Name, ID: foundContainer.ID, Config: config, ImageHash: inspection.Image}, nil
+		return &Container{Name: config.Name, ID: foundContainer.ID, Config: config, ImageHash: inspection.Image}, nil
 	}
 
 	bindings := make(map[nat.Port][]nat.PortBinding)
@@ -523,7 +544,7 @@ func (d *dockerClient) StartContainer(ctx context.Context, config DockerContaine
 		"id":   cont.ID,
 		"name": config.Name,
 	}).Info("container is starting")
-	return &DockerContainer{Name: config.Name, ID: cont.ID, Config: config, ImageHash: inspection.Image}, nil
+	return &Container{Name: config.Name, ID: cont.ID, Config: config, ImageHash: inspection.Image}, nil
 }
 
 // StopContainer kills a container by ID
@@ -697,8 +718,30 @@ func (d *dockerClient) EnsureLocalImage(ctx context.Context, name, ref string) e
 		}
 	}
 
-	log.Infof("pulled image for '%s': %s", name, ref)
+	log.Infof("pulled '%s' image: %s", name, ref)
 	return nil
+}
+
+// ImagePull data about an image to pull.
+type ImagePull struct {
+	Name string
+	Ref  string
+}
+
+// EnsureLocalImages pulls an image using the given ref asynchronously.
+func (d *dockerClient) EnsureLocalImages(ctx context.Context, timeoutPerPull time.Duration, imagePulls []ImagePull) (errs []error) {
+	var outputs []*workers.Output
+	for _, imagePull := range imagePulls {
+		outputs = append(outputs, d.workers.Execute(func() ([]interface{}, error) {
+			ctx, cancel := context.WithTimeout(ctx, timeoutPerPull)
+			defer cancel()
+			return nil, d.EnsureLocalImage(ctx, imagePull.Name, imagePull.Ref)
+		}))
+	}
+	for _, output := range outputs {
+		errs = append(errs, output.Error)
+	}
+	return
 }
 
 // GetContainerLogs gets the container logs.
@@ -735,8 +778,12 @@ func (d *dockerClient) GetContainerLogs(ctx context.Context, containerID, tail s
 }
 
 func (d *dockerClient) labelFilter() filters.Args {
+	return makeLabelFilter(d.labels)
+}
+
+func makeLabelFilter(labels []dockerLabel) filters.Args {
 	filter := filters.NewArgs()
-	for _, label := range d.labels {
+	for _, label := range labels {
 		filter.Add("label", fmt.Sprintf("%s=%s", label.Name, label.Value))
 	}
 	return filter
@@ -777,7 +824,7 @@ func initLabels(name string) []dockerLabel {
 
 	return append(
 		defaultLabels, dockerLabel{
-			Name:  DockerLabelFortaSupervisor,
+			Name:  LabelFortaSupervisor,
 			Value: name,
 		},
 	)

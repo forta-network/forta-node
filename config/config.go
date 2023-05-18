@@ -264,6 +264,22 @@ func GetConfigForContainer() (Config, error) {
 	return cfg, nil
 }
 
+// BotsToWait returns the count of the bots to wait.
+func (cfg *Config) BotsToWait() (waitBots int) {
+	if !cfg.LocalModeConfig.Enable {
+		return
+	}
+	waitBots += len(cfg.LocalModeConfig.BotImages)
+	waitBots += len(cfg.LocalModeConfig.Standalone.BotContainers)
+	// sharded bots spawn on multiple containers, so total "wait bot" count is shards * target
+	for _, bot := range cfg.LocalModeConfig.ShardedBots {
+		if bot != nil {
+			waitBots += int(bot.Target * bot.Shards)
+		}
+	}
+	return
+}
+
 // apply defaults that apply in certain contexts
 func applyContextDefaults(cfg *Config) {
 	chainSettings := settings.GetChainSettings(cfg.ChainID)

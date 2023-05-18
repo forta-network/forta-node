@@ -7,7 +7,7 @@ import (
 
 	"github.com/forta-network/forta-core-go/clients/agentlogs"
 	"github.com/forta-network/forta-core-go/security"
-	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/clients/docker"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -47,7 +47,7 @@ func (sup *SupervisorService) doSyncAgentLogs() error {
 			log.WithError(err).Warn("failed to get agent container")
 			continue
 		}
-		if dockerContainer.Labels[clients.DockerLabelFortaSettingsAgentLogsEnable] != "true" {
+		if dockerContainer.Labels[docker.LabelFortaSettingsAgentLogsEnable] != "true" {
 			continue
 		}
 		logs, err := sup.client.GetContainerLogs(

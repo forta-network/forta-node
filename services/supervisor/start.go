@@ -10,27 +10,22 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/forta-network/forta-core-go/clients/agentlogs"
+	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/manifest"
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-core-go/release"
-
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ipfs/go-cid"
-	log "github.com/sirupsen/logrus"
-
-	"github.com/forta-network/forta-core-go/clients/agentlogs"
-	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/security"
 	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/clients/docker"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/services"
-)
-
-const (
-	// SupervisorStrategyVersion is for versioning the critical changes in supervisor's management strategy.
-	// It's effective in deciding if an agent container should be restarted or not.
-	SupervisorStrategyVersion = "3"
+	"github.com/forta-network/forta-node/services/components"
+	"github.com/forta-network/forta-node/services/components/containers"
+	"github.com/ipfs/go-cid"
+	log "github.com/sirupsen/logrus"
 )
 
 var knownServiceContainerNames = []string{
@@ -48,9 +43,10 @@ var knownServiceContainerNames = []string{
 type SupervisorService struct {
 	ctx context.Context
 
-	client           clients.DockerClient
-	globalClient     clients.DockerClient
-	agentImageClient clients.DockerClient
+	client       clients.DockerClient
+	globalClient clients.DockerClient
+
+	botLifecycle components.BotLifecycle
 
 	manifestClient manifest.Client
 	releaseClient  release.Client
@@ -60,12 +56,12 @@ type SupervisorService struct {
 	maxLogSize  string
 	maxLogFiles int
 
-	scannerContainer     *clients.DockerContainer
-	inspectorContainer   *clients.DockerContainer
-	jsonRpcContainer     *clients.DockerContainer
-	publicAPIContainer   *clients.DockerContainer
-	jwtProviderContainer *clients.DockerContainer
-	storageContainer     *clients.DockerContainer
+	scannerContainer     *docker.Container
+	inspectorContainer   *docker.Container
+	jsonRpcContainer     *docker.Container
+	publicAPIContainer   *docker.Container
+	jwtProviderContainer *docker.Container
+	storageContainer     *docker.Container
 	containers           []*Container
 	mu                   sync.RWMutex
 
@@ -86,14 +82,15 @@ type SupervisorService struct {
 }
 
 type SupervisorServiceConfig struct {
-	Config     config.Config
-	Passphrase string
-	Key        *keystore.Key
+	Config       config.Config
+	Passphrase   string
+	Key          *keystore.Key
+	BotLifecycle components.BotLifecycle
 }
 
 // Container extends the default container data.
 type Container struct {
-	clients.DockerContainer
+	docker.Container
 	IsAgent     bool
 	AgentConfig *config.AgentConfig
 }
@@ -104,6 +101,7 @@ func (sup *SupervisorService) Start() error {
 	}
 
 	go sup.healthCheck()
+	go sup.refreshBotContainers()
 
 	return nil
 }
@@ -178,7 +176,7 @@ func (sup *SupervisorService) start() error {
 
 	manageIpfsDir(sup.config.Config)
 	if sup.config.Config.AdvancedConfig.IPFSExperiment {
-		ipfsContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
+		ipfsContainer, err := sup.client.StartContainer(sup.ctx, docker.ContainerConfig{
 			Name:  config.DockerIpfsContainerName,
 			Image: "ipfs/kubo:v0.16.0",
 			Ports: map[string]string{
@@ -218,7 +216,7 @@ func (sup *SupervisorService) start() error {
 	}
 
 	// start nats, wait for it and connect from the supervisor
-	natsContainer, err := sup.client.StartContainer(sup.ctx, clients.DockerContainerConfig{
+	natsContainer, err := sup.client.StartContainer(sup.ctx, docker.ContainerConfig{
 		Name:  config.DockerNatsContainerName,
 		Image: "nats:2.3.2",
 		Ports: map[string]string{
@@ -246,7 +244,7 @@ func (sup *SupervisorService) start() error {
 
 	if sup.config.Config.AdvancedConfig.IPFSExperiment {
 		sup.storageContainer, err = sup.client.StartContainer(
-			sup.ctx, clients.DockerContainerConfig{
+			sup.ctx, docker.ContainerConfig{
 				Name:  config.DockerStorageContainerName,
 				Image: commonNodeImage,
 				Cmd:   []string{config.DefaultFortaNodeBinaryPath, "storage"},
@@ -281,7 +279,7 @@ func (sup *SupervisorService) start() error {
 	}
 
 	sup.jsonRpcContainer, err = sup.client.StartContainer(
-		sup.ctx, clients.DockerContainerConfig{
+		sup.ctx, docker.ContainerConfig{
 			Name:  config.DockerJSONRPCProxyContainerName,
 			Image: commonNodeImage,
 			Cmd:   []string{config.DefaultFortaNodeBinaryPath, "json-rpc"},
@@ -306,7 +304,7 @@ func (sup *SupervisorService) start() error {
 	sup.addContainerUnsafe(sup.jsonRpcContainer)
 
 	sup.publicAPIContainer, err = sup.client.StartContainer(
-		sup.ctx, clients.DockerContainerConfig{
+		sup.ctx, docker.ContainerConfig{
 			Name:  config.DockerPublicAPIProxyContainerName,
 			Image: commonNodeImage,
 			Cmd:   []string{config.DefaultFortaNodeBinaryPath, "public-api"},
@@ -345,7 +343,7 @@ func (sup *SupervisorService) start() error {
 	}
 
 	sup.inspectorContainer, err = sup.client.StartContainer(
-		sup.ctx, clients.DockerContainerConfig{
+		sup.ctx, docker.ContainerConfig{
 			Name:  config.DockerInspectorContainerName,
 			Image: commonNodeImage,
 			Cmd:   []string{config.DefaultFortaNodeBinaryPath, "inspector"},
@@ -381,7 +379,7 @@ func (sup *SupervisorService) start() error {
 	}
 
 	sup.scannerContainer, err = sup.client.StartContainer(
-		sup.ctx, clients.DockerContainerConfig{
+		sup.ctx, docker.ContainerConfig{
 			Name:  config.DockerScannerContainerName,
 			Image: commonNodeImage,
 			Cmd:   []string{config.DefaultFortaNodeBinaryPath, "scanner"},
@@ -410,7 +408,7 @@ func (sup *SupervisorService) start() error {
 	sup.addContainerUnsafe(sup.scannerContainer)
 
 	sup.jwtProviderContainer, err = sup.client.StartContainer(
-		sup.ctx, clients.DockerContainerConfig{
+		sup.ctx, docker.ContainerConfig{
 			Name:  config.DockerJWTProviderContainerName,
 			Image: commonNodeImage,
 			Cmd:   []string{config.DefaultFortaNodeBinaryPath, "jwt-provider"},
@@ -441,6 +439,26 @@ func (sup *SupervisorService) start() error {
 	sup.addContainerUnsafe(sup.jwtProviderContainer)
 
 	return nil
+}
+
+func (sup *SupervisorService) addContainerUnsafe(container *docker.Container, agentConfig ...*config.AgentConfig) {
+	if agentConfig != nil {
+		sup.containers = append(
+			sup.containers, &Container{
+				Container:   *container,
+				IsAgent:     true,
+				AgentConfig: agentConfig[0],
+			},
+		)
+		return
+	}
+	sup.containers = append(sup.containers, &Container{Container: *container})
+}
+
+func (sup *SupervisorService) registerMessageHandlers() {
+	if sup.config.Config.InspectionConfig.InspectAtStartup {
+		sup.msgClient.Subscribe(messaging.SubjectInspectionDone, messaging.InspectionResultsHandler(sup.handleInspectionResults))
+	}
 }
 
 func manageIpfsDir(cfg config.Config) error {
@@ -509,11 +527,11 @@ func (sup *SupervisorService) removeOldContainers() error {
 	}
 
 	// gather old agents
-	containers, err := sup.client.GetContainers(sup.ctx)
+	containerList, err := sup.client.GetContainers(sup.ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get containers list: %v", err)
 	}
-	for _, container := range containers {
+	for _, container := range containerList {
 		containerName := container.Names[0][1:]
 		logger := log.WithFields(log.Fields{
 			"containerName": containerName,
@@ -522,8 +540,11 @@ func (sup *SupervisorService) removeOldContainers() error {
 		if !strings.Contains(containerName, "forta-agent-") {
 			continue
 		}
-		if container.Labels[clients.DockerLabelFortaSupervisorStrategyVersion] != SupervisorStrategyVersion {
-			logger.Info("agent container is old - need to remove")
+		if !containers.HasSameLabelValue(
+			&container,
+			docker.LabelFortaSupervisorStrategyVersion, containers.LabelValueStrategyVersion,
+		) {
+			logger.Info("bot container is old - need to remove")
 			containersToRemove = append(containersToRemove, &containerDefinition{
 				ID:   container.ID,
 				Name: containerName,
@@ -652,9 +673,9 @@ func (sup *SupervisorService) Stop() error {
 		}
 		var err error
 		if cnt.IsAgent {
-			err = sup.client.StopContainer(ctx, cnt.DockerContainer.ID)
+			err = sup.client.StopContainer(ctx, cnt.Container.ID)
 		} else {
-			err = sup.client.InterruptContainer(ctx, cnt.DockerContainer.ID)
+			err = sup.client.InterruptContainer(ctx, cnt.Container.ID)
 		}
 		logger := log.WithFields(log.Fields{
 			"id":      cnt.ID,
@@ -725,11 +746,11 @@ func (sup *SupervisorService) handleInspectionResults(payload *protocol.Inspecti
 }
 
 func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*SupervisorService, error) {
-	dockerClient, err := clients.NewDockerClient("supervisor")
+	dockerClient, err := docker.NewDockerClient(containers.LabelFortaSupervisor)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the docker client: %v", err)
 	}
-	globalClient, err := clients.NewDockerClient("")
+	globalClient, err := docker.NewDockerClient("")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the global docker client: %v", err)
 	}
@@ -739,30 +760,15 @@ func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*Su
 		return nil, fmt.Errorf("failed to create the release client: %v", err)
 	}
 
-	// agent image client is helpful for loading local mode agents from a restricted container registry
-	var agentImageClient clients.DockerClient
-	if cfg.Config.LocalModeConfig.Enable && cfg.Config.LocalModeConfig.ContainerRegistry != nil {
-		agentImageClient, err = clients.NewAuthDockerClient(
-			"",
-			cfg.Config.LocalModeConfig.ContainerRegistry.Username,
-			cfg.Config.LocalModeConfig.ContainerRegistry.Password,
-		)
-	} else {
-		agentImageClient, err = clients.NewDockerClient("")
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to create the private docker client: %v", err)
-	}
-
 	return &SupervisorService{
-		ctx:              ctx,
-		client:           dockerClient,
-		globalClient:     globalClient,
-		agentImageClient: agentImageClient,
-		releaseClient:    releaseClient,
-		config:           cfg,
-		healthClient:     health.NewClient(),
-		agentLogsClient:  agentlogs.NewClient(cfg.Config.AgentLogsConfig.URL),
-		inspectionCh:     make(chan *protocol.InspectionResults),
+		ctx:             ctx,
+		client:          dockerClient,
+		globalClient:    globalClient,
+		releaseClient:   releaseClient,
+		botLifecycle:    cfg.BotLifecycle,
+		config:          cfg,
+		healthClient:    health.NewClient(),
+		agentLogsClient: agentlogs.NewClient(cfg.Config.AgentLogsConfig.URL),
+		inspectionCh:    make(chan *protocol.InspectionResults),
 	}, nil
 }

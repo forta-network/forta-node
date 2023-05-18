@@ -3,6 +3,7 @@ package agentgrpc
 import (
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/forta-network/forta-core-go/protocol"
@@ -25,19 +26,27 @@ const (
 	MethodEvaluateAlert Method = "/network.forta.Agent/EvaluateAlert"
 )
 
-// Client allows us to communicate with an agent.
-type Client struct {
+// Client makes the gRPC requests to evaluate block and txs and receive results.
+type Client interface {
+	Dial(config.AgentConfig) error
+	Invoke(ctx context.Context, method Method, in, out interface{}, opts ...grpc.CallOption) error
+	protocol.AgentClient
+	io.Closer
+}
+
+// client allows us to communicate with an agent.
+type client struct {
 	conn *grpc.ClientConn
 	protocol.AgentClient
 }
 
 // NewClient creates a new client.
-func NewClient() *Client {
-	return &Client{}
+func NewClient() *client {
+	return &client{}
 }
 
 // Dial dials an agent using the config.
-func (client *Client) Dial(cfg config.AgentConfig) error {
+func (client *client) Dial(cfg config.AgentConfig) error {
 	var (
 		conn *grpc.ClientConn
 		err  error
@@ -67,18 +76,18 @@ func (client *Client) Dial(cfg config.AgentConfig) error {
 }
 
 // WithConn sets the client conn.
-func (client *Client) WithConn(conn *grpc.ClientConn) {
+func (client *client) WithConn(conn *grpc.ClientConn) {
 	client.conn = conn
 	client.AgentClient = protocol.NewAgentClient(conn)
 }
 
 // Invoke is a generalization of client methods.
-func (client *Client) Invoke(ctx context.Context, method Method, in, out interface{}, opts ...grpc.CallOption) error {
+func (client *client) Invoke(ctx context.Context, method Method, in, out interface{}, opts ...grpc.CallOption) error {
 	return client.conn.Invoke(ctx, string(method), in, out, opts...)
 }
 
 // Close implements io.Closer.
-func (client *Client) Close() error {
+func (client *client) Close() error {
 	if client.conn != nil {
 		return client.conn.Close()
 	}
