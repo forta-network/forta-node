@@ -18,12 +18,12 @@ func FindUpdatedBots(list1, list2 []config.AgentConfig) (resultList []config.Age
 
 // Drop drops a bot from the list.
 func Drop(bot config.AgentConfig, botList []config.AgentConfig) (resultList []config.AgentConfig) {
-	findBotAndDo(bot, botList, func(currBot config.AgentConfig) {
+	for _, currBot := range botList {
 		if bot.ContainerName() == currBot.ContainerName() {
-			return
+			continue
 		}
 		resultList = append(resultList, currBot)
-	})
+	}
 	return
 }
 

@@ -18,7 +18,7 @@ func NewBotDialer() BotDialer {
 
 func (bd *botDialer) DialBot(ac config.AgentConfig) (Client, error) {
 	client := NewClient()
-	err := client.Dial(ac)
+	err := client.DialWithRetry(ac)
 	if err != nil {
 		return nil, err
 	}

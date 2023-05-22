@@ -34,8 +34,8 @@ type BotProcessing struct {
 func GetBotProcessingComponents(ctx context.Context, botProcCfg BotProcessingConfig) (BotProcessing, error) {
 	resultChannels := botreq.MakeResultChannels()
 	botPool := lifecycle.NewBotPool(
-		ctx, botProcCfg.MessageClient, agentgrpc.NewBotDialer(),
-		resultChannels.SendOnly(), botProcCfg.Config.BotsToWait(),
+		ctx, botProcCfg.MessageClient, metrics.NewLifecycleClient(botProcCfg.MessageClient),
+		agentgrpc.NewBotDialer(), resultChannels.SendOnly(), botProcCfg.Config.BotsToWait(),
 	)
 	mediator.New(botProcCfg.MessageClient).ConnectBotPool(botPool)
 	sender := botio.NewSender(ctx, botProcCfg.MessageClient, botPool)

@@ -23,7 +23,7 @@ const (
 type BotClient interface {
 	EnsureBotImages(ctx context.Context, botConfigs []config.AgentConfig) []error
 	LaunchBot(ctx context.Context, botConfig config.AgentConfig) error
-	ShutDownBot(ctx context.Context, botConfig config.AgentConfig) error
+	TearDownBot(ctx context.Context, botConfig config.AgentConfig) error
 	LoadBotContainers(ctx context.Context) ([]types.Container, error)
 	StartWaitBotContainer(ctx context.Context, containerID string) error
 }
@@ -100,13 +100,19 @@ func (bc *botClient) getServiceContainerIDs(ctx context.Context) (ids []string, 
 	return ids, nil
 }
 
-// ShutDownBot shuts down a bot by shutting down the docker container.
-func (bc *botClient) ShutDownBot(ctx context.Context, botConfig config.AgentConfig) error {
+// TearDownBot tears down a bot by shutting down the docker container and removing it.
+func (bc *botClient) TearDownBot(ctx context.Context, botConfig config.AgentConfig) error {
 	container, err := bc.client.GetContainerByName(ctx, botConfig.ContainerName())
 	if err != nil {
-		return fmt.Errorf("failed to get the bot container to shut down: %v", err)
+		return fmt.Errorf("failed to get the bot container to tear down: %v", err)
 	}
-	return bc.client.StopContainer(ctx, container.ID)
+	if err := bc.client.StopContainer(ctx, container.ID); err != nil {
+		return fmt.Errorf("failed to stop the bot container to tear down: %v", err)
+	}
+	if err := bc.client.RemoveContainer(ctx, container.ID); err != nil {
+		return fmt.Errorf("failed to remove the bot container to tear down: %v", err)
+	}
+	return nil
 }
 
 // LoadBotContainers loads the latest bot list for the running scanner.

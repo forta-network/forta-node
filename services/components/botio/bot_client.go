@@ -30,10 +30,13 @@ type BotClient interface {
 	Config() config.AgentConfig
 	SetConfig(config.AgentConfig)
 
-	Closed() <-chan struct{}
-	IsClosed() bool
+	Started() <-chan struct{}
+	IsStarted() bool
 	Initialized() <-chan struct{}
 	IsInitialized() bool
+	Closed() <-chan struct{}
+	IsClosed() bool
+
 	TxBufferIsFull() bool
 
 	Initialize()
@@ -80,12 +83,12 @@ type botClient struct {
 	dialer       agentgrpc.BotDialer
 	clientUnsafe agentgrpc.Client
 
-	ready           chan struct{}
-	readyOnce       sync.Once
-	closed          chan struct{}
-	closeOnce       sync.Once
+	started         chan struct{}
+	startedOnce     sync.Once
 	initialized     chan struct{}
 	initializedOnce sync.Once
+	closed          chan struct{}
+	closeOnce       sync.Once
 
 	mu sync.RWMutex
 }
@@ -113,7 +116,7 @@ func (bot *botClient) CombinerBotSubscriptions() (subscriptions []domain.Combine
 // NewBotClient creates a new bot client.
 func NewBotClient(
 	ctx context.Context, botCfg config.AgentConfig,
-	msgClient clients.MessageClient, botDialer agentgrpc.BotDialer,
+	msgClient clients.MessageClient, lifecycleMetrics metrics.Lifecycle, botDialer agentgrpc.BotDialer,
 	resultChannels botreq.SendOnlyChannels,
 ) BotClient {
 	return &botClient{
@@ -124,10 +127,11 @@ func NewBotClient(
 		combinationRequests: make(chan *botreq.CombinationRequest, DefaultBufferSize),
 		errCounter:          nodeutils.NewErrorCounter(3, isCriticalErr),
 		msgClient:           msgClient,
-		lifecycleMetrics:    metrics.NewLifecycleClient(msgClient),
+		lifecycleMetrics:    lifecycleMetrics,
 		dialer:              botDialer,
-		closed:              make(chan struct{}),
+		started:             make(chan struct{}),
 		initialized:         make(chan struct{}),
+		closed:              make(chan struct{}),
 	}
 }
 
@@ -144,6 +148,7 @@ func (bot *botClient) LogStatus() {
 		"bot":         bot.Config().ID,
 		"blockBuffer": len(bot.blockRequests),
 		"txBuffer":    len(bot.txRequests),
+		"started":     bot.IsStarted(),
 		"initialized": bot.IsInitialized(),
 		"closed":      bot.IsClosed(),
 	}).Debug("bot status")
@@ -235,7 +240,17 @@ func (bot *botClient) Close() error {
 	return nil
 }
 
-// setInitialized sets the bot initialized.
+// Closed returns the closed channel.
+func (bot *botClient) Closed() <-chan struct{} {
+	return bot.closed
+}
+
+// IsClosed tells if the bot is closed.
+func (bot *botClient) IsClosed() bool {
+	return isChanClosed(bot.closed)
+}
+
+// setInitialized sets the bot as initialized.
 func (bot *botClient) setInitialized() {
 	bot.initializedOnce.Do(
 		func() {
@@ -244,24 +259,33 @@ func (bot *botClient) setInitialized() {
 	)
 }
 
-// Closed returns the closed channel.
-func (bot *botClient) Closed() <-chan struct{} {
-	return bot.closed
-}
-
 // Initialized returns the initialized channel.
 func (bot *botClient) Initialized() <-chan struct{} {
 	return bot.initialized
 }
 
-// IsClosed tells if the bot is closed.
-func (bot *botClient) IsClosed() bool {
-	return isChanClosed(bot.closed)
-}
-
 // IsInitialized tells if the bot is initialized.
 func (bot *botClient) IsInitialized() bool {
 	return isChanClosed(bot.initialized)
+}
+
+// setStarted sets the bot as started.
+func (bot *botClient) setStarted() {
+	bot.startedOnce.Do(
+		func() {
+			close(bot.started) // never close this anywhere else
+		},
+	)
+}
+
+// Started returns the started channel.
+func (bot *botClient) Started() <-chan struct{} {
+	return bot.started
+}
+
+// IsStarted tells if the bot has been started.
+func (bot *botClient) IsStarted() bool {
+	return isChanClosed(bot.started)
 }
 
 func isChanClosed(ch chan struct{}) bool {
@@ -283,8 +307,7 @@ func (bot *botClient) StartProcessing() {
 
 // Initialize initializes the bot.
 func (bot *botClient) Initialize() {
-	// TODO: initialize is retryable - use it with backoff
-	go bot.initialize()
+	bot.initialize()
 }
 
 func (bot *botClient) initialize() {
@@ -296,10 +319,12 @@ func (bot *botClient) initialize() {
 
 	// publish start metric to track bot starts/restarts.
 	bot.lifecycleMetrics.Start(botConfig)
+	bot.setStarted()
 
 	botClient, err := bot.dialer.DialBot(botConfig)
 	if err != nil {
 		logger.WithError(err).Info("failed to dial bot")
+		return
 	}
 	bot.setGrpcClient(botClient)
 	bot.lifecycleMetrics.StatusAttached(botConfig)
@@ -309,6 +334,7 @@ func (bot *botClient) initialize() {
 	defer cancel()
 
 	// invoke initialize method of the bot
+	// TODO: we should define and use InitializeAndRetry in clients/agentgrpc/client.go
 	initializeResponse, err := botClient.Initialize(ctx, &protocol.InitializeRequest{
 		AgentId:   botConfig.ID,
 		ProxyHost: config.DockerJSONRPCProxyContainerName,

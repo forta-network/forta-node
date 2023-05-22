@@ -28,7 +28,7 @@ const (
 
 // Client makes the gRPC requests to evaluate block and txs and receive results.
 type Client interface {
-	Dial(config.AgentConfig) error
+	DialWithRetry(config.AgentConfig) error
 	Invoke(ctx context.Context, method Method, in, out interface{}, opts ...grpc.CallOption) error
 	protocol.AgentClient
 	io.Closer
@@ -45,8 +45,8 @@ func NewClient() *client {
 	return &client{}
 }
 
-// Dial dials an agent using the config.
-func (client *client) Dial(cfg config.AgentConfig) error {
+// DialWithRetry dials an agent using the config.
+func (client *client) DialWithRetry(cfg config.AgentConfig) error {
 	var (
 		conn *grpc.ClientConn
 		err  error

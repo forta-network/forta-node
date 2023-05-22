@@ -30,14 +30,16 @@ type botLifecycleManager struct {
 	botPool          BotPoolUpdater
 	lifecycleMetrics metrics.Lifecycle
 
-	prevBots []config.AgentConfig
+	runningBots []config.AgentConfig
 }
+
+var _ BotLifecycleManager = &botLifecycleManager{}
 
 // NewManager creates new.
 func NewManager(
 	botRegistry registry.BotRegistry, botClient containers.BotClient,
 	botPool BotPoolUpdater, lifecycleMetrics metrics.Lifecycle,
-) BotLifecycleManager {
+) *botLifecycleManager {
 	return &botLifecycleManager{
 		botRegistry:      botRegistry,
 		botClient:        botClient,
@@ -49,22 +51,24 @@ func NewManager(
 // ManageBots starts containers for assigned bots and stops the containers for unassigned
 // bots and lets other services know.
 func (blm *botLifecycleManager) ManageBots(ctx context.Context) error {
-	currBots, err := blm.botRegistry.LoadAssignedBots()
+	assignedBots, err := blm.botRegistry.LoadAssignedBots()
 	if err != nil {
 		return fmt.Errorf("failed to load assigned bots: %v", err)
 	}
 
 	// find the removed bots and remove them from the pool
-	removedBotConfigs := FindMissingBots(currBots, blm.prevBots)
-	blm.botPool.RemoveBotsWithConfigs(removedBotConfigs)
-	blm.lifecycleMetrics.StatusStopping(removedBotConfigs...)
+	removedBotConfigs := FindMissingBots(blm.runningBots, assignedBots)
+	if len(removedBotConfigs) > 0 {
+		blm.botPool.RemoveBotsWithConfigs(removedBotConfigs)
+		blm.lifecycleMetrics.StatusStopping(removedBotConfigs...)
+	}
 
 	// then wait a little to let the bot pool process this
 	time.Sleep(botRemoveTimeout)
 
 	// then stop the containers
 	for _, removedBotConfig := range removedBotConfigs {
-		err := blm.botClient.ShutDownBot(ctx, removedBotConfig)
+		err := blm.botClient.TearDownBot(ctx, removedBotConfig)
 		if err != nil {
 			log.WithField("container", removedBotConfig.ContainerName()).
 				Warn("failed to stop unassigned bot container")
@@ -72,22 +76,25 @@ func (blm *botLifecycleManager) ManageBots(ctx context.Context) error {
 	}
 
 	// find the bot containers to start
-	addedBotConfigs := FindExtraBots(currBots, blm.prevBots)
+	addedBotConfigs := FindExtraBots(blm.runningBots, assignedBots)
 
 	// then download all images concurrently
-	errs := blm.botClient.EnsureBotImages(ctx, addedBotConfigs)
+	var downloadErrs []error
+	if len(addedBotConfigs) > 0 {
+		downloadErrs = blm.botClient.EnsureBotImages(ctx, addedBotConfigs)
+	}
 
 	// and start them
 	for i, addedBotConfig := range addedBotConfigs {
 		// skip start if we could not download
-		if errs[i] != nil {
+		if downloadErrs[i] != nil {
 			log.WithFields(log.Fields{
 				"bot":   addedBotConfig.ID,
 				"image": addedBotConfig.Image,
-				"error": errs[i],
+				"error": downloadErrs[i],
 			}).Error("bot image download failed - skipping launch")
 			// drop the bot from the list so it can be picked again next time
-			currBots = Drop(addedBotConfig, currBots)
+			assignedBots = Drop(addedBotConfig, assignedBots)
 			blm.lifecycleMetrics.FailurePull(addedBotConfig)
 			continue
 		}
@@ -98,17 +105,17 @@ func (blm *botLifecycleManager) ManageBots(ctx context.Context) error {
 			log.WithField("container", addedBotConfig.ContainerName()).
 				Warn("failed to start assigned bot container")
 			// drop the bot from the list so it can be picked again next time
-			currBots = Drop(addedBotConfig, currBots)
+			assignedBots = Drop(addedBotConfig, assignedBots)
 			blm.lifecycleMetrics.FailureLaunch(addedBotConfig)
 			continue
 		}
 	}
 
 	// then update the pool with latest bots
-	blm.botPool.UpdateBotsWithLatestConfigs(currBots)
-	blm.lifecycleMetrics.StatusRunning(currBots...)
+	blm.botPool.UpdateBotsWithLatestConfigs(assignedBots)
+	blm.lifecycleMetrics.StatusRunning(assignedBots...)
 
-	blm.prevBots = currBots
+	blm.runningBots = assignedBots
 	return nil
 }
 
@@ -149,7 +156,7 @@ func (blm *botLifecycleManager) RestartExitedBots(ctx context.Context) error {
 }
 
 func (blm *botLifecycleManager) findBotConfig(containerName string) (config.AgentConfig, bool) {
-	for _, bot := range blm.prevBots {
+	for _, bot := range blm.runningBots {
 		if bot.ContainerName() == containerName {
 			return bot, true
 		}

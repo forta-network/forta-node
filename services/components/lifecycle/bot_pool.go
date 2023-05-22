@@ -39,22 +39,26 @@ type botPool struct {
 	waitBots int
 	botWg    *sync.WaitGroup
 
+	waitInit bool // hack to make testing synchronous
+
 	resultChannels   botreq.SendOnlyChannels
 	msgClient        clients.MessageClient
 	lifecycleMetrics metrics.Lifecycle
 	dialer           agentgrpc.BotDialer
 }
 
+var _ BotPool = &botPool{}
+
 // NewBotPool creates a new bot pool.
 func NewBotPool(
-	ctx context.Context, msgClient clients.MessageClient, botDialer agentgrpc.BotDialer,
-	resultChannels botreq.SendOnlyChannels, waitBots int,
-) BotPool {
+	ctx context.Context, msgClient clients.MessageClient, lifecycleMetrics metrics.Lifecycle,
+	botDialer agentgrpc.BotDialer, resultChannels botreq.SendOnlyChannels, waitBots int,
+) *botPool {
 	botPool := &botPool{
 		ctx:              ctx,
 		resultChannels:   resultChannels,
 		msgClient:        msgClient,
-		lifecycleMetrics: metrics.NewLifecycleClient(msgClient),
+		lifecycleMetrics: lifecycleMetrics,
 		dialer:           botDialer,
 	}
 	if waitBots > 0 {
@@ -102,9 +106,14 @@ func (bp *botPool) UpdateBotsWithLatestConfigs(latestConfigs messaging.AgentPayl
 
 		logger.Info("adding new bot")
 		bot = botio.NewBotClient(
-			bp.ctx, addedBotConfig, bp.msgClient, bp.dialer, bp.resultChannels,
+			bp.ctx, addedBotConfig, bp.msgClient, bp.lifecycleMetrics, bp.dialer, bp.resultChannels,
 		)
-		bot.Initialize()
+
+		if bp.waitInit {
+			bot.Initialize()
+		} else {
+			go bot.Initialize()
+		}
 		bot.StartProcessing()
 
 		bp.botClients = append(bp.botClients, bot)
@@ -121,7 +130,9 @@ func (bp *botPool) UpdateBotsWithLatestConfigs(latestConfigs messaging.AgentPayl
 		}
 		bot.SetConfig(updatedBotConfig)
 	}
-	bp.lifecycleMetrics.ActionUpdate(updatedBotConfigs...)
+	if len(updatedBotConfigs) > 0 {
+		bp.lifecycleMetrics.ActionUpdate(updatedBotConfigs...)
+	}
 
 	// if the pool needs to wait for the first time, detect that and mark done
 	if bp.waitBots > 0 && bp.botWg != nil {
@@ -175,7 +186,11 @@ func (bp *botPool) ReinitBotsWithConfigs(reinitedBotConfigs messaging.AgentPaylo
 			logger.Info("could not find the reinited bot! skipping")
 			continue
 		}
-		bot.Initialize()
+		if bp.waitInit {
+			bot.Initialize()
+		} else {
+			go bot.Initialize()
+		}
 	}
 
 	return nil
@@ -198,7 +213,7 @@ func (bp *botPool) WaitForAll() {
 }
 
 func botLogger(botConfig config.AgentConfig) *log.Entry {
-	return log.WithField("bot", botConfig).WithField("container", botConfig.ContainerName())
+	return log.WithField("bot", botConfig.ID).WithField("container", botConfig.ContainerName())
 }
 
 func (bp *botPool) getBot(containerName string) (botio.BotClient, bool) {
