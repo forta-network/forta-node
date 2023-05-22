@@ -54,10 +54,6 @@ type LifecycleTestSuite struct {
 	suite.Suite
 }
 
-func (s *LifecycleTestSuite) log(msg string) {
-	s.T().Log(msg)
-}
-
 func TestLifecycleTestSuite(t *testing.T) {
 	suite.Run(t, &LifecycleTestSuite{})
 }
@@ -81,7 +77,7 @@ func (s *LifecycleTestSuite) SetupTest() {
 }
 
 func (s *LifecycleTestSuite) TestDownloadTimeout() {
-	s.log("should redownload a bot if downloading times out")
+	s.T().Log("should redownload a bot if downloading times out")
 
 	assigned := []config.AgentConfig{
 		{
@@ -120,7 +116,7 @@ func (s *LifecycleTestSuite) TestDownloadTimeout() {
 }
 
 func (s *LifecycleTestSuite) TestLaunchFailure() {
-	s.log("should relaunch a bot if launching fails")
+	s.T().Log("should relaunch a bot if launching fails")
 
 	assigned := []config.AgentConfig{
 		{
@@ -160,7 +156,7 @@ func (s *LifecycleTestSuite) TestLaunchFailure() {
 }
 
 func (s *LifecycleTestSuite) TestDialFailure() {
-	s.log("should not reload or redial a bot if dialing finally fails")
+	s.T().Log("should not reload or redial a bot if dialing finally fails")
 
 	assigned := []config.AgentConfig{
 		{
@@ -186,7 +182,7 @@ func (s *LifecycleTestSuite) TestDialFailure() {
 }
 
 func (s *LifecycleTestSuite) TestInitializeFailure() {
-	s.log("should not reload or reinitialize a bot if initialization finally fails")
+	s.T().Log("should not reload or reinitialize a bot if initialization finally fails")
 
 	assigned := []config.AgentConfig{
 		{
@@ -215,7 +211,7 @@ func (s *LifecycleTestSuite) TestInitializeFailure() {
 }
 
 func (s *LifecycleTestSuite) TestExitedRestarted() {
-	s.log("should restart, redial and reinitialize exited bots")
+	s.T().Log("should restart, redial and reinitialize exited bots")
 
 	assigned := []config.AgentConfig{
 		{
@@ -268,7 +264,7 @@ func (s *LifecycleTestSuite) TestExitedRestarted() {
 }
 
 func (s *LifecycleTestSuite) TestUnassigned() {
-	s.log("should tear down unassigned bots")
+	s.T().Log("should tear down unassigned bots")
 
 	assigned := []config.AgentConfig{
 		{
@@ -297,14 +293,17 @@ func (s *LifecycleTestSuite) TestUnassigned() {
 	s.lifecycleMetrics.EXPECT().StatusStopping(assigned[0])
 	s.botContainers.EXPECT().TearDownBot(gomock.Any(), assigned[0]).Return(nil)
 	s.lifecycleMetrics.EXPECT().StatusRunning().Times(1)
+	s.botGrpc.EXPECT().Close()
 
 	// when the bot manager manages the assigned bots over time
 	s.r.NoError(s.botManager.ManageBots(context.Background()))
+	createdBotClient := s.botPool.GetCurrentBotClients()[0]
 	s.r.NoError(s.botManager.ManageBots(context.Background()))
+	<-createdBotClient.Closed()
 }
 
 func (s *LifecycleTestSuite) TestConfigUpdated() {
-	s.log("should update bot config without tearing down")
+	s.T().Log("should update bot config without tearing down")
 
 	assigned := []config.AgentConfig{
 		{
@@ -312,13 +311,22 @@ func (s *LifecycleTestSuite) TestConfigUpdated() {
 			Image: testImageRef,
 		},
 	}
+	updated := []config.AgentConfig{
+		{
+			ID:    testBotID1,
+			Image: testImageRef,
+			ShardConfig: &config.ShardConfig{
+				ShardID: 1,
+			},
+		},
+	}
 
 	// given that there is a new bot assignment
 	s.botRegistry.EXPECT().LoadAssignedBots().Return(assigned, nil).Times(1)
-	// and the assignment is removed shortly
-	s.botRegistry.EXPECT().LoadAssignedBots().Return(nil, nil).Times(1)
+	// and the assigned bot's shard config is updated shortly
+	s.botRegistry.EXPECT().LoadAssignedBots().Return(updated, nil).Times(1)
 
-	// then the bot should be tore down
+	// then the config of the bot should be updated
 
 	s.botContainers.EXPECT().EnsureBotImages(gomock.Any(), assigned).Return([]error{nil}).Times(1)
 	s.botContainers.EXPECT().LaunchBot(gomock.Any(), assigned[0]).Return(nil).Times(1)
@@ -330,11 +338,12 @@ func (s *LifecycleTestSuite) TestConfigUpdated() {
 	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{}, nil).
 		Times(1)
 
-	s.lifecycleMetrics.EXPECT().StatusStopping(assigned[0])
-	s.botContainers.EXPECT().TearDownBot(gomock.Any(), assigned[0]).Return(nil)
-	s.lifecycleMetrics.EXPECT().StatusRunning().Times(1)
+	s.lifecycleMetrics.EXPECT().StatusRunning(updated[0]).Times(1)
+	s.lifecycleMetrics.EXPECT().ActionUpdate(updated[0])
 
 	// when the bot manager manages the assigned bots over time
 	s.r.NoError(s.botManager.ManageBots(context.Background()))
 	s.r.NoError(s.botManager.ManageBots(context.Background()))
+
+	s.r.Equal(updated[0], s.botPool.botClients[0].Config())
 }
