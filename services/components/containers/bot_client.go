@@ -106,11 +106,8 @@ func (bc *botClient) TearDownBot(ctx context.Context, botConfig config.AgentConf
 	if err != nil {
 		return fmt.Errorf("failed to get the bot container to tear down: %v", err)
 	}
-	if err := bc.client.StopContainer(ctx, container.ID); err != nil {
-		return fmt.Errorf("failed to stop the bot container to tear down: %v", err)
-	}
 	if err := bc.client.RemoveContainer(ctx, container.ID); err != nil {
-		return fmt.Errorf("failed to remove the bot container to tear down: %v", err)
+		return fmt.Errorf("failed to destroy the container: %v", err)
 	}
 	return nil
 }

@@ -21,10 +21,13 @@ import (
 )
 
 const (
-	testBotID1      = "0x0100000000000000000000000000000000000000000000000000000000000000"
-	testBotID2      = "0x0200000000000000000000000000000000000000000000000000000000000000"
-	testImageRef    = "bafybeielvnt5apaxbk6chthc4dc3p6vscpx3ai4uvti7gwh253j7facsxu@sha256:e0e9efb6699b02750f6a9668084d37314f1de3a80da7e19c1d40da73ee57dd45"
-	testContainerID = "test-container-id"
+	testBotID1       = "0x0100000000000000000000000000000000000000000000000000000000000000"
+	testBotID2       = "0x0200000000000000000000000000000000000000000000000000000000000000"
+	testBotID3       = "0x0300000000000000000000000000000000000000000000000000000000000000"
+	testImageRef     = "bafybeielvnt5apaxbk6chthc4dc3p6vscpx3ai4uvti7gwh253j7facsxu@sha256:e0e9efb6699b02750f6a9668084d37314f1de3a80da7e19c1d40da73ee57dd45"
+	testContainerID  = "test-container-id"
+	testContainerID1 = "test-container-id-1"
+	testContainerID2 = "test-container-id-2"
 )
 
 // LifecycleTestSuite composes type botLifecycleManager with a concrete type botPool
@@ -235,6 +238,7 @@ func (s *LifecycleTestSuite) TestExitedRestarted() {
 	s.dialer.EXPECT().DialBot(assigned[0]).Return(s.botGrpc, nil).Times(2)
 	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{}, nil).
 		Times(2)
+	s.botGrpc.EXPECT().Close().Return(nil).Times(1) // should close the client before replacing
 
 	dockerContainerName := fmt.Sprintf("/%s", assigned[0].ContainerName())
 

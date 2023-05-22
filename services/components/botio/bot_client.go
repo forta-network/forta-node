@@ -204,6 +204,10 @@ func (bot *botClient) setGrpcClient(client agentgrpc.Client) {
 	bot.mu.Lock()
 	defer bot.mu.Unlock()
 
+	if bot.clientUnsafe != nil {
+		bot.clientUnsafe.Close()
+	}
+
 	bot.clientUnsafe = client
 }
 
