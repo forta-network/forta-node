@@ -30,7 +30,6 @@ type botPool struct {
 	ctx context.Context
 
 	botClients []botio.BotClient
-	configs    []config.AgentConfig
 	mu         sync.RWMutex
 
 	waitBots int
@@ -90,38 +89,38 @@ func (bp *botPool) UpdateBotsWithLatestConfigs(latestConfigs messaging.AgentPayl
 	defer bp.mu.Unlock()
 
 	// start and add missing bots
-	addedBotConfigs := FindExtraBots(bp.configs, latestConfigs)
+	addedBotConfigs := FindExtraBots(bp.getConfigsUnsafe(), latestConfigs)
 	for _, addedBotConfig := range addedBotConfigs {
 		logger := botLogger(addedBotConfig)
-		bot, ok := bp.getBot(addedBotConfig.ContainerName())
+		botClient, ok := bp.getBotClient(addedBotConfig.ContainerName())
 		if ok {
 			logger.Debug("bot already exists - skipping")
 			continue
 		}
 
 		logger.Info("adding new bot")
-		bot = bp.botClientFactory.NewBotClient(bp.ctx, addedBotConfig)
+		botClient = bp.botClientFactory.NewBotClient(bp.ctx, addedBotConfig)
 
 		if bp.waitInit {
-			bot.Initialize()
+			botClient.Initialize()
 		} else {
-			go bot.Initialize()
+			go botClient.Initialize()
 		}
-		bot.StartProcessing()
+		botClient.StartProcessing()
 
-		bp.botClients = append(bp.botClients, bot)
+		bp.botClients = append(bp.botClients, botClient)
 	}
 
 	// updated the config of the bots that have different config
-	updatedBotConfigs := FindUpdatedBots(bp.configs, latestConfigs)
+	updatedBotConfigs := FindUpdatedBots(bp.getConfigsUnsafe(), latestConfigs)
 	for _, updatedBotConfig := range updatedBotConfigs {
 		logger := botLogger(updatedBotConfig)
-		bot, ok := bp.getBot(updatedBotConfig.ContainerName())
+		botClient, ok := bp.getBotClient(updatedBotConfig.ContainerName())
 		if !ok {
 			logger.Info("could not find the updated bot! skipping")
 			continue
 		}
-		bot.SetConfig(updatedBotConfig)
+		botClient.SetConfig(updatedBotConfig)
 	}
 	if len(updatedBotConfigs) > 0 {
 		bp.lifecycleMetrics.ActionUpdate(updatedBotConfigs...)
@@ -131,8 +130,6 @@ func (bp *botPool) UpdateBotsWithLatestConfigs(latestConfigs messaging.AgentPayl
 	if bp.waitBots > 0 && bp.botWg != nil {
 		bp.botWg.Add(-len(latestConfigs))
 	}
-
-	bp.configs = latestConfigs
 
 	return nil
 }
@@ -145,7 +142,7 @@ func (bp *botPool) RemoveBotsWithConfigs(removedBotConfigs messaging.AgentPayloa
 	// close and discard the removed bots
 	for _, removedBotConfig := range removedBotConfigs {
 		logger := botLogger(removedBotConfig)
-		bot, ok := bp.getBot(removedBotConfig.ContainerName())
+		bot, ok := bp.getBotClient(removedBotConfig.ContainerName())
 		if !ok {
 			logger.Info("could not find the removed bot! skipping")
 			continue
@@ -155,8 +152,8 @@ func (bp *botPool) RemoveBotsWithConfigs(removedBotConfigs messaging.AgentPayloa
 
 	// find the bots we are not supposed to remove and keep them
 	var preservedBots []botio.BotClient
-	for _, preservedBotConfig := range FindExtraBots(removedBotConfigs, bp.configs) {
-		bot, ok := bp.getBot(preservedBotConfig.ContainerName())
+	for _, preservedBotConfig := range FindExtraBots(removedBotConfigs, bp.getConfigsUnsafe()) {
+		bot, ok := bp.getBotClient(preservedBotConfig.ContainerName())
 		if ok {
 			preservedBots = append(preservedBots, bot)
 		}
@@ -174,7 +171,7 @@ func (bp *botPool) ReinitBotsWithConfigs(reinitedBotConfigs messaging.AgentPaylo
 
 	for _, reinitedBotConfig := range reinitedBotConfigs {
 		logger := botLogger(reinitedBotConfig)
-		bot, ok := bp.getBot(reinitedBotConfig.ContainerName())
+		bot, ok := bp.getBotClient(reinitedBotConfig.ContainerName())
 		if !ok {
 			logger.Info("could not find the reinited bot! skipping")
 			continue
@@ -209,11 +206,18 @@ func botLogger(botConfig config.AgentConfig) *log.Entry {
 	return log.WithField("bot", botConfig.ID).WithField("container", botConfig.ContainerName())
 }
 
-func (bp *botPool) getBot(containerName string) (botio.BotClient, bool) {
+func (bp *botPool) getBotClient(containerName string) (botio.BotClient, bool) {
 	for _, bot := range bp.botClients {
 		if bot.Config().ContainerName() == containerName {
 			return bot, true
 		}
 	}
 	return nil, false
+}
+
+func (bp *botPool) getConfigsUnsafe() (allConfigs []config.AgentConfig) {
+	for _, botClient := range bp.botClients {
+		allConfigs = append(allConfigs, botClient.Config())
+	}
+	return
 }

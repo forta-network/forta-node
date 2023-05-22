@@ -93,19 +93,29 @@ type botClient struct {
 	mu sync.RWMutex
 }
 
+var _ BotClient = &botClient{}
+
 func (bot *botClient) isCombinerBot() bool {
 	return len(bot.AlertConfig().Subscriptions) > 0
 }
 
-func (bot *botClient) CombinerBotSubscriptions() (subscriptions []domain.CombinerBotSubscription) {
-	for _, subscription := range bot.AlertConfig().Subscriptions {
+func (bot *botClient) CombinerBotSubscriptions() []domain.CombinerBotSubscription {
+	return MakeCombinerBotSubscriptions(bot.AlertConfig().Subscriptions, bot.Config())
+}
+
+// MakeCombinerBotSubscriptions makes combiner bot subscriptions from given alert config subscriptions.
+func MakeCombinerBotSubscriptions(
+	alertSubs []*protocol.CombinerBotSubscription,
+	botConfig config.AgentConfig,
+) (subscriptions []domain.CombinerBotSubscription) {
+	for _, subscription := range alertSubs {
 		subscriptions = append(
 			subscriptions, domain.CombinerBotSubscription{
 				Subscription: subscription,
 				Subscriber: &domain.Subscriber{
-					BotID:    bot.Config().ID,
-					BotOwner: bot.Config().Owner,
-					BotImage: bot.Config().Image,
+					BotID:    botConfig.ID,
+					BotOwner: botConfig.Owner,
+					BotImage: botConfig.Image,
 				},
 			},
 		)
@@ -118,13 +128,14 @@ func NewBotClient(
 	ctx context.Context, botCfg config.AgentConfig,
 	msgClient clients.MessageClient, lifecycleMetrics metrics.Lifecycle, botDialer agentgrpc.BotDialer,
 	resultChannels botreq.SendOnlyChannels,
-) BotClient {
+) *botClient {
 	return &botClient{
 		ctx:                 ctx,
 		configUnsafe:        botCfg,
 		txRequests:          make(chan *botreq.TxRequest, DefaultBufferSize),
 		blockRequests:       make(chan *botreq.BlockRequest, DefaultBufferSize),
 		combinationRequests: make(chan *botreq.CombinationRequest, DefaultBufferSize),
+		resultChannels:      resultChannels,
 		errCounter:          nodeutils.NewErrorCounter(3, isCriticalErr),
 		msgClient:           msgClient,
 		lifecycleMetrics:    lifecycleMetrics,
@@ -385,7 +396,7 @@ func validateInitializeResponse(response *protocol.InitializeResponse) error {
 
 	for _, subscription := range response.AlertConfig.Subscriptions {
 		if !utils.IsValidBotID(subscription.BotId) {
-			return fmt.Errorf("invalid bot id :%s", subscription.BotId)
+			return fmt.Errorf("invalid bot id: %s", subscription.BotId)
 		}
 	}
 

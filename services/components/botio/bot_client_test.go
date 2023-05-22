@@ -1,4 +1,4 @@
-package botio_test
+package botio
 
 import (
 	"context"
@@ -6,12 +6,13 @@ import (
 	"time"
 
 	"github.com/forta-network/forta-core-go/protocol"
-	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/agentgrpc"
+	mock_agentgrpc "github.com/forta-network/forta-node/clients/agentgrpc/mocks"
 	"github.com/forta-network/forta-node/clients/messaging"
 	mock_clients "github.com/forta-network/forta-node/clients/mocks"
 	"github.com/forta-network/forta-node/config"
-	"github.com/forta-network/forta-node/services/scanner"
+	"github.com/forta-network/forta-node/services/components/botio/botreq"
+	mock_metrics "github.com/forta-network/forta-node/services/components/metrics/mocks"
 	"google.golang.org/grpc"
 
 	"github.com/golang/mock/gomock"
@@ -19,92 +20,78 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// TODO: Reshape this into a working test or write similar.
-
 const (
-	testAgentID           = "test-agent"
+	testBotID             = "test-bot"
 	testRequestID         = "test-request-id"
 	testResponseID        = "test-response-id"
-	testCombinerSourceBot = "0x1d646c4045189991fdfd24a66b192a294158b839a6ec121d740474bdacb3as12"
+	testCombinerSourceBot = "0x1d646c4045189991fdfd24a66b192a294158b839a6ec121d740474bdacb3abcd"
 )
 
-// TestSuite runs the test suite.
-func TestSuite(t *testing.T) {
-	suite.Run(t, &Suite{})
-}
-
-// Suite is a test suite to test the agent pool.
-type Suite struct {
+// BotClientSuite is a test suite to test the agent pool.
+type BotClientSuite struct {
 	r *require.Assertions
 
-	msgClient   *mock_clients.MockMessageClient
-	agentClient *mock_clients.MockAgentClient
+	alertConfig *protocol.AlertConfig
 
-	ap *AgentPool
+	msgClient        *mock_clients.MockMessageClient
+	botGrpc          *mock_agentgrpc.MockClient
+	lifecycleMetrics *mock_metrics.MockLifecycle
+	botDialer        *mock_agentgrpc.MockBotDialer
+	resultChannels   botreq.SendReceiveChannels
+
+	botClient *botClient
 
 	suite.Suite
 }
 
-// SetupTest sets up the test.
-func (s *Suite) SetupTest() {
-	s.r = require.New(s.T())
-	s.msgClient = mock_clients.NewMockMessageClient(gomock.NewController(s.T()))
-	s.agentClient = mock_clients.NewMockAgentClient(gomock.NewController(s.T()))
-	s.ap = &AgentPool{
-		ctx:                     context.Background(),
-		txResults:               make(chan *scanner.TxResult),
-		blockResults:            make(chan *scanner.BlockResult),
-		combinationAlertResults: make(chan *scanner.CombinationAlertResult),
-		msgClient:               s.msgClient,
-		dialer: func(agentCfg config.AgentConfig) (clients.AgentClient, error) {
-			return s.agentClient, nil
-		},
-	}
+// TestBotClientSuite runs the test suite.
+func TestBotClientSuite(t *testing.T) {
+	suite.Run(t, &BotClientSuite{})
 }
 
-// TestStartProcessStop tests the starting, processing and stopping flow for an agent.
-func (s *Suite) TestStartProcessStop() {
-	agentConfig := config.AgentConfig{
-		ID: testAgentID,
-		AlertConfig: &protocol.AlertConfig{
-			Subscriptions: []*protocol.CombinerBotSubscription{
-				{
-					BotId: testCombinerSourceBot,
-				},
+// SetupTest sets up the test.
+func (s *BotClientSuite) SetupTest() {
+	s.r = require.New(s.T())
+
+	ctrl := gomock.NewController(s.T())
+	s.msgClient = mock_clients.NewMockMessageClient(ctrl)
+	s.botGrpc = mock_agentgrpc.NewMockClient(ctrl)
+	s.lifecycleMetrics = mock_metrics.NewMockLifecycle(ctrl)
+	s.botDialer = mock_agentgrpc.NewMockBotDialer(ctrl)
+	s.resultChannels = botreq.MakeResultChannels()
+
+	s.botDialer.EXPECT().DialBot(gomock.Any()).Return(s.botGrpc, nil).AnyTimes()
+
+	s.alertConfig = &protocol.AlertConfig{
+		Subscriptions: []*protocol.CombinerBotSubscription{
+			{
+				BotId: testCombinerSourceBot,
 			},
 		},
 	}
 
-	agentPayload := messaging.AgentPayload{
-		agentConfig,
-	}
-	emptyPayload := messaging.AgentPayload{}
+	s.botClient = NewBotClient(context.Background(), config.AgentConfig{
+		ID: testBotID,
+	}, s.msgClient, s.lifecycleMetrics, s.botDialer, s.resultChannels.SendOnly())
+	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{
+		AlertConfig: s.alertConfig,
+	}, nil).AnyTimes()
+}
 
-	// Prior to invoking initialize method, agent.start metric should be emitted.
-	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any())
-	s.agentClient.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+// TestStartProcessStop tests the starting, processing and stopping flow for a bot.
+func (s *BotClientSuite) TestStartProcessStop() {
+	combinerSubscriptions := MakeCombinerBotSubscriptions(s.alertConfig.Subscriptions, s.botClient.Config())
 
-	// Given that there are no agents running
-	// When the latest list is received,
-	// Then a "run" action should be published
-	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusAttached, gomock.Any())
-	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsActionRun, gomock.Any())
-	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsAlertSubscribe, gomock.Any())
-	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any())
-	s.r.NoError(s.ap.handleAgentVersionsUpdate(agentPayload))
+	s.lifecycleMetrics.EXPECT().Start(s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().StatusAttached(s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().StatusInitialized(s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().ActionSubscribe(combinerSubscriptions)
+	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsAlertSubscribe, combinerSubscriptions)
 
-	// Given that the agent is known to the pool but it is not ready yet
-	s.r.Equal(1, len(s.ap.agents))
-	s.r.False(s.ap.agents[0].IsReady())
-	// When the agent pool receives a message saying that the agent started to run
-	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any()).Times(2)
-	s.r.NoError(s.ap.handleStatusRunning(agentPayload))
-	// Then the agent must be marked ready
-	s.r.True(s.ap.agents[0].IsReady())
+	s.botClient.StartProcessing()
+	s.botClient.Initialize()
 
-	// Given that the agent is running
-	// When an evaluate requests are received
-	// Then the agent should process them
+	<-s.botClient.Initialized()
 
 	txReq := &protocol.EvaluateTxRequest{
 		Event: &protocol.TransactionEvent{
@@ -114,11 +101,17 @@ func (s *Suite) TestStartProcessStop() {
 			},
 		},
 	}
+	encodedTxReq, err := agentgrpc.EncodeMessage(txReq)
+	s.r.NoError(err)
 	txResp := &protocol.EvaluateTxResponse{Metadata: map[string]string{"imageHash": ""}}
+
 	blockReq := &protocol.EvaluateBlockRequest{Event: &protocol.BlockEvent{BlockNumber: "123123"}}
+	encodedBlockReq, err := agentgrpc.EncodeMessage(blockReq)
+	s.r.NoError(err)
 	blockResp := &protocol.EvaluateBlockResponse{Metadata: map[string]string{"imageHash": ""}}
+
 	combinerReq := &protocol.EvaluateAlertRequest{
-		TargetBotId: testAgentID,
+		TargetBotId: testBotID,
 		Event: &protocol.AlertEvent{
 			Alert: &protocol.AlertEvent_Alert{
 				Hash:      "123123",
@@ -127,36 +120,44 @@ func (s *Suite) TestStartProcessStop() {
 			},
 		},
 	}
-	// save combiner subscription
+	encodedCombinerReq, err := agentgrpc.EncodeMessage(combinerReq)
+	s.r.NoError(err)
 	combinerResp := &protocol.EvaluateAlertResponse{Metadata: map[string]string{"imageHash": ""}}
 
 	// test tx handling
-	s.agentClient.EXPECT().Invoke(
+	s.botGrpc.EXPECT().Invoke(
 		gomock.Any(), agentgrpc.MethodEvaluateTx,
 		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateTxResponse{}),
 	).Return(nil)
-	s.ap.SendEvaluateTxRequest(txReq)
-	txResult := <-s.ap.TxResults()
+	s.botClient.TxRequestCh() <- &botreq.TxRequest{
+		Encoded:  encodedTxReq,
+		Original: txReq,
+	}
+	txResult := <-s.resultChannels.Tx
 	txResp.Timestamp = txResult.Response.Timestamp // bypass - hard to match
 
 	// test block handling
-	s.agentClient.EXPECT().Invoke(
+	s.botGrpc.EXPECT().Invoke(
 		gomock.Any(), agentgrpc.MethodEvaluateBlock,
 		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateBlockResponse{}),
 	).Return(nil)
-	s.msgClient.EXPECT().Publish(messaging.SubjectScannerBlock, gomock.Any())
-	s.ap.SendEvaluateBlockRequest(blockReq)
-	blockResult := <-s.ap.BlockResults()
+	s.botClient.BlockRequestCh() <- &botreq.BlockRequest{
+		Encoded:  encodedBlockReq,
+		Original: blockReq,
+	}
+	blockResult := <-s.resultChannels.Block
 	blockResp.Timestamp = blockResult.Response.Timestamp // bypass - hard to match
 
 	// test combine alert handling
-	s.agentClient.EXPECT().Invoke(
+	s.botGrpc.EXPECT().Invoke(
 		gomock.Any(), agentgrpc.MethodEvaluateAlert,
 		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateAlertResponse{}),
 	).Return(nil)
-	s.msgClient.EXPECT().Publish(messaging.SubjectScannerAlert, gomock.Any())
-	s.ap.SendEvaluateAlertRequest(combinerReq)
-	alertResult := <-s.ap.CombinationAlertResults()
+	s.botClient.CombinationRequestCh() <- &botreq.CombinationRequest{
+		Encoded:  encodedCombinerReq,
+		Original: combinerReq,
+	}
+	alertResult := <-s.resultChannels.CombinationAlert
 	combinerResp.Timestamp = alertResult.Response.Timestamp // bypass - hard to match
 
 	s.r.Equal(txReq, txResult.Request)
@@ -166,11 +167,9 @@ func (s *Suite) TestStartProcessStop() {
 	s.r.Equal(combinerReq, alertResult.Request)
 	s.r.Equal(combinerResp, alertResult.Response)
 
-	// Given that the agent is running
-	// When an empty agent list is received
-	// Then a "stop" action should be published
-	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsActionStop, gomock.Any())
-	// And the agent must be closed
-	s.agentClient.EXPECT().Close()
-	s.r.NoError(s.ap.handleAgentVersionsUpdate(emptyPayload))
+	s.botGrpc.EXPECT().Close().AnyTimes()
+	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsAlertUnsubscribe, combinerSubscriptions)
+	s.lifecycleMetrics.EXPECT().ActionUnsubscribe(combinerSubscriptions)
+
+	s.r.NoError(s.botClient.Close())
 }

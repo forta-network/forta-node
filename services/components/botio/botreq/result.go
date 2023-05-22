@@ -32,35 +32,35 @@ type CombinationAlertResult struct {
 
 // SendReceiveChannels has the bot result channels.
 type SendReceiveChannels struct {
-	TxResult               chan *TxResult
-	BlockResult            chan *BlockResult
-	CombinationAlertResult chan *CombinationAlertResult
+	Tx               chan *TxResult
+	Block            chan *BlockResult
+	CombinationAlert chan *CombinationAlertResult
 }
 
 // MakeResultChannels makes the result channels and returns.
 func MakeResultChannels() SendReceiveChannels {
 	return SendReceiveChannels{
-		TxResult:               make(chan *TxResult),
-		BlockResult:            make(chan *BlockResult),
-		CombinationAlertResult: make(chan *CombinationAlertResult),
+		Tx:               make(chan *TxResult),
+		Block:            make(chan *BlockResult),
+		CombinationAlert: make(chan *CombinationAlertResult),
 	}
 }
 
 // ReceiveOnly returns the receive-only channels so that we cannot send.
 func (src SendReceiveChannels) ReceiveOnly() ReceiveOnlyChannels {
 	return ReceiveOnlyChannels{
-		Tx:               src.TxResult,
-		Block:            src.BlockResult,
-		CombinationAlert: src.CombinationAlertResult,
+		Tx:               src.Tx,
+		Block:            src.Block,
+		CombinationAlert: src.CombinationAlert,
 	}
 }
 
 // SendOnly returns the send-only channels so that we cannot receive.
 func (src SendReceiveChannels) SendOnly() SendOnlyChannels {
 	return SendOnlyChannels{
-		Tx:               src.TxResult,
-		Block:            src.BlockResult,
-		CombinationAlert: src.CombinationAlertResult,
+		Tx:               src.Tx,
+		Block:            src.Block,
+		CombinationAlert: src.CombinationAlert,
 	}
 }
 

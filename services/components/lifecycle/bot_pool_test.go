@@ -66,17 +66,18 @@ func (s *BotPoolTestSuite) TestAddUpdate() {
 		},
 	}
 
-	s.botPool.configs = assigned
-
 	s.botPool.botClients = []botio.BotClient{s.botClient2}
-	s.botClient2.EXPECT().Config().Return(assigned[0])
-	s.botClient2.EXPECT().SetConfig(updated[1])
-	s.botClient2.EXPECT().Config().Return(updated[1]).AnyTimes()
-	s.lifecycleMetrics.EXPECT().ActionUpdate(updated[1])
 
+	s.botClient2.EXPECT().Config().Return(assigned[0]).Times(3)
 	s.botClientFactory.EXPECT().NewBotClient(gomock.Any(), updated[0]).Return(s.botClient1)
 	s.botClient1.EXPECT().Initialize()
 	s.botClient1.EXPECT().StartProcessing()
+
+	s.botClient1.EXPECT().Config().Return(updated[0]).Times(1)
+	s.botClient2.EXPECT().Config().Return(assigned[0]).Times(1)
+	s.botClient2.EXPECT().SetConfig(updated[1])
+	//s.botClient2.EXPECT().Config().Return(updated[1]).Times(2)
+	s.lifecycleMetrics.EXPECT().ActionUpdate(updated[1])
 
 	s.botPool.UpdateBotsWithLatestConfigs(updated)
 
@@ -103,8 +104,6 @@ func (s *BotPoolTestSuite) TestRemove() {
 		},
 	}
 
-	s.botPool.configs = assigned
-
 	s.botPool.botClients = []botio.BotClient{s.botClient1, s.botClient2}
 	s.botClient1.EXPECT().Config().Return(assigned[0]).AnyTimes()
 	s.botClient2.EXPECT().Config().Return(assigned[1]).AnyTimes()
@@ -123,8 +122,6 @@ func (s *BotPoolTestSuite) TestReinit() {
 			Image: testImageRef,
 		},
 	}
-
-	s.botPool.configs = assigned
 
 	s.botPool.botClients = []botio.BotClient{s.botClient1}
 	s.botClient1.EXPECT().Config().Return(assigned[0]).AnyTimes()
@@ -147,6 +144,7 @@ func (s *BotPoolTestSuite) TestWaitForAll() {
 	botPool.waitInit = true
 
 	s.botClientFactory.EXPECT().NewBotClient(gomock.Any(), latest[0]).Return(s.botClient1)
+	s.botClient1.EXPECT().Config().Return(latest[0]).Times(1)
 	s.botClient1.EXPECT().LogStatus().AnyTimes()
 	s.botClient1.EXPECT().Initialize()
 	s.botClient1.EXPECT().StartProcessing()
