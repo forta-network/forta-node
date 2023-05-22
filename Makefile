@@ -25,6 +25,8 @@ mocks:
 	mockgen -source services/components/lifecycle/bot_pool.go -destination services/components/lifecycle/mocks/mock_bot_pool.go
 	mockgen -source services/components/lifecycle/bot_manager.go -destination services/components/lifecycle/mocks/mock_bot_manager.go
 	mockgen -source services/components/containers/bot_client.go -destination services/components/containers/mocks/mock_bot_client.go
+	mockgen -source services/components/botio/bot_client.go -destination services/components/botio/mocks/mock_bot_client.go
+	mockgen -source services/components/botio/bot_client_factory.go -destination services/components/botio/mocks/mock_bot_client_factory.go
 	mockgen -source clients/agentgrpc/dialer.go -destination clients/agentgrpc/mocks/mock_dialer.go
 	mockgen -source clients/agentgrpc/client.go -destination clients/agentgrpc/mocks/mock_client.go
 

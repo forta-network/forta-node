@@ -5,12 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/forta-network/forta-node/clients"
-	"github.com/forta-network/forta-node/clients/agentgrpc"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/services/components/botio"
-	"github.com/forta-network/forta-node/services/components/botio/botreq"
 	"github.com/forta-network/forta-node/services/components/metrics"
 	log "github.com/sirupsen/logrus"
 )
@@ -41,30 +38,28 @@ type botPool struct {
 
 	waitInit bool // hack to make testing synchronous
 
-	resultChannels   botreq.SendOnlyChannels
-	msgClient        clients.MessageClient
 	lifecycleMetrics metrics.Lifecycle
-	dialer           agentgrpc.BotDialer
+	botClientFactory botio.BotClientFactory
 }
 
 var _ BotPool = &botPool{}
 
 // NewBotPool creates a new bot pool.
 func NewBotPool(
-	ctx context.Context, msgClient clients.MessageClient, lifecycleMetrics metrics.Lifecycle,
-	botDialer agentgrpc.BotDialer, resultChannels botreq.SendOnlyChannels, waitBots int,
+	ctx context.Context, lifecycleMetrics metrics.Lifecycle,
+	botClientFactory botio.BotClientFactory, waitBots int,
 ) *botPool {
 	botPool := &botPool{
 		ctx:              ctx,
-		resultChannels:   resultChannels,
-		msgClient:        msgClient,
+		waitBots:         waitBots,
 		lifecycleMetrics: lifecycleMetrics,
-		dialer:           botDialer,
+		botClientFactory: botClientFactory,
 	}
 	if waitBots > 0 {
 		botPool.botWg = &sync.WaitGroup{}
 		botPool.botWg.Add(waitBots)
 		go botPool.logBotWait()
+		go botPool.logBotStatuses()
 	}
 	return botPool
 }
@@ -76,14 +71,14 @@ func (bp *botPool) logBotWait() {
 	}
 }
 
-func (bp *botPool) logBotChanBuffersLoop() {
+func (bp *botPool) logBotStatuses() {
 	ticker := time.NewTicker(time.Minute)
 	for range ticker.C {
-		bp.logBotStatuses()
+		bp.doLogBotStatuses()
 	}
 }
 
-func (bp *botPool) logBotStatuses() {
+func (bp *botPool) doLogBotStatuses() {
 	for _, agent := range bp.GetCurrentBotClients() {
 		agent.LogStatus()
 	}
@@ -105,9 +100,7 @@ func (bp *botPool) UpdateBotsWithLatestConfigs(latestConfigs messaging.AgentPayl
 		}
 
 		logger.Info("adding new bot")
-		bot = botio.NewBotClient(
-			bp.ctx, addedBotConfig, bp.msgClient, bp.lifecycleMetrics, bp.dialer, bp.resultChannels,
-		)
+		bot = bp.botClientFactory.NewBotClient(bp.ctx, addedBotConfig)
 
 		if bp.waitInit {
 			bot.Initialize()

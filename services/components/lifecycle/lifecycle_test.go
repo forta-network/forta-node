@@ -11,6 +11,7 @@ import (
 	mock_agentgrpc "github.com/forta-network/forta-node/clients/agentgrpc/mocks"
 	mock_clients "github.com/forta-network/forta-node/clients/mocks"
 	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/services/components/botio"
 	"github.com/forta-network/forta-node/services/components/botio/botreq"
 	mock_containers "github.com/forta-network/forta-node/services/components/containers/mocks"
 	mock_metrics "github.com/forta-network/forta-node/services/components/metrics/mocks"
@@ -74,7 +75,8 @@ func (s *LifecycleTestSuite) SetupTest() {
 	s.dialer = mock_agentgrpc.NewMockBotDialer(ctrl)
 	s.resultChannels = botreq.MakeResultChannels()
 
-	s.botPool = NewBotPool(context.Background(), s.msgClient, s.lifecycleMetrics, s.dialer, s.resultChannels.SendOnly(), 0)
+	botClientFactory := botio.NewBotClientFactory(s.resultChannels.SendOnly(), s.msgClient, s.lifecycleMetrics, s.dialer)
+	s.botPool = NewBotPool(context.Background(), s.lifecycleMetrics, botClientFactory, 0)
 	s.botPool.waitInit = true // hack to make testing synchronous
 	s.botManager = NewManager(s.botRegistry, s.botContainers, s.botPool, s.lifecycleMetrics)
 }

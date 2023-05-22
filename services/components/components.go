@@ -33,9 +33,13 @@ type BotProcessing struct {
 // GetBotProcessingComponents returns the bot processing components after doing dependency injection.
 func GetBotProcessingComponents(ctx context.Context, botProcCfg BotProcessingConfig) (BotProcessing, error) {
 	resultChannels := botreq.MakeResultChannels()
+	lifecycleMetrics := metrics.NewLifecycleClient(botProcCfg.MessageClient)
+	botClientFactory := botio.NewBotClientFactory(
+		resultChannels.SendOnly(), botProcCfg.MessageClient,
+		lifecycleMetrics, agentgrpc.NewBotDialer(),
+	)
 	botPool := lifecycle.NewBotPool(
-		ctx, botProcCfg.MessageClient, metrics.NewLifecycleClient(botProcCfg.MessageClient),
-		agentgrpc.NewBotDialer(), resultChannels.SendOnly(), botProcCfg.Config.BotsToWait(),
+		ctx, lifecycleMetrics, botClientFactory, botProcCfg.Config.BotsToWait(),
 	)
 	mediator.New(botProcCfg.MessageClient).ConnectBotPool(botPool)
 	sender := botio.NewSender(ctx, botProcCfg.MessageClient, botPool)
