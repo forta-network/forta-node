@@ -337,7 +337,7 @@ func (sup *SupervisorService) start() error {
 	}
 	sup.addContainerUnsafe(sup.publicAPIContainer)
 
-	shouldInspectAtStartup := sup.config.Config.InspectionConfig.InspectAtStartup
+	shouldInspectAtStartup := *sup.config.Config.InspectionConfig.InspectAtStartup
 	if sup.config.Config.LocalModeConfig.Enable {
 		shouldInspectAtStartup = shouldInspectAtStartup && sup.config.Config.LocalModeConfig.ForceEnableInspection
 	}
@@ -464,7 +464,7 @@ func (sup *SupervisorService) addContainerUnsafe(container *docker.Container, ag
 }
 
 func (sup *SupervisorService) registerMessageHandlers() {
-	if sup.config.Config.InspectionConfig.InspectAtStartup {
+	if *sup.config.Config.InspectionConfig.InspectAtStartup {
 		sup.msgClient.Subscribe(messaging.SubjectInspectionDone, messaging.InspectionResultsHandler(sup.handleInspectionResults))
 	}
 }
