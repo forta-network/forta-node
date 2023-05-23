@@ -33,16 +33,16 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the bot registry: %v", err)
 	}
-	botLifecycle, err := components.GetBotLifecycleComponents(ctx, components.BotLifecycleConfig{
+	botLifecycleConfig := components.BotLifecycleConfig{
 		Config:         cfg,
 		ScannerAddress: key.Address,
 		BotRegistry:    botRegistry,
-	})
+	}
 	svc, err := supervisor.NewSupervisorService(ctx, supervisor.SupervisorServiceConfig{
-		Config:       cfg,
-		Passphrase:   passphrase,
-		Key:          key,
-		BotLifecycle: botLifecycle,
+		Config:             cfg,
+		Passphrase:         passphrase,
+		Key:                key,
+		BotLifecycleConfig: botLifecycleConfig,
 	})
 	if err != nil {
 		return nil, err

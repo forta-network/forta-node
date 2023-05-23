@@ -46,7 +46,8 @@ type SupervisorService struct {
 	client       clients.DockerClient
 	globalClient clients.DockerClient
 
-	botLifecycle components.BotLifecycle
+	botLifecycleConfig components.BotLifecycleConfig
+	botLifecycle       components.BotLifecycle
 
 	manifestClient manifest.Client
 	releaseClient  release.Client
@@ -82,10 +83,10 @@ type SupervisorService struct {
 }
 
 type SupervisorServiceConfig struct {
-	Config       config.Config
-	Passphrase   string
-	Key          *keystore.Key
-	BotLifecycle components.BotLifecycle
+	Config             config.Config
+	Passphrase         string
+	Key                *keystore.Key
+	BotLifecycleConfig components.BotLifecycleConfig
 }
 
 // Container extends the default container data.
@@ -239,6 +240,11 @@ func (sup *SupervisorService) start() error {
 	// in tests, this is already set to a mock client
 	if sup.msgClient == nil {
 		sup.msgClient = messaging.NewClient("supervisor", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
+	}
+	sup.botLifecycleConfig.MessageClient = sup.msgClient // we are able to set this dependency only here
+	sup.botLifecycle, err = components.GetBotLifecycleComponents(sup.ctx, sup.botLifecycleConfig)
+	if err != nil {
+		return fmt.Errorf("failed to get bot lifecycle components: %v", err)
 	}
 	sup.registerMessageHandlers()
 
@@ -761,14 +767,14 @@ func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*Su
 	}
 
 	return &SupervisorService{
-		ctx:             ctx,
-		client:          dockerClient,
-		globalClient:    globalClient,
-		releaseClient:   releaseClient,
-		botLifecycle:    cfg.BotLifecycle,
-		config:          cfg,
-		healthClient:    health.NewClient(),
-		agentLogsClient: agentlogs.NewClient(cfg.Config.AgentLogsConfig.URL),
-		inspectionCh:    make(chan *protocol.InspectionResults),
+		ctx:                ctx,
+		client:             dockerClient,
+		globalClient:       globalClient,
+		releaseClient:      releaseClient,
+		botLifecycleConfig: cfg.BotLifecycleConfig,
+		config:             cfg,
+		healthClient:       health.NewClient(),
+		agentLogsClient:    agentlogs.NewClient(cfg.Config.AgentLogsConfig.URL),
+		inspectionCh:       make(chan *protocol.InspectionResults),
 	}, nil
 }

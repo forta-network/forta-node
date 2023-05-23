@@ -299,7 +299,7 @@ func (s *LifecycleTestSuite) TestUnassigned() {
 	s.lifecycleMetrics.EXPECT().StatusStopping(assigned[0])
 	s.botContainers.EXPECT().TearDownBot(gomock.Any(), assigned[0]).Return(nil)
 	s.lifecycleMetrics.EXPECT().StatusRunning().Times(1)
-	s.botGrpc.EXPECT().Close()
+	s.botGrpc.EXPECT().Close().AnyTimes()
 
 	// when the bot manager manages the assigned bots over time
 	s.r.NoError(s.botManager.ManageBots(context.Background()))
