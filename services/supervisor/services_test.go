@@ -8,6 +8,7 @@ import (
 
 	"github.com/forta-network/forta-core-go/release"
 	"github.com/forta-network/forta-core-go/utils"
+	"github.com/forta-network/forta-node/clients/messaging"
 
 	"github.com/docker/docker/api/types"
 
@@ -149,6 +150,8 @@ func (s *Suite) initialContainerCheck() {
 }
 
 func (s *Suite) TestStartServices() {
+	s.msgClient.EXPECT().Subscribe(messaging.SubjectMetricAgent, gomock.Any())
+
 	s.releaseClient.EXPECT().GetReleaseManifest(gomock.Any()).Return(&release.ReleaseManifest{}, nil).AnyTimes()
 
 	s.initialContainerCheck()
