@@ -28,4 +28,9 @@ func (sup *SupervisorService) doRefreshBotContainers() {
 	if err := sup.botLifecycle.BotManager.RestartExitedBots(sup.ctx); err != nil {
 		log.WithError(err).Error("error while restarting exited bots")
 	}
+	// doing the exits after restarts so the exits we do here can be picked up
+	// for restarts in the next round
+	if err := sup.botLifecycle.BotManager.ExitInactiveBots(sup.ctx); err != nil {
+		log.WithError(err).Error("error while exiting inactive bots")
+	}
 }
