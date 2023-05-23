@@ -71,19 +71,34 @@ func (bc *botClient) LaunchBot(ctx context.Context, botConfig config.AgentConfig
 		return nil
 	}
 
-	nwID, err := bc.client.CreatePublicNetwork(ctx, botConfig.ContainerName())
+	botNetworkID, err := bc.client.CreatePublicNetwork(ctx, botConfig.ContainerName())
 	if err != nil {
 		return err
 	}
 
-	botContainerCfg := NewBotContainerConfig(nwID, botConfig, bc.logConfig, bc.resourcesConfig)
-	botContainerCfg.LinkNetworkIDs, err = bc.getServiceContainerIDs(ctx)
-	if err != nil {
-		return err
-	}
-
+	botContainerCfg := NewBotContainerConfig(botNetworkID, botConfig, bc.logConfig, bc.resourcesConfig)
 	_, err = bc.client.StartContainer(ctx, botContainerCfg)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to start the bot container: %v", err)
+	}
+	return bc.attachServiceContainers(ctx, botNetworkID)
+}
+
+func (bc *botClient) attachServiceContainers(ctx context.Context, botNetworkID string) error {
+	serviceContainerIDs, err := bc.getServiceContainerIDs(ctx)
+	if err != nil {
+		return err
+	}
+	for _, serviceContainerID := range serviceContainerIDs {
+		err := bc.client.AttachNetwork(ctx, serviceContainerID, botNetworkID)
+		if err != nil {
+			return fmt.Errorf(
+				"failed to attach service container '%s' to bot network '%s': %v",
+				serviceContainerID, botNetworkID, err,
+			)
+		}
+	}
+	return nil
 }
 
 func (bc *botClient) getServiceContainerIDs(ctx context.Context) (ids []string, err error) {

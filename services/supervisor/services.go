@@ -381,7 +381,9 @@ func (sup *SupervisorService) start() error {
 
 		// this makes sure that inspector published a message. Which means publisher has also received it and
 		// inspection results will be available for every batch starting first batch.
+		log.Info("waiting for the first inspection to complete...")
 		<-sup.inspectionCh
+		log.Info("inspection to completed")
 	}
 
 	sup.scannerContainer, err = sup.client.StartContainer(
@@ -672,20 +674,18 @@ func (sup *SupervisorService) Stop() error {
 	sup.mu.RLock()
 	defer sup.mu.RUnlock()
 
+	// we use the background context here because
+	// we don't want tear downs to be aborted by the closed service context
 	ctx := context.Background()
+
+	if !services.IsGracefulShutdown() {
+		sup.botLifecycle.BotManager.TearDownRunningBots(ctx)
+	}
+
 	for _, cnt := range sup.containers {
-		if services.IsGracefulShutdown() && cnt.IsAgent {
-			continue // keep container agents alive
-		}
-		var err error
-		if cnt.IsAgent {
-			err = sup.client.StopContainer(ctx, cnt.Container.ID)
-		} else {
-			err = sup.client.InterruptContainer(ctx, cnt.Container.ID)
-		}
+		err := sup.client.InterruptContainer(ctx, cnt.Container.ID)
 		logger := log.WithFields(log.Fields{
-			"id":      cnt.ID,
-			"isAgent": cnt.IsAgent,
+			"id": cnt.ID,
 		})
 		if err != nil {
 			logger.WithError(err).Error("error stopping container")

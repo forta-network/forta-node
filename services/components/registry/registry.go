@@ -68,7 +68,7 @@ func (br *botRegistry) LoadAssignedBots() ([]config.AgentConfig, error) {
 		br.botConfigs = agts
 		logger.WithField("count", len(agts)).Info("updated bot list")
 	} else {
-		logger.Info("no bot list changes detected")
+		logger.Debug("no bot list changes detected")
 	}
 
 	return br.botConfigs, nil

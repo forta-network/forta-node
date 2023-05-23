@@ -61,3 +61,15 @@ func (mr *MockBotLifecycleManagerMockRecorder) RestartExitedBots(ctx interface{}
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestartExitedBots", reflect.TypeOf((*MockBotLifecycleManager)(nil).RestartExitedBots), ctx)
 }
+
+// TearDownRunningBots mocks base method.
+func (m *MockBotLifecycleManager) TearDownRunningBots(ctx context.Context) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "TearDownRunningBots", ctx)
+}
+
+// TearDownRunningBots indicates an expected call of TearDownRunningBots.
+func (mr *MockBotLifecycleManagerMockRecorder) TearDownRunningBots(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TearDownRunningBots", reflect.TypeOf((*MockBotLifecycleManager)(nil).TearDownRunningBots), ctx)
+}

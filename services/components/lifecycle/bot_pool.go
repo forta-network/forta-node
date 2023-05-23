@@ -88,7 +88,7 @@ func (bp *botPool) UpdateBotsWithLatestConfigs(latestConfigs messaging.AgentPayl
 	bp.mu.Lock()
 	defer bp.mu.Unlock()
 
-	// start and add missing bots
+	// add new bots
 	addedBotConfigs := FindExtraBots(bp.getConfigsUnsafe(), latestConfigs)
 	for _, addedBotConfig := range addedBotConfigs {
 		logger := botLogger(addedBotConfig)

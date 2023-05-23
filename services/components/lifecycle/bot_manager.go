@@ -22,6 +22,7 @@ var (
 type BotLifecycleManager interface {
 	ManageBots(ctx context.Context) error
 	RestartExitedBots(ctx context.Context) error
+	TearDownRunningBots(ctx context.Context)
 }
 
 type botLifecycleManager struct {
@@ -64,14 +65,15 @@ func (blm *botLifecycleManager) ManageBots(ctx context.Context) error {
 	}
 
 	// then wait a little to let the bot pool process this
+	// this is just for avoiding bot client error noise
 	time.Sleep(botRemoveTimeout)
 
 	// then stop the containers
 	for _, removedBotConfig := range removedBotConfigs {
 		err := blm.botClient.TearDownBot(ctx, removedBotConfig)
 		if err != nil {
-			log.WithField("container", removedBotConfig.ContainerName()).
-				Warn("failed to stop unassigned bot container")
+			log.WithError(err).WithField("container", removedBotConfig.ContainerName()).
+				Warn("failed to tear down unassigned bot container")
 		}
 	}
 
@@ -102,8 +104,8 @@ func (blm *botLifecycleManager) ManageBots(ctx context.Context) error {
 		// skip if the bot could not start
 		err := blm.botClient.LaunchBot(ctx, addedBotConfig)
 		if err != nil {
-			log.WithField("container", addedBotConfig.ContainerName()).
-				Warn("failed to start assigned bot container")
+			log.WithError(err).WithField("container", addedBotConfig.ContainerName()).
+				Warn("failed to launch bot")
 			// drop the bot from the list so it can be picked again next time
 			assignedBots = Drop(addedBotConfig, assignedBots)
 			blm.lifecycleMetrics.FailureLaunch(addedBotConfig)
@@ -153,6 +155,30 @@ func (blm *botLifecycleManager) RestartExitedBots(ctx context.Context) error {
 	// let bot pool reinitialize the restart bots
 	blm.botPool.ReinitBotsWithConfigs(restartedBotConfigs)
 	return nil
+}
+
+// TearDownRunningBots tears down all running bots.
+func (blm *botLifecycleManager) TearDownRunningBots(ctx context.Context) {
+	if len(blm.runningBots) == 0 {
+		return
+	}
+	log.WithField("count", len(blm.runningBots)).Info("tearing down running bots")
+
+	// remove all bots from the pool
+	blm.botPool.RemoveBotsWithConfigs(blm.runningBots)
+
+	// then wait a little to let the bot pool process this
+	// this is just for avoiding bot client error noise
+	time.Sleep(botRemoveTimeout)
+
+	// then stop the containers
+	for _, runningBotConfig := range blm.runningBots {
+		err := blm.botClient.TearDownBot(ctx, runningBotConfig)
+		if err != nil {
+			log.WithError(err).WithField("container", runningBotConfig.ContainerName()).
+				Warn("failed to tear down running bot container")
+		}
+	}
 }
 
 func (blm *botLifecycleManager) findBotConfig(containerName string) (config.AgentConfig, bool) {
