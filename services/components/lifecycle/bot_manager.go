@@ -153,7 +153,9 @@ func (blm *botLifecycleManager) RestartExitedBots(ctx context.Context) error {
 	}
 
 	// let bot pool reinitialize the restart bots
-	blm.botPool.ReinitBotsWithConfigs(restartedBotConfigs)
+	if len(restartedBotConfigs) > 0 {
+		blm.botPool.ReinitBotsWithConfigs(restartedBotConfigs)
+	}
 	return nil
 }
 
