@@ -93,10 +93,11 @@ func GetBotLifecycleComponents(ctx context.Context, botLifeConfig BotLifecycleCo
 		dockerClient, botImageClient,
 	)
 	lifecycleMetrics := metrics.NewLifecycleClient(botLifeConfig.MessageClient)
-	botPool := mediator.New(botLifeConfig.MessageClient, lifecycleMetrics)
+	lifecycleMediator := mediator.New(botLifeConfig.MessageClient, lifecycleMetrics)
 	botMonitor := lifecycle.NewBotMonitor(lifecycleMetrics)
+	lifecycleMediator.ConnectBotMonitor(botMonitor)
 	botManager := lifecycle.NewManager(
-		botLifeConfig.BotRegistry, botClient, botPool,
+		botLifeConfig.BotRegistry, botClient, lifecycleMediator,
 		lifecycleMetrics, botMonitor,
 	)
 	return BotLifecycle{
