@@ -136,7 +136,7 @@ func NewBotClient(
 		blockRequests:       make(chan *botreq.BlockRequest, DefaultBufferSize),
 		combinationRequests: make(chan *botreq.CombinationRequest, DefaultBufferSize),
 		resultChannels:      resultChannels,
-		errCounter:          nodeutils.NewErrorCounter(10, isCriticalErr),
+		errCounter:          nodeutils.NewErrorCounter(3, isCriticalErr),
 		msgClient:           msgClient,
 		lifecycleMetrics:    lifecycleMetrics,
 		dialer:              botDialer,
@@ -147,7 +147,7 @@ func NewBotClient(
 }
 
 func isCriticalErr(err error) bool {
-	return true
+	return false
 	// errStr := err.Error()
 	// return strings.Contains(errStr, codes.DeadlineExceeded.String()) ||
 	// 	strings.Contains(errStr, codes.Unavailable.String())
