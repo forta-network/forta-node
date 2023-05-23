@@ -16,12 +16,16 @@ func (sup *SupervisorService) refreshBotContainers() {
 			return
 
 		case <-time.After(time.Second * 15):
-			if err := sup.botLifecycle.BotManager.ManageBots(sup.ctx); err != nil {
-				log.WithError(err).Error("error while managing bots")
-			}
-			if err := sup.botLifecycle.BotManager.RestartExitedBots(sup.ctx); err != nil {
-				log.WithError(err).Error("error while restarting exited bots")
-			}
+			sup.doRefreshBotContainers()
 		}
+	}
+}
+
+func (sup *SupervisorService) doRefreshBotContainers() {
+	if err := sup.botLifecycle.BotManager.ManageBots(sup.ctx); err != nil {
+		log.WithError(err).Error("error while managing bots")
+	}
+	if err := sup.botLifecycle.BotManager.RestartExitedBots(sup.ctx); err != nil {
+		log.WithError(err).Error("error while restarting exited bots")
 	}
 }

@@ -414,10 +414,10 @@ func (pub *Publisher) registerMessageHandlers() {
 	pub.messageClient.Subscribe(messaging.SubjectScannerBlock, messaging.ScannerHandler(pub.handleScannerBlock))
 	pub.messageClient.Subscribe(messaging.SubjectScannerAlert, messaging.ScannerHandler(pub.handleScannerAlert))
 	pub.messageClient.Subscribe(messaging.SubjectInspectionDone, messaging.InspectionResultsHandler(pub.handleInspectionResults))
-	pub.messageClient.Subscribe(messaging.SubjectAgentsVersionsLatest, messaging.AgentsHandler(pub.handleAgentVersionsUpdate))
+	pub.messageClient.Subscribe(messaging.SubjectAgentsStatusRunning, messaging.AgentsHandler(pub.handleRunningBots))
 }
 
-func (pub *Publisher) handleAgentVersionsUpdate(payload messaging.AgentPayload) error {
+func (pub *Publisher) handleRunningBots(payload messaging.AgentPayload) error {
 	pub.botConfigMu.Lock()
 	pub.botConfigs = payload
 	pub.botConfigMu.Unlock()
