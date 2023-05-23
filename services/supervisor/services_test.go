@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/forta-network/forta-core-go/release"
+	"github.com/forta-network/forta-core-go/utils"
 
 	"github.com/docker/docker/api/types"
 
@@ -109,6 +110,7 @@ func (s *Suite) SetupTest() {
 	supervisor.config.Config.Log.Level = "debug"
 	supervisor.config.Config.ChainID = 1
 	supervisor.config.Config.AdvancedConfig.IPFSExperiment = true
+	supervisor.config.Config.InspectionConfig.InspectAtStartup = utils.BoolPtr(false)
 	s.supervisor = supervisor
 }
 

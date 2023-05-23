@@ -41,7 +41,7 @@ func GetBotProcessingComponents(ctx context.Context, botProcCfg BotProcessingCon
 	botPool := lifecycle.NewBotPool(
 		ctx, lifecycleMetrics, botClientFactory, botProcCfg.Config.BotsToWait(),
 	)
-	mediator.New(botProcCfg.MessageClient).ConnectBotPool(botPool)
+	mediator.New(botProcCfg.MessageClient, lifecycleMetrics).ConnectBotPool(botPool)
 	sender := botio.NewSender(ctx, botProcCfg.MessageClient, botPool)
 	return BotProcessing{
 		RequestSender: sender,
@@ -92,10 +92,12 @@ func GetBotLifecycleComponents(ctx context.Context, botLifeConfig BotLifecycleCo
 		botLifeConfig.Config.Log, botLifeConfig.Config.ResourcesConfig,
 		dockerClient, botImageClient,
 	)
-	botPool := mediator.New(botLifeConfig.MessageClient)
+	lifecycleMetrics := metrics.NewLifecycleClient(botLifeConfig.MessageClient)
+	botPool := mediator.New(botLifeConfig.MessageClient, lifecycleMetrics)
+	botMonitor := lifecycle.NewBotMonitor(lifecycleMetrics)
 	botManager := lifecycle.NewManager(
 		botLifeConfig.BotRegistry, botClient, botPool,
-		metrics.NewLifecycleClient(botLifeConfig.MessageClient),
+		lifecycleMetrics, botMonitor,
 	)
 	return BotLifecycle{
 		BotManager: botManager,

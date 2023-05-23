@@ -21,6 +21,7 @@ var (
 // BotLifecycleManager manages lifecycles of running bots.
 type BotLifecycleManager interface {
 	ManageBots(ctx context.Context) error
+	ExitInactiveBots(ctx context.Context) error
 	RestartExitedBots(ctx context.Context) error
 	TearDownRunningBots(ctx context.Context)
 }
@@ -30,6 +31,7 @@ type botLifecycleManager struct {
 	botClient        containers.BotClient
 	botPool          BotPoolUpdater
 	lifecycleMetrics metrics.Lifecycle
+	botMonitor       BotMonitor
 
 	runningBots []config.AgentConfig
 }
@@ -40,12 +42,14 @@ var _ BotLifecycleManager = &botLifecycleManager{}
 func NewManager(
 	botRegistry registry.BotRegistry, botClient containers.BotClient,
 	botPool BotPoolUpdater, lifecycleMetrics metrics.Lifecycle,
+	botMonitor BotMonitor,
 ) *botLifecycleManager {
 	return &botLifecycleManager{
 		botRegistry:      botRegistry,
 		botClient:        botClient,
 		botPool:          botPool,
 		lifecycleMetrics: lifecycleMetrics,
+		botMonitor:       botMonitor,
 	}
 }
 
@@ -121,6 +125,26 @@ func (blm *botLifecycleManager) ManageBots(ctx context.Context) error {
 	return nil
 }
 
+// ExitInactiveBots exits inactive bots so the restart can pick them up later.
+func (blm *botLifecycleManager) ExitInactiveBots(ctx context.Context) error {
+	inactiveBotIDs := blm.botMonitor.GetInactiveBots()
+	if len(inactiveBotIDs) == 0 {
+		return nil
+	}
+	for _, inactiveBotID := range inactiveBotIDs {
+		botConfig, found := blm.findBotConfigByID(inactiveBotID)
+		logger := log.WithField("bot", inactiveBotID)
+		if !found {
+			logger.Warn("could not find the config for inactive bot - skipping stop")
+			continue
+		}
+		if err := blm.botClient.StopBot(ctx, botConfig); err != nil {
+			logger.WithError(err).Error("failed to stop the inactive bot")
+		}
+	}
+	return nil
+}
+
 // RestartExitedBots restarts bot containers when they are down and lets other services know.
 func (blm *botLifecycleManager) RestartExitedBots(ctx context.Context) error {
 	botContainers, err := blm.botClient.LoadBotContainers(ctx)
@@ -186,6 +210,15 @@ func (blm *botLifecycleManager) TearDownRunningBots(ctx context.Context) {
 func (blm *botLifecycleManager) findBotConfig(containerName string) (config.AgentConfig, bool) {
 	for _, bot := range blm.runningBots {
 		if bot.ContainerName() == containerName {
+			return bot, true
+		}
+	}
+	return config.AgentConfig{}, false
+}
+
+func (blm *botLifecycleManager) findBotConfigByID(botID string) (config.AgentConfig, bool) {
+	for _, bot := range blm.runningBots {
+		if bot.ID == botID {
 			return bot, true
 		}
 	}

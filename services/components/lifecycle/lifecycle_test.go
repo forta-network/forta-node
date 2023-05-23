@@ -14,6 +14,7 @@ import (
 	"github.com/forta-network/forta-node/services/components/botio"
 	"github.com/forta-network/forta-node/services/components/botio/botreq"
 	mock_containers "github.com/forta-network/forta-node/services/components/containers/mocks"
+	mock_lifecycle "github.com/forta-network/forta-node/services/components/lifecycle/mocks"
 	mock_metrics "github.com/forta-network/forta-node/services/components/metrics/mocks"
 	mock_registry "github.com/forta-network/forta-node/services/components/registry/mocks"
 	"github.com/golang/mock/gomock"
@@ -49,6 +50,7 @@ type LifecycleTestSuite struct {
 	botRegistry      *mock_registry.MockBotRegistry
 	botContainers    *mock_containers.MockBotClient
 	dialer           *mock_agentgrpc.MockBotDialer
+	botMonitor       *mock_lifecycle.MockBotMonitor
 
 	resultChannels botreq.SendReceiveChannels
 
@@ -74,11 +76,12 @@ func (s *LifecycleTestSuite) SetupTest() {
 	s.botContainers = mock_containers.NewMockBotClient(ctrl)
 	s.dialer = mock_agentgrpc.NewMockBotDialer(ctrl)
 	s.resultChannels = botreq.MakeResultChannels()
+	s.botMonitor = mock_lifecycle.NewMockBotMonitor(ctrl)
 
 	botClientFactory := botio.NewBotClientFactory(s.resultChannels.SendOnly(), s.msgClient, s.lifecycleMetrics, s.dialer)
 	s.botPool = NewBotPool(context.Background(), s.lifecycleMetrics, botClientFactory, 0)
 	s.botPool.waitInit = true // hack to make testing synchronous
-	s.botManager = NewManager(s.botRegistry, s.botContainers, s.botPool, s.lifecycleMetrics)
+	s.botManager = NewManager(s.botRegistry, s.botContainers, s.botPool, s.lifecycleMetrics, s.botMonitor)
 }
 
 func (s *LifecycleTestSuite) TestDownloadTimeout() {
@@ -266,6 +269,55 @@ func (s *LifecycleTestSuite) TestExitedRestarted() {
 	s.r.NoError(s.botManager.ManageBots(context.Background()))
 	s.r.NoError(s.botManager.RestartExitedBots(context.Background()))
 	s.r.NoError(s.botManager.ManageBots(context.Background()))
+	s.r.NoError(s.botManager.RestartExitedBots(context.Background()))
+}
+
+func (s *LifecycleTestSuite) TestInactiveRestarted() {
+	s.T().Log("should restart, redial and reinitialize the inactive and exited bots")
+
+	assigned := []config.AgentConfig{
+		{
+			ID:    testBotID1,
+			Image: testImageRef,
+		},
+	}
+
+	// given that there is a new bot assignment
+	// and no new assignments after the first time
+	s.botRegistry.EXPECT().LoadAssignedBots().Return(assigned, nil).Times(1)
+
+	// then there should be restart and reinitialization
+
+	s.botContainers.EXPECT().EnsureBotImages(gomock.Any(), assigned).Return([]error{nil}).Times(1)
+	s.botContainers.EXPECT().LaunchBot(gomock.Any(), assigned[0]).Return(nil).Times(1)
+	s.lifecycleMetrics.EXPECT().StatusRunning(assigned[0]).Times(1)
+	s.lifecycleMetrics.EXPECT().Start(assigned[0]).Times(2)
+	s.lifecycleMetrics.EXPECT().StatusAttached(assigned[0]).Times(2)
+	s.lifecycleMetrics.EXPECT().StatusInitialized(assigned[0]).Times(2)
+	s.dialer.EXPECT().DialBot(assigned[0]).Return(s.botGrpc, nil).Times(2)
+	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{}, nil).
+		Times(2)
+	s.botGrpc.EXPECT().Close().Return(nil).Times(1) // should close the client before replacing
+
+	s.botMonitor.EXPECT().GetInactiveBots().Return([]string{testBotID1})
+	s.botContainers.EXPECT().StopBot(gomock.Any(), assigned[0])
+
+	dockerContainerName := fmt.Sprintf("/%s", assigned[0].ContainerName())
+
+	s.botContainers.EXPECT().LoadBotContainers(gomock.Any()).Return([]types.Container{
+		{
+			ID:    testContainerID,
+			Names: []string{dockerContainerName},
+			State: "exited",
+		},
+	}, nil).Times(1)
+
+	s.lifecycleMetrics.EXPECT().ActionRestart(assigned[0])
+	s.botContainers.EXPECT().StartWaitBotContainer(gomock.Any(), testContainerID).Return(nil)
+
+	// when the bot manager manages the assigned bots over time
+	s.r.NoError(s.botManager.ManageBots(context.Background()))
+	s.r.NoError(s.botManager.ExitInactiveBots(context.Background()))
 	s.r.NoError(s.botManager.RestartExitedBots(context.Background()))
 }
 

@@ -24,6 +24,7 @@ type BotClient interface {
 	EnsureBotImages(ctx context.Context, botConfigs []config.AgentConfig) []error
 	LaunchBot(ctx context.Context, botConfig config.AgentConfig) error
 	TearDownBot(ctx context.Context, botConfig config.AgentConfig) error
+	StopBot(ctx context.Context, botConfig config.AgentConfig) error
 	LoadBotContainers(ctx context.Context) ([]types.Container, error)
 	StartWaitBotContainer(ctx context.Context, containerID string) error
 }
@@ -123,6 +124,18 @@ func (bc *botClient) TearDownBot(ctx context.Context, botConfig config.AgentConf
 	}
 	if err := bc.client.RemoveContainer(ctx, container.ID); err != nil {
 		return fmt.Errorf("failed to destroy the container: %v", err)
+	}
+	return nil
+}
+
+// StopBot shuts down a bot container.
+func (bc *botClient) StopBot(ctx context.Context, botConfig config.AgentConfig) error {
+	container, err := bc.client.GetContainerByName(ctx, botConfig.ContainerName())
+	if err != nil {
+		return fmt.Errorf("failed to get the bot container to stop: %v", err)
+	}
+	if err := bc.client.StopContainer(ctx, container.ID); err != nil {
+		return fmt.Errorf("failed to stop the container: %v", err)
 	}
 	return nil
 }

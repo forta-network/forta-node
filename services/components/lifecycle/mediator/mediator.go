@@ -4,15 +4,18 @@ import (
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/services/components/lifecycle"
+	"github.com/forta-network/forta-node/services/components/metrics"
 )
 
 type lifecycleMediator struct {
-	msgClient clients.MessageClient
+	msgClient        clients.MessageClient
+	lifecycleMetrics metrics.Lifecycle
 }
 
 // Mediator helps in connecting the bot manager with bot pool.
 type Mediator interface {
 	ConnectBotPool(botPool lifecycle.BotPoolUpdater)
+	ConnectBotMonitor(botMonitor lifecycle.BotMonitorUpdater)
 	lifecycle.BotPoolUpdater
 }
 
@@ -20,9 +23,10 @@ type Mediator interface {
 // It lets the bot client pool subscribe to the messaging coming from the bot manager so
 // the bot manager and the bot client pool are connected.
 // This helps in defining the manager-pool communication concretely.
-func New(msgClient clients.MessageClient) Mediator {
+func New(msgClient clients.MessageClient, lifecycleMetrics metrics.Lifecycle) Mediator {
 	return &lifecycleMediator{
-		msgClient: msgClient,
+		msgClient:        msgClient,
+		lifecycleMetrics: lifecycleMetrics,
 	}
 }
 
@@ -36,6 +40,13 @@ func (lm *lifecycleMediator) ConnectBotPool(botPool lifecycle.BotPoolUpdater) {
 	)
 	lm.msgClient.Subscribe(
 		messaging.SubjectAgentsStatusRestarted, messaging.AgentsHandler(botPool.ReinitBotsWithConfigs),
+	)
+}
+
+// ConnectBotMonitor connects given bot monitor by subscribing to lifecycle management messages.
+func (lm *lifecycleMediator) ConnectBotMonitor(botMonitor lifecycle.BotMonitorUpdater) {
+	lm.msgClient.Subscribe(
+		messaging.SubjectMetricAgent, messaging.AgentMetricHandler(botMonitor.UpdateWithMetrics),
 	)
 }
 

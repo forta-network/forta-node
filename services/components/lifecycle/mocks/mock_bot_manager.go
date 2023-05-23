@@ -34,6 +34,20 @@ func (m *MockBotLifecycleManager) EXPECT() *MockBotLifecycleManagerMockRecorder 
 	return m.recorder
 }
 
+// ExitInactiveBots mocks base method.
+func (m *MockBotLifecycleManager) ExitInactiveBots(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExitInactiveBots", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ExitInactiveBots indicates an expected call of ExitInactiveBots.
+func (mr *MockBotLifecycleManagerMockRecorder) ExitInactiveBots(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExitInactiveBots", reflect.TypeOf((*MockBotLifecycleManager)(nil).ExitInactiveBots), ctx)
+}
+
 // ManageBots mocks base method.
 func (m *MockBotLifecycleManager) ManageBots(ctx context.Context) error {
 	m.ctrl.T.Helper()
