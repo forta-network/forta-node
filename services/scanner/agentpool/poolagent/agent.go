@@ -315,21 +315,21 @@ func (agent *Agent) Initialize() {
 	}
 
 	if err != nil {
-		metrics.SendAgentMetrics(agent.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agentConfig.ID, messaging.SubjectAgentsStatusInitializeFailed, 1)})
+		metrics.SendAgentMetrics(agent.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agentConfig.ID, metrics.MetricInitializeError, 1)})
 		logger.WithError(err).Warn("bot initialization failed")
 		_ = agent.Close()
 		return
 	}
 
 	if err := validateInitializeResponse(initializeResponse); err != nil {
-		metrics.SendAgentMetrics(agent.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agentConfig.ID, messaging.SubjectAgentsStatusInitializeFailed, 1)})
+		metrics.SendAgentMetrics(agent.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agentConfig.ID, metrics.MetricInitializeError, 1)})
 		logger.WithError(err).Warn("bot initialization response validation failed")
 		_ = agent.Close()
 		return
 	}
 
 	if initializeResponse.Status == protocol.ResponseStatus_ERROR {
-		metrics.SendAgentMetrics(agent.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agentConfig.ID, messaging.SubjectAgentsStatusInitializeFailed, 1)})
+		metrics.SendAgentMetrics(agent.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agentConfig.ID, metrics.MetricInitializeError, 1)})
 		logger.WithError(err).Warn("bot initialization failed")
 		_ = agent.Close()
 		return

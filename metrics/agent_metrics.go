@@ -36,6 +36,7 @@ const (
 	MetricActionUnsubscribe       = "agent.action.unsubscribe"
 	MetricStatusAttached          = "agent.status.attached"
 	MetricStatusRunning           = "agent.status.running"
+	MetricInitializeError         = "agents.status.initialize.error"
 	MetricJSONRPCLatency          = "jsonrpc.latency"
 	MetricJSONRPCRequest          = "jsonrpc.request"
 	MetricJSONRPCSuccess          = "jsonrpc.success"
