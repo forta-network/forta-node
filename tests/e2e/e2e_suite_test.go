@@ -28,6 +28,7 @@ import (
 	"github.com/forta-network/forta-core-go/security"
 	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/clients/docker"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/tests/e2e"
 	"github.com/forta-network/forta-node/tests/e2e/ethaccounts"
@@ -128,7 +129,7 @@ func TestE2E(t *testing.T) {
 		ctx: context.Background(),
 		r:   require.New(t),
 	}
-	dockerClient, err := clients.NewDockerClient("")
+	dockerClient, err := docker.NewDockerClient("")
 	s.r.NoError(err)
 	s.dockerClient = dockerClient
 

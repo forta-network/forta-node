@@ -18,7 +18,7 @@ import (
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/clients/ratelimiter"
 	"github.com/forta-network/forta-node/config"
-	"github.com/forta-network/forta-node/metrics"
+	"github.com/forta-network/forta-node/services/components/metrics"
 	jwt_provider "github.com/forta-network/forta-node/services/jwt-provider"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
@@ -291,6 +291,6 @@ func newPublicAPIProxy(
 		authenticator: botAuthenticator,
 		msgClient:     msgClient,
 		Key:           key,
-		rateLimiter: rateLimiter,
+		rateLimiter:   rateLimiter,
 	}, nil
 }

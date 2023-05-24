@@ -1,15 +1,15 @@
 package config
 
-// AgentResourceLimits contain the agent resource limits data.
-type AgentResourceLimits struct {
+// BotResourceLimits contain the agent resource limits data.
+type BotResourceLimits struct {
 	CPUQuota int64 // in microseconds
 	Memory   int64 // in bytes
 }
 
 // GetAgentResourceLimits calculates and returns the resource limits by
 // taking the configuration into account. Zero values mean no limits.
-func GetAgentResourceLimits(resourcesCfg ResourcesConfig) *AgentResourceLimits {
-	var limits AgentResourceLimits
+func GetAgentResourceLimits(resourcesCfg ResourcesConfig) *BotResourceLimits {
+	var limits BotResourceLimits
 
 	if resourcesCfg.DisableAgentLimits {
 		return &limits
