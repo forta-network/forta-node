@@ -101,6 +101,7 @@ func (s *Suite) TestPublishChanges() {
 
 	s.registryStore.EXPECT().GetAgentsIfChanged(s.service.scannerAddress.Hex()).Return(configs, true, nil)
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsVersionsLatest, configs)
+	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any()).AnyTimes()
 
 	s.NoError(s.service.publishLatestAgents())
 }

@@ -23,8 +23,21 @@ const (
 	agentStartTimeout = time.Minute * 5
 )
 
+func (sup *SupervisorService) emitMetric(agentID string, name string) {
+	m := metrics.CreateAgentMetric(agentID, name, float64(1))
+	sup.msgClient.PublishProto(
+		messaging.SubjectMetricAgent,
+		&protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{m}},
+	)
+}
+
+func (sup *SupervisorService) emitErrMetric(agentID string, name string, err error) {
+	sup.emitMetric(agentID, fmt.Sprintf("%s-%s", name, err.Error()))
+}
+
 func (sup *SupervisorService) startAgent(ctx context.Context, agent config.AgentConfig) error {
 	if err := sup.agentImageClient.EnsureLocalImage(ctx, fmt.Sprintf("agent %s", agent.ID), agent.Image); err != nil {
+		sup.emitErrMetric(agent.ID, metrics.MetricAgentSupervisorStartErrorImage, err)
 		return err
 	}
 
@@ -38,6 +51,7 @@ func (sup *SupervisorService) startAgent(ctx context.Context, agent config.Agent
 
 	nwID, err := sup.client.CreatePublicNetwork(ctx, agent.ContainerName())
 	if err != nil {
+		sup.emitErrMetric(agent.ID, metrics.MetricAgentSupervisorStartErrorCreateNetwork, err)
 		return err
 	}
 
@@ -71,6 +85,7 @@ func (sup *SupervisorService) startAgent(ctx context.Context, agent config.Agent
 		},
 	)
 	if err != nil {
+		sup.emitErrMetric(agent.ID, metrics.MetricAgentSupervisorErrorStartContainer, err)
 		return err
 	}
 
@@ -81,11 +96,13 @@ func (sup *SupervisorService) startAgent(ctx context.Context, agent config.Agent
 	} {
 		err := sup.client.AttachNetwork(ctx, containerID, nwID)
 		if err != nil {
+			sup.emitErrMetric(agent.ID, metrics.MetricAgentSupervisorStartErrorAttachNetwork, err)
 			return err
 		}
 	}
 
 	sup.addContainerUnsafe(agentContainer, &agent)
+	sup.emitMetric(agent.ID, metrics.MetricAgentSupervisorStartComplete)
 
 	return nil
 }
@@ -141,6 +158,8 @@ func (sup *SupervisorService) handleAgentRunWithContext(ctx context.Context, pay
 
 // doStartAgent intended to use during multiple agent starts
 func (sup *SupervisorService) doStartAgent(ctx context.Context, agent config.AgentConfig, wg *sync.WaitGroup) {
+	sup.emitMetric(agent.ID, metrics.MetricAgentSupervisorStartBegin)
+
 	ctx, cancel := context.WithTimeout(ctx, agentStartTimeout)
 	defer cancel()
 
@@ -151,19 +170,21 @@ func (sup *SupervisorService) doStartAgent(ctx context.Context, agent config.Age
 	err := sup.startAgent(ctx, agent)
 	if err == errAgentAlreadyRunning {
 		logger.Infof("agent container is already running - skipped")
+		sup.emitMetric(agent.ID, metrics.MetricAgentSupervisorStartSkipAlreadyRunning)
 		sup.msgClient.Publish(messaging.SubjectAgentsStatusRunning, messaging.AgentPayload{agent})
-		metrics.SendAgentMetrics(sup.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agent.ID,metrics.MetricStatusRunning,1)})
+		metrics.SendAgentMetrics(sup.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agent.ID, metrics.MetricStatusRunning, 1)})
 		return
 	}
 	if err != nil {
 		logger.WithError(err).Error("failed to start agent")
+		sup.emitErrMetric(agent.ID, metrics.MetricAgentSupervisorStartError, err)
 		sup.msgClient.Publish(messaging.SubjectAgentsStatusStopped, messaging.AgentPayload{agent})
 		return
 	}
 
 	// Broadcast the agent status.
 	sup.msgClient.Publish(messaging.SubjectAgentsStatusRunning, messaging.AgentPayload{agent})
-	metrics.SendAgentMetrics(sup.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agent.ID,metrics.MetricStatusRunning,1)})
+	metrics.SendAgentMetrics(sup.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agent.ID, metrics.MetricStatusRunning, 1)})
 }
 
 func (sup *SupervisorService) handleAgentStop(payload messaging.AgentPayload) error {
@@ -173,18 +194,24 @@ func (sup *SupervisorService) handleAgentStop(payload messaging.AgentPayload) er
 	sup.lastStop.Set()
 
 	stopped := make(map[string]bool)
+
 	for _, agentCfg := range payload {
+		sup.emitMetric(agentCfg.ID, metrics.MetricAgentSupervisorStopBegin)
 		logger := agentLogger(agentCfg)
 
 		container, ok := sup.getContainerUnsafe(agentCfg.ContainerName())
 		if !ok {
+			sup.emitMetric(agentCfg.ID, metrics.MetricAgentSupervisorStopSkipNotFound)
 			logger.Warnf("container for agent was not found - skipping stop action")
 			continue
 		}
 		if err := sup.client.StopContainer(sup.ctx, container.ID); err != nil {
+			sup.emitErrMetric(agentCfg.ID, metrics.MetricAgentSupervisorStopErrorContainer, err)
 			return fmt.Errorf("failed to stop container '%s': %v", container.ID, err)
 		}
 		logger.Infof("successfully stopped the container")
+
+		sup.emitMetric(agentCfg.ID, metrics.MetricAgentSupervisorStopComplete)
 		stopped[container.ID] = true
 	}
 
