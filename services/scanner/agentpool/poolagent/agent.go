@@ -321,15 +321,17 @@ func (agent *Agent) Initialize() {
 		return
 	}
 
-	if initializeResponse.Status == protocol.ResponseStatus_ERROR {
+	if err := validateInitializeResponse(initializeResponse); err != nil {
 		metrics.SendAgentMetrics(agent.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agentConfig.ID, messaging.SubjectAgentsStatusInitializeFailed, 1)})
-		logger.WithError(err).Warn("bot initialization failed")
+		logger.WithError(err).Warn("bot initialization response validation failed")
 		_ = agent.Close()
 		return
 	}
 
-	if err := validateInitializeResponse(initializeResponse); err != nil {
-		logger.WithError(err).Warn("bot initialization validation failed")
+	if initializeResponse.Status == protocol.ResponseStatus_ERROR {
+		metrics.SendAgentMetrics(agent.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agentConfig.ID, messaging.SubjectAgentsStatusInitializeFailed, 1)})
+		logger.WithError(err).Warn("bot initialization failed")
+		_ = agent.Close()
 		return
 	}
 
@@ -345,7 +347,10 @@ func (agent *Agent) Initialize() {
 }
 
 func validateInitializeResponse(response *protocol.InitializeResponse) error {
-	if response == nil || response.AlertConfig == nil {
+	if response == nil {
+		return fmt.Errorf("initialize response can not be nil")
+	}
+	if response.AlertConfig == nil {
 		return nil
 	}
 
