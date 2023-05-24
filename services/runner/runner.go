@@ -12,7 +12,6 @@ import (
 	"github.com/forta-network/forta-core-go/ethereum"
 	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/clients"
-	"github.com/forta-network/forta-node/clients/docker"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/healthutils"
 	"github.com/forta-network/forta-node/services"
@@ -33,8 +32,8 @@ type Runner struct {
 	dockerClient clients.DockerClient
 	globalClient clients.DockerClient
 
-	updaterContainer     *docker.Container
-	supervisorContainer  *docker.Container
+	updaterContainer     *clients.DockerContainer
+	supervisorContainer  *clients.DockerContainer
 	currentUpdaterImg    string
 	currentSupervisorImg string
 	containerMu          sync.RWMutex // protects above refs and containers
@@ -137,7 +136,7 @@ func (runner *Runner) fixTestRpcUrl(rawurl string) string {
 	return strings.ReplaceAll(rawurl, "host.docker.internal", "localhost")
 }
 
-func (runner *Runner) removeContainer(container *docker.Container) error {
+func (runner *Runner) removeContainer(container *clients.DockerContainer) error {
 	if container != nil {
 		return runner.removeContainerWithProps(container.Name, container.ID)
 	}
@@ -277,7 +276,7 @@ func (runner *Runner) startUpdater(logger *log.Entry, latestRefs store.ImageRefs
 		return err
 	}
 
-	uc, err := runner.dockerClient.StartContainer(runner.ctx, docker.ContainerConfig{
+	uc, err := runner.dockerClient.StartContainer(runner.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerUpdaterContainerName,
 		Image: updaterRef,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "updater"},
@@ -315,7 +314,7 @@ func (runner *Runner) startSupervisor(logger *log.Entry, latestRefs store.ImageR
 	if err != nil {
 		return err
 	}
-	sc, err := runner.dockerClient.StartContainer(runner.ctx, docker.ContainerConfig{
+	sc, err := runner.dockerClient.StartContainer(runner.ctx, clients.DockerContainerConfig{
 		Name:  config.DockerSupervisorContainerName,
 		Image: supervisorRef,
 		Cmd:   []string{config.DefaultFortaNodeBinaryPath, "supervisor"},

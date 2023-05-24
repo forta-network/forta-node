@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/forta-network/forta-node/clients/docker"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/config"
 )
@@ -81,7 +80,7 @@ func (p *ipAuthenticator) FindContainerNameFromRemoteAddr(ctx context.Context, h
 	return containerName, nil
 }
 
-func (p *ipAuthenticator) handleAgentStatusRunning(payload messaging.AgentPayload) error {
+func (p *ipAuthenticator) handleAgentVersionsUpdate(payload messaging.AgentPayload) error {
 	p.agentConfigMu.Lock()
 	p.agentConfigs = payload
 	p.agentConfigMu.Unlock()
@@ -89,7 +88,7 @@ func (p *ipAuthenticator) handleAgentStatusRunning(payload messaging.AgentPayloa
 }
 
 func NewBotAuthenticator(ctx context.Context) (IPAuthenticator, error) {
-	globalClient, err := docker.NewDockerClient("")
+	globalClient, err := NewDockerClient("")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the global docker client: %v", err)
 	}
@@ -101,7 +100,7 @@ func NewBotAuthenticator(ctx context.Context) (IPAuthenticator, error) {
 		msgClient:    msgClient,
 	}
 
-	msgClient.Subscribe(messaging.SubjectAgentsStatusRunning, messaging.AgentsHandler(b.handleAgentStatusRunning))
+	msgClient.Subscribe(messaging.SubjectAgentsVersionsLatest, messaging.AgentsHandler(b.handleAgentVersionsUpdate))
 
 	return b, nil
 }

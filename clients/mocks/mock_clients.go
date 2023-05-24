@@ -7,14 +7,16 @@ package mock_clients
 import (
 	context "context"
 	reflect "reflect"
-	time "time"
 
 	types "github.com/docker/docker/api/types"
 	domain "github.com/forta-network/forta-core-go/domain"
-	docker "github.com/forta-network/forta-node/clients/docker"
+	protocol "github.com/forta-network/forta-core-go/protocol"
+	clients "github.com/forta-network/forta-node/clients"
+	agentgrpc "github.com/forta-network/forta-node/clients/agentgrpc"
 	config "github.com/forta-network/forta-node/config"
 	gomock "github.com/golang/mock/gomock"
 	proto "github.com/golang/protobuf/proto"
+	grpc "google.golang.org/grpc"
 )
 
 // MockDockerClient is a mock of DockerClient interface.
@@ -98,20 +100,6 @@ func (mr *MockDockerClientMockRecorder) EnsureLocalImage(ctx, name, ref interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureLocalImage", reflect.TypeOf((*MockDockerClient)(nil).EnsureLocalImage), ctx, name, ref)
 }
 
-// EnsureLocalImages mocks base method.
-func (m *MockDockerClient) EnsureLocalImages(ctx context.Context, timeoutPerPull time.Duration, imagePulls []docker.ImagePull) []error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureLocalImages", ctx, timeoutPerPull, imagePulls)
-	ret0, _ := ret[0].([]error)
-	return ret0
-}
-
-// EnsureLocalImages indicates an expected call of EnsureLocalImages.
-func (mr *MockDockerClientMockRecorder) EnsureLocalImages(ctx, timeoutPerPull, imagePulls interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureLocalImages", reflect.TypeOf((*MockDockerClient)(nil).EnsureLocalImages), ctx, timeoutPerPull, imagePulls)
-}
-
 // GetContainerByID mocks base method.
 func (m *MockDockerClient) GetContainerByID(ctx context.Context, id string) (*types.Container, error) {
 	m.ctrl.T.Helper()
@@ -173,10 +161,10 @@ func (mr *MockDockerClientMockRecorder) GetContainerLogs(ctx, containerID, tail,
 }
 
 // GetContainers mocks base method.
-func (m *MockDockerClient) GetContainers(ctx context.Context) (docker.ContainerList, error) {
+func (m *MockDockerClient) GetContainers(ctx context.Context) (clients.DockerContainerList, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetContainers", ctx)
-	ret0, _ := ret[0].(docker.ContainerList)
+	ret0, _ := ret[0].(clients.DockerContainerList)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -187,26 +175,11 @@ func (mr *MockDockerClientMockRecorder) GetContainers(ctx interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainers", reflect.TypeOf((*MockDockerClient)(nil).GetContainers), ctx)
 }
 
-// GetContainersByLabel mocks base method.
-func (m *MockDockerClient) GetContainersByLabel(ctx context.Context, name, value string) (docker.ContainerList, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetContainersByLabel", ctx, name, value)
-	ret0, _ := ret[0].(docker.ContainerList)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetContainersByLabel indicates an expected call of GetContainersByLabel.
-func (mr *MockDockerClientMockRecorder) GetContainersByLabel(ctx, name, value interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainersByLabel", reflect.TypeOf((*MockDockerClient)(nil).GetContainersByLabel), ctx, name, value)
-}
-
 // GetFortaServiceContainers mocks base method.
-func (m *MockDockerClient) GetFortaServiceContainers(ctx context.Context) (docker.ContainerList, error) {
+func (m *MockDockerClient) GetFortaServiceContainers(ctx context.Context) (clients.DockerContainerList, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetFortaServiceContainers", ctx)
-	ret0, _ := ret[0].(docker.ContainerList)
+	ret0, _ := ret[0].(clients.DockerContainerList)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -331,10 +304,10 @@ func (mr *MockDockerClientMockRecorder) RemoveNetworkByName(ctx, networkName int
 }
 
 // StartContainer mocks base method.
-func (m *MockDockerClient) StartContainer(ctx context.Context, config docker.ContainerConfig) (*docker.Container, error) {
+func (m *MockDockerClient) StartContainer(ctx context.Context, config clients.DockerContainerConfig) (*clients.DockerContainer, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StartContainer", ctx, config)
-	ret0, _ := ret[0].(*docker.Container)
+	ret0, _ := ret[0].(*clients.DockerContainer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -343,20 +316,6 @@ func (m *MockDockerClient) StartContainer(ctx context.Context, config docker.Con
 func (mr *MockDockerClientMockRecorder) StartContainer(ctx, config interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartContainer", reflect.TypeOf((*MockDockerClient)(nil).StartContainer), ctx, config)
-}
-
-// StartContainerWithID mocks base method.
-func (m *MockDockerClient) StartContainerWithID(ctx context.Context, containerID string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StartContainerWithID", ctx, containerID)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// StartContainerWithID indicates an expected call of StartContainerWithID.
-func (mr *MockDockerClientMockRecorder) StartContainerWithID(ctx, containerID interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartContainerWithID", reflect.TypeOf((*MockDockerClient)(nil).StartContainerWithID), ctx, containerID)
 }
 
 // StopContainer mocks base method.
@@ -486,6 +445,156 @@ func (m *MockMessageClient) Subscribe(subject string, handler interface{}) {
 func (mr *MockMessageClientMockRecorder) Subscribe(subject, handler interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Subscribe", reflect.TypeOf((*MockMessageClient)(nil).Subscribe), subject, handler)
+}
+
+// MockAgentClient is a mock of AgentClient interface.
+type MockAgentClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockAgentClientMockRecorder
+}
+
+// MockAgentClientMockRecorder is the mock recorder for MockAgentClient.
+type MockAgentClientMockRecorder struct {
+	mock *MockAgentClient
+}
+
+// NewMockAgentClient creates a new mock instance.
+func NewMockAgentClient(ctrl *gomock.Controller) *MockAgentClient {
+	mock := &MockAgentClient{ctrl: ctrl}
+	mock.recorder = &MockAgentClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockAgentClient) EXPECT() *MockAgentClientMockRecorder {
+	return m.recorder
+}
+
+// Close mocks base method.
+func (m *MockAgentClient) Close() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close.
+func (mr *MockAgentClientMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockAgentClient)(nil).Close))
+}
+
+// Dial mocks base method.
+func (m *MockAgentClient) Dial(arg0 config.AgentConfig) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Dial", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Dial indicates an expected call of Dial.
+func (mr *MockAgentClientMockRecorder) Dial(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dial", reflect.TypeOf((*MockAgentClient)(nil).Dial), arg0)
+}
+
+// EvaluateAlert mocks base method.
+func (m *MockAgentClient) EvaluateAlert(ctx context.Context, in *protocol.EvaluateAlertRequest, opts ...grpc.CallOption) (*protocol.EvaluateAlertResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "EvaluateAlert", varargs...)
+	ret0, _ := ret[0].(*protocol.EvaluateAlertResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EvaluateAlert indicates an expected call of EvaluateAlert.
+func (mr *MockAgentClientMockRecorder) EvaluateAlert(ctx, in interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EvaluateAlert", reflect.TypeOf((*MockAgentClient)(nil).EvaluateAlert), varargs...)
+}
+
+// EvaluateBlock mocks base method.
+func (m *MockAgentClient) EvaluateBlock(ctx context.Context, in *protocol.EvaluateBlockRequest, opts ...grpc.CallOption) (*protocol.EvaluateBlockResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "EvaluateBlock", varargs...)
+	ret0, _ := ret[0].(*protocol.EvaluateBlockResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EvaluateBlock indicates an expected call of EvaluateBlock.
+func (mr *MockAgentClientMockRecorder) EvaluateBlock(ctx, in interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EvaluateBlock", reflect.TypeOf((*MockAgentClient)(nil).EvaluateBlock), varargs...)
+}
+
+// EvaluateTx mocks base method.
+func (m *MockAgentClient) EvaluateTx(ctx context.Context, in *protocol.EvaluateTxRequest, opts ...grpc.CallOption) (*protocol.EvaluateTxResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "EvaluateTx", varargs...)
+	ret0, _ := ret[0].(*protocol.EvaluateTxResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EvaluateTx indicates an expected call of EvaluateTx.
+func (mr *MockAgentClientMockRecorder) EvaluateTx(ctx, in interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EvaluateTx", reflect.TypeOf((*MockAgentClient)(nil).EvaluateTx), varargs...)
+}
+
+// Initialize mocks base method.
+func (m *MockAgentClient) Initialize(ctx context.Context, in *protocol.InitializeRequest, opts ...grpc.CallOption) (*protocol.InitializeResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Initialize", varargs...)
+	ret0, _ := ret[0].(*protocol.InitializeResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Initialize indicates an expected call of Initialize.
+func (mr *MockAgentClientMockRecorder) Initialize(ctx, in interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Initialize", reflect.TypeOf((*MockAgentClient)(nil).Initialize), varargs...)
+}
+
+// Invoke mocks base method.
+func (m *MockAgentClient) Invoke(ctx context.Context, method agentgrpc.Method, in, out interface{}, opts ...grpc.CallOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, method, in, out}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Invoke", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Invoke indicates an expected call of Invoke.
+func (mr *MockAgentClientMockRecorder) Invoke(ctx, method, in, out interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, method, in, out}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Invoke", reflect.TypeOf((*MockAgentClient)(nil).Invoke), varargs...)
 }
 
 // MockAlertAPIClient is a mock of AlertAPIClient interface.

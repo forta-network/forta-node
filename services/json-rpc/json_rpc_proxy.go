@@ -19,7 +19,7 @@ import (
 	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/config"
-	"github.com/forta-network/forta-node/services/components/metrics"
+	"github.com/forta-network/forta-node/metrics"
 )
 
 // JsonRpcProxy proxies requests from agents to json-rpc endpoint
