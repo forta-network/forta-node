@@ -9,9 +9,7 @@ import (
 	"github.com/forta-network/forta-core-go/protocol/alerthash"
 	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/clients/messaging"
-	"github.com/forta-network/forta-node/services/components"
-	"github.com/forta-network/forta-node/services/components/botio/botreq"
-	"github.com/forta-network/forta-node/services/components/metrics"
+	"github.com/forta-network/forta-node/metrics"
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/google/uuid"
@@ -34,16 +32,16 @@ type BlockAnalyzerService struct {
 type BlockAnalyzerServiceConfig struct {
 	BlockChannel <-chan *domain.BlockEvent
 	AlertSender  clients.AlertSender
+	AgentPool    AgentPool
 	MsgClient    clients.MessageClient
-	components.BotProcessing
 }
 
-func (t *BlockAnalyzerService) publishMetrics(result *botreq.BlockResult) {
+func (t *BlockAnalyzerService) publishMetrics(result *BlockResult) {
 	m := metrics.GetBlockMetrics(result.AgentConfig, result.Response, result.Timestamps)
 	t.cfg.MsgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: m})
 }
 
-func (t *BlockAnalyzerService) findingToAlert(result *botreq.BlockResult, ts time.Time, f *protocol.Finding) (
+func (t *BlockAnalyzerService) findingToAlert(result *BlockResult, ts time.Time, f *protocol.Finding) (
 	*protocol.Alert, error,
 ) {
 	alertID := alerthash.ForBlockAlert(
@@ -105,7 +103,7 @@ func (t *BlockAnalyzerService) createBloomFilter(finding *protocol.Finding) (blo
 func (t *BlockAnalyzerService) Start() error {
 	// Gear 2: receive result from agent
 	go func() {
-		for result := range t.cfg.Results.Block {
+		for result := range t.cfg.AgentPool.BlockResults() {
 			ts := time.Now().UTC()
 
 			m := jsonpb.Marshaler{}
@@ -164,7 +162,7 @@ func (t *BlockAnalyzerService) Start() error {
 			request := &protocol.EvaluateBlockRequest{RequestId: requestId.String(), Event: blockEvt}
 
 			// forward to the pool
-			t.cfg.RequestSender.SendEvaluateBlockRequest(request)
+			t.cfg.AgentPool.SendEvaluateBlockRequest(request)
 
 			t.lastInputActivity.Set()
 		}

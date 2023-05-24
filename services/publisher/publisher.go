@@ -30,7 +30,6 @@ import (
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/clients/storagegrpc"
 	"github.com/forta-network/forta-node/config"
-	"github.com/forta-network/forta-node/services/components/metrics"
 	"github.com/forta-network/forta-node/services/publisher/webhooklog"
 	"github.com/forta-network/forta-node/services/storage"
 	"github.com/forta-network/forta-node/store"
@@ -60,8 +59,6 @@ type Publisher struct {
 	messageClient     clients.MessageClient
 	alertClient       clients.AlertAPIClient
 	localAlertClient  LocalAlertClient
-
-	lifecycleMetrics metrics.Lifecycle
 
 	batchRefStore    store.StringStore
 	lastReceiptStore store.StringStore
@@ -139,8 +136,6 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 	if _, skip := pub.shouldSkipPublishing(batch); !skip {
 		var flushed bool
 		batch.Metrics, flushed = pub.metricsAggregator.TryFlush()
-		// detect the active bots from metrics
-		pub.lifecycleMetrics.StatusActive(metrics.FindActiveBotsFromMetrics(batch.Metrics))
 		if flushed {
 			log.Debug("flushed metrics")
 			pub.lastMetricsFlush.Set()
@@ -419,10 +414,10 @@ func (pub *Publisher) registerMessageHandlers() {
 	pub.messageClient.Subscribe(messaging.SubjectScannerBlock, messaging.ScannerHandler(pub.handleScannerBlock))
 	pub.messageClient.Subscribe(messaging.SubjectScannerAlert, messaging.ScannerHandler(pub.handleScannerAlert))
 	pub.messageClient.Subscribe(messaging.SubjectInspectionDone, messaging.InspectionResultsHandler(pub.handleInspectionResults))
-	pub.messageClient.Subscribe(messaging.SubjectAgentsStatusRunning, messaging.AgentsHandler(pub.handleRunningBots))
+	pub.messageClient.Subscribe(messaging.SubjectAgentsVersionsLatest, messaging.AgentsHandler(pub.handleAgentVersionsUpdate))
 }
 
-func (pub *Publisher) handleRunningBots(payload messaging.AgentPayload) error {
+func (pub *Publisher) handleAgentVersionsUpdate(payload messaging.AgentPayload) error {
 	pub.botConfigMu.Lock()
 	pub.botConfigs = payload
 	pub.botConfigMu.Unlock()
@@ -816,7 +811,6 @@ func (pub *Publisher) Health() health.Reports {
 
 func NewPublisher(ctx context.Context, cfg config.Config) (*Publisher, error) {
 	msgClient := messaging.NewClient("metrics", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
-	lifecycleMetrics := metrics.NewLifecycleClient(msgClient)
 
 	key, err := config.LoadKeyInContainer(cfg)
 	if err != nil {
@@ -840,7 +834,7 @@ func NewPublisher(ctx context.Context, cfg config.Config) (*Publisher, error) {
 		}
 	}
 
-	return initPublisher(ctx, msgClient, lifecycleMetrics, apiClient, storageClient, PublisherConfig{
+	return initPublisher(ctx, msgClient, apiClient, storageClient, PublisherConfig{
 		ChainID:         cfg.ChainID,
 		Key:             key,
 		PublisherConfig: cfg.Publish,
@@ -849,11 +843,7 @@ func NewPublisher(ctx context.Context, cfg config.Config) (*Publisher, error) {
 	})
 }
 
-func initPublisher(
-	ctx context.Context, mc clients.MessageClient,
-	lifecycleMetrics metrics.Lifecycle, alertClient clients.AlertAPIClient,
-	storageClient StorageClient, cfg PublisherConfig,
-) (*Publisher, error) {
+func initPublisher(ctx context.Context, mc clients.MessageClient, alertClient clients.AlertAPIClient, storageClient StorageClient, cfg PublisherConfig) (*Publisher, error) {
 	ipfsClient, err := ipfs.NewClient(fmt.Sprintf("http://%s:5001", config.DockerIpfsContainerName))
 	if err != nil {
 		return nil, err
@@ -899,7 +889,6 @@ func initPublisher(
 		messageClient:     mc,
 		alertClient:       alertClient,
 		localAlertClient:  localAlertClient,
-		lifecycleMetrics:  lifecycleMetrics,
 		batchRefStore:     store.NewFileStringStore(path.Join(cfg.Config.FortaDir, ".last-batch")),
 		lastReceiptStore:  store.NewFileStringStore(path.Join(cfg.Config.FortaDir, ".last-receipt")),
 

@@ -12,9 +12,7 @@ import (
 	"github.com/forta-network/forta-core-go/protocol/alerthash"
 	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/clients/messaging"
-	"github.com/forta-network/forta-node/services/components"
-	"github.com/forta-network/forta-node/services/components/botio/botreq"
-	"github.com/forta-network/forta-node/services/components/metrics"
+	"github.com/forta-network/forta-node/metrics"
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/google/uuid"
@@ -37,17 +35,17 @@ type CombinerAlertAnalyzerService struct {
 type CombinerAlertAnalyzerServiceConfig struct {
 	AlertChannel <-chan *domain.AlertEvent
 	AlertSender  clients.AlertSender
+	AgentPool    AgentPool
 	MsgClient    clients.MessageClient
 	ChainID      string
-	components.BotProcessing
 }
 
-func (aas *CombinerAlertAnalyzerService) publishMetrics(result *botreq.CombinationAlertResult) {
+func (aas *CombinerAlertAnalyzerService) publishMetrics(result *CombinationAlertResult) {
 	m := metrics.GetCombinerMetrics(result.AgentConfig, result.Response, result.Timestamps)
 	aas.cfg.MsgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: m})
 }
 
-func (aas *CombinerAlertAnalyzerService) findingToAlert(result *botreq.CombinationAlertResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
+func (aas *CombinerAlertAnalyzerService) findingToAlert(result *CombinationAlertResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
 	alertID := alerthash.ForCombinationAlert(
 		&alerthash.Inputs{
 			AlertEvent: result.Request.Event,
@@ -98,7 +96,7 @@ func (aas *CombinerAlertAnalyzerService) createBloomFilter(finding *protocol.Fin
 func (aas *CombinerAlertAnalyzerService) Start() error {
 	// Gear 2: receive result from agent
 	go func() {
-		for result := range aas.cfg.Results.CombinationAlert {
+		for result := range aas.cfg.AgentPool.CombinationAlertResults() {
 			ts := time.Now().UTC()
 
 			m := jsonpb.Marshaler{}
@@ -110,7 +108,7 @@ func (aas *CombinerAlertAnalyzerService) Start() error {
 			log.Debugf(resStr)
 
 			rt := &clients.AgentRoundTrip{
-				AgentConfig:       result.AgentConfig,
+				AgentConfig:             result.AgentConfig,
 				EvalAlertRequest:  result.Request,
 				EvalAlertResponse: result.Response,
 			}
@@ -169,7 +167,7 @@ func (aas *CombinerAlertAnalyzerService) Start() error {
 			request := &protocol.EvaluateAlertRequest{RequestId: requestId.String(), Event: alertEvtMsg, TargetBotId: alertEvt.Subscriber.BotID}
 
 			// forward to the pool
-			aas.cfg.RequestSender.SendEvaluateAlertRequest(request)
+			aas.cfg.AgentPool.SendEvaluateAlertRequest(request)
 
 			aas.lastInputActivity.Set()
 		}

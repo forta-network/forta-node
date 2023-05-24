@@ -39,7 +39,7 @@ func init() {
 
 const benchAgentReqCount = 25
 
-func getBenchClient() agentgrpc.Client {
+func getBenchClient() *agentgrpc.Client {
 	agentClient := agentgrpc.NewClient()
 	for {
 		conn, err := grpc.Dial(fmt.Sprintf("localhost:%s", config.AgentGrpcPort), grpc.WithInsecure())

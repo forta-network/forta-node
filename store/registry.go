@@ -13,6 +13,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/forta-network/forta-core-go/ens"
+	"github.com/forta-network/forta-core-go/ethereum"
+	"github.com/forta-network/forta-core-go/feeds"
 	"github.com/forta-network/forta-core-go/manifest"
 	"github.com/forta-network/forta-core-go/registry"
 	"github.com/forta-network/forta-core-go/utils"
@@ -30,7 +32,7 @@ const (
 
 type RegistryStore interface {
 	FindAgentGlobally(agentID string) (*config.AgentConfig, error)
-	GetAgentsIfChanged(scanner string) ([]config.AgentConfig, bool, error)
+	GetAgentsIfChanged(scanner string) ([]*config.AgentConfig, bool, error)
 	FindScannerShardIDForBot(agentID, scannerAddress string) (uint, uint, uint, error)
 }
 
@@ -42,12 +44,12 @@ type registryStore struct {
 
 	lastUpdate           time.Time
 	lastCompletedVersion string
-	loadedBots           []config.AgentConfig
+	loadedBots           []*config.AgentConfig
 	invalidBots          []*registry.Agent
 	mu                   sync.Mutex
 }
 
-func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]config.AgentConfig, bool, error) {
+func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConfig, bool, error) {
 	// because we peg the latest block, it can be problematic if this is called concurrently
 	rs.mu.Lock()
 	defer rs.mu.Unlock()
@@ -57,7 +59,7 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]config.AgentConfi
 		return nil, false, err
 	}
 
-	shouldUpdate := rs.lastCompletedVersion != hash.Hash || time.Since(rs.lastUpdate) > 5*time.Minute
+	shouldUpdate := rs.lastCompletedVersion != hash.Hash || time.Since(rs.lastUpdate) > 5 * time.Minute
 	if !shouldUpdate {
 		return nil, false, nil
 	}
@@ -68,7 +70,7 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]config.AgentConfi
 	defer rs.rc.ResetOpts()
 
 	var (
-		loadedBots       []config.AgentConfig
+		loadedBots       []*config.AgentConfig
 		invalidBots      []*registry.Agent
 		failedLoadingAny bool
 	)
@@ -103,7 +105,7 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]config.AgentConfi
 
 			botCfg.ShardConfig = &config.ShardConfig{ShardID: shardID, Shards: shards, Target: target}
 			botCfg.Owner = bot.Owner
-			loadedBots = append(loadedBots, *botCfg) // remember for next time
+			loadedBots = append(loadedBots, botCfg) // remember for next time
 			logger.Info("successfully loaded bot")
 
 			return nil
@@ -231,13 +233,13 @@ func calculateShardID(target, idx uint) uint {
 	return idx / target
 }
 
-func (rs *registryStore) getLoadedBot(bot *registry.Agent) (config.AgentConfig, bool) {
+func (rs *registryStore) getLoadedBot(bot *registry.Agent) (*config.AgentConfig, bool) {
 	for _, loadedBot := range rs.loadedBots {
 		if bot.Manifest == loadedBot.Manifest {
 			return loadedBot, true
 		}
 	}
-	return config.AgentConfig{}, false
+	return nil, false
 }
 
 func (rs *registryStore) isInvalidBot(bot *registry.Agent) bool {
@@ -284,7 +286,7 @@ func loadBot(ctx context.Context, cfg config.Config, mc manifest.Client, agentID
 	}, nil
 }
 
-func NewRegistryStore(ctx context.Context, cfg config.Config) (*registryStore, error) {
+func NewRegistryStore(ctx context.Context, cfg config.Config, ethClient ethereum.Client, blockFeed feeds.BlockFeed) (*registryStore, error) {
 	mc, err := manifest.NewClient(cfg.Registry.IPFS.GatewayURL)
 	if err != nil {
 		return nil, err
@@ -336,11 +338,11 @@ func (rs *privateRegistryStore) FindScannerShardIDForBot(agentID, scannerAddress
 	return 0, 0, 0, nil
 }
 
-func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]config.AgentConfig, bool, error) {
+func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConfig, bool, error) {
 	rs.mu.Lock()
 	defer rs.mu.Unlock()
 
-	var agentConfigs []config.AgentConfig
+	var agentConfigs []*config.AgentConfig
 
 	// load by image references
 	for i, agentImage := range rs.cfg.LocalModeConfig.BotImages {
@@ -349,7 +351,7 @@ func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]config.Age
 		}
 		// forta-agent-1, forta-agent-2, forta-agent-3, ...
 		agentID := strconv.Itoa(i + 1)
-		agentConfigs = append(agentConfigs, *rs.makePrivateModeAgentConfig(agentID, agentImage, nil))
+		agentConfigs = append(agentConfigs, rs.makePrivateModeAgentConfig(agentID, agentImage, nil))
 	}
 
 	// load by bot IDs
@@ -369,7 +371,7 @@ func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]config.Age
 		}
 
 		agtCfg.Owner = agt.Owner
-		agentConfigs = append(agentConfigs, *agtCfg)
+		agentConfigs = append(agentConfigs, agtCfg)
 	}
 
 	// load sharded bots by image
@@ -386,7 +388,7 @@ func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]config.Age
 
 				agentID := strconv.Itoa(len(agentConfigs) + i + 1)
 				agentConfigs = append(
-					agentConfigs, *rs.makePrivateModeAgentConfig(agentID, *shardedBot.BotImage, shardConfig),
+					agentConfigs, rs.makePrivateModeAgentConfig(agentID, *shardedBot.BotImage, shardConfig),
 				)
 			}
 		}
@@ -395,7 +397,7 @@ func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]config.Age
 	// load the standalone bot configs that are already running
 	if rs.cfg.LocalModeConfig.IsStandalone() {
 		for _, runningBot := range rs.cfg.LocalModeConfig.Standalone.BotContainers {
-			agentConfigs = append(agentConfigs, config.AgentConfig{
+			agentConfigs = append(agentConfigs, &config.AgentConfig{
 				ID:           runningBot,
 				IsStandalone: true,
 				ChainID:      rs.cfg.ChainID,

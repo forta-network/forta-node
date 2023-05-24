@@ -58,7 +58,7 @@ func (ins *Inspector) Start() error {
 		return nil
 	}
 
-	if *ins.cfg.Config.InspectionConfig.InspectAtStartup {
+	if ins.cfg.Config.InspectionConfig.InspectAtStartup {
 		blockNumber := ins.getClosestBlockToInspect()
 		ins.runInspection(blockNumber)
 	}
@@ -94,9 +94,7 @@ func (ins *Inspector) inspectionPublisher(ctx context.Context) error {
 			return ctx.Err()
 		case <-t.C:
 			ins.latestInspectionMu.RLock()
-			if ins.latestInspection != nil {
-				ins.msgClient.PublishProto(messaging.SubjectInspectionDone, inspect.ToProtoInspectionResults(ins.latestInspection))
-			}
+			ins.msgClient.PublishProto(messaging.SubjectInspectionDone, inspect.ToProtoInspectionResults(ins.latestInspection))
 			ins.latestInspectionMu.RUnlock()
 		}
 	}

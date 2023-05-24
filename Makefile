@@ -17,19 +17,10 @@ main:
 mocks:
 	mockgen -source clients/interfaces.go -destination clients/mocks/mock_clients.go
 	mockgen -source clients/ratelimiter/rate_limiter.go -destination clients/ratelimiter/mocks/mock_rate_limiter.go
-	mockgen -source services/components/registry/registry.go -destination services/components/registry/mocks/mock_registry.go
+	mockgen -source services/registry/registry.go -destination services/registry/mocks/mock_registry.go
 	mockgen -source store/registry.go -destination store/mocks/mock_registry.go
 	mockgen -source services/storage/ipfs.go -destination services/storage/mocks/mock_ipfs.go
 	mockgen -source store/scanner_release.go -destination store/mocks/mock_scanner_release.go
-	mockgen -source services/components/metrics/lifecycle.go -destination services/components/metrics/mocks/mock_lifecycle.go
-	mockgen -source services/components/lifecycle/bot_pool.go -destination services/components/lifecycle/mocks/mock_bot_pool.go
-	mockgen -source services/components/lifecycle/bot_manager.go -destination services/components/lifecycle/mocks/mock_bot_manager.go
-	mockgen -source services/components/lifecycle/bot_monitor.go -destination services/components/lifecycle/mocks/mock_bot_monitor.go
-	mockgen -source services/components/containers/bot_client.go -destination services/components/containers/mocks/mock_bot_client.go
-	mockgen -source services/components/botio/bot_client.go -destination services/components/botio/mocks/mock_bot_client.go
-	mockgen -source services/components/botio/bot_client_factory.go -destination services/components/botio/mocks/mock_bot_client_factory.go
-	mockgen -source clients/agentgrpc/dialer.go -destination clients/agentgrpc/mocks/mock_dialer.go
-	mockgen -source clients/agentgrpc/client.go -destination clients/agentgrpc/mocks/mock_client.go
 
 test:
 	go test -v -count=1 ./... -coverprofile=coverage.out
