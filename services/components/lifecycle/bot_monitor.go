@@ -117,7 +117,7 @@ func (bm *botMonitor) GetInactiveBots() (inactive []string) {
 	defer bm.mu.Unlock()
 
 	for _, tracker := range bm.trackers {
-		if tracker.Status() == TrackerStatusInactive {
+		if tracker.IsInactive() {
 			inactive = append(inactive, tracker.BotID())
 		}
 	}

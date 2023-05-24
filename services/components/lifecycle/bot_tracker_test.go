@@ -15,15 +15,15 @@ func TestActive(t *testing.T) {
 	r := require.New(t)
 
 	botTracker := NewBotTracker(testBotID)
-	r.Equal(TrackerStatusActive, botTracker.Status())
+	r.Equal(false, botTracker.IsInactive())
 }
 
 func TestActive_ShortCircuit(t *testing.T) {
 	r := require.New(t)
 
 	botTracker := NewBotTracker(testBotID)
-	r.Equal(TrackerStatusActive, botTracker.Status())
-	r.Equal(TrackerStatusActive, botTracker.Status())
+	r.Equal(false, botTracker.IsInactive())
+	r.Equal(false, botTracker.IsInactive())
 }
 
 func TestInactive(t *testing.T) {
@@ -31,10 +31,10 @@ func TestInactive(t *testing.T) {
 
 	botTracker := NewBotTracker(testBotID)
 	botTracker.lastActivity = time.Now().Add(-inactivityThreshold - 1)
-	r.Equal(TrackerStatusInactive, botTracker.Status())
+	r.Equal(true, botTracker.IsInactive())
 
 	// should say "active" for the second time to avoid quick reads
-	r.Equal(TrackerStatusActive, botTracker.Status())
+	r.Equal(false, botTracker.IsInactive())
 }
 
 func TestSaveActivity(t *testing.T) {
@@ -45,7 +45,7 @@ func TestSaveActivity(t *testing.T) {
 	botTracker.SaveActivity()
 
 	// the status is "active" because SaveActivity() updated the time
-	r.Equal(TrackerStatusActive, botTracker.Status())
+	r.Equal(false, botTracker.IsInactive())
 }
 
 func TestGetBotID(t *testing.T) {
