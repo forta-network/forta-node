@@ -433,8 +433,8 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 				if agent.IsReady() {
 					return nil
 				}
-				
-				metrics.SendAgentMetrics(ap.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agent.Config().ID, metrics.MetricAgentReady, 1)})
+
+				metrics.SendAgentMetrics(ap.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agent.Config().ID, metrics.MetricAgentDialBegin, 1)})
 
 				c, err := ap.dialer(agent.Config())
 				if err != nil {
