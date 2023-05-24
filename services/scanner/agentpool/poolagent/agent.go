@@ -315,6 +315,14 @@ func (agent *Agent) Initialize() {
 	}
 
 	if err != nil {
+		metrics.SendAgentMetrics(agent.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agentConfig.ID, messaging.SubjectAgentsStatusInitializeFailed, 1)})
+		logger.WithError(err).Warn("bot initialization failed")
+		_ = agent.Close()
+		return
+	}
+
+	if initializeResponse.Status == protocol.ResponseStatus_ERROR {
+		metrics.SendAgentMetrics(agent.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agentConfig.ID, messaging.SubjectAgentsStatusInitializeFailed, 1)})
 		logger.WithError(err).Warn("bot initialization failed")
 		_ = agent.Close()
 		return
@@ -329,6 +337,7 @@ func (agent *Agent) Initialize() {
 	if initializeResponse != nil && initializeResponse.AlertConfig != nil {
 		agent.SetAlertConfig(initializeResponse.AlertConfig)
 		agent.msgClient.Publish(messaging.SubjectAgentsAlertSubscribe, agent.CombinerBotSubscriptions())
+		metrics.SendAgentMetrics(agent.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agentConfig.ID, messaging.SubjectAgentsAlertSubscribe, 1)})
 	}
 
 	logger.Info("bot initialization succeeded")
