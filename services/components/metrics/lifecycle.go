@@ -18,6 +18,8 @@ const (
 	MetricStatusAttached    = "agent.status.attached"
 	MetricStatusInitialized = "agent.status.initialized"
 	MetricStatusStopping    = "agent.status.stopping"
+	MetricStatusActive      = "agent.status.active"
+	MetricStatusInactive    = "agent.status.inactive"
 
 	MetricActionUpdate      = "agent.action.update"
 	MetricActionRestart     = "agent.action.restart"
@@ -40,6 +42,8 @@ type Lifecycle interface {
 	StatusAttached(...config.AgentConfig)
 	StatusInitialized(...config.AgentConfig)
 	StatusStopping(...config.AgentConfig)
+	StatusActive([]string)
+	StatusInactive([]string)
 
 	ActionUpdate(...config.AgentConfig)
 	ActionRestart(...config.AgentConfig)
@@ -87,6 +91,14 @@ func (lc *lifecycle) StatusStopping(botConfigs ...config.AgentConfig) {
 	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricStatusStopping, botConfigs))
 }
 
+func (lc *lifecycle) StatusActive(botIDs []string) {
+	SendAgentMetrics(lc.msgClient, fromBotIDs(MetricStatusActive, botIDs))
+}
+
+func (lc *lifecycle) StatusInactive(botIDs []string) {
+	SendAgentMetrics(lc.msgClient, fromBotIDs(MetricStatusInactive, botIDs))
+}
+
 func (lc *lifecycle) ActionUpdate(botConfigs ...config.AgentConfig) {
 	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricActionUpdate, botConfigs))
 }
@@ -130,6 +142,18 @@ func fromBotConfigs(metricName string, botConfigs []config.AgentConfig) (metrics
 	for _, botConfig := range botConfigs {
 		metrics = append(metrics, &protocol.AgentMetric{
 			AgentId:   botConfig.ID,
+			Timestamp: time.Now().Format(time.RFC3339),
+			Name:      metricName,
+			Value:     1,
+		})
+	}
+	return
+}
+
+func fromBotIDs(metricName string, botIDs []string) (metrics []*protocol.AgentMetric) {
+	for _, botID := range botIDs {
+		metrics = append(metrics, &protocol.AgentMetric{
+			AgentId:   botID,
 			Timestamp: time.Now().Format(time.RFC3339),
 			Name:      metricName,
 			Value:     1,

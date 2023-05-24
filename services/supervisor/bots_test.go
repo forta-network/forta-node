@@ -20,8 +20,10 @@ func TestBotManagement(t *testing.T) {
 	gomock.InOrder(
 		botManager.EXPECT().ManageBots(gomock.Any()).Return(testErr),
 		botManager.EXPECT().RestartExitedBots(gomock.Any()).Return(testErr),
+		botManager.EXPECT().ExitInactiveBots(gomock.Any()).Return(testErr),
 		botManager.EXPECT().ManageBots(gomock.Any()).Return(testErr),
 		botManager.EXPECT().RestartExitedBots(gomock.Any()).Return(testErr),
+		botManager.EXPECT().ExitInactiveBots(gomock.Any()).Return(testErr),
 	)
 
 	supervisor.doRefreshBotContainers()

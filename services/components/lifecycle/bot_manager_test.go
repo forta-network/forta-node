@@ -29,6 +29,7 @@ type BotLifecycleManagerTestSuite struct {
 	botRegistry      *mock_registry.MockBotRegistry
 	botContainers    *mock_containers.MockBotClient
 	botPool          *mock_lifecycle.MockBotPoolUpdater
+	botMonitor       *mock_lifecycle.MockBotMonitor
 
 	botManager *botLifecycleManager
 
@@ -50,8 +51,9 @@ func (s *BotLifecycleManagerTestSuite) SetupTest() {
 	s.botRegistry = mock_registry.NewMockBotRegistry(ctrl)
 	s.botContainers = mock_containers.NewMockBotClient(ctrl)
 	s.botPool = mock_lifecycle.NewMockBotPoolUpdater(ctrl)
+	s.botMonitor = mock_lifecycle.NewMockBotMonitor(ctrl)
 
-	s.botManager = NewManager(s.botRegistry, s.botContainers, s.botPool, s.lifecycleMetrics)
+	s.botManager = NewManager(s.botRegistry, s.botContainers, s.botPool, s.lifecycleMetrics, s.botMonitor)
 }
 
 func (s *BotLifecycleManagerTestSuite) TestAddUpdateRemove() {
@@ -94,6 +96,7 @@ func (s *BotLifecycleManagerTestSuite) TestAddUpdateRemove() {
 
 	s.lifecycleMetrics.EXPECT().StatusRunning(latestAssigned).Times(1)
 	s.botPool.EXPECT().UpdateBotsWithLatestConfigs(latestAssigned)
+	s.botMonitor.EXPECT().MonitorBots(GetBotIDs(latestAssigned))
 
 	s.r.NoError(s.botManager.ManageBots(context.Background()))
 }
@@ -138,4 +141,24 @@ func (s *BotLifecycleManagerTestSuite) TestRestart() {
 	s.botPool.EXPECT().ReinitBotsWithConfigs([]config.AgentConfig{botConfigs[0]})
 
 	s.r.NoError(s.botManager.RestartExitedBots(context.Background()))
+}
+
+func (s *BotLifecycleManagerTestSuite) TestExit() {
+	botConfigs := []config.AgentConfig{
+		{
+			ID:    testBotID1,
+			Image: testImageRef,
+		},
+		{
+			ID:    testBotID2,
+			Image: testImageRef,
+		},
+	}
+
+	s.botManager.runningBots = botConfigs
+
+	s.botMonitor.EXPECT().GetInactiveBots().Return([]string{testBotID2})
+	s.botContainers.EXPECT().StopBot(gomock.Any(), botConfigs[1])
+
+	s.r.NoError(s.botManager.ExitInactiveBots(context.Background()))
 }

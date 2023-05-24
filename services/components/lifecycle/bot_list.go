@@ -59,3 +59,11 @@ func missBotAndDo(bot config.AgentConfig, botList []config.AgentConfig, do func(
 	}
 	do(bot)
 }
+
+// GetBotIDs makes a new slice of bot IDs.
+func GetBotIDs(botList []config.AgentConfig) (ids []string) {
+	for _, bot := range botList {
+		ids = append(ids, bot.ID)
+	}
+	return
+}

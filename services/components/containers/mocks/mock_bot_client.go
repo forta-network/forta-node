@@ -93,6 +93,20 @@ func (mr *MockBotClientMockRecorder) StartWaitBotContainer(ctx, containerID inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartWaitBotContainer", reflect.TypeOf((*MockBotClient)(nil).StartWaitBotContainer), ctx, containerID)
 }
 
+// StopBot mocks base method.
+func (m *MockBotClient) StopBot(ctx context.Context, botConfig config.AgentConfig) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StopBot", ctx, botConfig)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StopBot indicates an expected call of StopBot.
+func (mr *MockBotClientMockRecorder) StopBot(ctx, botConfig interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopBot", reflect.TypeOf((*MockBotClient)(nil).StopBot), ctx, botConfig)
+}
+
 // TearDownBot mocks base method.
 func (m *MockBotClient) TearDownBot(ctx context.Context, botConfig config.AgentConfig) error {
 	m.ctrl.T.Helper()

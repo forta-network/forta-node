@@ -171,6 +171,18 @@ func (mr *MockLifecycleMockRecorder) Start(arg0 ...interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockLifecycle)(nil).Start), arg0...)
 }
 
+// StatusActive mocks base method.
+func (m *MockLifecycle) StatusActive(arg0 []string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "StatusActive", arg0)
+}
+
+// StatusActive indicates an expected call of StatusActive.
+func (mr *MockLifecycleMockRecorder) StatusActive(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StatusActive", reflect.TypeOf((*MockLifecycle)(nil).StatusActive), arg0)
+}
+
 // StatusAttached mocks base method.
 func (m *MockLifecycle) StatusAttached(arg0 ...config.AgentConfig) {
 	m.ctrl.T.Helper()
@@ -185,6 +197,18 @@ func (m *MockLifecycle) StatusAttached(arg0 ...config.AgentConfig) {
 func (mr *MockLifecycleMockRecorder) StatusAttached(arg0 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StatusAttached", reflect.TypeOf((*MockLifecycle)(nil).StatusAttached), arg0...)
+}
+
+// StatusInactive mocks base method.
+func (m *MockLifecycle) StatusInactive(arg0 []string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "StatusInactive", arg0)
+}
+
+// StatusInactive indicates an expected call of StatusInactive.
+func (mr *MockLifecycleMockRecorder) StatusInactive(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StatusInactive", reflect.TypeOf((*MockLifecycle)(nil).StatusInactive), arg0)
 }
 
 // StatusInitialized mocks base method.
