@@ -12,6 +12,7 @@ import (
 
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol/settings"
+	"github.com/forta-network/forta-node/services/components"
 	"github.com/forta-network/forta-node/services/publisher"
 	log "github.com/sirupsen/logrus"
 
@@ -27,9 +28,7 @@ import (
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/healthutils"
 	"github.com/forta-network/forta-node/services"
-	"github.com/forta-network/forta-node/services/registry"
 	"github.com/forta-network/forta-node/services/scanner"
-	"github.com/forta-network/forta-node/services/scanner/agentpool"
 )
 
 func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, cfg config.Config) (*scanner.TxStreamService, feeds.BlockFeed, error) {
@@ -208,32 +207,44 @@ func initCombinationStream(ctx context.Context, msgClient clients.MessageClient,
 	return combinerStream, combinerFeed, nil
 }
 
-func initTxAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.TxStreamService, ap *agentpool.AgentPool, msgClient clients.MessageClient) (*scanner.TxAnalyzerService, error) {
+func initTxAnalyzer(
+	ctx context.Context, cfg config.Config,
+	as clients.AlertSender, stream *scanner.TxStreamService,
+	botProcessingComponents components.BotProcessing, msgClient clients.MessageClient,
+) (*scanner.TxAnalyzerService, error) {
 	return scanner.NewTxAnalyzerService(ctx, scanner.TxAnalyzerServiceConfig{
-		TxChannel:   stream.ReadOnlyTxStream(),
-		AlertSender: as,
-		AgentPool:   ap,
-		MsgClient:   msgClient,
+		TxChannel:     stream.ReadOnlyTxStream(),
+		AlertSender:   as,
+		MsgClient:     msgClient,
+		BotProcessing: botProcessingComponents,
 	})
 }
 
-func initBlockAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.TxStreamService, ap *agentpool.AgentPool, msgClient clients.MessageClient) (*scanner.BlockAnalyzerService, error) {
+func initBlockAnalyzer(
+	ctx context.Context, cfg config.Config,
+	as clients.AlertSender, stream *scanner.TxStreamService,
+	botProcessingComponents components.BotProcessing, msgClient clients.MessageClient,
+) (*scanner.BlockAnalyzerService, error) {
 	return scanner.NewBlockAnalyzerService(ctx, scanner.BlockAnalyzerServiceConfig{
-		BlockChannel: stream.ReadOnlyBlockStream(),
-		AlertSender:  as,
-		AgentPool:    ap,
-		MsgClient:    msgClient,
+		BlockChannel:  stream.ReadOnlyBlockStream(),
+		AlertSender:   as,
+		MsgClient:     msgClient,
+		BotProcessing: botProcessingComponents,
 	})
 }
 
-func initCombinerAlertAnalyzer(ctx context.Context, cfg config.Config, as clients.AlertSender, stream *scanner.CombinerAlertStreamService, ap *agentpool.AgentPool, msgClient clients.MessageClient) (*scanner.CombinerAlertAnalyzerService, error) {
+func initCombinerAlertAnalyzer(
+	ctx context.Context, cfg config.Config,
+	as clients.AlertSender, stream *scanner.CombinerAlertStreamService,
+	botProcessingComponents components.BotProcessing, msgClient clients.MessageClient,
+) (*scanner.CombinerAlertAnalyzerService, error) {
 	return scanner.NewCombinerAlertAnalyzerService(
 		ctx, scanner.CombinerAlertAnalyzerServiceConfig{
-			AlertChannel: stream.ReadOnlyAlertStream(),
-			AlertSender:  as,
-			AgentPool:    ap,
-			MsgClient:    msgClient,
-			ChainID:      fmt.Sprintf("%d", cfg.ChainID),
+			AlertChannel:  stream.ReadOnlyAlertStream(),
+			AlertSender:   as,
+			MsgClient:     msgClient,
+			ChainID:       fmt.Sprintf("%d", cfg.ChainID),
+			BotProcessing: botProcessingComponents,
 		},
 	)
 }
@@ -306,12 +317,18 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		}
 	}
 
-	agentPool := agentpool.NewAgentPool(ctx, cfg, msgClient, waitBots)
-	txAnalyzer, err := initTxAnalyzer(ctx, cfg, alertSender, txStream, agentPool, msgClient)
+	botProcessingComponents, err := components.GetBotProcessingComponents(ctx, components.BotProcessingConfig{
+		Config:        cfg,
+		MessageClient: msgClient,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create bot processing components: %v", err)
+	}
+	txAnalyzer, err := initTxAnalyzer(ctx, cfg, alertSender, txStream, botProcessingComponents, msgClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize tx analyzer: %v", err)
 	}
-	blockAnalyzer, err := initBlockAnalyzer(ctx, cfg, alertSender, txStream, agentPool, msgClient)
+	blockAnalyzer, err := initBlockAnalyzer(ctx, cfg, alertSender, txStream, botProcessingComponents, msgClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize block analyzer: %v", err)
 	}
@@ -326,13 +343,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, fmt.Errorf("failed to initialize combiner stream: %v", err)
 	}
 
-	registryClient, err := ethereum.NewStreamEthClient(ctx, "registry", cfg.Registry.JsonRpc.Url)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize registry client stream: %v", err)
-	}
-	registryService := registry.New(cfg, key.Address, msgClient, registryClient, blockFeed)
-
-	combinationAnalyzer, err := initCombinerAlertAnalyzer(ctx, cfg, alertSender, combinationStream, agentPool, msgClient)
+	combinationAnalyzer, err := initCombinerAlertAnalyzer(ctx, cfg, alertSender, combinationStream, botProcessingComponents, msgClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize combiner analyzer: %v", err)
 	}
@@ -340,7 +351,9 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	svcs := []services.Service{
 		health.NewService(ctx, "", healthutils.DefaultHealthServerErrHandler, health.CheckerFrom(
 			summarizeReports,
-			ethClient, traceClient, combinationFeed, blockFeed, txStream, txAnalyzer, blockAnalyzer, combinationAnalyzer, agentPool, registryService,
+			ethClient, traceClient, combinationFeed, blockFeed, txStream,
+			txAnalyzer, blockAnalyzer, combinationAnalyzer,
+			botProcessingComponents.RequestSender,
 			publisherSvc,
 		)),
 		txStream,
@@ -349,11 +362,6 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		combinationStream,
 		combinationAnalyzer,
 		publisherSvc,
-	}
-
-	// for performance tests, this flag avoids using registry service
-	if !cfg.Registry.Disable {
-		svcs = append(svcs, registryService)
 	}
 
 	return svcs, nil
