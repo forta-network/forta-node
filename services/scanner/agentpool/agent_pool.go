@@ -433,9 +433,12 @@ func (ap *AgentPool) handleStatusRunning(payload messaging.AgentPayload) error {
 				if agent.IsReady() {
 					return nil
 				}
+				
+				metrics.SendAgentMetrics(ap.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agent.Config().ID, metrics.MetricAgentReady, 1)})
 
 				c, err := ap.dialer(agent.Config())
 				if err != nil {
+					metrics.SendAgentMetrics(ap.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agent.Config().ID, metrics.MetricAgentDialError, 1)})
 					log.WithField("agent", agent.Config().ID).WithError(err).Error("handleStatusRunning: error while dialing")
 					agentsToStop = append(agentsToStop, agent.Config())
 					removedSubscriptions = append(removedSubscriptions, agent.CombinerBotSubscriptions()...)
