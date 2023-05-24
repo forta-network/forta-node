@@ -118,6 +118,9 @@ func (s *LifecycleTestSuite) TestDownloadTimeout() {
 	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{}, nil).
 		Times(1)
 
+	s.botMonitor.EXPECT().MonitorBots(GetBotIDs(nil)).Times(1)
+	s.botMonitor.EXPECT().MonitorBots(GetBotIDs(assigned)).Times(1)
+
 	// when the bot manager manages the assigned bots over time
 	s.r.NoError(s.botManager.ManageBots(context.Background()))
 	s.r.NoError(s.botManager.ManageBots(context.Background()))
@@ -158,6 +161,9 @@ func (s *LifecycleTestSuite) TestLaunchFailure() {
 	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{}, nil).
 		Times(1)
 
+	s.botMonitor.EXPECT().MonitorBots(GetBotIDs(assigned)).Times(1)
+	s.botMonitor.EXPECT().MonitorBots(nil).Times(1)
+
 	// when the bot manager manages the assigned bots over time
 	s.r.NoError(s.botManager.ManageBots(context.Background()))
 	s.r.NoError(s.botManager.ManageBots(context.Background()))
@@ -183,6 +189,8 @@ func (s *LifecycleTestSuite) TestDialFailure() {
 	s.lifecycleMetrics.EXPECT().StatusRunning(assigned[0]).Times(2)
 	s.lifecycleMetrics.EXPECT().Start(assigned[0]).Times(1)
 	s.dialer.EXPECT().DialBot(assigned[0]).Return(nil, errors.New("failed to dial")).Times(1)
+
+	s.botMonitor.EXPECT().MonitorBots(GetBotIDs(assigned)).Times(2)
 
 	// when the bot manager manages the assigned bots over time
 	s.r.NoError(s.botManager.ManageBots(context.Background()))
@@ -212,6 +220,8 @@ func (s *LifecycleTestSuite) TestInitializeFailure() {
 	s.lifecycleMetrics.EXPECT().FailureInitialize(assigned[0]).Times(1)
 	s.dialer.EXPECT().DialBot(assigned[0]).Return(s.botGrpc, nil).Times(1)
 	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(nil, errors.New("failed to init")).Times(1)
+
+	s.botMonitor.EXPECT().MonitorBots(GetBotIDs(assigned)).Times(2)
 
 	// when the bot manager manages the assigned bots over time
 	s.r.NoError(s.botManager.ManageBots(context.Background()))
@@ -264,6 +274,7 @@ func (s *LifecycleTestSuite) TestExitedRestarted() {
 
 	s.lifecycleMetrics.EXPECT().ActionRestart(assigned[0])
 	s.botContainers.EXPECT().StartWaitBotContainer(gomock.Any(), testContainerID).Return(nil)
+	s.botMonitor.EXPECT().MonitorBots(GetBotIDs(assigned)).Times(2)
 
 	// when the bot manager manages the assigned bots over time
 	s.r.NoError(s.botManager.ManageBots(context.Background()))
@@ -315,6 +326,8 @@ func (s *LifecycleTestSuite) TestInactiveRestarted() {
 	s.lifecycleMetrics.EXPECT().ActionRestart(assigned[0])
 	s.botContainers.EXPECT().StartWaitBotContainer(gomock.Any(), testContainerID).Return(nil)
 
+	s.botMonitor.EXPECT().MonitorBots(GetBotIDs(assigned))
+
 	// when the bot manager manages the assigned bots over time
 	s.r.NoError(s.botManager.ManageBots(context.Background()))
 	s.r.NoError(s.botManager.ExitInactiveBots(context.Background()))
@@ -352,6 +365,9 @@ func (s *LifecycleTestSuite) TestUnassigned() {
 	s.botContainers.EXPECT().TearDownBot(gomock.Any(), assigned[0]).Return(nil)
 	s.lifecycleMetrics.EXPECT().StatusRunning().Times(1)
 	s.botGrpc.EXPECT().Close().AnyTimes()
+
+	s.botMonitor.EXPECT().MonitorBots(GetBotIDs(assigned)).Times(1)
+	s.botMonitor.EXPECT().MonitorBots(GetBotIDs(nil)).Times(1)
 
 	// when the bot manager manages the assigned bots over time
 	s.r.NoError(s.botManager.ManageBots(context.Background()))
@@ -398,6 +414,8 @@ func (s *LifecycleTestSuite) TestConfigUpdated() {
 
 	s.lifecycleMetrics.EXPECT().StatusRunning(updated[0]).Times(1)
 	s.lifecycleMetrics.EXPECT().ActionUpdate(updated[0])
+
+	s.botMonitor.EXPECT().MonitorBots(GetBotIDs(assigned)).Times(2)
 
 	// when the bot manager manages the assigned bots over time
 	s.r.NoError(s.botManager.ManageBots(context.Background()))

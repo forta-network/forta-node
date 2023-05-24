@@ -120,6 +120,7 @@ func (blm *botLifecycleManager) ManageBots(ctx context.Context) error {
 	// then update the pool with latest bots
 	blm.botPool.UpdateBotsWithLatestConfigs(assignedBots)
 	blm.lifecycleMetrics.StatusRunning(assignedBots...)
+	blm.botMonitor.MonitorBots(GetBotIDs(assignedBots))
 
 	blm.runningBots = assignedBots
 	return nil

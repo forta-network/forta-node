@@ -85,6 +85,18 @@ func (mr *MockBotMonitorStateMockRecorder) GetInactiveBots() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInactiveBots", reflect.TypeOf((*MockBotMonitorState)(nil).GetInactiveBots))
 }
 
+// MonitorBots mocks base method.
+func (m *MockBotMonitorState) MonitorBots(arg0 []string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "MonitorBots", arg0)
+}
+
+// MonitorBots indicates an expected call of MonitorBots.
+func (mr *MockBotMonitorStateMockRecorder) MonitorBots(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MonitorBots", reflect.TypeOf((*MockBotMonitorState)(nil).MonitorBots), arg0)
+}
+
 // MockBotMonitor is a mock of BotMonitor interface.
 type MockBotMonitor struct {
 	ctrl     *gomock.Controller
@@ -120,6 +132,18 @@ func (m *MockBotMonitor) GetInactiveBots() []string {
 func (mr *MockBotMonitorMockRecorder) GetInactiveBots() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInactiveBots", reflect.TypeOf((*MockBotMonitor)(nil).GetInactiveBots))
+}
+
+// MonitorBots mocks base method.
+func (m *MockBotMonitor) MonitorBots(arg0 []string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "MonitorBots", arg0)
+}
+
+// MonitorBots indicates an expected call of MonitorBots.
+func (mr *MockBotMonitorMockRecorder) MonitorBots(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MonitorBots", reflect.TypeOf((*MockBotMonitor)(nil).MonitorBots), arg0)
 }
 
 // UpdateWithMetrics mocks base method.

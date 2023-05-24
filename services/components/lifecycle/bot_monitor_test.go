@@ -15,6 +15,8 @@ const (
 	testTrackerBotID1 = "test-tracker-bot-id-1"
 	testTrackerBotID2 = "test-tracker-bot-id-2"
 	testTrackerBotID3 = "test-tracker-bot-id-3"
+	testTrackerBotID4 = "test-tracker-bot-id-4"
+	testTrackerBotID5 = "test-tracker-bot-id-5"
 )
 
 func TestBotMonitor(t *testing.T) {
@@ -39,7 +41,7 @@ func TestBotMonitor(t *testing.T) {
 		{
 			botID:        testTrackerBotID3,
 			lastRead:     time.Time{}, // no reads yet
-			lastActivity: time.Now().Add(-expiryThreshold - 1),
+			lastActivity: time.Now().Add(-inactivityThreshold * 2),
 		},
 	}
 
@@ -55,16 +57,39 @@ func TestBotMonitor(t *testing.T) {
 		},
 	}))
 
-	// the latest inactivity list is requested: bot 1 is inactive, bot 3 is stale (tracker dropped)
-	lifecycleMetrics.EXPECT().StatusInactive([]string{testTrackerBotID1})
+	// the latest inactivity list is requested: bot 2 is active, the rest are inactive
+	lifecycleMetrics.EXPECT().StatusInactive([]string{testTrackerBotID1, testTrackerBotID3})
 	inactiveBots := botMonitor.GetInactiveBots()
-	r.Len(inactiveBots, 1)
+	r.Len(inactiveBots, 2)
 	r.Equal(testTrackerBotID1, inactiveBots[0])
-	r.Len(botMonitor.trackers, 2) // shrinked down because stale bot 3 tracker is dropped!
+	r.Equal(testTrackerBotID3, inactiveBots[1])
+	r.Len(botMonitor.trackers, 3)
 
 	// a second request to get the latest inactivity will hit the read cooldown
 	// which is helpful in not detecting inactive bots too often but every once in a while
 	inactiveBots = botMonitor.GetInactiveBots()
 	r.Len(inactiveBots, 0)
-	r.Len(botMonitor.trackers, 2) // should keep the previous trackers
+	r.Len(botMonitor.trackers, 3) // should keep the previous trackers
+
+	// it should add a new tracker and drop a stale one (drops bot 3, adds bot 4)
+	botMonitor.MonitorBots([]string{testTrackerBotID1, testTrackerBotID2, testTrackerBotID4})
+	r.Len(botMonitor.trackers, 3)
+	r.Equal(testTrackerBotID1, botMonitor.trackers[0].BotID())
+	r.Equal(testTrackerBotID2, botMonitor.trackers[1].BotID())
+	r.Equal(testTrackerBotID4, botMonitor.trackers[2].BotID())
+
+	// and should not add a duplicate one
+	botMonitor.MonitorBots([]string{testTrackerBotID1, testTrackerBotID2, testTrackerBotID4})
+	r.Len(botMonitor.trackers, 3)
+	r.Equal(testTrackerBotID1, botMonitor.trackers[0].BotID())
+	r.Equal(testTrackerBotID2, botMonitor.trackers[1].BotID())
+	r.Equal(testTrackerBotID4, botMonitor.trackers[2].BotID())
+
+	// and should be able to add an even newer one
+	botMonitor.MonitorBots([]string{testTrackerBotID1, testTrackerBotID2, testTrackerBotID4, testTrackerBotID5})
+	r.Len(botMonitor.trackers, 4)
+	r.Equal(testTrackerBotID1, botMonitor.trackers[0].BotID())
+	r.Equal(testTrackerBotID2, botMonitor.trackers[1].BotID())
+	r.Equal(testTrackerBotID4, botMonitor.trackers[2].BotID())
+	r.Equal(testTrackerBotID5, botMonitor.trackers[3].BotID())
 }

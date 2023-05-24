@@ -96,6 +96,7 @@ func (s *BotLifecycleManagerTestSuite) TestAddUpdateRemove() {
 
 	s.lifecycleMetrics.EXPECT().StatusRunning(latestAssigned).Times(1)
 	s.botPool.EXPECT().UpdateBotsWithLatestConfigs(latestAssigned)
+	s.botMonitor.EXPECT().MonitorBots(GetBotIDs(latestAssigned))
 
 	s.r.NoError(s.botManager.ManageBots(context.Background()))
 }

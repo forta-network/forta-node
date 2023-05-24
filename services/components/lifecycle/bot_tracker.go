@@ -8,7 +8,6 @@ import (
 const (
 	readCooldown        = time.Minute * 5
 	inactivityThreshold = time.Minute * 15
-	expiryThreshold     = time.Minute * 30
 )
 
 // TrackerStatus is tracker status enum type.
@@ -18,7 +17,6 @@ type TrackerStatus int
 const (
 	TrackerStatusActive TrackerStatus = iota + 1
 	TrackerStatusInactive
-	TrackerStatusStale
 )
 
 // BotTracker tracks activity time of a bot.
@@ -45,9 +43,6 @@ func (bt *BotTracker) Status() TrackerStatus {
 		return TrackerStatusActive
 	}
 	bt.lastRead = time.Now()
-	if time.Since(bt.lastActivity) > expiryThreshold {
-		return TrackerStatusStale
-	}
 	if time.Since(bt.lastActivity) > inactivityThreshold {
 		return TrackerStatusInactive
 	}

@@ -37,17 +37,6 @@ func TestInactive(t *testing.T) {
 	r.Equal(TrackerStatusActive, botTracker.Status())
 }
 
-func TestStale(t *testing.T) {
-	r := require.New(t)
-
-	botTracker := NewBotTracker(testBotID)
-	botTracker.lastActivity = time.Now().Add(-expiryThreshold - 1)
-	r.Equal(TrackerStatusStale, botTracker.Status())
-
-	// should say "active" for the second time to avoid quick reads
-	r.Equal(TrackerStatusActive, botTracker.Status())
-}
-
 func TestSaveActivity(t *testing.T) {
 	r := require.New(t)
 

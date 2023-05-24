@@ -14,6 +14,7 @@ type BotMonitorUpdater interface {
 
 // BotMonitorState reads the bot monitor state.
 type BotMonitorState interface {
+	MonitorBots([]string)
 	GetInactiveBots() []string
 }
 
@@ -56,13 +57,58 @@ func (bm *botMonitor) UpdateWithMetrics(botMetrics *protocol.AgentMetricList) er
 	return nil
 }
 
-func (bm *botMonitor) saveBotActivity(botID string) {
+func (bm *botMonitor) findTrackerAndDo(botID string, do func(*BotTracker)) {
 	for _, tracker := range bm.trackers {
 		if tracker.BotID() == botID {
-			tracker.SaveActivity()
+			do(tracker)
 			return
 		}
 	}
+}
+
+func (bm *botMonitor) missTrackerAndDo(botID string, do func()) {
+	for _, tracker := range bm.trackers {
+		if tracker.BotID() == botID {
+			return
+		}
+	}
+	do()
+}
+
+func (bm *botMonitor) saveBotActivity(botID string) {
+	bm.findTrackerAndDo(botID, func(tracker *BotTracker) {
+		tracker.SaveActivity()
+	})
+}
+
+func (bm *botMonitor) ensureTrackerExists(botID string) {
+	bm.missTrackerAndDo(botID, func() {
+		bm.trackers = append(bm.trackers, NewBotTracker(botID))
+	})
+}
+
+func (bm *botMonitor) dropStaleTrackers(botIDs []string) {
+	var preservedTrackers []*BotTracker
+	for _, tracker := range bm.trackers {
+		for _, botID := range botIDs {
+			if tracker.BotID() == botID {
+				preservedTrackers = append(preservedTrackers, tracker)
+				break
+			}
+		}
+	}
+	bm.trackers = preservedTrackers
+}
+
+// MonitorBots makes sure that the bots with given IDs are monitored.
+func (bm *botMonitor) MonitorBots(botIDs []string) {
+	bm.mu.Lock()
+	defer bm.mu.Unlock()
+
+	for _, botID := range botIDs {
+		bm.ensureTrackerExists(botID)
+	}
+	bm.dropStaleTrackers(botIDs)
 }
 
 // GetInactiveBots returns the list of the inactive bot IDs.
@@ -70,18 +116,9 @@ func (bm *botMonitor) GetInactiveBots() (inactive []string) {
 	bm.mu.Lock()
 	defer bm.mu.Unlock()
 
-	var preservedTrackers []*BotTracker
 	for _, tracker := range bm.trackers {
-		switch tracker.Status() {
-		case TrackerStatusActive:
-			preservedTrackers = append(preservedTrackers, tracker)
-
-		case TrackerStatusInactive:
-			preservedTrackers = append(preservedTrackers, tracker)
+		if tracker.Status() == TrackerStatusInactive {
 			inactive = append(inactive, tracker.BotID())
-
-		case TrackerStatusStale:
-			// ignore so the tracker is dropped
 		}
 	}
 
@@ -89,6 +126,5 @@ func (bm *botMonitor) GetInactiveBots() (inactive []string) {
 		bm.lifecycleMetrics.StatusInactive(inactive)
 	}
 
-	bm.trackers = preservedTrackers
 	return
 }
