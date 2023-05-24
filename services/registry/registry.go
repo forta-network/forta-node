@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/forta-network/forta-core-go/protocol"
+	"github.com/forta-network/forta-node/metrics"
 	"github.com/forta-network/forta-node/store"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -120,6 +122,15 @@ func (rs *RegistryService) publishLatestAgents() error {
 			rs.lastChangeDetected.Set()
 			log.WithField("count", len(agts)).Infof("publishing list of agents")
 			rs.agentsConfigs = agts
+
+			// emit metrics for each detected bot
+			var ms []*protocol.AgentMetric
+			for _, agt := range agts {
+				ms = append(ms, metrics.CreateAgentMetric(agt.ID, metrics.MetricAgentRegistryDetected, 1))
+			}
+
+			metrics.SendAgentMetrics(rs.msgClient, ms)
+
 			rs.msgClient.Publish(messaging.SubjectAgentsVersionsLatest, agts)
 		} else {
 			log.Info("registry: no agent changes detected")

@@ -50,6 +50,13 @@ const (
 	MetricAgentSupervisorStopComplete            = "agent.supervisor.stop.complete"
 	MetricAgentSupervisorStopSkipNotFound        = "agent.supervisor.stop.skip.notfound"
 
+	MetricAgentBlockError      = "agent.invoke.block.error"
+	MetricAgentTxError         = "agent.invoke.tx.error"
+	MetricAgentCombinerError   = "agent.invoke.combiner.error"
+	MetricAgentInitializeError = "agent.invoke.combiner.error"
+
+	MetricAgentRegistryDetected = "agent.registry.detected"
+
 	MetricJSONRPCLatency          = "jsonrpc.latency"
 	MetricJSONRPCRequest          = "jsonrpc.request"
 	MetricJSONRPCSuccess          = "jsonrpc.success"
