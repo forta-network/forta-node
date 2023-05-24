@@ -316,12 +316,15 @@ func (agent *Agent) Initialize() {
 
 	if err != nil {
 		logger.WithError(err).Warn("bot initialization failed")
+		agent.emitMetric(metrics.MetricAgentInitializeError, 1)
+
 		_ = agent.Close()
 		return
 	}
 
 	if err := validateInitializeResponse(initializeResponse); err != nil {
 		logger.WithError(err).Warn("bot initialization validation failed")
+		agent.emitMetric(metrics.MetricAgentInitializeError, 1)
 		return
 	}
 
@@ -438,6 +441,11 @@ func (agent *Agent) processTransaction(lg *log.Entry, request *TxRequest) (exit 
 		return true
 	}
 
+	if err != nil {
+		agent.emitMetric(metrics.MetricAgentTxError, 1)
+		return false
+	}
+
 	return false
 }
 
@@ -520,6 +528,11 @@ func (agent *Agent) processBlock(lg *log.Entry, request *BlockRequest) (exit boo
 		return true
 	}
 
+	if err != nil {
+		agent.emitMetric(metrics.MetricAgentBlockError, 1)
+		return false
+	}
+
 	return false
 }
 
@@ -560,6 +573,8 @@ func (agent *Agent) processCombinationAlert(lg *log.Entry, request *CombinationR
 
 	if err != nil {
 		lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking agent")
+		agent.emitMetric(metrics.MetricAgentCombinerError, 1)
+
 		if agent.errCounter.TooManyErrs(err) {
 			lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down agent")
 			agent.Close()
@@ -733,4 +748,12 @@ func (agent *Agent) IsSharded() bool {
 	defer agent.mu.RUnlock()
 
 	return agent.config.ShardConfig != nil && agent.config.ShardConfig.Shards > 1
+}
+
+func (agent *Agent) emitMetric(metricName string, value float64) {
+	metrics.SendAgentMetrics(
+		agent.msgClient, []*protocol.AgentMetric{
+			metrics.CreateAgentMetric(agent.config.ID, metricName, value),
+		},
+	)
 }

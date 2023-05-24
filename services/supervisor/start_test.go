@@ -267,7 +267,7 @@ func (s *Suite) TestAgentRun() {
 	s.dockerClient.EXPECT().AttachNetwork(gomock.Any(), testJWTProviderContainerID, testAgentNetworkID)
 	s.dockerClient.EXPECT().AttachNetwork(gomock.Any(), testPublicAPIContainerID, testAgentNetworkID)
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusRunning, agentPayload)
-	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any())
+	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any()).AnyTimes()
 
 	s.r.NoError(s.service.handleAgentRunWithContext(s.service.ctx, agentPayload))
 }
@@ -282,7 +282,7 @@ func (s *Suite) TestAgentRunAgain() {
 	// the agent is running.
 	s.agentImageClient.EXPECT().EnsureLocalImage(gomock.Any(), "agent test-agent", agentConfig.Image).Return(nil)
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusRunning, agentPayload)
-	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any())
+	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any()).AnyTimes()
 
 	s.r.NoError(s.service.handleAgentRunWithContext(s.service.ctx, agentPayload))
 }
