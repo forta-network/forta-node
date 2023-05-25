@@ -17,30 +17,30 @@ runs:
     - name: Run unit tests
       shell: bash
       run: make test
-    # - name: Code coverage
-    #   shell: bash
-    #   id: coverage
-    #   run: |
-    #     echo "total=$(make -s coverage)" >> $GITHUB_OUTPUT
-    # - name: Checkout master branch
-    #   uses: actions/checkout@v2
-    #   with:
-    #     ref: master
-    #     path: master
-    # - name: Master branch code coverage
-    #   shell: bash
-    #   id: master-coverage
-    #   run: |
-    #     make test
-    #     echo "total=$(make -s coverage)" >> $GITHUB_OUTPUT
-    #   working-directory: ./master
-    # - name: Coverage threshold check
-    #   shell: bash
-    #   run: |
-    #     COVERAGE=${{ steps.coverage.outputs.total }}
-    #     MASTER_COVERAGE=${{ steps.master-coverage.outputs.total }}
-    #     COVERAGE_THRESHOLD=${{ inputs.COVERAGE_THRESHOLD }}
-    #     if (( $(echo "$MASTER_COVERAGE - $COVERAGE > $COVERAGE_THRESHOLD" | bc -l)  )) ; then
-    #       echo "coverage fell by more than $COVERAGE_THRESHOLD%"
-    #       exit 1
-    #     fi
+    - name: Code coverage
+      shell: bash
+      id: coverage
+      run: |
+        echo "total=$(make -s coverage)" >> $GITHUB_OUTPUT
+    - name: Checkout master branch
+      uses: actions/checkout@v2
+      with:
+        ref: master
+        path: master
+    - name: Master branch code coverage
+      shell: bash
+      id: master-coverage
+      run: |
+        make test
+        echo "total=$(make -s coverage)" >> $GITHUB_OUTPUT
+      working-directory: ./master
+    - name: Coverage threshold check
+      shell: bash
+      run: |
+        COVERAGE=${{ steps.coverage.outputs.total }}
+        MASTER_COVERAGE=${{ steps.master-coverage.outputs.total }}
+        COVERAGE_THRESHOLD=${{ inputs.COVERAGE_THRESHOLD }}
+        if (( $(echo "$MASTER_COVERAGE - $COVERAGE > $COVERAGE_THRESHOLD" | bc -l)  )) ; then
+          echo "coverage fell by more than $COVERAGE_THRESHOLD%"
+          exit 1
+        fi
