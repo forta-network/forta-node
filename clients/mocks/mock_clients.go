@@ -191,11 +191,12 @@ func (mr *MockDockerClientMockRecorder) GetFortaServiceContainers(ctx interface{
 }
 
 // HasLocalImage mocks base method.
-func (m *MockDockerClient) HasLocalImage(ctx context.Context, ref string) bool {
+func (m *MockDockerClient) HasLocalImage(ctx context.Context, ref string) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "HasLocalImage", ctx, ref)
 	ret0, _ := ret[0].(bool)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // HasLocalImage indicates an expected call of HasLocalImage.
