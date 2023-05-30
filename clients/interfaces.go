@@ -19,6 +19,7 @@ type DockerClient interface {
 	CreatePublicNetwork(ctx context.Context, name string) (string, error)
 	CreateInternalNetwork(ctx context.Context, name string) (string, error)
 	AttachNetwork(ctx context.Context, containerID string, networkID string) error
+	DetachNetwork(ctx context.Context, containerID string, networkID string) error
 	RemoveNetworkByName(ctx context.Context, networkName string) error
 	GetContainers(ctx context.Context) (docker.ContainerList, error)
 	GetContainersByLabel(ctx context.Context, name, value string) (docker.ContainerList, error)
@@ -37,7 +38,7 @@ type DockerClient interface {
 	Prune(ctx context.Context) error
 	WaitContainerPrune(ctx context.Context, id string) error
 	Nuke(ctx context.Context) error
-	HasLocalImage(ctx context.Context, ref string) bool
+	HasLocalImage(ctx context.Context, ref string) (bool, error)
 	EnsureLocalImage(ctx context.Context, name, ref string) error
 	EnsureLocalImages(ctx context.Context, timeoutPerPull time.Duration, imagePulls []docker.ImagePull) []error
 	GetContainerLogs(ctx context.Context, containerID, tail string, truncate int) (string, error)

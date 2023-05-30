@@ -214,7 +214,6 @@ func (s *Suite) TestStartServices() {
 			},
 		),
 	).Return(&docker.Container{ID: testProxyContainerID}, nil)
-	s.dockerClient.EXPECT().HasLocalImage(s.supervisor.ctx, gomock.Any()).Return(true).AnyTimes()
 	s.globalClient.EXPECT().GetContainerByName(s.supervisor.ctx, config.DockerSupervisorContainerName).Return(&types.Container{ID: testSupervisorContainerID}, nil).AnyTimes()
 	s.dockerClient.EXPECT().AttachNetwork(s.supervisor.ctx, testSupervisorContainerID, testNodeNetworkID)
 	s.dockerClient.EXPECT().AttachNetwork(s.supervisor.ctx, testSupervisorContainerID, testNatsNetworkID)

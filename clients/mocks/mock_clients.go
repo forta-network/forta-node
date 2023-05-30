@@ -84,6 +84,20 @@ func (mr *MockDockerClientMockRecorder) CreatePublicNetwork(ctx, name interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePublicNetwork", reflect.TypeOf((*MockDockerClient)(nil).CreatePublicNetwork), ctx, name)
 }
 
+// DetachNetwork mocks base method.
+func (m *MockDockerClient) DetachNetwork(ctx context.Context, containerID, networkID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DetachNetwork", ctx, containerID, networkID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DetachNetwork indicates an expected call of DetachNetwork.
+func (mr *MockDockerClientMockRecorder) DetachNetwork(ctx, containerID, networkID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DetachNetwork", reflect.TypeOf((*MockDockerClient)(nil).DetachNetwork), ctx, containerID, networkID)
+}
+
 // EnsureLocalImage mocks base method.
 func (m *MockDockerClient) EnsureLocalImage(ctx context.Context, name, ref string) error {
 	m.ctrl.T.Helper()
@@ -218,11 +232,12 @@ func (mr *MockDockerClientMockRecorder) GetFortaServiceContainers(ctx interface{
 }
 
 // HasLocalImage mocks base method.
-func (m *MockDockerClient) HasLocalImage(ctx context.Context, ref string) bool {
+func (m *MockDockerClient) HasLocalImage(ctx context.Context, ref string) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "HasLocalImage", ctx, ref)
 	ret0, _ := ret[0].(bool)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // HasLocalImage indicates an expected call of HasLocalImage.
