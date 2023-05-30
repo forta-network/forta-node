@@ -14,7 +14,6 @@ const (
 	SubjectAgentsAlertSubscribe         = "agents.alert.subscribe"
 	SubjectAgentsAlertUnsubscribe       = "agents.alert.unsubscribe"
 	SubjectAgentsStatusRunning          = "agents.status.running"
-	SubjectAgentsStatusInitializeFailed = "agents.status.initialize.failed"
 	SubjectAgentsStatusAttached         = "agents.status.attached"
 	SubjectAgentsStatusStopped          = "agents.status.stopped"
 	SubjectMetricAgent                  = "metric.agent"
