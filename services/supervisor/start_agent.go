@@ -44,15 +44,16 @@ func (sup *SupervisorService) startAgent(ctx context.Context, agent config.Agent
 	sup.mu.Lock()
 	defer sup.mu.Unlock()
 
-	_, ok := sup.getContainerUnsafe(agent.ContainerName())
-	if ok {
-		return errAgentAlreadyRunning
-	}
 
 	nwID, err := sup.client.CreatePublicNetwork(ctx, agent.ContainerName())
 	if err != nil {
 		sup.emitErrMetric(agent.ID, metrics.MetricAgentSupervisorStartErrorCreateNetwork, err)
 		return err
+	}
+
+	_, ok := sup.getContainerUnsafe(agent.ContainerName())
+	if ok {
+		return errAgentAlreadyRunning
 	}
 
 	limits := config.GetAgentResourceLimits(sup.config.Config.ResourcesConfig)
@@ -210,6 +211,11 @@ func (sup *SupervisorService) handleAgentStop(payload messaging.AgentPayload) er
 			return fmt.Errorf("failed to stop container '%s': %v", container.ID, err)
 		}
 		logger.Infof("successfully stopped the container")
+
+		if err := sup.client.RemoveNetworkByName(sup.ctx, container.ID); err != nil{
+			sup.emitErrMetric(agentCfg.ID, metrics.MetricAgentSupervisorStopErrorContainer, err)
+			return fmt.Errorf("failed to stop container '%s': %v", container.ID, err)
+		}
 
 		sup.emitMetric(agentCfg.ID, metrics.MetricAgentSupervisorStopComplete)
 		stopped[container.ID] = true
