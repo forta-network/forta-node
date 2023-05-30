@@ -295,7 +295,8 @@ func (s *Suite) TestAgentStopOne() {
 	_, agentPayload := testAgentData()
 	// Stops the agent container and publishes a "stopped" message.
 	s.dockerClient.EXPECT().StopContainer(s.service.ctx, testAgentContainerID)
-	s.dockerClient.EXPECT().RemoveNetworkByName(s.service.ctx, testAgentContainerID)
+	s.dockerClient.EXPECT().DetachNetwork(s.service.ctx, gomock.Any(), testAgentContainerName).AnyTimes()
+	s.dockerClient.EXPECT().RemoveNetworkByName(s.service.ctx, testAgentContainerName)
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusStopped, agentPayload)
 
 	s.r.NoError(s.service.handleAgentStop(agentPayload))

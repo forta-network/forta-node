@@ -21,6 +21,7 @@ type DockerClient interface {
 	CreatePublicNetwork(ctx context.Context, name string) (string, error)
 	CreateInternalNetwork(ctx context.Context, name string) (string, error)
 	AttachNetwork(ctx context.Context, containerID string, networkID string) error
+	DetachNetwork(ctx context.Context, containerID string, networkID string) error
 	RemoveNetworkByName(ctx context.Context, networkName string) error
 	GetContainers(ctx context.Context) (DockerContainerList, error)
 	GetFortaServiceContainers(ctx context.Context) (fortaContainers DockerContainerList, err error)

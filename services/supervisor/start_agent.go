@@ -91,11 +91,8 @@ func (sup *SupervisorService) startAgent(ctx context.Context, agent config.Agent
 	}
 
 	// Attach the scanner, JWT Provider, Public API Proxy and the JSON-RPC proxy to the agent's network.
-	for _, containerID := range []string{
-		sup.scannerContainer.ID, sup.jsonRpcContainer.ID,
-		sup.jwtProviderContainer.ID, sup.publicAPIContainer.ID,
-	} {
-		err := sup.client.AttachNetwork(ctx, containerID, nwID)
+	for _, container := range sup.getBotNetworkContainers() {
+		err := sup.client.AttachNetwork(ctx, container.ID, nwID)
 		if err != nil {
 			sup.emitErrMetric(agent.ID, metrics.MetricAgentSupervisorStartErrorAttachNetwork, err)
 			return err
@@ -212,9 +209,16 @@ func (sup *SupervisorService) handleAgentStop(payload messaging.AgentPayload) er
 		}
 		logger.Infof("successfully stopped the container")
 
-		if err := sup.client.RemoveNetworkByName(sup.ctx, container.ID); err != nil{
+		for _, c := range sup.getBotNetworkContainers() {
+			if err := sup.client.DetachNetwork(sup.ctx, c.ID, agentCfg.ContainerName()); err != nil {
+				sup.emitErrMetric(agentCfg.ID, metrics.MetricAgentSupervisorStopErrorContainer, err)
+				logger.WithError(err).Warnf("failed to disconnect container %s from network: %s", container.ID, agentCfg.ContainerName())
+			}
+		}
+
+		if err := sup.client.RemoveNetworkByName(sup.ctx, agentCfg.ContainerName()); err != nil {
 			sup.emitErrMetric(agentCfg.ID, metrics.MetricAgentSupervisorStopErrorContainer, err)
-			logger.WithError(err).Warnf("failed to remove container network: %s", container.ID)
+			logger.WithError(err).Warnf("failed to remove container network: %s", agentCfg.ContainerName())
 		}
 
 		sup.emitMetric(agentCfg.ID, metrics.MetricAgentSupervisorStopComplete)
@@ -242,6 +246,13 @@ func (sup *SupervisorService) registerMessageHandlers() {
 	sup.msgClient.Subscribe(messaging.SubjectAgentsActionStop, messaging.AgentsHandler(sup.handleAgentStop))
 	if sup.config.Config.InspectionConfig.InspectAtStartup {
 		sup.msgClient.Subscribe(messaging.SubjectInspectionDone, messaging.InspectionResultsHandler(sup.handleInspectionResults))
+	}
+}
+
+func (sup *SupervisorService) getBotNetworkContainers() []*clients.DockerContainer {
+	return []*clients.DockerContainer{
+		sup.scannerContainer, sup.jsonRpcContainer,
+		sup.jwtProviderContainer, sup.publicAPIContainer,
 	}
 }
 
