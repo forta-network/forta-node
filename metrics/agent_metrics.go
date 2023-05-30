@@ -53,7 +53,7 @@ const (
 	MetricAgentBlockError      = "agent.invoke.block.error"
 	MetricAgentTxError         = "agent.invoke.tx.error"
 	MetricAgentCombinerError   = "agent.invoke.combiner.error"
-	MetricAgentInitializeError = "agent.invoke.combiner.error"
+	MetricAgentInitializeError = "agent.invoke.initialize.error"
 	MetricAgentDialBegin       = "agent.dial.begin"
 	MetricAgentDialError       = "agent.dial.error"
 

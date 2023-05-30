@@ -328,10 +328,18 @@ func (agent *Agent) Initialize() {
 		return
 	}
 
+	if initializeResponse.Status == protocol.ResponseStatus_ERROR {
+		agent.emitMetric(metrics.MetricAgentInitializeError, 1)
+		logger.WithError(err).Warn("bot initialization failed")
+		_ = agent.Close()
+		return
+	}
+
 	// pass new alert subscriptions to the agent pool
 	if initializeResponse != nil && initializeResponse.AlertConfig != nil {
 		agent.SetAlertConfig(initializeResponse.AlertConfig)
 		agent.msgClient.Publish(messaging.SubjectAgentsAlertSubscribe, agent.CombinerBotSubscriptions())
+		metrics.SendAgentMetrics(agent.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agentConfig.ID, messaging.SubjectAgentsAlertSubscribe, 1)})
 	}
 
 	logger.Info("bot initialization succeeded")
@@ -339,7 +347,10 @@ func (agent *Agent) Initialize() {
 }
 
 func validateInitializeResponse(response *protocol.InitializeResponse) error {
-	if response == nil || response.AlertConfig == nil {
+	if response == nil {
+		return fmt.Errorf("initialize response can not be nil")
+	}
+	if response.AlertConfig == nil {
 		return nil
 	}
 
