@@ -93,7 +93,6 @@ func (s *Suite) TestStartProcessStop() {
 	s.r.Equal(1, len(s.ap.agents))
 	s.r.False(s.ap.agents[0].IsReady())
 	// When the agent pool receives a message saying that the agent started to run
-	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any()).Times(2)
 	s.agentClient.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{Status: protocol.ResponseStatus_SUCCESS}, nil)
 
 	s.r.NoError(s.ap.handleStatusRunning(agentPayload))
