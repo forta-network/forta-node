@@ -214,7 +214,7 @@ func (sup *SupervisorService) handleAgentStop(payload messaging.AgentPayload) er
 
 		if err := sup.client.RemoveNetworkByName(sup.ctx, container.ID); err != nil{
 			sup.emitErrMetric(agentCfg.ID, metrics.MetricAgentSupervisorStopErrorContainer, err)
-			return fmt.Errorf("failed to stop container '%s': %v", container.ID, err)
+			logger.WithError(err).Warnf("failed to remove container network: %s", container.ID)
 		}
 
 		sup.emitMetric(agentCfg.ID, metrics.MetricAgentSupervisorStopComplete)
