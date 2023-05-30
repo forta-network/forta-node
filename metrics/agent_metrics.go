@@ -54,6 +54,8 @@ const (
 	MetricAgentTxError         = "agent.invoke.tx.error"
 	MetricAgentCombinerError   = "agent.invoke.combiner.error"
 	MetricAgentInitializeError = "agent.invoke.combiner.error"
+	MetricAgentDialBegin       = "agent.dial.begin"
+	MetricAgentDialError       = "agent.dial.error"
 
 	MetricAgentRegistryDetected = "agent.registry.detected"
 

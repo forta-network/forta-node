@@ -56,3 +56,4 @@ runs:
         MANIFEST_REF=$(./scripts/ipfs-add.sh "./manifest.json")
         echo "::set-output name=release-cid::$MANIFEST_REF"
         aws s3 cp manifest.json "s3://$BUCKET_NAME/manifests/releases/$MANIFEST_REF"
+        aws s3 cp manifest.json "s3://$BUCKET_NAME/manifests/releases/latest"

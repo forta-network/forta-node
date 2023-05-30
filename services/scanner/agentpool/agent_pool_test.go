@@ -79,8 +79,7 @@ func (s *Suite) TestStartProcessStop() {
 	emptyPayload := messaging.AgentPayload{}
 
 	// Prior to invoking initialize method, agent.start metric should be emitted.
-	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent,gomock.Any())
-
+	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any()).AnyTimes()
 
 	// Given that there are no agents running
 	// When the latest list is received,
@@ -88,7 +87,6 @@ func (s *Suite) TestStartProcessStop() {
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusAttached, gomock.Any())
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsActionRun, gomock.Any())
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsAlertUnsubscribe, gomock.Any())
-	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent,gomock.Any())
 	s.r.NoError(s.ap.handleAgentVersionsUpdate(agentPayload))
 
 	// Given that the agent is known to the pool but it is not ready yet
@@ -99,7 +97,7 @@ func (s *Suite) TestStartProcessStop() {
 	s.agentClient.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{Status: protocol.ResponseStatus_SUCCESS}, nil)
 
 	s.r.NoError(s.ap.handleStatusRunning(agentPayload))
-	<- s.ap.agents[0].Initialized()
+	<-s.ap.agents[0].Initialized()
 	// Then the agent must be marked ready
 	s.r.True(s.ap.agents[0].IsReady())
 	s.r.True(s.ap.agents[0].IsInitialized())
@@ -127,7 +125,6 @@ func (s *Suite) TestStartProcessStop() {
 				Source:    &protocol.AlertEvent_Alert_Source{Bot: &protocol.AlertEvent_Alert_Bot{Id: testCombinerSourceBot}},
 				CreatedAt: time.Now().Format(time.RFC3339Nano),
 			},
-
 		},
 	}
 	// save combiner subscription
