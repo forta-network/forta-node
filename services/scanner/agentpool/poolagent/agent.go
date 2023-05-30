@@ -315,7 +315,6 @@ func (agent *Agent) Initialize() {
 	}
 
 	if err != nil {
-		metrics.SendAgentMetrics(agent.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agentConfig.ID, metrics.MetricInitializeError, 1)})
 		logger.WithError(err).Warn("bot initialization failed")
 		agent.emitMetric(metrics.MetricAgentInitializeError, 1)
 
@@ -330,7 +329,7 @@ func (agent *Agent) Initialize() {
 	}
 
 	if initializeResponse.Status == protocol.ResponseStatus_ERROR {
-		metrics.SendAgentMetrics(agent.msgClient, []*protocol.AgentMetric{metrics.CreateAgentMetric(agentConfig.ID, metrics.MetricInitializeError, 1)})
+		agent.emitMetric(metrics.MetricAgentInitializeError, 1)
 		logger.WithError(err).Warn("bot initialization failed")
 		_ = agent.Close()
 		return
