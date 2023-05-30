@@ -4,8 +4,9 @@ import (
 	"errors"
 
 	"github.com/forta-network/forta-core-go/utils"
-	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/clients/docker"
 	"github.com/forta-network/forta-node/services"
+	"github.com/forta-network/forta-node/services/components/containers"
 
 	"fmt"
 	"time"
@@ -44,7 +45,7 @@ func (sup *SupervisorService) doHealthCheck() error {
 			var err error
 			foundContainer, err = sup.client.GetContainerByID(sup.ctx, knownContainer.ID)
 			currAttempt := attempt + 1
-			if err != nil && errors.Is(err, clients.ErrContainerNotFound) {
+			if err != nil && errors.Is(err, docker.ErrContainerNotFound) {
 				log.Warnf("healthcheck: container '%s' with id '%s' was not found (attempt=%d/%d)", knownContainer.Name, knownContainer.ID, currAttempt, maxAttempts)
 				return err
 			}
@@ -80,7 +81,10 @@ func (sup *SupervisorService) ensureUp(knownContainer *Container, foundContainer
 		if err != nil {
 			return err
 		}
-		if !knownContainer.IsAgent && containerDetails.State.ExitCode == services.ExitCodeTriggered {
+		if containers.IsBotContainer(foundContainer) {
+			return nil // do not handle bot containers
+		}
+		if containerDetails.State.ExitCode == services.ExitCodeTriggered {
 			logger.Info("detected internal exit trigger - exiting")
 			services.TriggerExit(0)
 			return nil

@@ -7,7 +7,9 @@ import (
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/protocol/alerthash"
 	"github.com/forta-network/forta-node/clients/messaging"
-	"github.com/forta-network/forta-node/metrics"
+	"github.com/forta-network/forta-node/services/components"
+	"github.com/forta-network/forta-node/services/components/botio/botreq"
+	"github.com/forta-network/forta-node/services/components/metrics"
 
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol"
@@ -17,7 +19,6 @@ import (
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 )
-
 
 // TxAnalyzerService reads TX info, calls agents, and emits results
 type TxAnalyzerService struct {
@@ -31,16 +32,16 @@ type TxAnalyzerService struct {
 type TxAnalyzerServiceConfig struct {
 	TxChannel   <-chan *domain.TransactionEvent
 	AlertSender clients.AlertSender
-	AgentPool   AgentPool
 	MsgClient   clients.MessageClient
+	components.BotProcessing
 }
 
-func (t *TxAnalyzerService) publishMetrics(result *TxResult) {
+func (t *TxAnalyzerService) publishMetrics(result *botreq.TxResult) {
 	m := metrics.GetTxMetrics(result.AgentConfig, result.Response, result.Timestamps)
 	t.cfg.MsgClient.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: m})
 }
 
-func (t *TxAnalyzerService) findingToAlert(result *TxResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
+func (t *TxAnalyzerService) findingToAlert(result *botreq.TxResult, ts time.Time, f *protocol.Finding) (*protocol.Alert, error) {
 	alertID := alerthash.ForTransactionAlert(
 		&alerthash.Inputs{
 			TransactionEvent: result.Request.Event,
@@ -108,7 +109,7 @@ func (t *TxAnalyzerService) createBloomFilter(finding *protocol.Finding, event *
 
 func (t *TxAnalyzerService) Start() error {
 	go func() {
-		for result := range t.cfg.AgentPool.TxResults() {
+		for result := range t.cfg.BotProcessing.Results.Tx {
 			ts := time.Now().UTC()
 
 			rt := &clients.AgentRoundTrip{
@@ -160,7 +161,7 @@ func (t *TxAnalyzerService) Start() error {
 			request := &protocol.EvaluateTxRequest{RequestId: requestId.String(), Event: msg}
 
 			// forward to the pool
-			t.cfg.AgentPool.SendEvaluateTxRequest(request)
+			t.cfg.RequestSender.SendEvaluateTxRequest(request)
 
 			t.lastInputActivity.Set()
 		}

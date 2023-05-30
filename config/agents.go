@@ -23,7 +23,6 @@ type AgentConfig struct {
 	Owner        string  `yaml:"owner" json:"owner"`
 
 	ChainID     int
-	AlertConfig *protocol.AlertConfig
 	ShardConfig *ShardConfig
 }
 
@@ -40,14 +39,31 @@ func (ac AgentConfig) Equal(b AgentConfig) bool {
 		return false
 	}
 
-	noSharding := ac.ShardConfig == nil && b.ShardConfig == nil
-	if noSharding {
+	// if both don't have sharding config, then they are the same
+	if ac.ShardConfig == nil && b.ShardConfig == nil {
 		return true
 	}
+
+	// if one of them does not have shard config, then they are different
+	if ac.ShardConfig == nil && b.ShardConfig != nil {
+		return false
+	}
+
+	if ac.ShardConfig != nil && b.ShardConfig == nil {
+		return false
+	}
+
+	// if both have shard config, then configs should match
+
 	sameShardID := ac.ShardConfig.ShardID == b.ShardConfig.ShardID
 	sameShardCount := ac.ShardConfig.Shards == b.ShardConfig.Shards
 
 	return sameShardID && sameShardCount
+}
+
+// IsSharded tells if this is a sharded bot.
+func (ac *AgentConfig) IsSharded() bool {
+	return ac.ShardConfig != nil && ac.ShardConfig.Shards > 1
 }
 
 // ToAgentInfo transforms the agent config to the agent info.

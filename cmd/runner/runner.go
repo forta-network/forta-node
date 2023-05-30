@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/forta-network/forta-node/clients"
+	"github.com/forta-network/forta-node/clients/docker"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/services"
 	"github.com/forta-network/forta-node/services/runner"
@@ -19,11 +19,11 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the image store: %v", err)
 	}
-	dockerClient, err := clients.NewDockerClient("runner")
+	dockerClient, err := docker.NewDockerClient("runner")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the docker client: %v", err)
 	}
-	globalDockerClient, err := clients.NewDockerClient("")
+	globalDockerClient, err := docker.NewDockerClient("")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the docker client: %v", err)
 	}

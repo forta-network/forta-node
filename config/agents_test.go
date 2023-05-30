@@ -1,8 +1,9 @@
 package config
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAgentConfig_ContainerName(t *testing.T) {
@@ -32,7 +33,6 @@ func TestAgentConfig_Equal(t *testing.T) {
 				StopBlock:    nil,
 				Owner:        "owner1",
 				ChainID:      123,
-				AlertConfig:  nil,
 				ShardConfig: &ShardConfig{
 					ShardID: 1,
 					Shards:  2,
@@ -49,7 +49,6 @@ func TestAgentConfig_Equal(t *testing.T) {
 				StopBlock:    nil,
 				Owner:        "owner1",
 				ChainID:      123,
-				AlertConfig:  nil,
 				ShardConfig: &ShardConfig{
 					ShardID: 1,
 					Shards:  2,
@@ -70,7 +69,6 @@ func TestAgentConfig_Equal(t *testing.T) {
 				StopBlock:    nil,
 				Owner:        "owner1",
 				ChainID:      123,
-				AlertConfig:  nil,
 				ShardConfig: &ShardConfig{
 					ShardID: 1,
 					Shards:  2,
@@ -87,7 +85,6 @@ func TestAgentConfig_Equal(t *testing.T) {
 				StopBlock:    nil,
 				Owner:        "owner1",
 				ChainID:      123,
-				AlertConfig:  nil,
 				ShardConfig: &ShardConfig{
 					ShardID: 2,
 					Shards:  4,
@@ -108,7 +105,6 @@ func TestAgentConfig_Equal(t *testing.T) {
 				StopBlock:    nil,
 				Owner:        "owner1",
 				ChainID:      123,
-				AlertConfig:  nil,
 				ShardConfig: &ShardConfig{
 					ShardID: 1,
 					Shards:  2,
@@ -125,7 +121,6 @@ func TestAgentConfig_Equal(t *testing.T) {
 				StopBlock:    nil,
 				Owner:        "owner1",
 				ChainID:      123,
-				AlertConfig:  nil,
 				ShardConfig: &ShardConfig{
 					ShardID: 1,
 					Shards:  2,

@@ -67,10 +67,10 @@ func (mr *MockRegistryStoreMockRecorder) FindScannerShardIDForBot(agentID, scann
 }
 
 // GetAgentsIfChanged mocks base method.
-func (m *MockRegistryStore) GetAgentsIfChanged(scanner string) ([]*config.AgentConfig, bool, error) {
+func (m *MockRegistryStore) GetAgentsIfChanged(scanner string) ([]config.AgentConfig, bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAgentsIfChanged", scanner)
-	ret0, _ := ret[0].([]*config.AgentConfig)
+	ret0, _ := ret[0].([]config.AgentConfig)
 	ret1, _ := ret[1].(bool)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2

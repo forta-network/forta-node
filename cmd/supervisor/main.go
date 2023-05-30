@@ -2,6 +2,7 @@ package supervisor
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/forta-network/forta-core-go/clients/health"
@@ -10,6 +11,8 @@ import (
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/healthutils"
 	"github.com/forta-network/forta-node/services"
+	"github.com/forta-network/forta-node/services/components"
+	"github.com/forta-network/forta-node/services/components/registry"
 	"github.com/forta-network/forta-node/services/supervisor"
 )
 
@@ -26,10 +29,20 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	if err != nil {
 		return nil, err
 	}
+	botRegistry, err := registry.New(cfg, key.Address)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create the bot registry: %v", err)
+	}
+	botLifecycleConfig := components.BotLifecycleConfig{
+		Config:         cfg,
+		ScannerAddress: key.Address,
+		BotRegistry:    botRegistry,
+	}
 	svc, err := supervisor.NewSupervisorService(ctx, supervisor.SupervisorServiceConfig{
-		Config:     cfg,
-		Passphrase: passphrase,
-		Key:        key,
+		Config:             cfg,
+		Passphrase:         passphrase,
+		Key:                key,
+		BotLifecycleConfig: botLifecycleConfig,
 	})
 	if err != nil {
 		return nil, err
@@ -37,7 +50,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	return []services.Service{
 		health.NewService(
 			ctx, "", healthutils.DefaultHealthServerErrHandler,
-			health.CheckerFrom(summarizeReports, svc),
+			health.CheckerFrom(summarizeReports, svc, botRegistry),
 		),
 		svc,
 	}, nil
