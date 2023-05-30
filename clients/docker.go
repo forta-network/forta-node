@@ -237,6 +237,18 @@ func (d *dockerClient) AttachNetwork(ctx context.Context, containerID string, ne
 	return err
 }
 
+func (d *dockerClient) DetachNetwork(ctx context.Context, containerID string, networkID string) error {
+	err := d.cli.NetworkDisconnect(ctx, networkID, containerID, true)
+	if err == nil {
+		return nil
+	}
+
+	if strings.Contains(err.Error(), "is not connected") {
+		return nil
+	}
+	return err
+}
+
 func withTcp(port string) string {
 	return fmt.Sprintf("%s/tcp", port)
 }

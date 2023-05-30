@@ -86,6 +86,20 @@ func (mr *MockDockerClientMockRecorder) CreatePublicNetwork(ctx, name interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePublicNetwork", reflect.TypeOf((*MockDockerClient)(nil).CreatePublicNetwork), ctx, name)
 }
 
+// DetachNetwork mocks base method.
+func (m *MockDockerClient) DetachNetwork(ctx context.Context, containerID, networkID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DetachNetwork", ctx, containerID, networkID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DetachNetwork indicates an expected call of DetachNetwork.
+func (mr *MockDockerClientMockRecorder) DetachNetwork(ctx, containerID, networkID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DetachNetwork", reflect.TypeOf((*MockDockerClient)(nil).DetachNetwork), ctx, containerID, networkID)
+}
+
 // EnsureLocalImage mocks base method.
 func (m *MockDockerClient) EnsureLocalImage(ctx context.Context, name, ref string) error {
 	m.ctrl.T.Helper()
