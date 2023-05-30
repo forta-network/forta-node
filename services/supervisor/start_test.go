@@ -281,6 +281,7 @@ func (s *Suite) TestAgentRunAgain() {
 	// Expect it to only publish a message again to ensure the subscribers that
 	// the agent is running.
 	s.agentImageClient.EXPECT().EnsureLocalImage(gomock.Any(), "agent test-agent", agentConfig.Image).Return(nil)
+	s.dockerClient.EXPECT().CreatePublicNetwork(gomock.Any(), gomock.Any()).Return(testNodeNetworkID, nil)
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusRunning, agentPayload)
 	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any()).AnyTimes()
 
@@ -294,6 +295,7 @@ func (s *Suite) TestAgentStopOne() {
 	_, agentPayload := testAgentData()
 	// Stops the agent container and publishes a "stopped" message.
 	s.dockerClient.EXPECT().StopContainer(s.service.ctx, testAgentContainerID)
+	s.dockerClient.EXPECT().RemoveNetworkByName(s.service.ctx, testAgentContainerID)
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsStatusStopped, agentPayload)
 
 	s.r.NoError(s.service.handleAgentStop(agentPayload))
