@@ -37,7 +37,7 @@ type DockerClient interface {
 	Prune(ctx context.Context) error
 	WaitContainerPrune(ctx context.Context, id string) error
 	Nuke(ctx context.Context) error
-	HasLocalImage(ctx context.Context, ref string) bool
+	HasLocalImage(ctx context.Context, ref string) (bool, error)
 	EnsureLocalImage(ctx context.Context, name, ref string) error
 	GetContainerLogs(ctx context.Context, containerID, tail string, truncate int) (string, error)
 	GetContainerFromRemoteAddr(ctx context.Context, hostPort string) (*types.Container, error)

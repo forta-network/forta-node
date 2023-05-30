@@ -661,9 +661,15 @@ func (d *dockerClient) WaitContainerPrune(ctx context.Context, id string) error 
 }
 
 // HasLocalImage checks if we have an image locally.
-func (d *dockerClient) HasLocalImage(ctx context.Context, ref string) bool {
+func (d *dockerClient) HasLocalImage(ctx context.Context, ref string) (bool, error) {
 	_, _, err := d.cli.ImageInspectWithRaw(ctx, ref)
-	return err == nil
+	if client.IsErrNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // EnsureLocalImage ensures that we have the image locally.
@@ -672,7 +678,11 @@ func (d *dockerClient) EnsureLocalImage(ctx context.Context, name, ref string) e
 		"image": ref,
 		"name":  name,
 	}).Info("ensuring local image")
-	if d.HasLocalImage(ctx, ref) {
+	imageExists, imgErr := d.HasLocalImage(ctx, ref)
+	if imgErr != nil {
+		return fmt.Errorf("error checking local: %s", imgErr.Error())
+	}
+	if imageExists {
 		log.Infof("found local image for '%s': %s", name, ref)
 		return nil
 	}
@@ -693,7 +703,8 @@ func (d *dockerClient) EnsureLocalImage(ctx context.Context, name, ref string) e
 		case <-ticker.C:
 			// continue
 		case <-ctx.Done():
-			return ctx.Err()
+			// returning underlying err, because it's != nil
+			return err
 		}
 	}
 
