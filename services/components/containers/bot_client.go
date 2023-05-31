@@ -27,6 +27,7 @@ type BotClient interface {
 	StopBot(ctx context.Context, botConfig config.AgentConfig) error
 	LoadBotContainers(ctx context.Context) ([]types.Container, error)
 	StartWaitBotContainer(ctx context.Context, containerID string) error
+	CleanupUnusedBots(ctx context.Context, botConfigs []config.AgentConfig) error
 }
 
 type botClient struct {
@@ -109,7 +110,7 @@ func (bc *botClient) getServiceContainerIDs(ctx context.Context) (ids []string, 
 	} {
 		container, err := bc.client.GetContainerByName(ctx, containerName)
 		if errors.Is(err, docker.ErrContainerNotFound) {
-			return nil, fmt.Errorf("failed to get service container ids while launching the bot: %v", err)
+			return nil, fmt.Errorf("failed to get service container ids: %v", err)
 		}
 		ids = append(ids, container.ID)
 	}
@@ -118,12 +119,36 @@ func (bc *botClient) getServiceContainerIDs(ctx context.Context) (ids []string, 
 
 // TearDownBot tears down a bot by shutting down the docker container and removing it.
 func (bc *botClient) TearDownBot(ctx context.Context, botConfig config.AgentConfig) error {
-	container, err := bc.client.GetContainerByName(ctx, botConfig.ContainerName())
+	return bc.tearDownBotWithContainerName(ctx, botConfig.ContainerName())
+}
+
+func (bc *botClient) tearDownBotWithContainerName(ctx context.Context, containerName string) error {
+	container, err := bc.client.GetContainerByName(ctx, containerName)
 	if err != nil {
 		return fmt.Errorf("failed to get the bot container to tear down: %v", err)
 	}
+	serviceContainerIDs, err := bc.getServiceContainerIDs(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get service container ids during bot cleanup: %v", err)
+	}
+	for _, serviceContainerID := range serviceContainerIDs {
+		if err := bc.client.DetachNetwork(ctx, serviceContainerID, containerName); err != nil {
+			log.WithFields(log.Fields{
+				"network":          containerName,
+				"serviceContainer": serviceContainerID,
+			}).WithError(err).Warn("failed to detach the service container from the bot network")
+		}
+	}
 	if err := bc.client.RemoveContainer(ctx, container.ID); err != nil {
-		return fmt.Errorf("failed to destroy the container: %v", err)
+		log.WithFields(log.Fields{
+			"containerId":   container.ID,
+			"containerName": containerName,
+		}).WithError(err).Warn("failed to destroy the bot container")
+	}
+	if err := bc.client.RemoveNetworkByName(ctx, containerName); err != nil {
+		log.WithFields(log.Fields{
+			"network": containerName,
+		}).WithError(err).Warn("failed to destroy the bot network")
 	}
 	return nil
 }
@@ -151,4 +176,43 @@ func (bc *botClient) StartWaitBotContainer(ctx context.Context, containerID stri
 		return fmt.Errorf("failed to start container with id: %v", err)
 	}
 	return bc.client.WaitContainerStart(ctx, containerID)
+}
+
+// CleanupUnusedBots cleans up unused bot containers and networks.
+func (bc *botClient) CleanupUnusedBots(ctx context.Context, botConfigs []config.AgentConfig) error {
+	if len(botConfigs) == 0 {
+		return nil
+	}
+
+	botContainers, err := bc.LoadBotContainers(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to load bot containers during bot cleanup: %v", err)
+	}
+
+	if len(botContainers) == 0 {
+		return nil
+	}
+
+	for _, botContainer := range botContainers {
+		botContainerName := botContainer.Names[0][1:]
+		if hasBotContainer(botConfigs, botContainerName) {
+			continue
+		}
+
+		if err := bc.tearDownBotWithContainerName(ctx, botContainerName); err != nil {
+			log.WithField("botContainer", botContainerName).WithError(err).
+				Error("error while tearing down the unused bot")
+		}
+	}
+
+	return nil
+}
+
+func hasBotContainer(botList []config.AgentConfig, containerName string) bool {
+	for _, currBot := range botList {
+		if containerName == currBot.ContainerName() {
+			return true
+		}
+	}
+	return false
 }

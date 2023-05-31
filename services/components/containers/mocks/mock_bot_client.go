@@ -36,6 +36,20 @@ func (m *MockBotClient) EXPECT() *MockBotClientMockRecorder {
 	return m.recorder
 }
 
+// CleanupUnusedBots mocks base method.
+func (m *MockBotClient) CleanupUnusedBots(ctx context.Context, botConfigs []config.AgentConfig) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CleanupUnusedBots", ctx, botConfigs)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CleanupUnusedBots indicates an expected call of CleanupUnusedBots.
+func (mr *MockBotClientMockRecorder) CleanupUnusedBots(ctx, botConfigs interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CleanupUnusedBots", reflect.TypeOf((*MockBotClient)(nil).CleanupUnusedBots), ctx, botConfigs)
+}
+
 // EnsureBotImages mocks base method.
 func (m *MockBotClient) EnsureBotImages(ctx context.Context, botConfigs []config.AgentConfig) []error {
 	m.ctrl.T.Helper()
