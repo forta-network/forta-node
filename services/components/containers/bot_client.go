@@ -68,9 +68,15 @@ func (bc *botClient) LaunchBot(ctx context.Context, botConfig config.AgentConfig
 	defer cancel()
 
 	_, err := bc.client.GetContainerByName(ctx, botConfig.ContainerName())
-	if !errors.Is(err, docker.ErrContainerNotFound) {
+	switch {
+	case err == nil:
 		log.WithField("container", botConfig.ContainerName()).Info("bot container exists - skipping launch")
-		return nil
+
+	case errors.Is(err, docker.ErrContainerNotFound):
+		// continue
+
+	default:
+		log.WithField("container", botConfig.ContainerName()).WithError(err).Warn("failed to get container by name")
 	}
 
 	botNetworkID, err := bc.client.CreatePublicNetwork(ctx, botConfig.ContainerName())
