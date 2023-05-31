@@ -14,6 +14,7 @@ main:
 	docker rm -f build-forta
 	chmod 755 forta
 
+.PHONY: mocks
 mocks:
 	mockgen -source clients/interfaces.go -destination clients/mocks/mock_clients.go
 	mockgen -source clients/ratelimiter/rate_limiter.go -destination clients/ratelimiter/mocks/mock_rate_limiter.go
