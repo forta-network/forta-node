@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/forta-network/forta-core-go/protocol"
+	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/config"
@@ -178,6 +180,18 @@ func (sup *SupervisorService) doStartAgent(ctx context.Context, agent config.Age
 		sup.emitErrMetric(agent.ID, metrics.MetricAgentSupervisorStartError, err)
 		sup.msgClient.Publish(messaging.SubjectAgentsStatusStopped, messaging.AgentPayload{agent})
 		return
+	}
+
+	// remove older versions of the agent
+	containers, err := sup.client.GetContainers(ctx)
+	for _, container := range containers {
+		botContainerPrefix := fmt.Sprintf("%s-agent-%s", config.ContainerNamePrefix, utils.ShortenString(agent.ID, 8))
+		containerName := container.Names[0]
+		// check to see if there are bots with the same id, but different image
+		if strings.HasPrefix(containerName, botContainerPrefix) && containerName != agent.ContainerName() {
+			// emit stop action for outdated bot containers
+			sup.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{agent})
+		}
 	}
 
 	// Broadcast the agent status.
