@@ -156,6 +156,11 @@ func (bc *botClient) tearDownBotWithContainerName(ctx context.Context, container
 			"network": containerName,
 		}).WithError(err).Warn("failed to destroy the bot network")
 	}
+	if err := bc.client.RemoveImage(ctx, container.Image); err != nil {
+		log.WithFields(log.Fields{
+			"image": container.Image,
+		}).WithError(err).Warn("failed to remove image of the destroyed bot container")
+	}
 	return nil
 }
 

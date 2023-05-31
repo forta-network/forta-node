@@ -331,6 +331,20 @@ func (mr *MockDockerClientMockRecorder) RemoveContainer(ctx, containerID interfa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveContainer", reflect.TypeOf((*MockDockerClient)(nil).RemoveContainer), ctx, containerID)
 }
 
+// RemoveImage mocks base method.
+func (m *MockDockerClient) RemoveImage(ctx context.Context, refStr string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveImage", ctx, refStr)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RemoveImage indicates an expected call of RemoveImage.
+func (mr *MockDockerClientMockRecorder) RemoveImage(ctx, refStr interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveImage", reflect.TypeOf((*MockDockerClient)(nil).RemoveImage), ctx, refStr)
+}
+
 // RemoveNetworkByName mocks base method.
 func (m *MockDockerClient) RemoveNetworkByName(ctx context.Context, networkName string) error {
 	m.ctrl.T.Helper()
