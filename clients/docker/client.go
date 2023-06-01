@@ -184,6 +184,31 @@ func (d *dockerClient) Prune(ctx context.Context) error {
 	return nil
 }
 
+// RemoveImage removes an image.
+func (d *dockerClient) RemoveImage(ctx context.Context, refStr string) error {
+	filter := filters.NewArgs()
+	filter.Add("ancestor", refStr)
+	containers, err := d.cli.ContainerList(context.Background(), types.ContainerListOptions{
+		All:     true,
+		Filters: filter,
+		Limit:   1,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to get the container list: %v", err)
+	}
+
+	// avoid removing used images
+	if len(containers) > 0 {
+		return nil
+	}
+
+	_, err = d.cli.ImageRemove(ctx, refStr, types.ImageRemoveOptions{})
+	if err != nil && strings.Contains(strings.ToLower(err.Error()), "no such image") {
+		return nil
+	}
+	return err
+}
+
 func (d *dockerClient) CreatePublicNetwork(ctx context.Context, name string) (string, error) {
 	return d.createNetwork(ctx, name, false)
 }

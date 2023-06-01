@@ -30,6 +30,7 @@ const (
 	testContainerID  = "test-container-id"
 	testContainerID1 = "test-container-id-1"
 	testContainerID2 = "test-container-id-2"
+	testContainerID3 = "test-container-id-3"
 )
 
 // LifecycleTestSuite composes type botLifecycleManager with a concrete type botPool
@@ -365,7 +366,7 @@ func (s *LifecycleTestSuite) TestUnassigned() {
 
 	// and should shortly be tore down
 	s.lifecycleMetrics.EXPECT().StatusStopping(assigned[0])
-	s.botContainers.EXPECT().TearDownBot(gomock.Any(), assigned[0]).Return(nil)
+	s.botContainers.EXPECT().TearDownBot(gomock.Any(), assigned[0].ContainerName()).Return(nil)
 	s.lifecycleMetrics.EXPECT().StatusRunning().Times(1)
 	s.botGrpc.EXPECT().Close().AnyTimes()
 

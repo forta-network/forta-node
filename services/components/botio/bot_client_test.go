@@ -135,6 +135,7 @@ func (s *BotClientSuite) TestStartProcessStop() {
 	}
 	txResult := <-s.resultChannels.Tx
 	txResp.Timestamp = txResult.Response.Timestamp // bypass - hard to match
+	txResp.LatencyMs = txResult.Response.LatencyMs // bypass - hard to match
 
 	// test block handling
 	s.botGrpc.EXPECT().Invoke(
@@ -147,6 +148,7 @@ func (s *BotClientSuite) TestStartProcessStop() {
 	}
 	blockResult := <-s.resultChannels.Block
 	blockResp.Timestamp = blockResult.Response.Timestamp // bypass - hard to match
+	blockResp.LatencyMs = blockResult.Response.LatencyMs // bypass - hard to match
 
 	// test combine alert handling
 	s.botGrpc.EXPECT().Invoke(
@@ -159,6 +161,7 @@ func (s *BotClientSuite) TestStartProcessStop() {
 	}
 	alertResult := <-s.resultChannels.CombinationAlert
 	combinerResp.Timestamp = alertResult.Response.Timestamp // bypass - hard to match
+	combinerResp.LatencyMs = alertResult.Response.LatencyMs // bypass - hard to match
 
 	s.r.Equal(txReq, txResult.Request)
 	s.r.Equal(txResp, txResult.Response)

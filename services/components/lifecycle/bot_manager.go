@@ -21,6 +21,7 @@ var (
 // BotLifecycleManager manages lifecycles of running bots.
 type BotLifecycleManager interface {
 	ManageBots(ctx context.Context) error
+	CleanupUnusedBots(ctx context.Context) error
 	ExitInactiveBots(ctx context.Context) error
 	RestartExitedBots(ctx context.Context) error
 	TearDownRunningBots(ctx context.Context)
@@ -77,7 +78,7 @@ func (blm *botLifecycleManager) ManageBots(ctx context.Context) error {
 
 	// then stop the containers
 	for _, removedBotConfig := range removedBotConfigs {
-		if err := blm.botClient.TearDownBot(ctx, removedBotConfig); err != nil {
+		if err := blm.botClient.TearDownBot(ctx, removedBotConfig.ContainerName()); err != nil {
 			log.WithError(err).WithField("container", removedBotConfig.ContainerName()).
 				Warn("failed to tear down unassigned bot container")
 			blm.lifecycleMetrics.BotError("unassigned.teardown", err, removedBotConfig.ID)
@@ -129,6 +130,37 @@ func (blm *botLifecycleManager) ManageBots(ctx context.Context) error {
 	blm.botMonitor.MonitorBots(GetBotIDs(assignedBots))
 
 	blm.runningBots = assignedBots
+	return nil
+}
+
+// CleanupUnusedBots cleans up unused bots.
+func (blm *botLifecycleManager) CleanupUnusedBots(ctx context.Context) error {
+	if len(blm.runningBots) == 0 {
+		return nil
+	}
+
+	botContainers, err := blm.botClient.LoadBotContainers(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to load bot containers during bot cleanup: %v", err)
+	}
+
+	if len(botContainers) == 0 {
+		return nil
+	}
+
+	for _, botContainer := range botContainers {
+		botContainerName := botContainer.Names[0][1:]
+		_, ok := blm.findBotConfig(botContainerName)
+		if ok {
+			continue
+		}
+
+		if err := blm.botClient.TearDownBot(ctx, botContainerName); err != nil {
+			log.WithField("botContainer", botContainerName).WithError(err).
+				Error("error while tearing down the unused bot")
+		}
+	}
+
 	return nil
 }
 
@@ -214,7 +246,7 @@ func (blm *botLifecycleManager) TearDownRunningBots(ctx context.Context) {
 
 	// then stop the containers
 	for _, runningBotConfig := range blm.runningBots {
-		err := blm.botClient.TearDownBot(ctx, runningBotConfig)
+		err := blm.botClient.TearDownBot(ctx, runningBotConfig.ContainerName())
 		if err != nil {
 			blm.lifecycleMetrics.BotError("teardown.bot", err, runningBotConfig.ID)
 			log.WithError(err).WithField("container", runningBotConfig.ContainerName()).

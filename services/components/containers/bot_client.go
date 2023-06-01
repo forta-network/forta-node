@@ -23,7 +23,7 @@ const (
 type BotClient interface {
 	EnsureBotImages(ctx context.Context, botConfigs []config.AgentConfig) []error
 	LaunchBot(ctx context.Context, botConfig config.AgentConfig) error
-	TearDownBot(ctx context.Context, botConfig config.AgentConfig) error
+	TearDownBot(ctx context.Context, containerName string) error
 	StopBot(ctx context.Context, botConfig config.AgentConfig) error
 	LoadBotContainers(ctx context.Context) ([]types.Container, error)
 	StartWaitBotContainer(ctx context.Context, containerID string) error
@@ -40,7 +40,7 @@ type botClient struct {
 func NewBotClient(
 	logConfig config.LogConfig, resourcesConfig config.ResourcesConfig,
 	client clients.DockerClient, botImageClient clients.DockerClient,
-) BotClient {
+) *botClient {
 	return &botClient{
 		logConfig:       logConfig,
 		resourcesConfig: resourcesConfig,
@@ -48,6 +48,8 @@ func NewBotClient(
 		botImageClient:  botImageClient,
 	}
 }
+
+var _ BotClient = &botClient{}
 
 // EnsureBotImages ensures that all of the bot images are locally available.
 func (bc *botClient) EnsureBotImages(ctx context.Context, botConfigs []config.AgentConfig) []error {
@@ -58,7 +60,7 @@ func (bc *botClient) EnsureBotImages(ctx context.Context, botConfigs []config.Ag
 			Ref:  botConfig.Image,
 		})
 	}
-	return bc.client.EnsureLocalImages(ctx, BotPullTimeout, imagePulls)
+	return bc.botImageClient.EnsureLocalImages(ctx, BotPullTimeout, imagePulls)
 }
 
 // LaunchBot launches a bot by downloading docker image and starting the container.
@@ -67,9 +69,16 @@ func (bc *botClient) LaunchBot(ctx context.Context, botConfig config.AgentConfig
 	defer cancel()
 
 	_, err := bc.client.GetContainerByName(ctx, botConfig.ContainerName())
-	if !errors.Is(err, docker.ErrContainerNotFound) {
+	switch {
+	case err == nil:
 		log.WithField("container", botConfig.ContainerName()).Info("bot container exists - skipping launch")
 		return nil
+
+	case errors.Is(err, docker.ErrContainerNotFound):
+		// continue
+
+	default:
+		return fmt.Errorf("unexpected error while getting the bot container '%s': %v", botConfig.ContainerName(), err)
 	}
 
 	botNetworkID, err := bc.client.CreatePublicNetwork(ctx, botConfig.ContainerName())
@@ -103,28 +112,59 @@ func (bc *botClient) attachServiceContainers(ctx context.Context, botNetworkID s
 }
 
 func (bc *botClient) getServiceContainerIDs(ctx context.Context) (ids []string, err error) {
-	for _, containerName := range []string{
-		config.DockerScannerContainerName, config.DockerJSONRPCProxyContainerName,
-		config.DockerJWTProviderContainerName, config.DockerPublicAPIProxyContainerName,
-	} {
+	for _, containerName := range getServiceContainerNames() {
 		container, err := bc.client.GetContainerByName(ctx, containerName)
-		if errors.Is(err, docker.ErrContainerNotFound) {
-			return nil, fmt.Errorf("failed to get service container ids while launching the bot: %v", err)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get service container ids: %v", err)
 		}
 		ids = append(ids, container.ID)
 	}
 	return ids, nil
 }
 
+func getServiceContainerNames() []string {
+	return []string{
+		config.DockerScannerContainerName, config.DockerJSONRPCProxyContainerName,
+		config.DockerJWTProviderContainerName, config.DockerPublicAPIProxyContainerName,
+	}
+}
+
 // TearDownBot tears down a bot by shutting down the docker container and removing it.
-func (bc *botClient) TearDownBot(ctx context.Context, botConfig config.AgentConfig) error {
-	container, err := bc.client.GetContainerByName(ctx, botConfig.ContainerName())
+func (bc *botClient) TearDownBot(ctx context.Context, containerName string) error {
+	container, err := bc.client.GetContainerByName(ctx, containerName)
 	if err != nil {
 		return fmt.Errorf("failed to get the bot container to tear down: %v", err)
 	}
-	if err := bc.client.RemoveContainer(ctx, container.ID); err != nil {
-		return fmt.Errorf("failed to destroy the container: %v", err)
+	serviceContainerIDs, err := bc.getServiceContainerIDs(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get service container ids during bot cleanup: %v", err)
 	}
+	// not returning any errors in `if`s below so we keep on by removing whatever is left
+	for _, serviceContainerID := range serviceContainerIDs {
+		if err := bc.client.DetachNetwork(ctx, serviceContainerID, containerName); err != nil {
+			log.WithFields(log.Fields{
+				"network":          containerName,
+				"serviceContainer": serviceContainerID,
+			}).WithError(err).Warn("failed to detach the service container from the bot network")
+		}
+	}
+	if err := bc.client.RemoveContainer(ctx, container.ID); err != nil {
+		log.WithFields(log.Fields{
+			"containerId":   container.ID,
+			"containerName": containerName,
+		}).WithError(err).Warn("failed to destroy the bot container")
+	}
+	if err := bc.client.RemoveNetworkByName(ctx, containerName); err != nil {
+		log.WithFields(log.Fields{
+			"network": containerName,
+		}).WithError(err).Warn("failed to destroy the bot network")
+	}
+	if err := bc.client.RemoveImage(ctx, container.Image); err != nil {
+		log.WithFields(log.Fields{
+			"image": container.Image,
+		}).WithError(err).Warn("failed to remove image of the destroyed bot container")
+	}
+	log.WithField("botContainer", containerName).Info("done tearing down the bot and the associated docker resources")
 	return nil
 }
 
@@ -151,4 +191,13 @@ func (bc *botClient) StartWaitBotContainer(ctx context.Context, containerID stri
 		return fmt.Errorf("failed to start container with id: %v", err)
 	}
 	return bc.client.WaitContainerStart(ctx, containerID)
+}
+
+func hasBotContainer(botList []config.AgentConfig, containerName string) bool {
+	for _, currBot := range botList {
+		if containerName == currBot.ContainerName() {
+			return true
+		}
+	}
+	return false
 }

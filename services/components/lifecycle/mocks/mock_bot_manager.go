@@ -34,6 +34,20 @@ func (m *MockBotLifecycleManager) EXPECT() *MockBotLifecycleManagerMockRecorder 
 	return m.recorder
 }
 
+// CleanupUnusedBots mocks base method.
+func (m *MockBotLifecycleManager) CleanupUnusedBots(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CleanupUnusedBots", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CleanupUnusedBots indicates an expected call of CleanupUnusedBots.
+func (mr *MockBotLifecycleManagerMockRecorder) CleanupUnusedBots(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CleanupUnusedBots", reflect.TypeOf((*MockBotLifecycleManager)(nil).CleanupUnusedBots), ctx)
+}
+
 // ExitInactiveBots mocks base method.
 func (m *MockBotLifecycleManager) ExitInactiveBots(ctx context.Context) error {
 	m.ctrl.T.Helper()
