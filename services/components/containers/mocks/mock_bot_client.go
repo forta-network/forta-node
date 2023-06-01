@@ -36,20 +36,6 @@ func (m *MockBotClient) EXPECT() *MockBotClientMockRecorder {
 	return m.recorder
 }
 
-// CleanupUnusedBots mocks base method.
-func (m *MockBotClient) CleanupUnusedBots(ctx context.Context, botConfigs []config.AgentConfig) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CleanupUnusedBots", ctx, botConfigs)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CleanupUnusedBots indicates an expected call of CleanupUnusedBots.
-func (mr *MockBotClientMockRecorder) CleanupUnusedBots(ctx, botConfigs interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CleanupUnusedBots", reflect.TypeOf((*MockBotClient)(nil).CleanupUnusedBots), ctx, botConfigs)
-}
-
 // EnsureBotImages mocks base method.
 func (m *MockBotClient) EnsureBotImages(ctx context.Context, botConfigs []config.AgentConfig) []error {
 	m.ctrl.T.Helper()
@@ -122,15 +108,15 @@ func (mr *MockBotClientMockRecorder) StopBot(ctx, botConfig interface{}) *gomock
 }
 
 // TearDownBot mocks base method.
-func (m *MockBotClient) TearDownBot(ctx context.Context, botConfig config.AgentConfig) error {
+func (m *MockBotClient) TearDownBot(ctx context.Context, containerName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TearDownBot", ctx, botConfig)
+	ret := m.ctrl.Call(m, "TearDownBot", ctx, containerName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // TearDownBot indicates an expected call of TearDownBot.
-func (mr *MockBotClientMockRecorder) TearDownBot(ctx, botConfig interface{}) *gomock.Call {
+func (mr *MockBotClientMockRecorder) TearDownBot(ctx, containerName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TearDownBot", reflect.TypeOf((*MockBotClient)(nil).TearDownBot), ctx, botConfig)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TearDownBot", reflect.TypeOf((*MockBotClient)(nil).TearDownBot), ctx, containerName)
 }

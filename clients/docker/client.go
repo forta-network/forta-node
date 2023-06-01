@@ -738,10 +738,11 @@ func (d *dockerClient) HasLocalImage(ctx context.Context, ref string) (bool, err
 
 // EnsureLocalImage ensures that we have the image locally.
 func (d *dockerClient) EnsureLocalImage(ctx context.Context, name, ref string) error {
-	log.WithFields(log.Fields{
+	logger := log.WithFields(log.Fields{
 		"image": ref,
 		"name":  name,
-	}).Info("ensuring local image")
+	})
+	logger.Info("ensuring local image")
 	imageExists, imgErr := d.HasLocalImage(ctx, ref)
 	if imgErr != nil {
 		return fmt.Errorf("error checking local: %s", imgErr.Error())
@@ -751,25 +752,10 @@ func (d *dockerClient) EnsureLocalImage(ctx context.Context, name, ref string) e
 		return nil
 	}
 
-	ticker := time.NewTicker(time.Minute)
-
-	for {
-		err := d.PullImage(ctx, ref)
-		if err == nil {
-			break
-		}
-		log.WithFields(log.Fields{
-			"name":  name,
-			"ref":   ref,
-			"error": err,
-		}).Error("failed to pull image - retrying")
-		select {
-		case <-ticker.C:
-			// continue
-		case <-ctx.Done():
-			// returning underlying err, because it's != nil
-			return err
-		}
+	startTime := time.Now()
+	if err := d.PullImage(ctx, ref); err != nil {
+		logger.WithError(err).Error("error pulling image")
+		return fmt.Errorf("pull error (duration=%s) %s: %v", time.Since(startTime).String(), ref, err.Error())
 	}
 
 	log.Infof("pulled '%s' image: %s", name, ref)

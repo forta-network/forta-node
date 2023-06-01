@@ -91,84 +91,140 @@ func (mr *MockLifecycleMockRecorder) ActionUpdate(arg0 ...interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ActionUpdate", reflect.TypeOf((*MockLifecycle)(nil).ActionUpdate), arg0...)
 }
 
-// FailureDial mocks base method.
-func (m *MockLifecycle) FailureDial(arg0 ...config.AgentConfig) {
+// BotError mocks base method.
+func (m *MockLifecycle) BotError(metricName string, err error, botID ...string) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range arg0 {
+	varargs := []interface{}{metricName, err}
+	for _, a := range botID {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "BotError", varargs...)
+}
+
+// BotError indicates an expected call of BotError.
+func (mr *MockLifecycleMockRecorder) BotError(metricName, err interface{}, botID ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{metricName, err}, botID...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BotError", reflect.TypeOf((*MockLifecycle)(nil).BotError), varargs...)
+}
+
+// FailureDial mocks base method.
+func (m *MockLifecycle) FailureDial(arg0 error, arg1 ...config.AgentConfig) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0}
+	for _, a := range arg1 {
 		varargs = append(varargs, a)
 	}
 	m.ctrl.Call(m, "FailureDial", varargs...)
 }
 
 // FailureDial indicates an expected call of FailureDial.
-func (mr *MockLifecycleMockRecorder) FailureDial(arg0 ...interface{}) *gomock.Call {
+func (mr *MockLifecycleMockRecorder) FailureDial(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailureDial", reflect.TypeOf((*MockLifecycle)(nil).FailureDial), arg0...)
+	varargs := append([]interface{}{arg0}, arg1...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailureDial", reflect.TypeOf((*MockLifecycle)(nil).FailureDial), varargs...)
 }
 
 // FailureInitialize mocks base method.
-func (m *MockLifecycle) FailureInitialize(arg0 ...config.AgentConfig) {
+func (m *MockLifecycle) FailureInitialize(arg0 error, arg1 ...config.AgentConfig) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range arg0 {
+	varargs := []interface{}{arg0}
+	for _, a := range arg1 {
 		varargs = append(varargs, a)
 	}
 	m.ctrl.Call(m, "FailureInitialize", varargs...)
 }
 
 // FailureInitialize indicates an expected call of FailureInitialize.
-func (mr *MockLifecycleMockRecorder) FailureInitialize(arg0 ...interface{}) *gomock.Call {
+func (mr *MockLifecycleMockRecorder) FailureInitialize(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailureInitialize", reflect.TypeOf((*MockLifecycle)(nil).FailureInitialize), arg0...)
+	varargs := append([]interface{}{arg0}, arg1...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailureInitialize", reflect.TypeOf((*MockLifecycle)(nil).FailureInitialize), varargs...)
 }
 
 // FailureInitializeResponse mocks base method.
-func (m *MockLifecycle) FailureInitializeResponse(arg0 ...config.AgentConfig) {
+func (m *MockLifecycle) FailureInitializeResponse(arg0 error, arg1 ...config.AgentConfig) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range arg0 {
+	varargs := []interface{}{arg0}
+	for _, a := range arg1 {
 		varargs = append(varargs, a)
 	}
 	m.ctrl.Call(m, "FailureInitializeResponse", varargs...)
 }
 
 // FailureInitializeResponse indicates an expected call of FailureInitializeResponse.
-func (mr *MockLifecycleMockRecorder) FailureInitializeResponse(arg0 ...interface{}) *gomock.Call {
+func (mr *MockLifecycleMockRecorder) FailureInitializeResponse(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailureInitializeResponse", reflect.TypeOf((*MockLifecycle)(nil).FailureInitializeResponse), arg0...)
+	varargs := append([]interface{}{arg0}, arg1...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailureInitializeResponse", reflect.TypeOf((*MockLifecycle)(nil).FailureInitializeResponse), varargs...)
+}
+
+// FailureInitializeValidate mocks base method.
+func (m *MockLifecycle) FailureInitializeValidate(arg0 error, arg1 ...config.AgentConfig) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0}
+	for _, a := range arg1 {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "FailureInitializeValidate", varargs...)
+}
+
+// FailureInitializeValidate indicates an expected call of FailureInitializeValidate.
+func (mr *MockLifecycleMockRecorder) FailureInitializeValidate(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0}, arg1...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailureInitializeValidate", reflect.TypeOf((*MockLifecycle)(nil).FailureInitializeValidate), varargs...)
 }
 
 // FailureLaunch mocks base method.
-func (m *MockLifecycle) FailureLaunch(arg0 ...config.AgentConfig) {
+func (m *MockLifecycle) FailureLaunch(arg0 error, arg1 ...config.AgentConfig) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range arg0 {
+	varargs := []interface{}{arg0}
+	for _, a := range arg1 {
 		varargs = append(varargs, a)
 	}
 	m.ctrl.Call(m, "FailureLaunch", varargs...)
 }
 
 // FailureLaunch indicates an expected call of FailureLaunch.
-func (mr *MockLifecycleMockRecorder) FailureLaunch(arg0 ...interface{}) *gomock.Call {
+func (mr *MockLifecycleMockRecorder) FailureLaunch(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailureLaunch", reflect.TypeOf((*MockLifecycle)(nil).FailureLaunch), arg0...)
+	varargs := append([]interface{}{arg0}, arg1...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailureLaunch", reflect.TypeOf((*MockLifecycle)(nil).FailureLaunch), varargs...)
 }
 
 // FailurePull mocks base method.
-func (m *MockLifecycle) FailurePull(arg0 ...config.AgentConfig) {
+func (m *MockLifecycle) FailurePull(arg0 error, arg1 ...config.AgentConfig) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range arg0 {
+	varargs := []interface{}{arg0}
+	for _, a := range arg1 {
 		varargs = append(varargs, a)
 	}
 	m.ctrl.Call(m, "FailurePull", varargs...)
 }
 
 // FailurePull indicates an expected call of FailurePull.
-func (mr *MockLifecycleMockRecorder) FailurePull(arg0 ...interface{}) *gomock.Call {
+func (mr *MockLifecycleMockRecorder) FailurePull(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailurePull", reflect.TypeOf((*MockLifecycle)(nil).FailurePull), arg0...)
+	varargs := append([]interface{}{arg0}, arg1...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailurePull", reflect.TypeOf((*MockLifecycle)(nil).FailurePull), varargs...)
+}
+
+// FailureStop mocks base method.
+func (m *MockLifecycle) FailureStop(arg0 error, arg1 ...config.AgentConfig) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0}
+	for _, a := range arg1 {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "FailureStop", varargs...)
+}
+
+// FailureStop indicates an expected call of FailureStop.
+func (mr *MockLifecycleMockRecorder) FailureStop(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0}, arg1...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailureStop", reflect.TypeOf((*MockLifecycle)(nil).FailureStop), varargs...)
 }
 
 // Start mocks base method.
@@ -289,4 +345,16 @@ func (m *MockLifecycle) Stop(arg0 ...config.AgentConfig) {
 func (mr *MockLifecycleMockRecorder) Stop(arg0 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockLifecycle)(nil).Stop), arg0...)
+}
+
+// SystemError mocks base method.
+func (m *MockLifecycle) SystemError(metricName string, err error) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SystemError", metricName, err)
+}
+
+// SystemError indicates an expected call of SystemError.
+func (mr *MockLifecycleMockRecorder) SystemError(metricName, err interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SystemError", reflect.TypeOf((*MockLifecycle)(nil).SystemError), metricName, err)
 }

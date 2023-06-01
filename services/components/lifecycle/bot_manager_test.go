@@ -92,7 +92,7 @@ func (s *BotLifecycleManagerTestSuite) TestAddUpdateRemove() {
 
 	s.botPool.EXPECT().RemoveBotsWithConfigs([]config.AgentConfig{removedBot})
 	s.lifecycleMetrics.EXPECT().StatusStopping([]config.AgentConfig{removedBot})
-	s.botContainers.EXPECT().TearDownBot(gomock.Any(), removedBot)
+	s.botContainers.EXPECT().TearDownBot(gomock.Any(), removedBot.ContainerName())
 
 	s.lifecycleMetrics.EXPECT().StatusRunning(latestAssigned).Times(1)
 	s.botPool.EXPECT().UpdateBotsWithLatestConfigs(latestAssigned)
@@ -135,7 +135,9 @@ func (s *BotLifecycleManagerTestSuite) TestRestart() {
 	s.botContainers.EXPECT().StartWaitBotContainer(gomock.Any(), testContainerID1).Return(nil)
 
 	s.lifecycleMetrics.EXPECT().ActionRestart(botConfigs[1])
-	s.botContainers.EXPECT().StartWaitBotContainer(gomock.Any(), testContainerID2).Return(errors.New("failed to start"))
+	err := errors.New("failed to start")
+	s.lifecycleMetrics.EXPECT().BotError("start.exited.bot.container", gomock.Any(), testBotID2)
+	s.botContainers.EXPECT().StartWaitBotContainer(gomock.Any(), testContainerID2).Return(err)
 
 	// reinitialize only
 	s.botPool.EXPECT().ReinitBotsWithConfigs([]config.AgentConfig{botConfigs[0]})
@@ -161,4 +163,33 @@ func (s *BotLifecycleManagerTestSuite) TestExit() {
 	s.botContainers.EXPECT().StopBot(gomock.Any(), botConfigs[1])
 
 	s.r.NoError(s.botManager.ExitInactiveBots(context.Background()))
+}
+
+func (s *BotLifecycleManagerTestSuite) TestCleanup() {
+	botConfigs := []config.AgentConfig{
+		{
+			ID:    testBotID1,
+			Image: testImageRef,
+		},
+	}
+
+	unusedBotConfig := config.AgentConfig{
+		ID:    testBotID2,
+		Image: testImageRef,
+	}
+
+	s.botManager.runningBots = botConfigs
+
+	dockerContainerName := fmt.Sprintf("/%s", unusedBotConfig.ContainerName())
+
+	s.botContainers.EXPECT().LoadBotContainers(gomock.Any()).Return([]types.Container{
+		{
+			ID:    testContainerID,
+			Names: []string{dockerContainerName},
+			State: "exited",
+		},
+	}, nil).Times(1)
+	s.botContainers.EXPECT().TearDownBot(gomock.Any(), unusedBotConfig.ContainerName()).Return(nil)
+
+	s.r.NoError(s.botManager.CleanupUnusedBots(context.Background()))
 }

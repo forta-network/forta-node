@@ -16,7 +16,7 @@ func Error(respErrs []*protocol.Error) error {
 		errMsg += respErr.Message
 	}
 	if len(errMsg) == 0 {
-		return nil
+		return errors.New("<empty error list>")
 	}
 	return errors.New(errMsg)
 }

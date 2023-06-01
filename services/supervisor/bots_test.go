@@ -19,9 +19,11 @@ func TestBotManagement(t *testing.T) {
 	// both methods should be executed in order and the errors should not short circuit
 	gomock.InOrder(
 		botManager.EXPECT().ManageBots(gomock.Any()).Return(testErr),
+		botManager.EXPECT().CleanupUnusedBots(gomock.Any()).Return(testErr),
 		botManager.EXPECT().RestartExitedBots(gomock.Any()).Return(testErr),
 		botManager.EXPECT().ExitInactiveBots(gomock.Any()).Return(testErr),
 		botManager.EXPECT().ManageBots(gomock.Any()).Return(testErr),
+		botManager.EXPECT().CleanupUnusedBots(gomock.Any()).Return(testErr),
 		botManager.EXPECT().RestartExitedBots(gomock.Any()).Return(testErr),
 		botManager.EXPECT().ExitInactiveBots(gomock.Any()).Return(testErr),
 	)
