@@ -369,7 +369,7 @@ func (bot *botClient) initialize() {
 
 	if initializeResponse.Status == protocol.ResponseStatus_ERROR {
 		bot.lifecycleMetrics.FailureInitializeResponse(botConfig)
-		logger.WithField("error", agentgrpc.Error(initializeResponse.Errors)).Warn("bot initialization returned an error response")
+		logger.WithError(agentgrpc.Error(initializeResponse.Errors)).Warn("bot initialization returned an error response")
 		return
 	}
 
