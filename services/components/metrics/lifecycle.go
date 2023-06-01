@@ -27,11 +27,13 @@ const (
 	MetricActionSubscribe   = "agent.action.subscribe"
 	MetricActionUnsubscribe = "agent.action.unsubscribe"
 
-	MetricFailurePull       = "agent.failure.pull"
-	MetricFailureLaunch     = "agent.failure.launch"
-	MetricFailureStop       = "agent.failure.stop"
-	MetricFailureDial       = "agent.failure.dial"
-	MetricFailureInitialize = "agent.failure.initialize"
+	MetricFailurePull               = "agent.failure.pull"
+	MetricFailureLaunch             = "agent.failure.launch"
+	MetricFailureStop               = "agent.failure.stop"
+	MetricFailureDial               = "agent.failure.dial"
+	MetricFailureInitialize         = "agent.failure.initialize"
+	MetricFailureInitializeResponse = "agent.failure.initialize.response"
+	MetricFailureInitializeValidate = "agent.failure.initialize.validate"
 )
 
 // Lifecycle creates lifecycle metrics. It is useful in
@@ -57,6 +59,8 @@ type Lifecycle interface {
 	FailureStop(error, ...config.AgentConfig)
 	FailureDial(error, ...config.AgentConfig)
 	FailureInitialize(error, ...config.AgentConfig)
+	FailureInitializeResponse(error, ...config.AgentConfig)
+	FailureInitializeValidate(error, ...config.AgentConfig)
 
 	BotError(metricName string, err error, botID ...string)
 	SystemError(metricName string, err error)
@@ -139,6 +143,14 @@ func (lc *lifecycle) FailureDial(err error, botConfigs ...config.AgentConfig) {
 
 func (lc *lifecycle) FailureInitialize(err error, botConfigs ...config.AgentConfig) {
 	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricFailureInitialize, err.Error(), botConfigs))
+}
+
+func (lc *lifecycle) FailureInitializeResponse(err error, botConfigs ...config.AgentConfig) {
+	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricFailureInitializeResponse, err.Error(), botConfigs))
+}
+
+func (lc *lifecycle) FailureInitializeValidate(err error, botConfigs ...config.AgentConfig) {
+	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricFailureInitializeValidate, err.Error(), botConfigs))
 }
 
 func (lc *lifecycle) BotError(metricName string, err error, botIDs ...string) {

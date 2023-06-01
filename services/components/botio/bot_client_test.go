@@ -2,9 +2,11 @@ package botio
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
+	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-node/clients/agentgrpc"
 	mock_agentgrpc "github.com/forta-network/forta-node/clients/agentgrpc/mocks"
@@ -73,13 +75,14 @@ func (s *BotClientSuite) SetupTest() {
 	s.botClient = NewBotClient(context.Background(), config.AgentConfig{
 		ID: testBotID,
 	}, s.msgClient, s.lifecycleMetrics, s.botDialer, s.resultChannels.SendOnly())
-	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{
-		AlertConfig: s.alertConfig,
-	}, nil).AnyTimes()
 }
 
 // TestStartProcessStop tests the starting, processing and stopping flow for a bot.
 func (s *BotClientSuite) TestStartProcessStop() {
+	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{
+		AlertConfig: s.alertConfig,
+	}, nil).AnyTimes()
+
 	combinerSubscriptions := MakeCombinerBotSubscriptions(s.alertConfig.Subscriptions, s.botClient.Config())
 
 	s.lifecycleMetrics.EXPECT().Start(s.botClient.configUnsafe)
@@ -175,4 +178,66 @@ func (s *BotClientSuite) TestStartProcessStop() {
 	s.lifecycleMetrics.EXPECT().ActionUnsubscribe(combinerSubscriptions)
 
 	s.r.NoError(s.botClient.Close())
+}
+
+func (s *BotClientSuite) TestCombinerBotSubscriptions() {
+	s.botClient.SetAlertConfig(s.alertConfig)
+	s.Equal(
+		[]domain.CombinerBotSubscription{
+			{
+
+				Subscription: s.botClient.alertConfigUnsafe.Subscriptions[0],
+				Subscriber: &domain.Subscriber{
+					BotID:    s.botClient.configUnsafe.ID,
+					BotOwner: s.botClient.configUnsafe.Owner,
+					BotImage: s.botClient.configUnsafe.Image,
+				},
+			},
+		},
+		s.botClient.CombinerBotSubscriptions(),
+	)
+}
+
+func (s *BotClientSuite) TestInitialize_Success() {
+	s.lifecycleMetrics.EXPECT().Start(s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().StatusAttached(s.botClient.configUnsafe)
+	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{
+		Status:      protocol.ResponseStatus_SUCCESS,
+		AlertConfig: s.alertConfig,
+	}, nil).Times(1)
+	s.lifecycleMetrics.EXPECT().StatusInitialized(s.botClient.configUnsafe)
+	subs := MakeCombinerBotSubscriptions(s.alertConfig.Subscriptions, s.botClient.Config())
+	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsAlertSubscribe, subs)
+	s.lifecycleMetrics.EXPECT().ActionSubscribe(subs)
+
+	s.botClient.Initialize()
+}
+
+func (s *BotClientSuite) TestInitialize_Error() {
+	s.lifecycleMetrics.EXPECT().Start(s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().StatusAttached(s.botClient.configUnsafe)
+	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(nil, errors.New("some error")).Times(1)
+	s.lifecycleMetrics.EXPECT().FailureInitialize(gomock.Any(), s.botClient.configUnsafe)
+
+	s.botClient.Initialize()
+}
+
+func (s *BotClientSuite) TestInitialize_ResponseError() {
+	s.lifecycleMetrics.EXPECT().Start(s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().StatusAttached(s.botClient.configUnsafe)
+	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{
+		Status: protocol.ResponseStatus_ERROR,
+	}, nil).Times(1)
+	s.lifecycleMetrics.EXPECT().FailureInitializeResponse(gomock.Any(), s.botClient.configUnsafe)
+
+	s.botClient.Initialize()
+}
+
+func (s *BotClientSuite) TestInitialize_ValidationError() {
+	s.lifecycleMetrics.EXPECT().Start(s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().StatusAttached(s.botClient.configUnsafe)
+	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+	s.lifecycleMetrics.EXPECT().FailureInitializeValidate(gomock.Any(), s.botClient.configUnsafe)
+
+	s.botClient.Initialize()
 }
