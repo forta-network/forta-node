@@ -44,6 +44,7 @@ type DockerClient interface {
 	EnsureLocalImages(ctx context.Context, timeoutPerPull time.Duration, imagePulls []docker.ImagePull) []error
 	GetContainerLogs(ctx context.Context, containerID, tail string, truncate int) (string, error)
 	GetContainerFromRemoteAddr(ctx context.Context, hostPort string) (*types.Container, error)
+	SetImagePullCooldown(threshold int, cooldownDuration time.Duration)
 }
 
 // MessageClient receives and publishes messages.

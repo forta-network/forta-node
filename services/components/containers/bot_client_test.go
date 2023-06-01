@@ -47,6 +47,8 @@ func (s *BotClientTestSuite) SetupTest() {
 	s.client = mock_clients.NewMockDockerClient(ctrl)
 	s.botImageClient = mock_clients.NewMockDockerClient(ctrl)
 
+	s.botImageClient.EXPECT().SetImagePullCooldown(ImagePullCooldownThreshold, ImagePullCooldownDuration)
+
 	s.botClient = NewBotClient(config.LogConfig{}, config.ResourcesConfig{}, s.client, s.botImageClient)
 }
 

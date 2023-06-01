@@ -878,6 +878,11 @@ func labelsToMap(labels []dockerLabel) map[string]string {
 	return m
 }
 
+// SetImagePullCooldown sets the image pull cooldown.
+func (d *dockerClient) SetImagePullCooldown(threshold int, cooldownDuration time.Duration) {
+	d.imageDownloadCooldown = cooldown.New(threshold, cooldownDuration)
+}
+
 // NewDockerClient creates a new docker client
 func NewDockerClient(name string) (*dockerClient, error) {
 	cli, err := client.NewClientWithOpts()

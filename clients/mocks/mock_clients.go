@@ -359,6 +359,18 @@ func (mr *MockDockerClientMockRecorder) RemoveNetworkByName(ctx, networkName int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveNetworkByName", reflect.TypeOf((*MockDockerClient)(nil).RemoveNetworkByName), ctx, networkName)
 }
 
+// SetImagePullCooldown mocks base method.
+func (m *MockDockerClient) SetImagePullCooldown(threshold int, cooldownDuration time.Duration) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetImagePullCooldown", threshold, cooldownDuration)
+}
+
+// SetImagePullCooldown indicates an expected call of SetImagePullCooldown.
+func (mr *MockDockerClientMockRecorder) SetImagePullCooldown(threshold, cooldownDuration interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetImagePullCooldown", reflect.TypeOf((*MockDockerClient)(nil).SetImagePullCooldown), threshold, cooldownDuration)
+}
+
 // StartContainer mocks base method.
 func (m *MockDockerClient) StartContainer(ctx context.Context, config docker.ContainerConfig) (*docker.Container, error) {
 	m.ctrl.T.Helper()
