@@ -167,10 +167,6 @@ func (lc *lifecycle) SystemError(metricName string, err error) {
 	SendAgentMetrics(lc.msgClient, fromBotIDs(fmt.Sprintf("system.error.%s", metricName), err.Error(), []string{"system"}))
 }
 
-func (lc *lifecycle) FailureInitializeResponse(botConfigs ...config.AgentConfig) {
-	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricFailureInitializeResponse, botConfigs))
-}
-
 func fromBotSubscriptions(action string, subscriptions []domain.CombinerBotSubscription) (metrics []*protocol.AgentMetric) {
 	for _, botSub := range subscriptions {
 		metrics = append(metrics, CreateAgentMetric(botSub.Subscriber.BotID, action, 1))
