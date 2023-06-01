@@ -147,7 +147,7 @@ func (d *dockerClient) PullImage(ctx context.Context, refStr string) error {
 }
 
 func (d *dockerClient) pullImage(ctx context.Context, refStr string) error {
-	if d.imageDownloadCooldown.ShouldCoolDown(refStr) {
+	if d.imageDownloadCooldown != nil && d.imageDownloadCooldown.ShouldCoolDown(refStr) {
 		return fmt.Errorf("too many pull attempts - cooling down: %s", refStr)
 	}
 
