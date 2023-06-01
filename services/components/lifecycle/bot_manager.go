@@ -180,7 +180,7 @@ func (blm *botLifecycleManager) RestartExitedBots(ctx context.Context) error {
 		blm.lifecycleMetrics.ActionRestart(restartedBotConfig)
 		if err := blm.botClient.StartWaitBotContainer(ctx, botContainer.ID); err != nil {
 			logger.WithError(err).Error("failed to start exited bot container")
-			blm.lifecycleMetrics.BotError("start.exited.bot.container", fmt.Errorf("failed to start exited bot container: %v", err.Error()), botContainer.ID)
+			blm.lifecycleMetrics.BotError("start.exited.bot.container", fmt.Errorf("failed to start exited bot container: %v", err.Error()), restartedBotConfig.ID)
 			continue
 		}
 		restartedBotConfigs = append(restartedBotConfigs, restartedBotConfig)
