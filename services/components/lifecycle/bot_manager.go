@@ -122,10 +122,6 @@ func (blm *botLifecycleManager) ManageBots(ctx context.Context) error {
 		}
 	}
 
-	if err := blm.botClient.CleanupUnusedBots(ctx, assignedBots); err != nil {
-		log.WithError(err).Error("error while cleaning up unused bots")
-	}
-
 	// then update the pool with latest bots
 	if err := blm.botPool.UpdateBotsWithLatestConfigs(assignedBots); err != nil {
 		blm.lifecycleMetrics.SystemError("update.bots.with.latest.configs", err)

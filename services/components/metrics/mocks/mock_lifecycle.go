@@ -143,19 +143,37 @@ func (mr *MockLifecycleMockRecorder) FailureInitialize(arg0 interface{}, arg1 ..
 }
 
 // FailureInitializeResponse mocks base method.
-func (m *MockLifecycle) FailureInitializeResponse(arg0 ...config.AgentConfig) {
+func (m *MockLifecycle) FailureInitializeResponse(arg0 error, arg1 ...config.AgentConfig) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range arg0 {
+	varargs := []interface{}{arg0}
+	for _, a := range arg1 {
 		varargs = append(varargs, a)
 	}
 	m.ctrl.Call(m, "FailureInitializeResponse", varargs...)
 }
 
 // FailureInitializeResponse indicates an expected call of FailureInitializeResponse.
-func (mr *MockLifecycleMockRecorder) FailureInitializeResponse(arg0 ...interface{}) *gomock.Call {
+func (mr *MockLifecycleMockRecorder) FailureInitializeResponse(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailureInitializeResponse", reflect.TypeOf((*MockLifecycle)(nil).FailureInitializeResponse), arg0...)
+	varargs := append([]interface{}{arg0}, arg1...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailureInitializeResponse", reflect.TypeOf((*MockLifecycle)(nil).FailureInitializeResponse), varargs...)
+}
+
+// FailureInitializeValidate mocks base method.
+func (m *MockLifecycle) FailureInitializeValidate(arg0 error, arg1 ...config.AgentConfig) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0}
+	for _, a := range arg1 {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "FailureInitializeValidate", varargs...)
+}
+
+// FailureInitializeValidate indicates an expected call of FailureInitializeValidate.
+func (mr *MockLifecycleMockRecorder) FailureInitializeValidate(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0}, arg1...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailureInitializeValidate", reflect.TypeOf((*MockLifecycle)(nil).FailureInitializeValidate), varargs...)
 }
 
 // FailureLaunch mocks base method.

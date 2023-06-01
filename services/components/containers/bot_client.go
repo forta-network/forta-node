@@ -27,7 +27,6 @@ type BotClient interface {
 	StopBot(ctx context.Context, botConfig config.AgentConfig) error
 	LoadBotContainers(ctx context.Context) ([]types.Container, error)
 	StartWaitBotContainer(ctx context.Context, containerID string) error
-	CleanupUnusedBots(ctx context.Context, botConfigs []config.AgentConfig) error
 }
 
 type botClient struct {
@@ -139,25 +138,6 @@ func (bc *botClient) TearDownBot(ctx context.Context, containerName string) erro
 	serviceContainerIDs, err := bc.getServiceContainerIDs(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get service container ids during bot cleanup: %v", err)
-	}
-	for _, serviceContainerID := range serviceContainerIDs {
-		if err := bc.client.DetachNetwork(ctx, serviceContainerID, containerName); err != nil {
-			log.WithFields(log.Fields{
-				"network":          containerName,
-				"serviceContainer": serviceContainerID,
-			}).WithError(err).Warn("failed to detach the service container from the bot network")
-		}
-	}
-	if err := bc.client.RemoveContainer(ctx, container.ID); err != nil {
-		log.WithFields(log.Fields{
-			"containerId":   container.ID,
-			"containerName": containerName,
-		}).WithError(err).Warn("failed to destroy the bot container")
-	}
-	if err := bc.client.RemoveNetworkByName(ctx, containerName); err != nil {
-		log.WithFields(log.Fields{
-			"network": containerName,
-		}).WithError(err).Warn("failed to destroy the bot network")
 	}
 	// not returning any errors in `if`s below so we keep on by removing whatever is left
 	for _, serviceContainerID := range serviceContainerIDs {

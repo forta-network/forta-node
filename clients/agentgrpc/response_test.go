@@ -21,4 +21,6 @@ func TestErrors(t *testing.T) {
 			Message: errMsg2,
 		},
 	}), "operation failed, deadline exceeded")
+
+	r.EqualError(Error([]*protocol.Error{}), "<empty error list>")
 }
