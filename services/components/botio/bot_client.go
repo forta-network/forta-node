@@ -374,6 +374,12 @@ func (bot *botClient) initialize() {
 		return
 	}
 
+	if initializeResponse.Status == protocol.ResponseStatus_ERROR {
+		bot.lifecycleMetrics.FailureInitializeResponse(botConfig)
+		logger.WithField("error", agentgrpc.Error(initializeResponse.Errors)).Warn("bot initialization returned an error response")
+		return
+	}
+
 	if err := validateInitializeResponse(initializeResponse); err != nil {
 		logger.WithError(err).Warn("bot initialization validation failed")
 		bot.lifecycleMetrics.FailureInitializeValidate(err, botConfig)
