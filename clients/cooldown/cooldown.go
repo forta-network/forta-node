@@ -17,16 +17,16 @@ type cooldownCounter struct {
 }
 
 type cooldown struct {
-	limit            int
+	threshold        int
 	cooldownDuration time.Duration
 	counters         map[string]*cooldownCounter
 	mu               sync.Mutex
 }
 
 // New creates a new cooldown.
-func New(limit int, cooldownDuration time.Duration) *cooldown {
+func New(threshold int, cooldownDuration time.Duration) *cooldown {
 	cd := &cooldown{
-		limit:            limit,
+		threshold:        threshold,
 		cooldownDuration: cooldownDuration,
 		counters:         make(map[string]*cooldownCounter),
 	}
@@ -49,7 +49,7 @@ func (cd *cooldown) ShouldCoolDown(id string) bool {
 	if time.Now().Before(counter.cooldownEndsAt) {
 		return true
 	}
-	if counter.count >= cd.limit {
+	if counter.count >= cd.threshold {
 		counter.cooldownEndsAt = time.Now().Add(cd.cooldownDuration)
 		counter.count = 0
 		return true
