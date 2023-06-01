@@ -142,6 +142,22 @@ func (mr *MockLifecycleMockRecorder) FailureInitialize(arg0 interface{}, arg1 ..
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailureInitialize", reflect.TypeOf((*MockLifecycle)(nil).FailureInitialize), varargs...)
 }
 
+// FailureInitializeResponse mocks base method.
+func (m *MockLifecycle) FailureInitializeResponse(arg0 ...config.AgentConfig) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "FailureInitializeResponse", varargs...)
+}
+
+// FailureInitializeResponse indicates an expected call of FailureInitializeResponse.
+func (mr *MockLifecycleMockRecorder) FailureInitializeResponse(arg0 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailureInitializeResponse", reflect.TypeOf((*MockLifecycle)(nil).FailureInitializeResponse), arg0...)
+}
+
 // FailureLaunch mocks base method.
 func (m *MockLifecycle) FailureLaunch(arg0 error, arg1 ...config.AgentConfig) {
 	m.ctrl.T.Helper()

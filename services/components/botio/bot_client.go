@@ -367,6 +367,12 @@ func (bot *botClient) initialize() {
 		return
 	}
 
+	if initializeResponse.Status == protocol.ResponseStatus_ERROR {
+		bot.lifecycleMetrics.FailureInitializeResponse(botConfig)
+		logger.WithField("error", agentgrpc.Error(initializeResponse.Errors)).Warn("bot initialization returned an error response")
+		return
+	}
+
 	if err := validateInitializeResponse(initializeResponse); err != nil {
 		logger.WithError(err).Warn("bot initialization validation failed")
 		bot.lifecycleMetrics.FailureInitialize(err, botConfig)
@@ -390,7 +396,10 @@ func (bot *botClient) initSuccess(botConfig config.AgentConfig) {
 }
 
 func validateInitializeResponse(response *protocol.InitializeResponse) error {
-	if response == nil || response.AlertConfig == nil {
+	if response == nil {
+		return fmt.Errorf("initialize response can not be nil")
+	}
+	if response.AlertConfig == nil {
 		return nil
 	}
 

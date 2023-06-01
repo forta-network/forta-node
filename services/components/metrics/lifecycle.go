@@ -27,11 +27,12 @@ const (
 	MetricActionSubscribe   = "agent.action.subscribe"
 	MetricActionUnsubscribe = "agent.action.unsubscribe"
 
-	MetricFailurePull       = "agent.failure.pull"
-	MetricFailureLaunch     = "agent.failure.launch"
-	MetricFailureStop       = "agent.failure.stop"
-	MetricFailureDial       = "agent.failure.dial"
-	MetricFailureInitialize = "agent.failure.initialize"
+	MetricFailurePull               = "agent.failure.pull"
+	MetricFailureLaunch             = "agent.failure.launch"
+	MetricFailureStop               = "agent.failure.stop"
+	MetricFailureDial               = "agent.failure.dial"
+	MetricFailureInitialize         = "agent.failure.initialize"
+	MetricFailureInitializeResponse = "agent.failure.initialize.response"
 )
 
 // Lifecycle creates lifecycle metrics. It is useful in
@@ -57,6 +58,7 @@ type Lifecycle interface {
 	FailureStop(error, ...config.AgentConfig)
 	FailureDial(error, ...config.AgentConfig)
 	FailureInitialize(error, ...config.AgentConfig)
+	FailureInitializeResponse(...config.AgentConfig)
 
 	BotError(metricName string, err error, botID ...string)
 	SystemError(metricName string, err error)
@@ -147,6 +149,10 @@ func (lc *lifecycle) BotError(metricName string, err error, botIDs ...string) {
 
 func (lc *lifecycle) SystemError(metricName string, err error) {
 	SendAgentMetrics(lc.msgClient, fromBotIDs(fmt.Sprintf("system.error.%s", metricName), err.Error(), []string{"system"}))
+}
+
+func (lc *lifecycle) FailureInitializeResponse(botConfigs ...config.AgentConfig) {
+	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricFailureInitializeResponse, botConfigs))
 }
 
 func fromBotSubscriptions(action string, subscriptions []domain.CombinerBotSubscription) (metrics []*protocol.AgentMetric) {
