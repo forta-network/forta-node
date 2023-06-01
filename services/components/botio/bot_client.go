@@ -349,7 +349,6 @@ func (bot *botClient) initialize() {
 	defer cancel()
 
 	// invoke initialize method of the bot
-	// TODO: we should define and use InitializeAndRetry in clients/agentgrpc/client.go
 	initializeResponse, err := botClient.Initialize(ctx, &protocol.InitializeRequest{
 		AgentId:   botConfig.ID,
 		ProxyHost: config.DockerJSONRPCProxyContainerName,
