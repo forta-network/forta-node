@@ -101,9 +101,10 @@ func (s *LifecycleTestSuite) TestDownloadTimeout() {
 	// then the bot should be redownloaded, launched, dialed and initialized
 	// upon download timeouts for the first time
 
+	err := errors.New("download timeout")
 	s.botContainers.EXPECT().EnsureBotImages(gomock.Any(), assigned).
-		Return([]error{errors.New("download timeout")}).Times(1)
-	s.lifecycleMetrics.EXPECT().FailurePull(assigned[0]).Times(1)
+		Return([]error{err}).Times(1)
+	s.lifecycleMetrics.EXPECT().FailurePull(err, assigned[0]).Times(1)
 	s.lifecycleMetrics.EXPECT().StatusRunning().Times(1) // not bots running due to download failure
 
 	s.botContainers.EXPECT().EnsureBotImages(gomock.Any(), assigned).
