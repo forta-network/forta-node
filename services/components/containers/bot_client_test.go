@@ -91,6 +91,18 @@ func (s *BotClientTestSuite) TestLaunchBot_Exists() {
 	s.r.NoError(s.botClient.LaunchBot(context.Background(), botConfig))
 }
 
+func (s *BotClientTestSuite) TestLaunchBot_GetContainerError() {
+	botConfig := config.AgentConfig{
+		ID:    testBotID1,
+		Image: testImageRef,
+	}
+
+	err := errors.New("unexpected error")
+	s.client.EXPECT().GetContainerByName(gomock.Any(), botConfig.ContainerName()).Return(nil, err)
+
+	s.r.ErrorContains(s.botClient.LaunchBot(context.Background(), botConfig), err.Error())
+}
+
 func (s *BotClientTestSuite) TestLaunchBot_DoesNotExist() {
 	botConfig := config.AgentConfig{
 		ID:    testBotID1,

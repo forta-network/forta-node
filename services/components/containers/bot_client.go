@@ -78,7 +78,7 @@ func (bc *botClient) LaunchBot(ctx context.Context, botConfig config.AgentConfig
 		// continue
 
 	default:
-		log.WithField("container", botConfig.ContainerName()).WithError(err).Warn("failed to get container by name")
+		return fmt.Errorf("unexpected error while getting the bot container '%s': %v", botConfig.ContainerName(), err)
 	}
 
 	botNetworkID, err := bc.client.CreatePublicNetwork(ctx, botConfig.ContainerName())
