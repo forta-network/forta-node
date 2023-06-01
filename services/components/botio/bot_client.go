@@ -486,6 +486,10 @@ func (bot *botClient) processTransaction(lg *log.Entry, request *botreq.TxReques
 		return false
 	}
 
+	if status.Code(err) == codes.Unimplemented {
+		return false
+	}
+
 	lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking bot")
 	if bot.errCounter.TooManyErrs(err) {
 		lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down bot")
@@ -569,6 +573,10 @@ func (bot *botClient) processBlock(lg *log.Entry, request *botreq.BlockRequest) 
 		return false
 	}
 
+	if status.Code(err) == codes.Unimplemented {
+		return false
+	}
+
 	lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking bot")
 	if bot.errCounter.TooManyErrs(err) {
 		lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down bot")
@@ -617,7 +625,9 @@ func (bot *botClient) processCombinationAlert(lg *log.Entry, request *botreq.Com
 	cancel()
 
 	if err != nil {
-		lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking bot")
+		if status.Code(err) != codes.Unimplemented {
+			lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking bot")
+		}
 		if bot.errCounter.TooManyErrs(err) {
 			lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down bot")
 			_ = bot.Close()
