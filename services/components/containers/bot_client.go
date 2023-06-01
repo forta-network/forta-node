@@ -17,6 +17,9 @@ import (
 const (
 	BotPullTimeout  = time.Minute * 5
 	BotStartTimeout = time.Minute * 5
+
+	ImagePullCooldownThreshold = 5
+	ImagePullCooldownDuration  = time.Minute * 10
 )
 
 // BotClient launches a bot.
@@ -41,6 +44,7 @@ func NewBotClient(
 	logConfig config.LogConfig, resourcesConfig config.ResourcesConfig,
 	client clients.DockerClient, botImageClient clients.DockerClient,
 ) *botClient {
+	botImageClient.SetImagePullCooldown(ImagePullCooldownThreshold, ImagePullCooldownDuration)
 	return &botClient{
 		logConfig:       logConfig,
 		resourcesConfig: resourcesConfig,
