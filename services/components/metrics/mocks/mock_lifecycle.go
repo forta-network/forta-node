@@ -108,6 +108,38 @@ func (mr *MockLifecycleMockRecorder) BotError(metricName, err interface{}, botID
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BotError", reflect.TypeOf((*MockLifecycle)(nil).BotError), varargs...)
 }
 
+// ClientClose mocks base method.
+func (m *MockLifecycle) ClientClose(arg0 ...config.AgentConfig) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "ClientClose", varargs...)
+}
+
+// ClientClose indicates an expected call of ClientClose.
+func (mr *MockLifecycleMockRecorder) ClientClose(arg0 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClientClose", reflect.TypeOf((*MockLifecycle)(nil).ClientClose), arg0...)
+}
+
+// ClientDial mocks base method.
+func (m *MockLifecycle) ClientDial(arg0 ...config.AgentConfig) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "ClientDial", varargs...)
+}
+
+// ClientDial indicates an expected call of ClientDial.
+func (mr *MockLifecycleMockRecorder) ClientDial(arg0 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClientDial", reflect.TypeOf((*MockLifecycle)(nil).ClientDial), arg0...)
+}
+
 // FailureDial mocks base method.
 func (m *MockLifecycle) FailureDial(arg0 error, arg1 ...config.AgentConfig) {
 	m.ctrl.T.Helper()
@@ -243,20 +275,21 @@ func (mr *MockLifecycleMockRecorder) FailureStop(arg0 interface{}, arg1 ...inter
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailureStop", reflect.TypeOf((*MockLifecycle)(nil).FailureStop), varargs...)
 }
 
-// Start mocks base method.
-func (m *MockLifecycle) Start(arg0 ...config.AgentConfig) {
+// FailureTooManyErrs mocks base method.
+func (m *MockLifecycle) FailureTooManyErrs(arg0 error, arg1 ...config.AgentConfig) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range arg0 {
+	varargs := []interface{}{arg0}
+	for _, a := range arg1 {
 		varargs = append(varargs, a)
 	}
-	m.ctrl.Call(m, "Start", varargs...)
+	m.ctrl.Call(m, "FailureTooManyErrs", varargs...)
 }
 
-// Start indicates an expected call of Start.
-func (mr *MockLifecycleMockRecorder) Start(arg0 ...interface{}) *gomock.Call {
+// FailureTooManyErrs indicates an expected call of FailureTooManyErrs.
+func (mr *MockLifecycleMockRecorder) FailureTooManyErrs(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockLifecycle)(nil).Start), arg0...)
+	varargs := append([]interface{}{arg0}, arg1...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailureTooManyErrs", reflect.TypeOf((*MockLifecycle)(nil).FailureTooManyErrs), varargs...)
 }
 
 // StatusActive mocks base method.
@@ -345,22 +378,6 @@ func (m *MockLifecycle) StatusStopping(arg0 ...config.AgentConfig) {
 func (mr *MockLifecycleMockRecorder) StatusStopping(arg0 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StatusStopping", reflect.TypeOf((*MockLifecycle)(nil).StatusStopping), arg0...)
-}
-
-// Stop mocks base method.
-func (m *MockLifecycle) Stop(arg0 ...config.AgentConfig) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range arg0 {
-		varargs = append(varargs, a)
-	}
-	m.ctrl.Call(m, "Stop", varargs...)
-}
-
-// Stop indicates an expected call of Stop.
-func (mr *MockLifecycleMockRecorder) Stop(arg0 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockLifecycle)(nil).Stop), arg0...)
 }
 
 // SystemError mocks base method.

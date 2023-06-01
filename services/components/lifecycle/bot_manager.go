@@ -218,9 +218,9 @@ func (blm *botLifecycleManager) RestartExitedBots(ctx context.Context) error {
 		restartedBotConfigs = append(restartedBotConfigs, restartedBotConfig)
 	}
 
-	// let bot pool reinitialize the restart bots
+	// let the bot pool reconnect to the restarted bots
 	if len(restartedBotConfigs) > 0 {
-		if err := blm.botPool.ReinitBotsWithConfigs(restartedBotConfigs); err != nil {
+		if err := blm.botPool.ReconnectToBotsWithConfigs(restartedBotConfigs); err != nil {
 			blm.lifecycleMetrics.SystemError("reinit.bots.with.configs", fmt.Errorf("failed to reinit bots with configs: %v", err.Error()))
 		}
 	}
