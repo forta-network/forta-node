@@ -144,10 +144,11 @@ func (s *LifecycleTestSuite) TestLaunchFailure() {
 	// then the bot should be relaunched, dialed and initialized
 	// upon launch failure for the first time
 
+	err := errors.New("failed to launch")
 	s.botContainers.EXPECT().EnsureBotImages(gomock.Any(), assigned).
 		Return([]error{nil}).Times(1)
-	s.botContainers.EXPECT().LaunchBot(gomock.Any(), assigned[0]).Return(errors.New("failed to launch")).Times(1)
-	s.lifecycleMetrics.EXPECT().FailureLaunch(assigned[0]).Times(1)
+	s.botContainers.EXPECT().LaunchBot(gomock.Any(), assigned[0]).Return(err).Times(1)
+	s.lifecycleMetrics.EXPECT().FailureLaunch(err, assigned[0]).Times(1)
 	s.lifecycleMetrics.EXPECT().StatusRunning().Times(1) // not bots running due to download failure
 
 	s.botContainers.EXPECT().EnsureBotImages(gomock.Any(), assigned).
@@ -212,15 +213,16 @@ func (s *LifecycleTestSuite) TestInitializeFailure() {
 	// and no new assignments after the first time
 	s.botRegistry.EXPECT().LoadAssignedBots().Return(assigned, nil).Times(2)
 
+	err := errors.New("failed to init")
 	// then there should be no reloading and redialing upon initialization failures
 	s.botContainers.EXPECT().EnsureBotImages(gomock.Any(), assigned).Return([]error{nil}).Times(1)
 	s.botContainers.EXPECT().LaunchBot(gomock.Any(), assigned[0]).Return(nil).Times(1)
 	s.lifecycleMetrics.EXPECT().StatusRunning(assigned[0]).Times(2)
 	s.lifecycleMetrics.EXPECT().Start(assigned[0]).Times(1)
 	s.lifecycleMetrics.EXPECT().StatusAttached(assigned[0]).Times(1)
-	s.lifecycleMetrics.EXPECT().FailureInitialize(assigned[0]).Times(1)
+	s.lifecycleMetrics.EXPECT().FailureInitialize(err, assigned[0]).Times(1)
 	s.dialer.EXPECT().DialBot(assigned[0]).Return(s.botGrpc, nil).Times(1)
-	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(nil, errors.New("failed to init")).Times(1)
+	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(nil, err).Times(1)
 
 	s.botMonitor.EXPECT().MonitorBots(GetBotIDs(assigned)).Times(2)
 
