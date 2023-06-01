@@ -363,13 +363,13 @@ func (bot *botClient) initialize() {
 	}
 	if err != nil {
 		logger.WithError(err).Warn("bot initialization failed")
-		bot.lifecycleMetrics.FailureInitialize(botConfig)
+		bot.lifecycleMetrics.FailureInitialize(err, botConfig)
 		return
 	}
 
 	if err := validateInitializeResponse(initializeResponse); err != nil {
 		logger.WithError(err).Warn("bot initialization validation failed")
-		bot.lifecycleMetrics.FailureInitialize(botConfig)
+		bot.lifecycleMetrics.FailureInitialize(err, botConfig)
 		return
 	}
 

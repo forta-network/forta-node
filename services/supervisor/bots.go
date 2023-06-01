@@ -15,7 +15,7 @@ func (sup *SupervisorService) refreshBotContainers() {
 		case <-sup.ctx.Done():
 			return
 
-		case <-time.After(time.Second * 15):
+		case <-time.After(time.Minute):
 			sup.doRefreshBotContainers()
 		}
 	}

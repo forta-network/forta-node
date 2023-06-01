@@ -74,13 +74,13 @@ func (bc *botClient) LaunchBot(ctx context.Context, botConfig config.AgentConfig
 
 	botNetworkID, err := bc.client.CreatePublicNetwork(ctx, botConfig.ContainerName())
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating public network: %v", err)
 	}
 
 	botContainerCfg := NewBotContainerConfig(botNetworkID, botConfig, bc.logConfig, bc.resourcesConfig)
 	_, err = bc.client.StartContainer(ctx, botContainerCfg)
 	if err != nil {
-		return fmt.Errorf("failed to start the bot container: %v", err)
+		return fmt.Errorf("failed to start bot container: %v", err)
 	}
 	return bc.attachServiceContainers(ctx, botNetworkID)
 }

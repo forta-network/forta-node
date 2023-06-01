@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/forta-network/forta-core-go/domain"
@@ -28,6 +29,7 @@ const (
 
 	MetricFailurePull       = "agent.failure.pull"
 	MetricFailureLaunch     = "agent.failure.launch"
+	MetricFailureStop       = "agent.failure.stop"
 	MetricFailureDial       = "agent.failure.dial"
 	MetricFailureInitialize = "agent.failure.initialize"
 )
@@ -50,10 +52,14 @@ type Lifecycle interface {
 	ActionSubscribe([]domain.CombinerBotSubscription)
 	ActionUnsubscribe([]domain.CombinerBotSubscription)
 
-	FailurePull(...config.AgentConfig)
-	FailureLaunch(...config.AgentConfig)
-	FailureDial(...config.AgentConfig)
-	FailureInitialize(...config.AgentConfig)
+	FailurePull(error, ...config.AgentConfig)
+	FailureLaunch(error, ...config.AgentConfig)
+	FailureStop(error, ...config.AgentConfig)
+	FailureDial(error, ...config.AgentConfig)
+	FailureInitialize(error, ...config.AgentConfig)
+
+	BotError(metricName string, err error, botID ...string)
+	SystemError(metricName string, err error)
 }
 
 type lifecycle struct {
@@ -68,43 +74,43 @@ func NewLifecycleClient(msgClient clients.MessageClient) Lifecycle {
 }
 
 func (lc *lifecycle) Start(botConfigs ...config.AgentConfig) {
-	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricStart, botConfigs))
+	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricStart, "", botConfigs))
 }
 
 func (lc *lifecycle) Stop(botConfigs ...config.AgentConfig) {
-	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricStop, botConfigs))
+	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricStop, "", botConfigs))
 }
 
 func (lc *lifecycle) StatusRunning(botConfigs ...config.AgentConfig) {
-	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricStatusRunning, botConfigs))
+	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricStatusRunning, "", botConfigs))
 }
 
 func (lc *lifecycle) StatusAttached(botConfigs ...config.AgentConfig) {
-	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricStatusAttached, botConfigs))
+	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricStatusAttached, "", botConfigs))
 }
 
 func (lc *lifecycle) StatusInitialized(botConfigs ...config.AgentConfig) {
-	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricStatusInitialized, botConfigs))
+	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricStatusInitialized, "", botConfigs))
 }
 
 func (lc *lifecycle) StatusStopping(botConfigs ...config.AgentConfig) {
-	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricStatusStopping, botConfigs))
+	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricStatusStopping, "", botConfigs))
 }
 
 func (lc *lifecycle) StatusActive(botIDs []string) {
-	SendAgentMetrics(lc.msgClient, fromBotIDs(MetricStatusActive, botIDs))
+	SendAgentMetrics(lc.msgClient, fromBotIDs(MetricStatusActive, "", botIDs))
 }
 
 func (lc *lifecycle) StatusInactive(botIDs []string) {
-	SendAgentMetrics(lc.msgClient, fromBotIDs(MetricStatusInactive, botIDs))
+	SendAgentMetrics(lc.msgClient, fromBotIDs(MetricStatusInactive, "", botIDs))
 }
 
 func (lc *lifecycle) ActionUpdate(botConfigs ...config.AgentConfig) {
-	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricActionUpdate, botConfigs))
+	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricActionUpdate, "", botConfigs))
 }
 
 func (lc *lifecycle) ActionRestart(botConfigs ...config.AgentConfig) {
-	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricActionRestart, botConfigs))
+	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricActionRestart, "", botConfigs))
 }
 
 func (lc *lifecycle) ActionSubscribe(subscriptions []domain.CombinerBotSubscription) {
@@ -115,20 +121,32 @@ func (lc *lifecycle) ActionUnsubscribe(subscriptions []domain.CombinerBotSubscri
 	SendAgentMetrics(lc.msgClient, fromBotSubscriptions(MetricActionUnsubscribe, subscriptions))
 }
 
-func (lc *lifecycle) FailurePull(botConfigs ...config.AgentConfig) {
-	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricFailurePull, botConfigs))
+func (lc *lifecycle) FailurePull(err error, botConfigs ...config.AgentConfig) {
+	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricFailurePull, err.Error(), botConfigs))
 }
 
-func (lc *lifecycle) FailureLaunch(botConfigs ...config.AgentConfig) {
-	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricFailureLaunch, botConfigs))
+func (lc *lifecycle) FailureLaunch(err error, botConfigs ...config.AgentConfig) {
+	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricFailureLaunch, err.Error(), botConfigs))
 }
 
-func (lc *lifecycle) FailureDial(botConfigs ...config.AgentConfig) {
-	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricFailureDial, botConfigs))
+func (lc *lifecycle) FailureStop(err error, botConfigs ...config.AgentConfig) {
+	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricFailureStop, err.Error(), botConfigs))
 }
 
-func (lc *lifecycle) FailureInitialize(botConfigs ...config.AgentConfig) {
-	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricFailureInitialize, botConfigs))
+func (lc *lifecycle) FailureDial(err error, botConfigs ...config.AgentConfig) {
+	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricFailureDial, err.Error(), botConfigs))
+}
+
+func (lc *lifecycle) FailureInitialize(err error, botConfigs ...config.AgentConfig) {
+	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricFailureInitialize, err.Error(), botConfigs))
+}
+
+func (lc *lifecycle) BotError(metricName string, err error, botIDs ...string) {
+	SendAgentMetrics(lc.msgClient, fromBotIDs(fmt.Sprintf("agent.error.%s", metricName), err.Error(), botIDs))
+}
+
+func (lc *lifecycle) SystemError(metricName string, err error) {
+	SendAgentMetrics(lc.msgClient, fromBotIDs(fmt.Sprintf("system.error.%s", metricName), err.Error(), []string{"system"}))
 }
 
 func fromBotSubscriptions(action string, subscriptions []domain.CombinerBotSubscription) (metrics []*protocol.AgentMetric) {
@@ -138,24 +156,26 @@ func fromBotSubscriptions(action string, subscriptions []domain.CombinerBotSubsc
 	return
 }
 
-func fromBotConfigs(metricName string, botConfigs []config.AgentConfig) (metrics []*protocol.AgentMetric) {
+func fromBotConfigs(metricName string, details string, botConfigs []config.AgentConfig) (metrics []*protocol.AgentMetric) {
 	for _, botConfig := range botConfigs {
 		metrics = append(metrics, &protocol.AgentMetric{
 			AgentId:   botConfig.ID,
 			Timestamp: time.Now().Format(time.RFC3339),
 			Name:      metricName,
+			Details:   details,
 			Value:     1,
 		})
 	}
 	return
 }
 
-func fromBotIDs(metricName string, botIDs []string) (metrics []*protocol.AgentMetric) {
+func fromBotIDs(metricName string, details string, botIDs []string) (metrics []*protocol.AgentMetric) {
 	for _, botID := range botIDs {
 		metrics = append(metrics, &protocol.AgentMetric{
 			AgentId:   botID,
 			Timestamp: time.Now().Format(time.RFC3339),
 			Name:      metricName,
+			Details:   details,
 			Value:     1,
 		})
 	}
