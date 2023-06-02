@@ -408,7 +408,7 @@ func (s *LifecycleTestSuite) TestUnassigned() {
 	<-createdBotClient.Closed()
 }
 
-func (s *LifecycleTestSuite) TestConfigUpdated() {
+func (s *LifecycleTestSuite) TestShardConfigUpdate_NewShardID() {
 	s.T().Log("should update bot config without tearing down")
 
 	assigned := []config.AgentConfig{
@@ -454,4 +454,56 @@ func (s *LifecycleTestSuite) TestConfigUpdated() {
 	s.r.NoError(s.botManager.ManageBots(context.Background()))
 
 	s.r.Equal(updated[0], s.botPool.botClients[0].Config())
+}
+
+func (s *LifecycleTestSuite) TestShardConfigUpdate_ShardIDChange() {
+	s.T().Log("should update bot config when shard id changes")
+
+	assigned := []config.AgentConfig{
+		{
+			ID:    testBotID1,
+			Image: testImageRef,
+			ShardConfig: &config.ShardConfig{
+				ShardID: 1,
+			},
+		},
+	}
+	updated := []config.AgentConfig{
+		{
+			ID:    testBotID1,
+			Image: testImageRef,
+			ShardConfig: &config.ShardConfig{
+				ShardID: 3,
+			},
+		},
+	}
+
+	// given that there is a new bot assignment
+	s.botRegistry.EXPECT().LoadAssignedBots().Return(assigned, nil).Times(1)
+	// and the assigned bot's shard config is updated shortly
+	s.botRegistry.EXPECT().LoadAssignedBots().Return(updated, nil).Times(1)
+
+	// then the config of the bot should be updated
+
+	s.botContainers.EXPECT().EnsureBotImages(gomock.Any(), assigned).Return([]error{nil}).Times(1)
+	s.botContainers.EXPECT().LaunchBot(gomock.Any(), assigned[0]).Return(nil).Times(1)
+	s.lifecycleMetrics.EXPECT().StatusRunning(assigned[0]).Times(1)
+	s.lifecycleMetrics.EXPECT().ClientDial(assigned[0]).Times(1)
+	s.lifecycleMetrics.EXPECT().StatusAttached(assigned[0]).Times(1)
+	s.lifecycleMetrics.EXPECT().StatusInitialized(assigned[0]).Times(1)
+	s.dialer.EXPECT().DialBot(assigned[0]).Return(s.botGrpc, nil).Times(1)
+	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{}, nil).
+		Times(1)
+
+	s.lifecycleMetrics.EXPECT().StatusRunning(updated[0]).Times(1)
+	s.lifecycleMetrics.EXPECT().ActionUpdate(updated[0])
+
+	s.botMonitor.EXPECT().MonitorBots(GetBotIDs(assigned)).Times(2)
+
+	// when the bot manager manages the assigned bots over time
+	s.r.NoError(s.botManager.ManageBots(context.Background()))
+	s.r.NoError(s.botManager.ManageBots(context.Background()))
+
+	s.r.Equal(updated[0], s.botPool.botClients[0].Config())
+	s.r.Len(s.botPool.botClients, 1)
 }
