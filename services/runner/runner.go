@@ -244,9 +244,22 @@ func (runner *Runner) ensureImage(logger *log.Entry, name string, imageRef strin
 		}
 	}
 
-	if err := runner.dockerClient.EnsureLocalImage(runner.ctx, name, imageRef); err != nil {
-		logger.WithError(err).Warn("failed to ensure local image")
-		return "", err
+	ticker := time.NewTicker(time.Minute)
+
+	for {
+		err := runner.dockerClient.EnsureLocalImage(runner.ctx, name, imageRef)
+		if err != nil {
+			logger.WithError(err).Warn("failed to ensure local image - retrying")
+		} else {
+			break
+		}
+		select {
+		case <-ticker.C:
+			// continue
+		case <-runner.ctx.Done():
+			// returning underlying err, because it's != nil
+			return "", err
+		}
 	}
 
 	return imageRef, nil
