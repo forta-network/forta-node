@@ -15,7 +15,7 @@ const (
 	LabelValueFortaIsBot = "true"
 	// LabelValueStrategyVersion is for versioning the critical changes in container management strategy.
 	// It's effective in deciding if a bot container should be re-created or not.
-	LabelValueStrategyVersion = "3"
+	LabelValueStrategyVersion = "2023-06-02T14:00:00Z"
 )
 
 // Limits define container limits.
