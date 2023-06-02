@@ -12,8 +12,8 @@ import (
 
 // Bot lifecycle metrics
 const (
-	MetricStart = "agent.start"
-	MetricStop  = "agent.stop"
+	MetricClientDial  = "agent.client.dial"
+	MetricClientClose = "agent.client.close"
 
 	MetricStatusRunning     = "agent.status.running"
 	MetricStatusAttached    = "agent.status.attached"
@@ -34,13 +34,14 @@ const (
 	MetricFailureInitialize         = "agent.failure.initialize"
 	MetricFailureInitializeResponse = "agent.failure.initialize.response"
 	MetricFailureInitializeValidate = "agent.failure.initialize.validate"
+	MetricFailureTooManyErrs        = "agent.failure.too-many-errs"
 )
 
 // Lifecycle creates lifecycle metrics. It is useful in
 // understanding what is going on during lifecycle management.
 type Lifecycle interface {
-	Start(...config.AgentConfig)
-	Stop(...config.AgentConfig)
+	ClientDial(...config.AgentConfig)
+	ClientClose(...config.AgentConfig)
 
 	StatusRunning(...config.AgentConfig)
 	StatusAttached(...config.AgentConfig)
@@ -61,6 +62,7 @@ type Lifecycle interface {
 	FailureInitialize(error, ...config.AgentConfig)
 	FailureInitializeResponse(error, ...config.AgentConfig)
 	FailureInitializeValidate(error, ...config.AgentConfig)
+	FailureTooManyErrs(error, ...config.AgentConfig)
 
 	BotError(metricName string, err error, botID ...string)
 	SystemError(metricName string, err error)
@@ -77,12 +79,12 @@ func NewLifecycleClient(msgClient clients.MessageClient) Lifecycle {
 	}
 }
 
-func (lc *lifecycle) Start(botConfigs ...config.AgentConfig) {
-	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricStart, "", botConfigs))
+func (lc *lifecycle) ClientDial(botConfigs ...config.AgentConfig) {
+	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricClientDial, "", botConfigs))
 }
 
-func (lc *lifecycle) Stop(botConfigs ...config.AgentConfig) {
-	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricStop, "", botConfigs))
+func (lc *lifecycle) ClientClose(botConfigs ...config.AgentConfig) {
+	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricClientClose, "", botConfigs))
 }
 
 func (lc *lifecycle) StatusRunning(botConfigs ...config.AgentConfig) {
@@ -151,6 +153,10 @@ func (lc *lifecycle) FailureInitializeResponse(err error, botConfigs ...config.A
 
 func (lc *lifecycle) FailureInitializeValidate(err error, botConfigs ...config.AgentConfig) {
 	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricFailureInitializeValidate, err.Error(), botConfigs))
+}
+
+func (lc *lifecycle) FailureTooManyErrs(err error, botConfigs ...config.AgentConfig) {
+	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricFailureTooManyErrs, err.Error(), botConfigs))
 }
 
 func (lc *lifecycle) BotError(metricName string, err error, botIDs ...string) {

@@ -39,7 +39,7 @@ func (lm *lifecycleMediator) ConnectBotPool(botPool lifecycle.BotPoolUpdater) {
 		messaging.SubjectAgentsStatusStopping, messaging.AgentsHandler(botPool.RemoveBotsWithConfigs),
 	)
 	lm.msgClient.Subscribe(
-		messaging.SubjectAgentsStatusRestarted, messaging.AgentsHandler(botPool.ReinitBotsWithConfigs),
+		messaging.SubjectAgentsStatusRestarted, messaging.AgentsHandler(botPool.ReconnectToBotsWithConfigs),
 	)
 }
 
@@ -62,7 +62,7 @@ func (lm *lifecycleMediator) RemoveBotsWithConfigs(payload messaging.AgentPayloa
 	return nil
 }
 
-func (lm *lifecycleMediator) ReinitBotsWithConfigs(payload messaging.AgentPayload) error {
+func (lm *lifecycleMediator) ReconnectToBotsWithConfigs(payload messaging.AgentPayload) error {
 	lm.msgClient.Publish(messaging.SubjectAgentsStatusRestarted, payload)
 	return nil
 }

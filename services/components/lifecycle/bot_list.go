@@ -67,3 +67,13 @@ func GetBotIDs(botList []config.AgentConfig) (ids []string) {
 	}
 	return
 }
+
+// FindBot finds the bot from the config list.
+func FindBot(containerName string, botList []config.AgentConfig) (config.AgentConfig, bool) {
+	for _, bot := range botList {
+		if bot.ContainerName() == containerName {
+			return bot, true
+		}
+	}
+	return config.AgentConfig{}, false
+}

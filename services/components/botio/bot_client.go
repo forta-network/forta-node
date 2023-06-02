@@ -243,10 +243,11 @@ func (bot *botClient) Close() error {
 		close(bot.closed) // never close this anywhere else
 		client := bot.grpcClient()
 		if client != nil {
-			go client.Close()
+			client.Close()
 		}
 		botConfig := bot.Config()
 		log.WithField("bot", botConfig.ID).WithField("image", botConfig.Image).Info("detached")
+		bot.lifecycleMetrics.ClientClose(botConfig)
 		if bot.isCombinerBot() {
 			bot.msgClient.Publish(messaging.SubjectAgentsAlertUnsubscribe, bot.CombinerBotSubscriptions())
 			bot.lifecycleMetrics.ActionUnsubscribe(bot.CombinerBotSubscriptions())
@@ -333,7 +334,7 @@ func (bot *botClient) initialize() {
 	})
 
 	// publish start metric to track bot starts/restarts.
-	bot.lifecycleMetrics.Start(botConfig)
+	bot.lifecycleMetrics.ClientDial(botConfig)
 	bot.setStarted()
 
 	botClient, err := bot.dialer.DialBot(botConfig)
@@ -363,6 +364,7 @@ func (bot *botClient) initialize() {
 	if err != nil {
 		logger.WithError(err).Warn("bot initialization failed")
 		bot.lifecycleMetrics.FailureInitialize(err, botConfig)
+		_ = bot.Close()
 		return
 	}
 
@@ -370,6 +372,7 @@ func (bot *botClient) initialize() {
 		err := agentgrpc.Error(initializeResponse.Errors)
 		logger.WithError(err).Warn("bot initialization returned an error response")
 		bot.lifecycleMetrics.FailureInitializeResponse(err, botConfig)
+		_ = bot.Close()
 		return
 	}
 
@@ -434,10 +437,11 @@ func (bot *botClient) processTransaction(lg *log.Entry, request *botreq.TxReques
 	botConfig := bot.Config()
 	botClient := bot.grpcClient()
 
-	startTime := time.Now()
 	if bot.IsClosed() {
 		return true
 	}
+
+	startTime := time.Now()
 
 	ctx, cancel := context.WithTimeout(bot.ctx, AgentTimeout)
 	lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
@@ -482,12 +486,15 @@ func (bot *botClient) processTransaction(lg *log.Entry, request *botreq.TxReques
 		return false
 	}
 
+	if status.Code(err) == codes.Unimplemented {
+		return false
+	}
+
 	lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking bot")
 	if bot.errCounter.TooManyErrs(err) {
 		lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down bot")
-		bot.Close()
-		bot.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{botConfig})
-		bot.lifecycleMetrics.Stop(botConfig)
+		_ = bot.Close()
+		bot.lifecycleMetrics.FailureTooManyErrs(err, botConfig)
 		return true
 	}
 
@@ -516,10 +523,11 @@ func (bot *botClient) processBlock(lg *log.Entry, request *botreq.BlockRequest) 
 	botConfig := bot.Config()
 	botClient := bot.grpcClient()
 
-	startTime := time.Now()
 	if bot.IsClosed() {
 		return true
 	}
+
+	startTime := time.Now()
 
 	ctx, cancel := context.WithTimeout(bot.ctx, AgentTimeout)
 	lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
@@ -565,12 +573,15 @@ func (bot *botClient) processBlock(lg *log.Entry, request *botreq.BlockRequest) 
 		return false
 	}
 
+	if status.Code(err) == codes.Unimplemented {
+		return false
+	}
+
 	lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking bot")
 	if bot.errCounter.TooManyErrs(err) {
 		lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down bot")
-		bot.Close()
-		bot.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{botConfig})
-		bot.lifecycleMetrics.Stop(botConfig)
+		_ = bot.Close()
+		bot.lifecycleMetrics.FailureTooManyErrs(err, botConfig)
 		return true
 	}
 
@@ -599,10 +610,11 @@ func (bot *botClient) processCombinationAlert(lg *log.Entry, request *botreq.Com
 	botConfig := bot.Config()
 	botClient := bot.grpcClient()
 
-	startTime := time.Now()
 	if bot.IsClosed() {
 		return true
 	}
+
+	startTime := time.Now()
 
 	ctx, cancel := context.WithTimeout(bot.ctx, AgentTimeout)
 	lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
@@ -613,12 +625,13 @@ func (bot *botClient) processCombinationAlert(lg *log.Entry, request *botreq.Com
 	cancel()
 
 	if err != nil {
-		lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking bot")
+		if status.Code(err) != codes.Unimplemented {
+			lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking bot")
+		}
 		if bot.errCounter.TooManyErrs(err) {
 			lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down bot")
-			bot.Close()
-			bot.msgClient.Publish(messaging.SubjectAgentsActionStop, messaging.AgentPayload{botConfig})
-			bot.lifecycleMetrics.Stop(botConfig)
+			_ = bot.Close()
+			bot.lifecycleMetrics.FailureTooManyErrs(err, botConfig)
 			return true
 		}
 	}

@@ -69,14 +69,14 @@ func (s *BotPoolTestSuite) TestAddUpdate() {
 	s.botPool.botClients = []botio.BotClient{s.botClient2}
 
 	s.botClient2.EXPECT().Config().Return(assigned[0]).Times(3)
+	s.botClient2.EXPECT().IsClosed().Return(false)
 	s.botClientFactory.EXPECT().NewBotClient(gomock.Any(), updated[0]).Return(s.botClient1)
 	s.botClient1.EXPECT().Initialize()
 	s.botClient1.EXPECT().StartProcessing()
 
-	s.botClient1.EXPECT().Config().Return(updated[0]).Times(1)
+	s.botClient1.EXPECT().Config().Return(updated[0]).Times(2)
 	s.botClient2.EXPECT().Config().Return(assigned[0]).Times(1)
 	s.botClient2.EXPECT().SetConfig(updated[1])
-	//s.botClient2.EXPECT().Config().Return(updated[1]).Times(2)
 	s.lifecycleMetrics.EXPECT().ActionUpdate(updated[1])
 
 	s.botPool.UpdateBotsWithLatestConfigs(updated)
@@ -115,7 +115,7 @@ func (s *BotPoolTestSuite) TestRemove() {
 	s.r.Equal(s.botPool.botClients[0], s.botClient1)
 }
 
-func (s *BotPoolTestSuite) TestReinit() {
+func (s *BotPoolTestSuite) TestReconnect() {
 	assigned := []config.AgentConfig{
 		{
 			ID:    testBotID1,
@@ -125,12 +125,15 @@ func (s *BotPoolTestSuite) TestReinit() {
 
 	s.botPool.botClients = []botio.BotClient{s.botClient1}
 	s.botClient1.EXPECT().Config().Return(assigned[0]).AnyTimes()
-	s.botClient1.EXPECT().Initialize()
+	s.botClient1.EXPECT().Close()
+	s.botClientFactory.EXPECT().NewBotClient(gomock.Any(), assigned[0]).Return(s.botClient2)
+	s.botClient2.EXPECT().Initialize()
+	s.botClient2.EXPECT().StartProcessing()
 
-	s.botPool.ReinitBotsWithConfigs(assigned)
+	s.botPool.ReconnectToBotsWithConfigs(assigned)
 
 	s.r.Len(s.botPool.botClients, 1)
-	s.r.Equal(s.botPool.botClients[0], s.botClient1)
+	s.r.Equal(s.botPool.botClients[0], s.botClient2)
 }
 
 func (s *BotPoolTestSuite) TestWaitForAll() {

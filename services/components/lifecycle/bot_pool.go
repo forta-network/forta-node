@@ -23,7 +23,7 @@ type BotPool interface {
 type BotPoolUpdater interface {
 	UpdateBotsWithLatestConfigs(messaging.AgentPayload) error
 	RemoveBotsWithConfigs(messaging.AgentPayload) error
-	ReinitBotsWithConfigs(messaging.AgentPayload) error
+	ReconnectToBotsWithConfigs(messaging.AgentPayload) error
 }
 
 type botPool struct {
@@ -89,27 +89,25 @@ func (bp *botPool) UpdateBotsWithLatestConfigs(latestConfigs messaging.AgentPayl
 	defer bp.mu.Unlock()
 
 	// add new bots
-	addedBotConfigs := FindExtraBots(bp.getConfigsUnsafe(), latestConfigs)
-	for _, addedBotConfig := range addedBotConfigs {
-		logger := botLogger(addedBotConfig)
-		botClient, ok := bp.getBotClient(addedBotConfig.ContainerName())
-		if ok {
-			logger.Debug("bot already exists - skipping")
+	var latestBotClients []botio.BotClient
+	for _, botConfig := range latestConfigs {
+		logger := botLogger(botConfig)
+		botClient, ok := bp.getBotClient(botConfig.ContainerName())
+		if ok && !botClient.IsClosed() {
+			logger.Debug("bot client already exists - skipping update")
+			latestBotClients = append(latestBotClients, botClient)
 			continue
 		}
 
-		logger.Info("adding new bot")
-		botClient = bp.botClientFactory.NewBotClient(bp.ctx, addedBotConfig)
-
-		if bp.waitInit {
-			botClient.Initialize()
+		if ok && botClient.IsClosed() {
+			logger.Info("replacing closed bot client")
 		} else {
-			go botClient.Initialize()
+			logger.Info("adding new bot client")
 		}
-		botClient.StartProcessing()
 
-		bp.botClients = append(bp.botClients, botClient)
+		latestBotClients = append(latestBotClients, bp.startBotClient(botConfig))
 	}
+	bp.botClients = latestBotClients
 
 	// updated the config of the bots that have different config
 	updatedBotConfigs := FindUpdatedBots(bp.getConfigsUnsafe(), latestConfigs)
@@ -134,6 +132,19 @@ func (bp *botPool) UpdateBotsWithLatestConfigs(latestConfigs messaging.AgentPayl
 	return nil
 }
 
+func (bp *botPool) startBotClient(botConfig config.AgentConfig) botio.BotClient {
+	botClient := bp.botClientFactory.NewBotClient(bp.ctx, botConfig)
+
+	if bp.waitInit {
+		botClient.Initialize()
+	} else {
+		go botClient.Initialize()
+	}
+	botClient.StartProcessing()
+
+	return botClient
+}
+
 // RemoveBotsWithConfigs closes and discards the bots to be removed.
 func (bp *botPool) RemoveBotsWithConfigs(removedBotConfigs messaging.AgentPayload) error {
 	bp.mu.Lock()
@@ -147,7 +158,7 @@ func (bp *botPool) RemoveBotsWithConfigs(removedBotConfigs messaging.AgentPayloa
 			logger.Info("could not find the removed bot! skipping")
 			continue
 		}
-		go bot.Close()
+		_ = bot.Close()
 	}
 
 	// find the bots we are not supposed to remove and keep them
@@ -164,24 +175,23 @@ func (bp *botPool) RemoveBotsWithConfigs(removedBotConfigs messaging.AgentPayloa
 	return nil
 }
 
-// ReinitBotsWithConfigs reinitializes bots.
-func (bp *botPool) ReinitBotsWithConfigs(reinitedBotConfigs messaging.AgentPayload) error {
+// ReconnectToBotsWithConfigs reinitializes bots.
+func (bp *botPool) ReconnectToBotsWithConfigs(reconnectedBots messaging.AgentPayload) error {
 	bp.mu.Lock()
 	defer bp.mu.Unlock()
 
-	for _, reinitedBotConfig := range reinitedBotConfigs {
-		logger := botLogger(reinitedBotConfig)
-		bot, ok := bp.getBotClient(reinitedBotConfig.ContainerName())
-		if !ok {
-			logger.Info("could not find the reinited bot! skipping")
-			continue
+	var latestBotClients []botio.BotClient
+	for _, botClient := range bp.botClients {
+		botConfig, found := FindBot(botClient.Config().ContainerName(), reconnectedBots)
+		// if found, close old and replace with new
+		if found {
+			_ = botClient.Close()
+			botClient = bp.startBotClient(botConfig)
 		}
-		if bp.waitInit {
-			bot.Initialize()
-		} else {
-			go bot.Initialize()
-		}
+		// append previous or new one one, depending on the previous step
+		latestBotClients = append(latestBotClients, botClient)
 	}
+	bp.botClients = latestBotClients
 
 	return nil
 }
