@@ -49,18 +49,18 @@ func (mr *MockBotPoolMockRecorder) GetCurrentBotClients() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCurrentBotClients", reflect.TypeOf((*MockBotPool)(nil).GetCurrentBotClients))
 }
 
-// ReinitBotsWithConfigs mocks base method.
-func (m *MockBotPool) ReinitBotsWithConfigs(arg0 messaging.AgentPayload) error {
+// ReconnectToBotsWithConfigs mocks base method.
+func (m *MockBotPool) ReconnectToBotsWithConfigs(arg0 messaging.AgentPayload) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReinitBotsWithConfigs", arg0)
+	ret := m.ctrl.Call(m, "ReconnectToBotsWithConfigs", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// ReinitBotsWithConfigs indicates an expected call of ReinitBotsWithConfigs.
-func (mr *MockBotPoolMockRecorder) ReinitBotsWithConfigs(arg0 interface{}) *gomock.Call {
+// ReconnectToBotsWithConfigs indicates an expected call of ReconnectToBotsWithConfigs.
+func (mr *MockBotPoolMockRecorder) ReconnectToBotsWithConfigs(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReinitBotsWithConfigs", reflect.TypeOf((*MockBotPool)(nil).ReinitBotsWithConfigs), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconnectToBotsWithConfigs", reflect.TypeOf((*MockBotPool)(nil).ReconnectToBotsWithConfigs), arg0)
 }
 
 // RemoveBotsWithConfigs mocks base method.
@@ -126,18 +126,18 @@ func (m *MockBotPoolUpdater) EXPECT() *MockBotPoolUpdaterMockRecorder {
 	return m.recorder
 }
 
-// ReinitBotsWithConfigs mocks base method.
-func (m *MockBotPoolUpdater) ReinitBotsWithConfigs(arg0 messaging.AgentPayload) error {
+// ReconnectToBotsWithConfigs mocks base method.
+func (m *MockBotPoolUpdater) ReconnectToBotsWithConfigs(arg0 messaging.AgentPayload) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReinitBotsWithConfigs", arg0)
+	ret := m.ctrl.Call(m, "ReconnectToBotsWithConfigs", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// ReinitBotsWithConfigs indicates an expected call of ReinitBotsWithConfigs.
-func (mr *MockBotPoolUpdaterMockRecorder) ReinitBotsWithConfigs(arg0 interface{}) *gomock.Call {
+// ReconnectToBotsWithConfigs indicates an expected call of ReconnectToBotsWithConfigs.
+func (mr *MockBotPoolUpdaterMockRecorder) ReconnectToBotsWithConfigs(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReinitBotsWithConfigs", reflect.TypeOf((*MockBotPoolUpdater)(nil).ReinitBotsWithConfigs), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconnectToBotsWithConfigs", reflect.TypeOf((*MockBotPoolUpdater)(nil).ReconnectToBotsWithConfigs), arg0)
 }
 
 // RemoveBotsWithConfigs mocks base method.

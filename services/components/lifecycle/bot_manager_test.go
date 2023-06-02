@@ -140,7 +140,7 @@ func (s *BotLifecycleManagerTestSuite) TestRestart() {
 	s.botContainers.EXPECT().StartWaitBotContainer(gomock.Any(), testContainerID2).Return(err)
 
 	// reinitialize only
-	s.botPool.EXPECT().ReinitBotsWithConfigs([]config.AgentConfig{botConfigs[0]})
+	s.botPool.EXPECT().ReconnectToBotsWithConfigs([]config.AgentConfig{botConfigs[0]})
 
 	s.r.NoError(s.botManager.RestartExitedBots(context.Background()))
 }

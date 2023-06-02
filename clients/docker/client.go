@@ -20,6 +20,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/forta-network/forta-core-go/utils/workers"
+	"github.com/forta-network/forta-node/clients/cooldown"
 	"github.com/forta-network/forta-node/config"
 	log "github.com/sirupsen/logrus"
 )
@@ -111,11 +112,12 @@ func (dcl ContainerList) ContainsAny(name string) (*types.Container, bool) {
 }
 
 type dockerClient struct {
-	cli      *client.Client
-	workers  *workers.Group
-	username string
-	password string
-	labels   []dockerLabel
+	cli                   *client.Client
+	workers               *workers.Group
+	username              string
+	password              string
+	labels                []dockerLabel
+	imageDownloadCooldown cooldown.Cooldown
 }
 
 func (cfg ContainerConfig) envVars() []string {
@@ -145,6 +147,10 @@ func (d *dockerClient) PullImage(ctx context.Context, refStr string) error {
 }
 
 func (d *dockerClient) pullImage(ctx context.Context, refStr string) error {
+	if d.imageDownloadCooldown != nil && d.imageDownloadCooldown.ShouldCoolDown(refStr) {
+		return fmt.Errorf("too many pull attempts - cooling down: %s", refStr)
+	}
+
 	r, err := d.cli.ImagePull(ctx, refStr, types.ImagePullOptions{
 		RegistryAuth: registryAuthValue(d.username, d.password),
 	})
@@ -870,6 +876,11 @@ func labelsToMap(labels []dockerLabel) map[string]string {
 		m[label.Name] = label.Value
 	}
 	return m
+}
+
+// SetImagePullCooldown sets the image pull cooldown.
+func (d *dockerClient) SetImagePullCooldown(threshold int, cooldownDuration time.Duration) {
+	d.imageDownloadCooldown = cooldown.New(threshold, cooldownDuration)
 }
 
 // NewDockerClient creates a new docker client

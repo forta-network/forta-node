@@ -113,7 +113,7 @@ func (s *LifecycleTestSuite) TestDownloadTimeout() {
 	s.botContainers.EXPECT().LaunchBot(gomock.Any(), assigned[0]).Return(nil).Times(1)
 	s.lifecycleMetrics.EXPECT().StatusRunning(assigned[0]).Times(1) // bot is running
 
-	s.lifecycleMetrics.EXPECT().Start(assigned[0]).Times(1)
+	s.lifecycleMetrics.EXPECT().ClientDial(assigned[0]).Times(1)
 	s.lifecycleMetrics.EXPECT().StatusAttached(assigned[0]).Times(1)
 	s.lifecycleMetrics.EXPECT().StatusInitialized(assigned[0]).Times(1)
 	s.dialer.EXPECT().DialBot(assigned[0]).Return(s.botGrpc, nil).Times(1)
@@ -157,7 +157,7 @@ func (s *LifecycleTestSuite) TestLaunchFailure() {
 	s.botContainers.EXPECT().LaunchBot(gomock.Any(), assigned[0]).Return(nil).Times(1)
 	s.lifecycleMetrics.EXPECT().StatusRunning(assigned[0]).Times(1) // bot is running
 
-	s.lifecycleMetrics.EXPECT().Start(assigned[0]).Times(1)
+	s.lifecycleMetrics.EXPECT().ClientDial(assigned[0]).Times(1)
 	s.lifecycleMetrics.EXPECT().StatusAttached(assigned[0]).Times(1)
 	s.lifecycleMetrics.EXPECT().StatusInitialized(assigned[0]).Times(1)
 	s.dialer.EXPECT().DialBot(assigned[0]).Return(s.botGrpc, nil).Times(1)
@@ -190,7 +190,7 @@ func (s *LifecycleTestSuite) TestDialFailure() {
 	s.botContainers.EXPECT().EnsureBotImages(gomock.Any(), assigned).Return([]error{nil}).Times(1)
 	s.botContainers.EXPECT().LaunchBot(gomock.Any(), assigned[0]).Return(nil).Times(1)
 	s.lifecycleMetrics.EXPECT().StatusRunning(assigned[0]).Times(2)
-	s.lifecycleMetrics.EXPECT().Start(assigned[0]).Times(1)
+	s.lifecycleMetrics.EXPECT().ClientDial(assigned[0]).Times(1)
 	s.dialer.EXPECT().DialBot(assigned[0]).Return(nil, errors.New("failed to dial")).Times(1)
 
 	s.botMonitor.EXPECT().MonitorBots(GetBotIDs(assigned)).Times(2)
@@ -201,7 +201,7 @@ func (s *LifecycleTestSuite) TestDialFailure() {
 }
 
 func (s *LifecycleTestSuite) TestInitializeFailure() {
-	s.T().Log("should not reload or reinitialize a bot if initialization finally fails")
+	s.T().Log("should reconnect to a bot if initialization finally fails")
 
 	assigned := []config.AgentConfig{
 		{
@@ -215,15 +215,27 @@ func (s *LifecycleTestSuite) TestInitializeFailure() {
 	s.botRegistry.EXPECT().LoadAssignedBots().Return(assigned, nil).Times(2)
 
 	err := errors.New("failed to init")
+
 	// then there should be no reloading and redialing upon initialization failures
+
 	s.botContainers.EXPECT().EnsureBotImages(gomock.Any(), assigned).Return([]error{nil}).Times(1)
 	s.botContainers.EXPECT().LaunchBot(gomock.Any(), assigned[0]).Return(nil).Times(1)
-	s.lifecycleMetrics.EXPECT().StatusRunning(assigned[0]).Times(2)
-	s.lifecycleMetrics.EXPECT().Start(assigned[0]).Times(1)
-	s.lifecycleMetrics.EXPECT().StatusAttached(assigned[0]).Times(1)
-	s.lifecycleMetrics.EXPECT().FailureInitialize(err, assigned[0]).Times(1)
-	s.dialer.EXPECT().DialBot(assigned[0]).Return(s.botGrpc, nil).Times(1)
-	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(nil, err).Times(1)
+
+	s.lifecycleMetrics.EXPECT().StatusRunning(assigned[0])
+	s.lifecycleMetrics.EXPECT().ClientDial(assigned[0])
+	s.dialer.EXPECT().DialBot(assigned[0]).Return(s.botGrpc, nil)
+	s.lifecycleMetrics.EXPECT().StatusAttached(assigned[0])
+	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(nil, err)
+	s.lifecycleMetrics.EXPECT().FailureInitialize(err, assigned[0])
+	s.botGrpc.EXPECT().Close()
+	s.lifecycleMetrics.EXPECT().ClientClose(assigned[0])
+
+	s.lifecycleMetrics.EXPECT().StatusRunning(assigned[0])
+	s.lifecycleMetrics.EXPECT().ClientDial(assigned[0])
+	s.dialer.EXPECT().DialBot(assigned[0]).Return(s.botGrpc, nil)
+	s.lifecycleMetrics.EXPECT().StatusAttached(assigned[0])
+	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{}, nil)
+	s.lifecycleMetrics.EXPECT().StatusInitialized(assigned[0])
 
 	s.botMonitor.EXPECT().MonitorBots(GetBotIDs(assigned)).Times(2)
 
@@ -233,7 +245,7 @@ func (s *LifecycleTestSuite) TestInitializeFailure() {
 }
 
 func (s *LifecycleTestSuite) TestExitedRestarted() {
-	s.T().Log("should restart, redial and reinitialize exited bots")
+	s.T().Log("should restart and reconnect to exited bots")
 
 	assigned := []config.AgentConfig{
 		{
@@ -250,14 +262,22 @@ func (s *LifecycleTestSuite) TestExitedRestarted() {
 
 	s.botContainers.EXPECT().EnsureBotImages(gomock.Any(), assigned).Return([]error{nil}).Times(1)
 	s.botContainers.EXPECT().LaunchBot(gomock.Any(), assigned[0]).Return(nil).Times(1)
-	s.lifecycleMetrics.EXPECT().StatusRunning(assigned[0]).Times(2)
-	s.lifecycleMetrics.EXPECT().Start(assigned[0]).Times(2)
-	s.lifecycleMetrics.EXPECT().StatusAttached(assigned[0]).Times(2)
-	s.lifecycleMetrics.EXPECT().StatusInitialized(assigned[0]).Times(2)
-	s.dialer.EXPECT().DialBot(assigned[0]).Return(s.botGrpc, nil).Times(2)
-	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{}, nil).
-		Times(2)
-	s.botGrpc.EXPECT().Close().Return(nil).Times(1) // should close the client before replacing
+
+	s.lifecycleMetrics.EXPECT().StatusRunning(assigned[0])
+	s.lifecycleMetrics.EXPECT().ClientDial(assigned[0])
+	s.dialer.EXPECT().DialBot(assigned[0]).Return(s.botGrpc, nil)
+	s.lifecycleMetrics.EXPECT().StatusAttached(assigned[0])
+	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{}, nil)
+	s.lifecycleMetrics.EXPECT().StatusInitialized(assigned[0])
+
+	s.lifecycleMetrics.EXPECT().StatusRunning(assigned[0])
+	s.botGrpc.EXPECT().Close()
+	s.lifecycleMetrics.EXPECT().ClientClose(assigned[0])
+	s.lifecycleMetrics.EXPECT().ClientDial(assigned[0])
+	s.dialer.EXPECT().DialBot(assigned[0]).Return(s.botGrpc, nil)
+	s.lifecycleMetrics.EXPECT().StatusAttached(assigned[0])
+	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{}, nil)
+	s.lifecycleMetrics.EXPECT().StatusInitialized(assigned[0])
 
 	dockerContainerName := fmt.Sprintf("/%s", assigned[0].ContainerName())
 
@@ -288,7 +308,7 @@ func (s *LifecycleTestSuite) TestExitedRestarted() {
 }
 
 func (s *LifecycleTestSuite) TestInactiveRestarted() {
-	s.T().Log("should restart, redial and reinitialize the inactive and exited bots")
+	s.T().Log("should restart and reconnect to the inactive and exited bots")
 
 	assigned := []config.AgentConfig{
 		{
@@ -305,14 +325,21 @@ func (s *LifecycleTestSuite) TestInactiveRestarted() {
 
 	s.botContainers.EXPECT().EnsureBotImages(gomock.Any(), assigned).Return([]error{nil}).Times(1)
 	s.botContainers.EXPECT().LaunchBot(gomock.Any(), assigned[0]).Return(nil).Times(1)
-	s.lifecycleMetrics.EXPECT().StatusRunning(assigned[0]).Times(1)
-	s.lifecycleMetrics.EXPECT().Start(assigned[0]).Times(2)
-	s.lifecycleMetrics.EXPECT().StatusAttached(assigned[0]).Times(2)
-	s.lifecycleMetrics.EXPECT().StatusInitialized(assigned[0]).Times(2)
-	s.dialer.EXPECT().DialBot(assigned[0]).Return(s.botGrpc, nil).Times(2)
-	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{}, nil).
-		Times(2)
-	s.botGrpc.EXPECT().Close().Return(nil).Times(1) // should close the client before replacing
+
+	s.lifecycleMetrics.EXPECT().StatusRunning(assigned[0])
+	s.lifecycleMetrics.EXPECT().ClientDial(assigned[0])
+	s.dialer.EXPECT().DialBot(assigned[0]).Return(s.botGrpc, nil)
+	s.lifecycleMetrics.EXPECT().StatusAttached(assigned[0])
+	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{}, nil)
+	s.lifecycleMetrics.EXPECT().StatusInitialized(assigned[0])
+
+	s.botGrpc.EXPECT().Close()
+	s.lifecycleMetrics.EXPECT().ClientClose(assigned[0])
+	s.lifecycleMetrics.EXPECT().ClientDial(assigned[0])
+	s.dialer.EXPECT().DialBot(assigned[0]).Return(s.botGrpc, nil)
+	s.lifecycleMetrics.EXPECT().StatusAttached(assigned[0])
+	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{}, nil)
+	s.lifecycleMetrics.EXPECT().StatusInitialized(assigned[0])
 
 	s.botMonitor.EXPECT().GetInactiveBots().Return([]string{testBotID1})
 	s.botContainers.EXPECT().StopBot(gomock.Any(), assigned[0])
@@ -357,7 +384,7 @@ func (s *LifecycleTestSuite) TestUnassigned() {
 	s.botContainers.EXPECT().EnsureBotImages(gomock.Any(), assigned).Return([]error{nil}).Times(1)
 	s.botContainers.EXPECT().LaunchBot(gomock.Any(), assigned[0]).Return(nil).Times(1)
 	s.lifecycleMetrics.EXPECT().StatusRunning(assigned[0]).Times(1)
-	s.lifecycleMetrics.EXPECT().Start(assigned[0]).Times(1)
+	s.lifecycleMetrics.EXPECT().ClientDial(assigned[0]).Times(1)
 	s.lifecycleMetrics.EXPECT().StatusAttached(assigned[0]).Times(1)
 	s.lifecycleMetrics.EXPECT().StatusInitialized(assigned[0]).Times(1)
 	s.dialer.EXPECT().DialBot(assigned[0]).Return(s.botGrpc, nil).Times(1)
@@ -368,6 +395,7 @@ func (s *LifecycleTestSuite) TestUnassigned() {
 	s.lifecycleMetrics.EXPECT().StatusStopping(assigned[0])
 	s.botContainers.EXPECT().TearDownBot(gomock.Any(), assigned[0].ContainerName()).Return(nil)
 	s.lifecycleMetrics.EXPECT().StatusRunning().Times(1)
+	s.lifecycleMetrics.EXPECT().ClientClose(assigned[0])
 	s.botGrpc.EXPECT().Close().AnyTimes()
 
 	s.botMonitor.EXPECT().MonitorBots(GetBotIDs(assigned)).Times(1)
@@ -409,7 +437,7 @@ func (s *LifecycleTestSuite) TestConfigUpdated() {
 	s.botContainers.EXPECT().EnsureBotImages(gomock.Any(), assigned).Return([]error{nil}).Times(1)
 	s.botContainers.EXPECT().LaunchBot(gomock.Any(), assigned[0]).Return(nil).Times(1)
 	s.lifecycleMetrics.EXPECT().StatusRunning(assigned[0]).Times(1)
-	s.lifecycleMetrics.EXPECT().Start(assigned[0]).Times(1)
+	s.lifecycleMetrics.EXPECT().ClientDial(assigned[0]).Times(1)
 	s.lifecycleMetrics.EXPECT().StatusAttached(assigned[0]).Times(1)
 	s.lifecycleMetrics.EXPECT().StatusInitialized(assigned[0]).Times(1)
 	s.dialer.EXPECT().DialBot(assigned[0]).Return(s.botGrpc, nil).Times(1)

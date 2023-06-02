@@ -85,7 +85,7 @@ func (s *BotClientSuite) TestStartProcessStop() {
 
 	combinerSubscriptions := MakeCombinerBotSubscriptions(s.alertConfig.Subscriptions, s.botClient.Config())
 
-	s.lifecycleMetrics.EXPECT().Start(s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().ClientDial(s.botClient.configUnsafe)
 	s.lifecycleMetrics.EXPECT().StatusAttached(s.botClient.configUnsafe)
 	s.lifecycleMetrics.EXPECT().StatusInitialized(s.botClient.configUnsafe)
 	s.lifecycleMetrics.EXPECT().ActionSubscribe(combinerSubscriptions)
@@ -174,6 +174,7 @@ func (s *BotClientSuite) TestStartProcessStop() {
 	s.r.Equal(combinerResp, alertResult.Response)
 
 	s.botGrpc.EXPECT().Close().AnyTimes()
+	s.lifecycleMetrics.EXPECT().ClientClose(s.botClient.configUnsafe).AnyTimes()
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsAlertUnsubscribe, combinerSubscriptions)
 	s.lifecycleMetrics.EXPECT().ActionUnsubscribe(combinerSubscriptions)
 
@@ -199,7 +200,7 @@ func (s *BotClientSuite) TestCombinerBotSubscriptions() {
 }
 
 func (s *BotClientSuite) TestInitialize_Success() {
-	s.lifecycleMetrics.EXPECT().Start(s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().ClientDial(s.botClient.configUnsafe)
 	s.lifecycleMetrics.EXPECT().StatusAttached(s.botClient.configUnsafe)
 	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{
 		Status:      protocol.ResponseStatus_SUCCESS,
@@ -214,27 +215,31 @@ func (s *BotClientSuite) TestInitialize_Success() {
 }
 
 func (s *BotClientSuite) TestInitialize_Error() {
-	s.lifecycleMetrics.EXPECT().Start(s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().ClientDial(s.botClient.configUnsafe)
 	s.lifecycleMetrics.EXPECT().StatusAttached(s.botClient.configUnsafe)
 	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(nil, errors.New("some error")).Times(1)
 	s.lifecycleMetrics.EXPECT().FailureInitialize(gomock.Any(), s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().ClientClose(s.botClient.configUnsafe)
+	s.botGrpc.EXPECT().Close()
 
 	s.botClient.Initialize()
 }
 
 func (s *BotClientSuite) TestInitialize_ResponseError() {
-	s.lifecycleMetrics.EXPECT().Start(s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().ClientDial(s.botClient.configUnsafe)
 	s.lifecycleMetrics.EXPECT().StatusAttached(s.botClient.configUnsafe)
 	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{
 		Status: protocol.ResponseStatus_ERROR,
 	}, nil).Times(1)
 	s.lifecycleMetrics.EXPECT().FailureInitializeResponse(gomock.Any(), s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().ClientClose(s.botClient.configUnsafe)
+	s.botGrpc.EXPECT().Close()
 
 	s.botClient.Initialize()
 }
 
 func (s *BotClientSuite) TestInitialize_ValidationError() {
-	s.lifecycleMetrics.EXPECT().Start(s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().ClientDial(s.botClient.configUnsafe)
 	s.lifecycleMetrics.EXPECT().StatusAttached(s.botClient.configUnsafe)
 	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
 	s.lifecycleMetrics.EXPECT().FailureInitializeValidate(gomock.Any(), s.botClient.configUnsafe)

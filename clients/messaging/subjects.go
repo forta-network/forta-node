@@ -8,8 +8,6 @@ import (
 
 // Message types
 const (
-	SubjectAgentsActionRun        = "agents.action.run"
-	SubjectAgentsActionStop       = "agents.action.stop"
 	SubjectAgentsAlertSubscribe   = "agents.alert.subscribe"
 	SubjectAgentsAlertUnsubscribe = "agents.alert.unsubscribe"
 	SubjectAgentsStatusRunning    = "agents.status.running"
