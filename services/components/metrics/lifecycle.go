@@ -176,6 +176,9 @@ func fromBotSubscriptions(action string, subscriptions []domain.CombinerBotSubsc
 
 func fromBotConfigs(metricName string, details string, botConfigs []config.AgentConfig) (metrics []*protocol.AgentMetric) {
 	for _, botConfig := range botConfigs {
+		if details == "" && botConfig.IsSharded() {
+			details = fmt.Sprintf("shard=%d", botConfig.ShardConfig.ShardID)
+		}
 		metrics = append(metrics, &protocol.AgentMetric{
 			AgentId:   botConfig.ID,
 			Timestamp: time.Now().Format(time.RFC3339),
