@@ -21,6 +21,7 @@ type AgentMetricsAggregator struct {
 type metricsBucket struct {
 	Time           time.Time
 	MetricCounters map[string][]uint32
+	MetricDetails  map[string]string
 	protocol.AgentMetrics
 }
 
@@ -58,6 +59,7 @@ func (ama *AgentMetricsAggregator) findBucket(agentID string, t time.Time) *metr
 	bucket := &metricsBucket{
 		Time:           bucketTime,
 		MetricCounters: make(map[string][]uint32),
+		MetricDetails:  make(map[string]string),
 	}
 	bucket.AgentId = agentID
 	bucket.Timestamp = utils.FormatTime(bucketTime)
@@ -83,6 +85,9 @@ func (ama *AgentMetricsAggregator) AddAgentMetrics(ms *protocol.AgentMetricList)
 		t, _ := time.Parse(time.RFC3339, m.Timestamp)
 		bucket := ama.findBucket(m.AgentId, t)
 		bucket.MetricCounters[m.Name] = append(bucket.MetricCounters[m.Name], uint32(m.Value))
+		if m.Details != "" {
+			bucket.MetricDetails[m.Name] = m.Details
+		}
 	}
 	return nil
 }
@@ -153,6 +158,9 @@ func (allMetrics allAgentMetrics) PrepareMetrics() {
 				summary.Max = maxDataPoint(list)
 				summary.P95 = calcP95(list)
 				summary.Sum = sumNums(list)
+				if details, ok := agentMetrics.MetricDetails[metricName]; ok {
+					summary.Details = details
+				}
 			}
 		}
 	}

@@ -18,6 +18,7 @@ var (
 
 type MetricsMathTest struct {
 	metrics  []float64
+	details  string
 	expected *protocol.MetricSummary
 }
 
@@ -57,6 +58,19 @@ func TestAgentMetricsAggregator_math(t *testing.T) {
 				P95:     45,
 			},
 		},
+		{
+			metrics: []float64{45},
+			details: "the details",
+			expected: &protocol.MetricSummary{
+				Name:    "test.metric",
+				Details: "the details",
+				Count:   1,
+				Max:     45,
+				Average: 45,
+				Sum:     45,
+				P95:     45,
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -69,6 +83,7 @@ func TestAgentMetricsAggregator_math(t *testing.T) {
 				Timestamp: utils.FormatTime(testTime1),
 				Name:      "test.metric",
 				Value:     val,
+				Details:   test.details,
 			})
 		}
 
