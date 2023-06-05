@@ -15,7 +15,6 @@ import (
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/services/components/botio/botreq"
 	mock_metrics "github.com/forta-network/forta-node/services/components/metrics/mocks"
-	"google.golang.org/grpc"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -104,13 +103,9 @@ func (s *BotClientSuite) TestStartProcessStop() {
 			},
 		},
 	}
-	encodedTxReq, err := agentgrpc.EncodeMessage(txReq)
-	s.r.NoError(err)
 	txResp := &protocol.EvaluateTxResponse{Metadata: map[string]string{"imageHash": ""}}
 
 	blockReq := &protocol.EvaluateBlockRequest{Event: &protocol.BlockEvent{BlockNumber: "123123"}}
-	encodedBlockReq, err := agentgrpc.EncodeMessage(blockReq)
-	s.r.NoError(err)
 	blockResp := &protocol.EvaluateBlockResponse{Metadata: map[string]string{"imageHash": ""}}
 
 	combinerReq := &protocol.EvaluateAlertRequest{
@@ -123,17 +118,14 @@ func (s *BotClientSuite) TestStartProcessStop() {
 			},
 		},
 	}
-	encodedCombinerReq, err := agentgrpc.EncodeMessage(combinerReq)
-	s.r.NoError(err)
 	combinerResp := &protocol.EvaluateAlertResponse{Metadata: map[string]string{"imageHash": ""}}
 
 	// test tx handling
 	s.botGrpc.EXPECT().Invoke(
 		gomock.Any(), agentgrpc.MethodEvaluateTx,
-		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateTxResponse{}),
+		gomock.AssignableToTypeOf(&protocol.EvaluateTxRequest{}), gomock.AssignableToTypeOf(&protocol.EvaluateTxResponse{}),
 	).Return(nil)
 	s.botClient.TxRequestCh() <- &botreq.TxRequest{
-		Encoded:  encodedTxReq,
 		Original: txReq,
 	}
 	txResult := <-s.resultChannels.Tx
@@ -143,10 +135,9 @@ func (s *BotClientSuite) TestStartProcessStop() {
 	// test block handling
 	s.botGrpc.EXPECT().Invoke(
 		gomock.Any(), agentgrpc.MethodEvaluateBlock,
-		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateBlockResponse{}),
+		gomock.AssignableToTypeOf(&protocol.EvaluateBlockRequest{}), gomock.AssignableToTypeOf(&protocol.EvaluateBlockResponse{}),
 	).Return(nil)
 	s.botClient.BlockRequestCh() <- &botreq.BlockRequest{
-		Encoded:  encodedBlockReq,
 		Original: blockReq,
 	}
 	blockResult := <-s.resultChannels.Block
@@ -156,10 +147,9 @@ func (s *BotClientSuite) TestStartProcessStop() {
 	// test combine alert handling
 	s.botGrpc.EXPECT().Invoke(
 		gomock.Any(), agentgrpc.MethodEvaluateAlert,
-		gomock.AssignableToTypeOf(&grpc.PreparedMsg{}), gomock.AssignableToTypeOf(&protocol.EvaluateAlertResponse{}),
+		gomock.AssignableToTypeOf(&protocol.EvaluateAlertRequest{}), gomock.AssignableToTypeOf(&protocol.EvaluateAlertResponse{}),
 	).Return(nil)
 	s.botClient.CombinationRequestCh() <- &botreq.CombinationRequest{
-		Encoded:  encodedCombinerReq,
 		Original: combinerReq,
 	}
 	alertResult := <-s.resultChannels.CombinationAlert

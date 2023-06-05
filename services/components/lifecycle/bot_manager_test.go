@@ -92,7 +92,7 @@ func (s *BotLifecycleManagerTestSuite) TestAddUpdateRemove() {
 
 	s.botPool.EXPECT().RemoveBotsWithConfigs([]config.AgentConfig{removedBot})
 	s.lifecycleMetrics.EXPECT().StatusStopping([]config.AgentConfig{removedBot})
-	s.botContainers.EXPECT().TearDownBot(gomock.Any(), removedBot.ContainerName())
+	s.botContainers.EXPECT().TearDownBot(gomock.Any(), removedBot.ContainerName(), true)
 
 	s.lifecycleMetrics.EXPECT().StatusRunning(latestAssigned).Times(1)
 	s.botPool.EXPECT().UpdateBotsWithLatestConfigs(latestAssigned)
@@ -189,7 +189,27 @@ func (s *BotLifecycleManagerTestSuite) TestCleanup() {
 			State: "exited",
 		},
 	}, nil).Times(1)
-	s.botContainers.EXPECT().TearDownBot(gomock.Any(), unusedBotConfig.ContainerName()).Return(nil)
+	s.botContainers.EXPECT().TearDownBot(gomock.Any(), unusedBotConfig.ContainerName(), true).Return(nil)
 
 	s.r.NoError(s.botManager.CleanupUnusedBots(context.Background()))
+}
+
+func (s *BotLifecycleManagerTestSuite) TestTearDown() {
+	botConfigs := []config.AgentConfig{
+		{
+			ID:    testBotID1,
+			Image: testImageRef,
+		},
+		{
+			ID:    testBotID2,
+			Image: testImageRef,
+		},
+	}
+	s.botManager.runningBots = botConfigs
+
+	s.botPool.EXPECT().RemoveBotsWithConfigs(botConfigs)
+	s.botContainers.EXPECT().TearDownBot(gomock.Any(), botConfigs[0].ContainerName(), false).Return(nil)
+	s.botContainers.EXPECT().TearDownBot(gomock.Any(), botConfigs[1].ContainerName(), false).Return(nil)
+
+	s.botManager.TearDownRunningBots(context.Background())
 }

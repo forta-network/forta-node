@@ -30,8 +30,6 @@ type BotClient interface {
 	Config() config.AgentConfig
 	SetConfig(config.AgentConfig)
 
-	Started() <-chan struct{}
-	IsStarted() bool
 	Initialized() <-chan struct{}
 	IsInitialized() bool
 	Closed() <-chan struct{}
@@ -58,15 +56,16 @@ type BotClient interface {
 
 // Constants
 const (
-	DefaultBufferSize             = 2000
-	AgentTimeout                  = 30 * time.Second
-	MaxFindings                   = 50
-	DefaultAgentInitializeTimeout = 5 * time.Minute
+	DefaultBufferSize        = 2000
+	RequestTimeout           = 30 * time.Second
+	MaxFindings              = 50
+	DefaultInitializeTimeout = 5 * time.Minute
 )
 
 // botClient receives blocks and transactions, and produces results.
 type botClient struct {
 	ctx               context.Context
+	ctxCancel         func()
 	configUnsafe      config.AgentConfig
 	alertConfigUnsafe protocol.AlertConfig
 
@@ -83,12 +82,10 @@ type botClient struct {
 	dialer       agentgrpc.BotDialer
 	clientUnsafe agentgrpc.Client
 
-	started         chan struct{}
-	startedOnce     sync.Once
 	initialized     chan struct{}
 	initializedOnce sync.Once
-	closed          chan struct{}
-	closeOnce       sync.Once
+
+	closeOnce sync.Once
 
 	mu sync.RWMutex
 }
@@ -129,8 +126,10 @@ func NewBotClient(
 	msgClient clients.MessageClient, lifecycleMetrics metrics.Lifecycle, botDialer agentgrpc.BotDialer,
 	resultChannels botreq.SendOnlyChannels,
 ) *botClient {
+	botCtx, botCtxCancel := context.WithCancel(ctx)
 	return &botClient{
-		ctx:                 ctx,
+		ctx:                 botCtx,
+		ctxCancel:           botCtxCancel,
 		configUnsafe:        botCfg,
 		txRequests:          make(chan *botreq.TxRequest, DefaultBufferSize),
 		blockRequests:       make(chan *botreq.BlockRequest, DefaultBufferSize),
@@ -140,9 +139,7 @@ func NewBotClient(
 		msgClient:           msgClient,
 		lifecycleMetrics:    lifecycleMetrics,
 		dialer:              botDialer,
-		started:             make(chan struct{}),
 		initialized:         make(chan struct{}),
-		closed:              make(chan struct{}),
 	}
 }
 
@@ -159,7 +156,6 @@ func (bot *botClient) LogStatus() {
 		"bot":         bot.Config().ID,
 		"blockBuffer": len(bot.blockRequests),
 		"txBuffer":    len(bot.txRequests),
-		"started":     bot.IsStarted(),
 		"initialized": bot.IsInitialized(),
 		"closed":      bot.IsClosed(),
 	}).Debug("bot status")
@@ -240,7 +236,7 @@ func (bot *botClient) CombinationRequestCh() chan<- *botreq.CombinationRequest {
 // Close implements io.Closer.
 func (bot *botClient) Close() error {
 	bot.closeOnce.Do(func() {
-		close(bot.closed) // never close this anywhere else
+		bot.ctxCancel()
 		client := bot.grpcClient()
 		if client != nil {
 			client.Close()
@@ -258,12 +254,12 @@ func (bot *botClient) Close() error {
 
 // Closed returns the closed channel.
 func (bot *botClient) Closed() <-chan struct{} {
-	return bot.closed
+	return bot.ctx.Done()
 }
 
 // IsClosed tells if the bot is closed.
 func (bot *botClient) IsClosed() bool {
-	return isChanClosed(bot.closed)
+	return isChanClosed(bot.ctx.Done())
 }
 
 // setInitialized sets the bot as initialized.
@@ -285,40 +281,13 @@ func (bot *botClient) IsInitialized() bool {
 	return isChanClosed(bot.initialized)
 }
 
-// setStarted sets the bot as started.
-func (bot *botClient) setStarted() {
-	bot.startedOnce.Do(
-		func() {
-			close(bot.started) // never close this anywhere else
-		},
-	)
-}
-
-// Started returns the started channel.
-func (bot *botClient) Started() <-chan struct{} {
-	return bot.started
-}
-
-// IsStarted tells if the bot has been started.
-func (bot *botClient) IsStarted() bool {
-	return isChanClosed(bot.started)
-}
-
-func isChanClosed(ch chan struct{}) bool {
+func isChanClosed(ch <-chan struct{}) bool {
 	select {
 	case _, ok := <-ch:
 		return !ok
 	default:
 		return false
 	}
-}
-
-// StartProcessing launches the goroutines to concurrently process incoming requests
-// from request channels.
-func (bot *botClient) StartProcessing() {
-	go bot.processTransactions()
-	go bot.processBlocks()
-	go bot.processCombinationAlerts()
 }
 
 // Initialize initializes the bot.
@@ -335,7 +304,6 @@ func (bot *botClient) initialize() {
 
 	// publish start metric to track bot starts/restarts.
 	bot.lifecycleMetrics.ClientDial(botConfig)
-	bot.setStarted()
 
 	botClient, err := bot.dialer.DialBot(botConfig)
 	if err != nil {
@@ -346,7 +314,7 @@ func (bot *botClient) initialize() {
 	bot.lifecycleMetrics.StatusAttached(botConfig)
 	logger.Info("attached to bot")
 
-	ctx, cancel := context.WithTimeout(bot.ctx, DefaultAgentInitializeTimeout)
+	ctx, cancel := context.WithTimeout(bot.ctx, DefaultInitializeTimeout)
 	defer cancel()
 
 	// invoke initialize method of the bot
@@ -415,25 +383,77 @@ func validateInitializeResponse(response *protocol.InitializeResponse) error {
 	return nil
 }
 
+// StartProcessing launches the goroutines to concurrently process incoming requests
+// from request channels.
+func (bot *botClient) StartProcessing() {
+	go bot.processTransactions()
+	go bot.processBlocks()
+	go bot.processCombinationAlerts()
+}
+
+func processRequests[R any](
+	ctx context.Context, reqCh <-chan *R, closedCh <-chan struct{}, logger *log.Entry,
+	processFunc func(context.Context, *log.Entry, *R) bool,
+) {
+	for {
+		select {
+		case <-ctx.Done():
+			logger.WithError(ctx.Err()).Info("bot context is done")
+			return
+
+		case request := <-reqCh:
+			ctx, cancel := context.WithTimeout(ctx, RequestTimeout)
+			exit := processFunc(ctx, logger, request)
+			cancel()
+			if exit {
+				return
+			}
+		}
+	}
+}
+
 func (bot *botClient) processTransactions() {
 	lg := log.WithFields(
 		log.Fields{
 			"bot":       bot.Config().ID,
-			"component": "pool-bot",
+			"component": "bot-client",
 			"evaluate":  "transaction",
 		},
 	)
 
 	<-bot.Initialized()
 
-	for request := range bot.txRequests {
-		if exit := bot.processTransaction(lg, request); exit {
-			return
-		}
-	}
+	processRequests(bot.ctx, bot.txRequests, bot.Closed(), lg, bot.processTransaction)
+}
+func (bot *botClient) processBlocks() {
+	lg := log.WithFields(
+		log.Fields{
+			"bot":       bot.Config().ID,
+			"component": "bot-client",
+			"evaluate":  "block",
+		},
+	)
+
+	<-bot.Initialized()
+
+	processRequests(bot.ctx, bot.blockRequests, bot.Closed(), lg, bot.processBlock)
 }
 
-func (bot *botClient) processTransaction(lg *log.Entry, request *botreq.TxRequest) (exit bool) {
+func (bot *botClient) processCombinationAlerts() {
+	lg := log.WithFields(
+		log.Fields{
+			"bot":       bot.Config().ID,
+			"component": "bot-client",
+			"evaluate":  "combination",
+		},
+	)
+
+	<-bot.Initialized()
+
+	processRequests(bot.ctx, bot.combinationRequests, bot.Closed(), lg, bot.processCombinationAlert)
+}
+
+func (bot *botClient) processTransaction(ctx context.Context, lg *log.Entry, request *botreq.TxRequest) (exit bool) {
 	botConfig := bot.Config()
 	botClient := bot.grpcClient()
 
@@ -443,14 +463,13 @@ func (bot *botClient) processTransaction(lg *log.Entry, request *botreq.TxReques
 
 	startTime := time.Now()
 
-	ctx, cancel := context.WithTimeout(bot.ctx, AgentTimeout)
 	lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
 	resp := new(protocol.EvaluateTxResponse)
 
 	requestTime := time.Now().UTC()
-	err := botClient.Invoke(ctx, agentgrpc.MethodEvaluateTx, request.Encoded, resp)
+	err := botClient.Invoke(ctx, agentgrpc.MethodEvaluateTx, request.Original, resp)
 	responseTime := time.Now().UTC()
-	cancel()
+
 	if err == nil {
 		// truncate findings
 		if len(resp.Findings) > MaxFindings {
@@ -501,25 +520,7 @@ func (bot *botClient) processTransaction(lg *log.Entry, request *botreq.TxReques
 	return false
 }
 
-func (bot *botClient) processBlocks() {
-	lg := log.WithFields(
-		log.Fields{
-			"bot":       bot.Config().ID,
-			"component": "bot",
-			"evaluate":  "block",
-		},
-	)
-
-	<-bot.Initialized()
-
-	for request := range bot.blockRequests {
-		if exit := bot.processBlock(lg, request); exit {
-			return
-		}
-	}
-}
-
-func (bot *botClient) processBlock(lg *log.Entry, request *botreq.BlockRequest) (exit bool) {
+func (bot *botClient) processBlock(ctx context.Context, lg *log.Entry, request *botreq.BlockRequest) (exit bool) {
 	botConfig := bot.Config()
 	botClient := bot.grpcClient()
 
@@ -529,13 +530,12 @@ func (bot *botClient) processBlock(lg *log.Entry, request *botreq.BlockRequest) 
 
 	startTime := time.Now()
 
-	ctx, cancel := context.WithTimeout(bot.ctx, AgentTimeout)
 	lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
 	resp := new(protocol.EvaluateBlockResponse)
 	requestTime := time.Now().UTC()
-	err := botClient.Invoke(ctx, agentgrpc.MethodEvaluateBlock, request.Encoded, resp)
+	err := botClient.Invoke(ctx, agentgrpc.MethodEvaluateBlock, request.Original, resp)
 	responseTime := time.Now().UTC()
-	cancel()
+
 	if err == nil {
 		// truncate findings
 		if len(resp.Findings) > MaxFindings {
@@ -588,25 +588,7 @@ func (bot *botClient) processBlock(lg *log.Entry, request *botreq.BlockRequest) 
 	return false
 }
 
-func (bot *botClient) processCombinationAlerts() {
-	lg := log.WithFields(
-		log.Fields{
-			"bot":       bot.Config().ID,
-			"component": "bot",
-			"evaluate":  "combination",
-		},
-	)
-
-	<-bot.Initialized()
-
-	for request := range bot.combinationRequests {
-		if exit := bot.processCombinationAlert(lg, request); exit {
-			return
-		}
-	}
-}
-
-func (bot *botClient) processCombinationAlert(lg *log.Entry, request *botreq.CombinationRequest) bool {
+func (bot *botClient) processCombinationAlert(ctx context.Context, lg *log.Entry, request *botreq.CombinationRequest) bool {
 	botConfig := bot.Config()
 	botClient := bot.grpcClient()
 
@@ -616,13 +598,11 @@ func (bot *botClient) processCombinationAlert(lg *log.Entry, request *botreq.Com
 
 	startTime := time.Now()
 
-	ctx, cancel := context.WithTimeout(bot.ctx, AgentTimeout)
 	lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
 	resp := new(protocol.EvaluateAlertResponse)
 	requestTime := time.Now().UTC()
-	err := botClient.Invoke(ctx, agentgrpc.MethodEvaluateAlert, request.Encoded, resp)
+	err := botClient.Invoke(ctx, agentgrpc.MethodEvaluateAlert, request.Original, resp)
 	responseTime := time.Now().UTC()
-	cancel()
 
 	if err != nil {
 		if status.Code(err) != codes.Unimplemented {

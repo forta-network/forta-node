@@ -175,20 +175,6 @@ func (mr *MockBotClientMockRecorder) IsInitialized() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsInitialized", reflect.TypeOf((*MockBotClient)(nil).IsInitialized))
 }
 
-// IsStarted mocks base method.
-func (m *MockBotClient) IsStarted() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsStarted")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// IsStarted indicates an expected call of IsStarted.
-func (mr *MockBotClientMockRecorder) IsStarted() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsStarted", reflect.TypeOf((*MockBotClient)(nil).IsStarted))
-}
-
 // LogStatus mocks base method.
 func (m *MockBotClient) LogStatus() {
 	m.ctrl.T.Helper()
@@ -251,20 +237,6 @@ func (m *MockBotClient) StartProcessing() {
 func (mr *MockBotClientMockRecorder) StartProcessing() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartProcessing", reflect.TypeOf((*MockBotClient)(nil).StartProcessing))
-}
-
-// Started mocks base method.
-func (m *MockBotClient) Started() <-chan struct{} {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Started")
-	ret0, _ := ret[0].(<-chan struct{})
-	return ret0
-}
-
-// Started indicates an expected call of Started.
-func (mr *MockBotClientMockRecorder) Started() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Started", reflect.TypeOf((*MockBotClient)(nil).Started))
 }
 
 // TxBufferIsFull mocks base method.
