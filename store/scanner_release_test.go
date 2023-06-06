@@ -2,10 +2,12 @@ package store
 
 import (
 	"context"
+	"testing"
+
 	"github.com/forta-network/forta-core-go/release"
 	"github.com/forta-network/forta-node/config"
 	"github.com/stretchr/testify/assert"
-	"testing"
+	"github.com/stretchr/testify/require"
 )
 
 type mockReleaseStore struct {
@@ -22,7 +24,7 @@ func TestNewScannerReleaseStore(t *testing.T) {
 	rs, err := NewScannerReleaseStore(context.Background(), config.Config{
 		Registry: config.RegistryConfig{
 			JsonRpc:                config.JsonRpcConfig{Url: "https://polygon-rpc.com"},
-			ReleaseDistributionUrl: "https://dist.forta.network/manifest/release",
+			ReleaseDistributionUrl: "https://dist.forta.network/manifests/releases",
 			IPFS: config.IPFSConfig{
 				GatewayURL: "https://ipfs.forta.network",
 			},
@@ -93,21 +95,25 @@ func TestLookupVersionStore_GetRelease(t *testing.T) {
 	}
 
 	for _, tst := range tests {
-		lookup := func() (string, error) {
-			return tst.mockRef, tst.mockLookupErr
-		}
-		lvs := &lookupVersionStore{
-			rc:            &mockReleaseStore{mockRm: tst.mockRM},
-			lookup:        lookup,
-			cachedRelease: tst.mockCached,
-		}
-		res, err := lvs.GetRelease(context.Background())
-		if tst.expectedErr != nil {
-			assert.Nil(t, res, tst.name)
-			assert.Error(t, err, tst.expectedErr, tst.name)
-			continue
-		}
-		assert.NoError(t, err, tst.name)
-		assert.Equal(t, tst.expectedRef, res.Reference, tst.name)
+		t.Run(tst.name, func(t *testing.T) {
+			r := require.New(t)
+
+			lookup := func() (string, error) {
+				return tst.mockRef, tst.mockLookupErr
+			}
+			lvs := &lookupVersionStore{
+				rc:            &mockReleaseStore{mockRm: tst.mockRM},
+				lookup:        lookup,
+				cachedRelease: tst.mockCached,
+			}
+			res, err := lvs.GetRelease(context.Background())
+			if tst.expectedErr != nil {
+				r.Nil(res)
+				r.Error(err, tst.expectedErr)
+				return
+			}
+			r.NoError(err)
+			r.Equal(tst.expectedRef, res.Reference)
+		})
 	}
 }
