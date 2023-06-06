@@ -26,7 +26,7 @@ const (
 type BotClient interface {
 	EnsureBotImages(ctx context.Context, botConfigs []config.AgentConfig) []error
 	LaunchBot(ctx context.Context, botConfig config.AgentConfig) error
-	TearDownBot(ctx context.Context, containerName string) error
+	TearDownBot(ctx context.Context, containerName string, removeImage bool) error
 	StopBot(ctx context.Context, botConfig config.AgentConfig) error
 	LoadBotContainers(ctx context.Context) ([]types.Container, error)
 	StartWaitBotContainer(ctx context.Context, containerID string) error
@@ -134,7 +134,7 @@ func getServiceContainerNames() []string {
 }
 
 // TearDownBot tears down a bot by shutting down the docker container and removing it.
-func (bc *botClient) TearDownBot(ctx context.Context, containerName string) error {
+func (bc *botClient) TearDownBot(ctx context.Context, containerName string, removeImage bool) error {
 	container, err := bc.client.GetContainerByName(ctx, containerName)
 	if err != nil {
 		return fmt.Errorf("failed to get the bot container to tear down: %v", err)
@@ -143,6 +143,7 @@ func (bc *botClient) TearDownBot(ctx context.Context, containerName string) erro
 	if err != nil {
 		return fmt.Errorf("failed to get service container ids during bot cleanup: %v", err)
 	}
+	defer log.WithField("botContainer", containerName).Info("done tearing down the bot and the associated docker resources")
 	// not returning any errors in `if`s below so we keep on by removing whatever is left
 	for _, serviceContainerID := range serviceContainerIDs {
 		if err := bc.client.DetachNetwork(ctx, serviceContainerID, containerName); err != nil {
@@ -163,12 +164,14 @@ func (bc *botClient) TearDownBot(ctx context.Context, containerName string) erro
 			"network": containerName,
 		}).WithError(err).Warn("failed to destroy the bot network")
 	}
+	if !removeImage {
+		return nil
+	}
 	if err := bc.client.RemoveImage(ctx, container.Image); err != nil {
 		log.WithFields(log.Fields{
 			"image": container.Image,
 		}).WithError(err).Warn("failed to remove image of the destroyed bot container")
 	}
-	log.WithField("botContainer", containerName).Info("done tearing down the bot and the associated docker resources")
 	return nil
 }
 

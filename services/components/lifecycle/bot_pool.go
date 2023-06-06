@@ -153,20 +153,20 @@ func (bp *botPool) RemoveBotsWithConfigs(removedBotConfigs messaging.AgentPayloa
 	// close and discard the removed bots
 	for _, removedBotConfig := range removedBotConfigs {
 		logger := botLogger(removedBotConfig)
-		bot, ok := bp.getBotClient(removedBotConfig.ContainerName())
+		botClient, ok := bp.getBotClient(removedBotConfig.ContainerName())
 		if !ok {
 			logger.Info("could not find the removed bot! skipping")
 			continue
 		}
-		_ = bot.Close()
+		_ = botClient.Close()
 	}
 
 	// find the bots we are not supposed to remove and keep them
 	var preservedBots []botio.BotClient
 	for _, preservedBotConfig := range FindExtraBots(removedBotConfigs, bp.getConfigsUnsafe()) {
-		bot, ok := bp.getBotClient(preservedBotConfig.ContainerName())
+		botClient, ok := bp.getBotClient(preservedBotConfig.ContainerName())
 		if ok {
-			preservedBots = append(preservedBots, bot)
+			preservedBots = append(preservedBots, botClient)
 		}
 	}
 

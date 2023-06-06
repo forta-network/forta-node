@@ -391,9 +391,9 @@ func (s *LifecycleTestSuite) TestUnassigned() {
 	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{}, nil).
 		Times(1)
 
-	// and should shortly be tore down
+	// and should shortly be torn down
 	s.lifecycleMetrics.EXPECT().StatusStopping(assigned[0])
-	s.botContainers.EXPECT().TearDownBot(gomock.Any(), assigned[0].ContainerName()).Return(nil)
+	s.botContainers.EXPECT().TearDownBot(gomock.Any(), assigned[0].ContainerName(), true).Return(nil)
 	s.lifecycleMetrics.EXPECT().StatusRunning().Times(1)
 	s.lifecycleMetrics.EXPECT().ClientClose(assigned[0])
 	s.botGrpc.EXPECT().Close().AnyTimes()

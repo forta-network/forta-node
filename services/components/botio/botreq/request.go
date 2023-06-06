@@ -2,23 +2,19 @@ package botreq
 
 import (
 	"github.com/forta-network/forta-core-go/protocol"
-	"google.golang.org/grpc"
 )
 
-// TxRequest contains the original request data and the encoded message.
+// TxRequest contains the request data.
 type TxRequest struct {
 	Original *protocol.EvaluateTxRequest
-	Encoded  *grpc.PreparedMsg
 }
 
-// BlockRequest contains the original request data and the encoded message.
+// BlockRequest contains the request data.
 type BlockRequest struct {
 	Original *protocol.EvaluateBlockRequest
-	Encoded  *grpc.PreparedMsg
 }
 
-// CombinationRequest contains the original request data and the encoded message.
+// CombinationRequest contains the request data.
 type CombinationRequest struct {
 	Original *protocol.EvaluateAlertRequest
-	Encoded  *grpc.PreparedMsg
 }

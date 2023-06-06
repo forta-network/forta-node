@@ -10,6 +10,7 @@ import (
 // This allows us to blast the latest assignment list very often
 // and keep bot containers and clients in order.
 func (sup *SupervisorService) refreshBotContainers() {
+	sup.doRefreshBotContainers()
 	for {
 		select {
 		case <-sup.ctx.Done():

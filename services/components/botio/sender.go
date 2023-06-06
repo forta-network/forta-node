@@ -9,7 +9,6 @@ import (
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-node/clients"
-	"github.com/forta-network/forta-node/clients/agentgrpc"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/services/components/botio/botreq"
 	"github.com/forta-network/forta-node/services/components/metrics"
@@ -94,11 +93,6 @@ func (rs *requestSender) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) 
 
 	bots := rs.botPool.GetCurrentBotClients()
 
-	encoded, err := agentgrpc.EncodeMessage(req)
-	if err != nil {
-		lg.WithError(err).Error("failed to encode message")
-		return
-	}
 	var metricsList []*protocol.AgentMetric
 	for _, bot := range bots {
 		if !bot.ShouldProcessBlock(req.Event.Block.BlockNumber) {
@@ -116,7 +110,6 @@ func (rs *requestSender) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) 
 			lg.WithField("bot", bot.Config().ID).Debug("bot is closed - skipping")
 		case bot.TxRequestCh() <- &botreq.TxRequest{
 			Original: req,
-			Encoded:  encoded,
 		}:
 		default: // do not try to send if the buffer is full
 			lg.WithField("bot", bot.Config().ID).Debug("agent tx request buffer is full - skipping")
@@ -148,12 +141,6 @@ func (rs *requestSender) SendEvaluateBlockRequest(req *protocol.EvaluateBlockReq
 
 	bots := rs.botPool.GetCurrentBotClients()
 
-	encoded, err := agentgrpc.EncodeMessage(req)
-	if err != nil {
-		lg.WithError(err).Error("failed to encode message")
-		return
-	}
-
 	var metricsList []*protocol.AgentMetric
 	for _, bot := range bots {
 		if !bot.ShouldProcessBlock(req.Event.BlockNumber) {
@@ -171,7 +158,6 @@ func (rs *requestSender) SendEvaluateBlockRequest(req *protocol.EvaluateBlockReq
 			lg.WithField("bot", bot.Config().ID).Debug("bot is closed - skipping")
 		case bot.BlockRequestCh() <- &botreq.BlockRequest{
 			Original: req,
-			Encoded:  encoded,
 		}:
 		default: // do not try to send if the buffer is full
 			lg.WithField("bot", bot.Config().ID).Warn("agent block request buffer is full - skipping")
@@ -218,12 +204,6 @@ func (rs *requestSender) SendEvaluateAlertRequest(req *protocol.EvaluateAlertReq
 
 	bots := rs.botPool.GetCurrentBotClients()
 
-	encoded, err := agentgrpc.EncodeMessage(req)
-	if err != nil {
-		lg.WithError(err).Error("failed to encode message")
-		return
-	}
-
 	var metricsList []*protocol.AgentMetric
 
 	var target BotClient
@@ -265,7 +245,6 @@ func (rs *requestSender) SendEvaluateAlertRequest(req *protocol.EvaluateAlertReq
 		lg.WithField("bot", target.Config().ID).Debug("bot is closed - skipping")
 	case target.CombinationRequestCh() <- &botreq.CombinationRequest{
 		Original: req,
-		Encoded:  encoded,
 	}:
 	default: // do not try to send if the buffer is full
 		lg.WithField("bot", target.Config().ID).Warn("agent alert request buffer is full - skipping")

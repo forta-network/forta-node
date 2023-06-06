@@ -145,7 +145,7 @@ func (s *BotClientTestSuite) TestTearDownBot() {
 	s.client.EXPECT().RemoveNetworkByName(gomock.Any(), botConfig.ContainerName())
 	s.client.EXPECT().RemoveImage(gomock.Any(), testImageRef)
 
-	s.r.NoError(s.botClient.TearDownBot(context.Background(), botConfig.ContainerName()))
+	s.r.NoError(s.botClient.TearDownBot(context.Background(), botConfig.ContainerName(), true))
 }
 
 func (s *BotClientTestSuite) TestStopBot() {
