@@ -19,7 +19,8 @@ const (
 )
 
 func (sup *SupervisorService) syncAgentLogs() {
-	ticker := time.NewTicker(defaultAgentLogSendInterval)
+	interval := time.Duration(sup.botLifecycleConfig.Config.AgentLogsConfig.SendIntervalSeconds) * time.Second
+	ticker := time.NewTicker(interval)
 	for range ticker.C {
 		err := sup.doSyncAgentLogs()
 		sup.lastAgentLogsRequest.Set()

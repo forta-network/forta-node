@@ -107,7 +107,8 @@ telemetry:
   disable: true
 
 agentLogs:
-  disable: true
+  url: http://localhost:9090/logs/agents
+	sendIntervalSeconds: 1
 
 publicApiProxy:
   url: http://localhost:%d
@@ -212,6 +213,8 @@ func (s *Suite) runLocalMode(webhookURL, logFileName string, readAlertsFunc func
 	}
 	s.r.NotNil(exploiterAlert)
 	s.r.NotNil(tokenAlert)
+
+	s.r.NotNil(s.alertServer.GetLogs())
 
 	_, err = security.VerifyScannerJWT(s.getTokenFromAlert(tokenAlert))
 	s.r.NoError(err)
