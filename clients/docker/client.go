@@ -30,6 +30,7 @@ const (
 	LabelFortaSupervisor                = "network.forta.supervisor"
 	LabelFortaSupervisorStrategyVersion = "network.forta.supervisor.strategy-version"
 	LabelFortaIsBot                     = "network.forta.is-bot"
+	LabelFortaBotID                     = "network.forta.bot-id"
 
 	LabelFortaSettingsAgentLogsEnable = "network.forta.settings.agent-logs.enable"
 )
