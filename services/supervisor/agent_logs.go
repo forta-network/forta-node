@@ -42,7 +42,7 @@ func (sup *SupervisorService) doSyncAgentLogs() error {
 
 	botContainers, err := sup.botLifecycle.BotClient.LoadBotContainers(sup.ctx)
 	if err != nil {
-		log.WithError(err).Warn("failed to sync bot logs")
+		return fmt.Errorf("failed to load the bot containers: %v", err)
 	}
 
 	for _, container := range botContainers {

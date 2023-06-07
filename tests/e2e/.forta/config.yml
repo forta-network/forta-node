@@ -34,7 +34,8 @@ telemetry:
   disable: true
 
 agentLogs:
-  disable: true
+  url: http://localhost:9090/logs/agents
+  sendIntervalSeconds: 1
 
 log:
   level: trace
