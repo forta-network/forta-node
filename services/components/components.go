@@ -60,6 +60,7 @@ type BotLifecycleConfig struct {
 // BotLifecycle contains the bot lifecycle components.
 type BotLifecycle struct {
 	BotManager lifecycle.BotLifecycleManager
+	BotClient  containers.BotClient
 }
 
 // GetBotLifecycleComponents returns the bot lifecycle management components.
@@ -100,7 +101,9 @@ func GetBotLifecycleComponents(ctx context.Context, botLifeConfig BotLifecycleCo
 		botLifeConfig.BotRegistry, botClient, lifecycleMediator,
 		lifecycleMetrics, botMonitor,
 	)
+
 	return BotLifecycle{
 		BotManager: botManager,
+		BotClient:  botClient,
 	}, nil
 }
