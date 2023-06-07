@@ -284,7 +284,7 @@ func (cfg *Config) BotsToWait() (waitBots int) {
 // apply defaults that apply in certain contexts
 func applyContextDefaults(cfg *Config) {
 	chainSettings := settings.GetChainSettings(cfg.ChainID)
-	if chainSettings.EnableTrace {
+	if chainSettings.EnableTrace && !cfg.LocalModeConfig.Enable {
 		cfg.Trace.Enabled = true
 	}
 	if cfg.ENSConfig.DefaultContract {
