@@ -19,7 +19,8 @@ const (
 )
 
 func (sup *SupervisorService) syncAgentLogs() {
-	ticker := time.NewTicker(defaultAgentLogSendInterval)
+	interval := time.Duration(sup.botLifecycleConfig.Config.AgentLogsConfig.SendIntervalSeconds) * time.Second
+	ticker := time.NewTicker(interval)
 	for range ticker.C {
 		err := sup.doSyncAgentLogs()
 		sup.lastAgentLogsRequest.Set()
@@ -41,7 +42,7 @@ func (sup *SupervisorService) doSyncAgentLogs() error {
 
 	botContainers, err := sup.botLifecycle.BotClient.LoadBotContainers(sup.ctx)
 	if err != nil {
-		log.WithError(err).Warn("failed to sync bot logs")
+		return fmt.Errorf("failed to load the bot containers: %v", err)
 	}
 
 	for _, container := range botContainers {

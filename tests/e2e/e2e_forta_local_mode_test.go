@@ -106,8 +106,11 @@ ens:
 telemetry:
   disable: true
 
+# this should not be helpful in sending logs
+# the feature is disabled by default in local mode
 agentLogs:
-  disable: true
+  url: http://localhost:9090/logs/agents
+  sendIntervalSeconds: 1
 
 publicApiProxy:
   url: http://localhost:%d
@@ -212,6 +215,9 @@ func (s *Suite) runLocalMode(webhookURL, logFileName string, readAlertsFunc func
 	}
 	s.r.NotNil(exploiterAlert)
 	s.r.NotNil(tokenAlert)
+
+	// bot logs are disabled by default in local mode
+	s.r.Nil(s.alertServer.GetLogs())
 
 	_, err = security.VerifyScannerJWT(s.getTokenFromAlert(tokenAlert))
 	s.r.NoError(err)

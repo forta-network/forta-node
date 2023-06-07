@@ -110,8 +110,9 @@ type AutoUpdateConfig struct {
 }
 
 type AgentLogsConfig struct {
-	URL     string `yaml:"url" json:"url" default:"https://alerts.forta.network/logs/agents" validate:"url"`
-	Disable bool   `yaml:"disable" json:"disable"`
+	URL                 string `yaml:"url" json:"url" default:"https://alerts.forta.network/logs/agents" validate:"url"`
+	Disable             bool   `yaml:"disable" json:"disable"`
+	SendIntervalSeconds int    `yaml:"sendIntervalSeconds" json:"sendIntervalSeconds" default:"60"`
 }
 
 type ContainerRegistryConfig struct {

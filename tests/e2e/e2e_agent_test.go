@@ -12,6 +12,13 @@ func (s *Suite) TestLinkUnlink() {
 
 	s.expectUpIn(largeTimeout, agentContainerID)
 
+	s.expectIn(
+		smallTimeout, func() (ok bool) {
+			b := s.alertServer.GetLogs()
+			return len(b) > 0
+		},
+	)
+
 	tx, err = s.mockRegistryContract.UnlinkTestAgent(s.deployer)
 	s.r.NoError(err)
 	s.ensureTx("unlink agent", tx)

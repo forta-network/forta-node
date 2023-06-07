@@ -21,6 +21,7 @@ type AlertServer struct {
 	router *mux.Router
 
 	knownBatches map[string][]byte
+	knownLogs    []byte
 	mu           sync.RWMutex
 }
 
@@ -34,6 +35,7 @@ func New(ctx context.Context, port int) *AlertServer {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/batch/{ref}", alertServer.AddAlert).Methods("POST")
+	r.HandleFunc("/logs/agents", alertServer.AddLogs).Methods("POST")
 	alertServer.router = r
 
 	return alertServer
@@ -62,6 +64,12 @@ func (as *AlertServer) GetAlert(ref string) ([]byte, bool) {
 	return b, ok
 }
 
+func (as *AlertServer) GetLogs() []byte {
+	as.mu.RLock()
+	defer as.mu.RUnlock()
+	return as.knownLogs
+}
+
 func (as *AlertServer) AddAlert(w http.ResponseWriter, r *http.Request) {
 	as.mu.Lock()
 	defer as.mu.Unlock()
@@ -71,5 +79,15 @@ func (as *AlertServer) AddAlert(w http.ResponseWriter, r *http.Request) {
 	b, _ := ioutil.ReadAll(r.Body)
 	logrus.WithField("ref", ref).Info("received alert: ", string(b))
 	as.knownBatches[ref] = b
+	return
+}
+
+func (as *AlertServer) AddLogs(w http.ResponseWriter, r *http.Request) {
+	as.mu.Lock()
+	defer as.mu.Unlock()
+
+	b, _ := ioutil.ReadAll(r.Body)
+	logrus.Info("received bot logs")
+	as.knownLogs = b
 	return
 }

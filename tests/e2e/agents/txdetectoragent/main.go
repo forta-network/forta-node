@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/forta-network/forta-core-go/protocol"
@@ -37,6 +38,13 @@ func main() {
 	protocol.RegisterAgentServer(server, &agentServer{
 		ethClient: ethClient,
 	})
+
+	go func() {
+		ticker := time.NewTicker(time.Second * 10)
+		for range ticker.C {
+			log.Println("new log", time.Now().UnixNano())
+		}
+	}()
 
 	log.Println("Starting agent server...")
 	log.Println(server.Serve(lis))
