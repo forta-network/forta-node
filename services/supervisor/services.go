@@ -115,11 +115,6 @@ func (sup *SupervisorService) start() error {
 		go sup.syncTelemetryData()
 	}
 
-	shouldDisableAgentLogs := sup.config.Config.AgentLogsConfig.Disable || sup.config.Config.LocalModeConfig.Enable
-	if !shouldDisableAgentLogs {
-		go sup.syncAgentLogs()
-	}
-
 	sup.mu.Lock()
 	defer sup.mu.Unlock()
 
@@ -246,6 +241,13 @@ func (sup *SupervisorService) start() error {
 	if err != nil {
 		return fmt.Errorf("failed to get bot lifecycle components: %v", err)
 	}
+
+	shouldDisableAgentLogs := sup.config.Config.AgentLogsConfig.Disable || sup.config.Config.LocalModeConfig.Enable
+	if !shouldDisableAgentLogs {
+		go sup.syncAgentLogs()
+	}
+
+
 	sup.registerMessageHandlers()
 
 	if sup.config.Config.AdvancedConfig.IPFSExperiment {

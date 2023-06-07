@@ -25,7 +25,6 @@ type BotLifecycleManager interface {
 	ExitInactiveBots(ctx context.Context) error
 	RestartExitedBots(ctx context.Context) error
 	TearDownRunningBots(ctx context.Context)
-	GetRunningBots() []config.AgentConfig
 }
 
 type botLifecycleManager struct {
@@ -132,10 +131,6 @@ func (blm *botLifecycleManager) ManageBots(ctx context.Context) error {
 
 	blm.runningBots = assignedBots
 	return nil
-}
-
-func (blm *botLifecycleManager) GetRunningBots() []config.AgentConfig {
-	return blm.runningBots
 }
 
 // CleanupUnusedBots cleans up unused bots.
