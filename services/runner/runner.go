@@ -123,7 +123,7 @@ func (runner *Runner) doStartUpCheck() error {
 		return err
 	}
 
-	if runner.cfg.Trace.Enabled {
+	if runner.cfg.Trace.Enabled && !runner.cfg.LocalModeConfig.Enable {
 		// ensure that the trace json-rpc api is reachable
 		err = ethereum.TestAPI(runner.ctx, runner.fixTestRpcUrl(runner.cfg.Trace.JsonRpc.Url))
 		if err != nil {
