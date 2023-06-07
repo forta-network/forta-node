@@ -88,7 +88,14 @@ func (s *BotClientTestSuite) TestLaunchBot_Exists() {
 		Image: testImageRef,
 	}
 
+	s.client.EXPECT().EnsurePublicNetwork(gomock.Any(), botConfig.ContainerName()).Return(testBotNetworkID, nil)
 	s.client.EXPECT().GetContainerByName(gomock.Any(), botConfig.ContainerName()).Return(nil, nil)
+	for _, serviceContainerName := range getServiceContainerNames() {
+		s.client.EXPECT().GetContainerByName(gomock.Any(), serviceContainerName).Return(&types.Container{
+			ID: testContainerID,
+		}, nil)
+		s.client.EXPECT().AttachNetwork(gomock.Any(), testContainerID, testBotNetworkID).Return(nil)
+	}
 
 	s.r.NoError(s.botClient.LaunchBot(context.Background(), botConfig))
 }
@@ -99,6 +106,7 @@ func (s *BotClientTestSuite) TestLaunchBot_GetContainerError() {
 		Image: testImageRef,
 	}
 
+	s.client.EXPECT().EnsurePublicNetwork(gomock.Any(), botConfig.ContainerName()).Return(testBotNetworkID, nil)
 	err := errors.New("unexpected error")
 	s.client.EXPECT().GetContainerByName(gomock.Any(), botConfig.ContainerName()).Return(nil, err)
 
@@ -111,8 +119,8 @@ func (s *BotClientTestSuite) TestLaunchBot_DoesNotExist() {
 		Image: testImageRef,
 	}
 
+	s.client.EXPECT().EnsurePublicNetwork(gomock.Any(), botConfig.ContainerName()).Return(testBotNetworkID, nil)
 	s.client.EXPECT().GetContainerByName(gomock.Any(), botConfig.ContainerName()).Return(nil, docker.ErrContainerNotFound)
-	s.client.EXPECT().CreatePublicNetwork(gomock.Any(), botConfig.ContainerName()).Return(testBotNetworkID, nil)
 	botContainerCfg := NewBotContainerConfig(testBotNetworkID, botConfig, config.LogConfig{}, config.ResourcesConfig{})
 	s.client.EXPECT().StartContainer(gomock.Any(), botContainerCfg).Return(nil, nil)
 	for _, serviceContainerName := range getServiceContainerNames() {

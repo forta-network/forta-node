@@ -216,11 +216,11 @@ func (d *dockerClient) RemoveImage(ctx context.Context, refStr string) error {
 	return err
 }
 
-func (d *dockerClient) CreatePublicNetwork(ctx context.Context, name string) (string, error) {
+func (d *dockerClient) EnsurePublicNetwork(ctx context.Context, name string) (string, error) {
 	return d.createNetwork(ctx, name, false)
 }
 
-func (d *dockerClient) CreateInternalNetwork(ctx context.Context, name string) (string, error) {
+func (d *dockerClient) EnsureInternalNetwork(ctx context.Context, name string) (string, error) {
 	return d.createNetwork(ctx, name, true)
 }
 

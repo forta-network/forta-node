@@ -156,8 +156,8 @@ func (s *Suite) TestStartServices() {
 
 	s.initialContainerCheck()
 	s.dockerClient.EXPECT().EnsureLocalImage(s.supervisor.ctx, gomock.Any(), gomock.Any()).Times(2) // needs to get nats and ipfs
-	s.dockerClient.EXPECT().CreatePublicNetwork(s.supervisor.ctx, gomock.Any()).Return(testNodeNetworkID, nil)
-	s.dockerClient.EXPECT().CreateInternalNetwork(s.supervisor.ctx, gomock.Any()).Return(testNatsNetworkID, nil) // for nats
+	s.dockerClient.EXPECT().EnsurePublicNetwork(s.supervisor.ctx, gomock.Any()).Return(testNodeNetworkID, nil)
+	s.dockerClient.EXPECT().EnsureInternalNetwork(s.supervisor.ctx, gomock.Any()).Return(testNatsNetworkID, nil) // for nats
 	s.dockerClient.EXPECT().StartContainer(
 		s.supervisor.ctx, (configMatcher)(
 			docker.ContainerConfig{
