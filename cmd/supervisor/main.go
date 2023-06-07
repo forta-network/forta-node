@@ -20,6 +20,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	cfg.Registry.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Registry.JsonRpc.Url)
 	cfg.Registry.IPFS.APIURL = utils.ConvertToDockerHostURL(cfg.Registry.IPFS.APIURL)
 	cfg.Registry.IPFS.GatewayURL = utils.ConvertToDockerHostURL(cfg.Registry.IPFS.GatewayURL)
+	cfg.AgentLogsConfig.URL = utils.ConvertToDockerHostURL(cfg.AgentLogsConfig.URL)
 
 	passphrase, err := security.ReadPassphrase()
 	if err != nil {

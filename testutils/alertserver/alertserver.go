@@ -87,7 +87,7 @@ func (as *AlertServer) AddLogs(w http.ResponseWriter, r *http.Request) {
 	defer as.mu.Unlock()
 
 	b, _ := ioutil.ReadAll(r.Body)
-	logrus.Info("received bot logs: ", string(b))
+	logrus.Info("received bot logs")
 	as.knownLogs = b
 	return
 }
