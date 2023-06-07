@@ -25,6 +25,7 @@ type BotLifecycleManager interface {
 	ExitInactiveBots(ctx context.Context) error
 	RestartExitedBots(ctx context.Context) error
 	TearDownRunningBots(ctx context.Context)
+	GetRunningBots() []config.AgentConfig
 }
 
 type botLifecycleManager struct {
@@ -62,6 +63,9 @@ func (blm *botLifecycleManager) ManageBots(ctx context.Context) error {
 		return fmt.Errorf("failed to load assigned bots: %v", err)
 	}
 
+	for _, bot := range blm.runningBots {
+		bot.ContainerName()
+	}
 	// find the removed bots and remove them from the pool
 	removedBotConfigs := FindMissingBots(blm.runningBots, assignedBots)
 	if len(removedBotConfigs) > 0 {
@@ -131,6 +135,10 @@ func (blm *botLifecycleManager) ManageBots(ctx context.Context) error {
 
 	blm.runningBots = assignedBots
 	return nil
+}
+
+func (blm *botLifecycleManager) GetRunningBots() []config.AgentConfig {
+	return blm.runningBots
 }
 
 // CleanupUnusedBots cleans up unused bots.

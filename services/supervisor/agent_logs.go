@@ -38,11 +38,9 @@ func (sup *SupervisorService) doSyncAgentLogs() error {
 		sendLogs agentlogs.Agents
 		keepLogs agentlogs.Agents
 	)
-	for _, container := range sup.containers {
-		if !container.IsAgent {
-			continue
-		}
-		dockerContainer, err := sup.client.GetContainerByID(sup.ctx, container.ID)
+
+	for _, bot := range sup.botLifecycle.BotManager.GetRunningBots() {
+		dockerContainer, err := sup.client.GetContainerByName(sup.ctx, bot.ContainerName())
 		if err != nil {
 			log.WithError(err).Warn("failed to get agent container")
 			continue
@@ -51,7 +49,7 @@ func (sup *SupervisorService) doSyncAgentLogs() error {
 			continue
 		}
 		logs, err := sup.client.GetContainerLogs(
-			sup.ctx, container.ID,
+			sup.ctx, bot.ID,
 			strconv.Itoa(defaultAgentLogTailLines),
 			defaultAgentLogAvgMaxCharsPerLine*defaultAgentLogTailLines,
 		)
@@ -60,13 +58,13 @@ func (sup *SupervisorService) doSyncAgentLogs() error {
 			continue
 		}
 		agent := &agentlogs.Agent{
-			ID:   container.AgentConfig.ID,
+			ID:   bot.ID,
 			Logs: logs,
 		}
 		// don't send if it's the same with previous logs but keep it for next time
 		// so we can check
 		keepLogs = append(keepLogs, agent)
-		if !sup.prevAgentLogs.Has(container.AgentConfig.ID, logs) {
+		if !sup.prevAgentLogs.Has(bot.ID, logs) {
 			log.WithField("agent", agent.ID).Debug("new agent logs found")
 			sendLogs = append(sendLogs, agent)
 		} else {

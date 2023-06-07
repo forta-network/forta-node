@@ -8,6 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	config "github.com/forta-network/forta-node/config"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -60,6 +61,20 @@ func (m *MockBotLifecycleManager) ExitInactiveBots(ctx context.Context) error {
 func (mr *MockBotLifecycleManagerMockRecorder) ExitInactiveBots(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExitInactiveBots", reflect.TypeOf((*MockBotLifecycleManager)(nil).ExitInactiveBots), ctx)
+}
+
+// GetRunningBots mocks base method.
+func (m *MockBotLifecycleManager) GetRunningBots() []config.AgentConfig {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRunningBots")
+	ret0, _ := ret[0].([]config.AgentConfig)
+	return ret0
+}
+
+// GetRunningBots indicates an expected call of GetRunningBots.
+func (mr *MockBotLifecycleManagerMockRecorder) GetRunningBots() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRunningBots", reflect.TypeOf((*MockBotLifecycleManager)(nil).GetRunningBots))
 }
 
 // ManageBots mocks base method.
