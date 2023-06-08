@@ -771,7 +771,7 @@ func (pub *Publisher) prepareLatestBatch() {
 
 	if !timedOut {
 		batchTime = time.Now()
-		pub.batchTicker.Reset(defaultInterval)
+		pub.batchTicker.Reset(pub.batchInterval)
 	}
 	pub.lastBatchReadyMu.Lock()
 	pub.lastBatchReady = batchTime
@@ -910,6 +910,6 @@ func initPublisher(
 		notifCh:       make(chan *protocol.NotifyRequest, defaultBatchLimit),
 		batchCh:       make(chan *protocol.AlertBatch, defaultBatchBufferSize),
 
-		batchTicker: time.NewTicker(defaultInterval),
+		batchTicker: time.NewTicker(batchInterval),
 	}, nil
 }

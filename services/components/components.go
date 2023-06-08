@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/agentgrpc"
 	"github.com/forta-network/forta-node/clients/docker"
@@ -42,6 +43,22 @@ func GetBotProcessingComponents(ctx context.Context, botProcCfg BotProcessingCon
 		ctx, lifecycleMetrics, botClientFactory, botProcCfg.Config.BotsToWait(),
 	)
 	mediator.New(botProcCfg.MessageClient, lifecycleMetrics).ConnectBotPool(botPool)
+
+	// update the bot pool directly if we are in standalone mode
+	if botProcCfg.Config.LocalModeConfig.IsStandalone() {
+		botRegistry, err := registry.New(botProcCfg.Config, common.HexToAddress(utils.ZeroAddress))
+		if err != nil {
+			return BotProcessing{}, fmt.Errorf("failed to create the standalone mode registry: %v", err)
+		}
+		bots, err := botRegistry.LoadAssignedBots()
+		if err != nil {
+			return BotProcessing{}, fmt.Errorf("failed to load the standalone mode bots: %v", err)
+		}
+		if err := botPool.UpdateBotsWithLatestConfigs(bots); err != nil {
+			return BotProcessing{}, fmt.Errorf("failed to update the standalone mode bot pool: %v", err)
+		}
+	}
+
 	sender := botio.NewSender(ctx, botProcCfg.MessageClient, botPool)
 	return BotProcessing{
 		RequestSender: sender,
