@@ -104,7 +104,33 @@ publishes alerts about them`,
 	cmdFortaStatus = &cobra.Command{
 		Use:   "status",
 		Short: "display statuses of node services",
-		RunE:  handleFortaStatus,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			format, err := cmd.Flags().GetString("format")
+			if err != nil {
+				return err
+			}
+			show, err := cmd.Flags().GetString("show")
+			if err != nil {
+				return err
+			}
+			noColor, err := cmd.Flags().GetBool("no-color")
+			if err != nil {
+				return err
+			}
+			return handleFortaStatus(cmd, format, show, noColor)
+		},
+	}
+
+	cmdFortaStatusAll = &cobra.Command{
+		Use:   "all",
+		Short: "shorthand for `--show all --format oneline`",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			noColor, err := cmd.Flags().GetBool("no-color")
+			if err != nil {
+				return err
+			}
+			return handleFortaStatus(cmd, StatusFormatOneline, StatusShowAll, noColor)
+		},
 	}
 
 	cmdFortaAuthorize = &cobra.Command{
@@ -144,6 +170,7 @@ func init() {
 	cmdForta.AddCommand(cmdFortaBatch)
 
 	cmdForta.AddCommand(cmdFortaStatus)
+	cmdFortaStatus.AddCommand(cmdFortaStatusAll)
 
 	cmdForta.AddCommand(cmdFortaAuthorize)
 	cmdFortaAuthorize.AddCommand(cmdFortaAuthorizePool)
@@ -173,6 +200,9 @@ func init() {
 	cmdFortaStatus.Flags().String("format", StatusFormatPretty, "output formatting/encoding: pretty (default), oneline, json, csv")
 	cmdFortaStatus.Flags().Bool("no-color", false, "disable colors")
 	cmdFortaStatus.Flags().String("show", StatusShowSummary, "filter statuses to show: summary (default), important, all")
+
+	// forta status all
+	cmdFortaStatusAll.Flags().Bool("no-color", false, "disable colors")
 
 	// forta authorize pool
 	cmdFortaAuthorizePool.Flags().String("id", "", "scanner pool ID (integer)")
