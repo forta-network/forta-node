@@ -62,6 +62,9 @@ func (p *JsonRpcProxy) Start() error {
 		Handler: p.metricHandler(c.Handler(rp)),
 	}
 	utils.GoListenAndServe(p.server)
+
+	go p.apiHealthChecker()
+
 	return nil
 }
 
@@ -119,7 +122,7 @@ func (p *JsonRpcProxy) apiHealthChecker() {
 }
 
 func (p *JsonRpcProxy) testAPI() {
-	err := ethereum.TestAPI(p.ctx, "http://localhost:8545")
+	err := ethereum.TestAPI(p.ctx, p.cfg.Url)
 	p.lastErr.Set(err)
 }
 
