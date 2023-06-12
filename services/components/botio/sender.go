@@ -98,8 +98,10 @@ func (rs *requestSender) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) 
 		if !bot.ShouldProcessBlock(req.Event.Block.BlockNumber) {
 			continue
 		}
+		botConfig := bot.Config()
+
 		lg.WithFields(log.Fields{
-			"bot":      bot.Config().ID,
+			"bot":      botConfig.ID,
 			"duration": time.Since(startTime),
 		}).Debug("sending tx request to evalTxCh")
 
@@ -107,16 +109,16 @@ func (rs *requestSender) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) 
 
 		select {
 		case <-bot.Closed():
-			lg.WithField("bot", bot.Config().ID).Debug("bot is closed - skipping")
+			lg.WithField("bot", botConfig.ID).Debug("bot is closed - skipping")
 		case bot.TxRequestCh() <- &botreq.TxRequest{
 			Original: req,
 		}:
 		default: // do not try to send if the buffer is full
-			lg.WithField("bot", bot.Config().ID).Debug("agent tx request buffer is full - skipping")
-			metricsList = append(metricsList, metrics.CreateAgentMetric(bot.Config().ID, metrics.MetricTxDrop, 1))
+			lg.WithField("bot", botConfig.ID).Debug("agent tx request buffer is full - skipping")
+			metricsList = append(metricsList, metrics.CreateAgentMetric(botConfig.ID, metrics.MetricTxDrop, 1))
 		}
 		lg.WithFields(log.Fields{
-			"bot":      bot.Config().ID,
+			"bot":      botConfig.ID,
 			"duration": time.Since(startTime),
 		}).Debug("sent tx request to evalTxCh")
 	}
@@ -146,26 +148,27 @@ func (rs *requestSender) SendEvaluateBlockRequest(req *protocol.EvaluateBlockReq
 		if !bot.ShouldProcessBlock(req.Event.BlockNumber) {
 			continue
 		}
+		botConfig := bot.Config()
 
 		lg.WithFields(log.Fields{
-			"bot":      bot.Config().ID,
+			"bot":      botConfig.ID,
 			"duration": time.Since(startTime),
 		}).Debug("sending block request to evalBlockCh")
 
 		// unblock req send if agent is closed
 		select {
 		case <-bot.Closed():
-			lg.WithField("bot", bot.Config().ID).Debug("bot is closed - skipping")
+			lg.WithField("bot", botConfig.ID).Debug("bot is closed - skipping")
 		case bot.BlockRequestCh() <- &botreq.BlockRequest{
 			Original: req,
 		}:
 		default: // do not try to send if the buffer is full
-			lg.WithField("bot", bot.Config().ID).Warn("agent block request buffer is full - skipping")
-			metricsList = append(metricsList, metrics.CreateAgentMetric(bot.Config().ID, metrics.MetricBlockDrop, 1))
+			lg.WithField("bot", botConfig.ID).Warn("agent block request buffer is full - skipping")
+			metricsList = append(metricsList, metrics.CreateAgentMetric(botConfig.ID, metrics.MetricBlockDrop, 1))
 		}
 		lg.WithFields(
 			log.Fields{
-				"bot":      bot.Config().ID,
+				"bot":      botConfig.ID,
 				"duration": time.Since(startTime),
 			},
 		).Debug("sent tx request to evalBlockCh")
@@ -214,9 +217,6 @@ func (rs *requestSender) SendEvaluateAlertRequest(req *protocol.EvaluateAlertReq
 			continue
 		}
 
-		if !bot.IsInitialized() {
-			continue
-		}
 		target = bot
 		break
 	}
@@ -231,10 +231,11 @@ func (rs *requestSender) SendEvaluateAlertRequest(req *protocol.EvaluateAlertReq
 	if !target.ShouldProcessAlert(req.Event) {
 		return
 	}
+	botConfig := target.Config()
 
 	lg.WithFields(
 		log.Fields{
-			"bot":      target.Config().ID,
+			"bot":      botConfig.ID,
 			"duration": time.Since(startTime),
 		},
 	).Debug("sending alert request to evalAlertCh")
@@ -242,18 +243,18 @@ func (rs *requestSender) SendEvaluateAlertRequest(req *protocol.EvaluateAlertReq
 	// unblock req send if agent is closed
 	select {
 	case <-target.Closed():
-		lg.WithField("bot", target.Config().ID).Debug("bot is closed - skipping")
+		lg.WithField("bot", botConfig.ID).Debug("bot is closed - skipping")
 	case target.CombinationRequestCh() <- &botreq.CombinationRequest{
 		Original: req,
 	}:
 	default: // do not try to send if the buffer is full
-		lg.WithField("bot", target.Config().ID).Warn("agent alert request buffer is full - skipping")
-		metricsList = append(metricsList, metrics.CreateAgentMetric(target.Config().ID, metrics.MetricCombinerDrop, 1))
+		lg.WithField("bot", botConfig.ID).Warn("agent alert request buffer is full - skipping")
+		metricsList = append(metricsList, metrics.CreateAgentMetric(botConfig.ID, metrics.MetricCombinerDrop, 1))
 	}
 
 	lg.WithFields(
 		log.Fields{
-			"bot":      target.Config().ID,
+			"bot":      botConfig.ID,
 			"duration": time.Since(startTime),
 		},
 	).Debug("sent alert request to evalAlertCh")

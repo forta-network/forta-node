@@ -199,12 +199,3 @@ func (bc *botClient) StartWaitBotContainer(ctx context.Context, containerID stri
 	}
 	return bc.client.WaitContainerStart(ctx, containerID)
 }
-
-func hasBotContainer(botList []config.AgentConfig, containerName string) bool {
-	for _, currBot := range botList {
-		if containerName == currBot.ContainerName() {
-			return true
-		}
-	}
-	return false
-}
