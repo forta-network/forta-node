@@ -15,7 +15,7 @@ import (
 
 // Timeouts
 const (
-	BotPullTimeout  = time.Minute * 5
+	BotPullTimeout  = time.Minute * 10
 	BotStartTimeout = time.Minute * 5
 
 	ImagePullCooldownThreshold = 5
