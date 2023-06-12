@@ -177,6 +177,7 @@ func (blm *botLifecycleManager) ExitInactiveBots(ctx context.Context) error {
 			logger.Warn("could not find the config for inactive bot - skipping stop")
 			continue
 		}
+		logger.Info("killing inactive bot for reinitialization")
 		if err := blm.botClient.StopBot(ctx, botConfig); err != nil {
 			logger.WithError(err).Error("failed to stop the inactive bot")
 			blm.lifecycleMetrics.FailureStop(fmt.Errorf("failed to stop the inactive bot: %v", err.Error()), botConfig)

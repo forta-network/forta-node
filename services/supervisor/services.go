@@ -154,7 +154,7 @@ func (sup *SupervisorService) start() error {
 	}
 	commonNodeImage := supervisorContainer.Image
 
-	nodeNetworkID, err := sup.client.CreatePublicNetwork(sup.ctx, config.DockerNetworkName)
+	nodeNetworkID, err := sup.client.EnsurePublicNetwork(sup.ctx, config.DockerNetworkName)
 	if err != nil {
 		return err
 	}
@@ -162,7 +162,7 @@ func (sup *SupervisorService) start() error {
 		return fmt.Errorf("failed to attach supervisor container to node network: %v", err)
 	}
 
-	natsNetworkID, err := sup.client.CreateInternalNetwork(sup.ctx, config.DockerNatsContainerName)
+	natsNetworkID, err := sup.client.EnsureInternalNetwork(sup.ctx, config.DockerNatsContainerName)
 	if err != nil {
 		return err
 	}
@@ -246,7 +246,6 @@ func (sup *SupervisorService) start() error {
 	if !shouldDisableAgentLogs {
 		go sup.syncAgentLogs()
 	}
-
 
 	sup.registerMessageHandlers()
 

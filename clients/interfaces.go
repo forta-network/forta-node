@@ -17,8 +17,8 @@ import (
 type DockerClient interface {
 	PullImage(ctx context.Context, refStr string) error
 	RemoveImage(ctx context.Context, refStr string) error
-	CreatePublicNetwork(ctx context.Context, name string) (string, error)
-	CreateInternalNetwork(ctx context.Context, name string) (string, error)
+	EnsurePublicNetwork(ctx context.Context, name string) (string, error)
+	EnsureInternalNetwork(ctx context.Context, name string) (string, error)
 	AttachNetwork(ctx context.Context, containerID string, networkID string) error
 	DetachNetwork(ctx context.Context, containerID string, networkID string) error
 	RemoveNetworkByName(ctx context.Context, networkName string) error
