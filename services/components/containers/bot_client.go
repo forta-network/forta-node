@@ -15,7 +15,7 @@ import (
 
 // Timeouts
 const (
-	BotPullTimeout  = time.Minute * 5
+	BotPullTimeout  = time.Minute * 10
 	BotStartTimeout = time.Minute * 5
 
 	ImagePullCooldownThreshold = 5
@@ -68,33 +68,38 @@ func (bc *botClient) EnsureBotImages(ctx context.Context, botConfigs []config.Ag
 }
 
 // LaunchBot launches a bot by downloading docker image and starting the container.
+// This method can be called when the bot containers are alive and should be able to
+// handle that situation.
 func (bc *botClient) LaunchBot(ctx context.Context, botConfig config.AgentConfig) error {
 	ctx, cancel := context.WithTimeout(ctx, BotStartTimeout)
 	defer cancel()
 
-	_, err := bc.client.GetContainerByName(ctx, botConfig.ContainerName())
+	// first make sure that the bot's bridge network exists
+	botNetworkID, err := bc.client.EnsurePublicNetwork(ctx, botConfig.ContainerName())
+	if err != nil {
+		return fmt.Errorf("error creating public network: %v", err)
+	}
+
+	_, err = bc.client.GetContainerByName(ctx, botConfig.ContainerName())
 	switch {
 	case err == nil:
-		log.WithField("container", botConfig.ContainerName()).Info("bot container exists - skipping launch")
-		return nil
+		// do not create a new container - we already have it
 
 	case errors.Is(err, docker.ErrContainerNotFound):
-		// continue
+		// if the bot container doesn't exist, create and start the container
+		botContainerCfg := NewBotContainerConfig(botNetworkID, botConfig, bc.logConfig, bc.resourcesConfig)
+		_, err = bc.client.StartContainer(ctx, botContainerCfg)
+		if err != nil {
+			return fmt.Errorf("failed to start bot container: %v", err)
+		}
 
 	default:
 		return fmt.Errorf("unexpected error while getting the bot container '%s': %v", botConfig.ContainerName(), err)
 	}
 
-	botNetworkID, err := bc.client.CreatePublicNetwork(ctx, botConfig.ContainerName())
-	if err != nil {
-		return fmt.Errorf("error creating public network: %v", err)
-	}
-
-	botContainerCfg := NewBotContainerConfig(botNetworkID, botConfig, bc.logConfig, bc.resourcesConfig)
-	_, err = bc.client.StartContainer(ctx, botContainerCfg)
-	if err != nil {
-		return fmt.Errorf("failed to start bot container: %v", err)
-	}
+	// at this point we have created a new bot container and a new bridge network for the bot
+	// or found the existing container and the network: it's time to ensure that all service containers
+	// are reattached to the bot's network
 	return bc.attachServiceContainers(ctx, botNetworkID)
 }
 
@@ -198,13 +203,4 @@ func (bc *botClient) StartWaitBotContainer(ctx context.Context, containerID stri
 		return fmt.Errorf("failed to start container with id: %v", err)
 	}
 	return bc.client.WaitContainerStart(ctx, containerID)
-}
-
-func hasBotContainer(botList []config.AgentConfig, containerName string) bool {
-	for _, currBot := range botList {
-		if containerName == currBot.ContainerName() {
-			return true
-		}
-	}
-	return false
 }

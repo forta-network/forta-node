@@ -54,36 +54,6 @@ func (mr *MockDockerClientMockRecorder) AttachNetwork(ctx, containerID, networkI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttachNetwork", reflect.TypeOf((*MockDockerClient)(nil).AttachNetwork), ctx, containerID, networkID)
 }
 
-// CreateInternalNetwork mocks base method.
-func (m *MockDockerClient) CreateInternalNetwork(ctx context.Context, name string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateInternalNetwork", ctx, name)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CreateInternalNetwork indicates an expected call of CreateInternalNetwork.
-func (mr *MockDockerClientMockRecorder) CreateInternalNetwork(ctx, name interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInternalNetwork", reflect.TypeOf((*MockDockerClient)(nil).CreateInternalNetwork), ctx, name)
-}
-
-// CreatePublicNetwork mocks base method.
-func (m *MockDockerClient) CreatePublicNetwork(ctx context.Context, name string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreatePublicNetwork", ctx, name)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CreatePublicNetwork indicates an expected call of CreatePublicNetwork.
-func (mr *MockDockerClientMockRecorder) CreatePublicNetwork(ctx, name interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePublicNetwork", reflect.TypeOf((*MockDockerClient)(nil).CreatePublicNetwork), ctx, name)
-}
-
 // DetachNetwork mocks base method.
 func (m *MockDockerClient) DetachNetwork(ctx context.Context, containerID, networkID string) error {
 	m.ctrl.T.Helper()
@@ -96,6 +66,21 @@ func (m *MockDockerClient) DetachNetwork(ctx context.Context, containerID, netwo
 func (mr *MockDockerClientMockRecorder) DetachNetwork(ctx, containerID, networkID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DetachNetwork", reflect.TypeOf((*MockDockerClient)(nil).DetachNetwork), ctx, containerID, networkID)
+}
+
+// EnsureInternalNetwork mocks base method.
+func (m *MockDockerClient) EnsureInternalNetwork(ctx context.Context, name string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureInternalNetwork", ctx, name)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnsureInternalNetwork indicates an expected call of EnsureInternalNetwork.
+func (mr *MockDockerClientMockRecorder) EnsureInternalNetwork(ctx, name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureInternalNetwork", reflect.TypeOf((*MockDockerClient)(nil).EnsureInternalNetwork), ctx, name)
 }
 
 // EnsureLocalImage mocks base method.
@@ -124,6 +109,21 @@ func (m *MockDockerClient) EnsureLocalImages(ctx context.Context, timeoutPerPull
 func (mr *MockDockerClientMockRecorder) EnsureLocalImages(ctx, timeoutPerPull, imagePulls interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureLocalImages", reflect.TypeOf((*MockDockerClient)(nil).EnsureLocalImages), ctx, timeoutPerPull, imagePulls)
+}
+
+// EnsurePublicNetwork mocks base method.
+func (m *MockDockerClient) EnsurePublicNetwork(ctx context.Context, name string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsurePublicNetwork", ctx, name)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnsurePublicNetwork indicates an expected call of EnsurePublicNetwork.
+func (mr *MockDockerClientMockRecorder) EnsurePublicNetwork(ctx, name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsurePublicNetwork", reflect.TypeOf((*MockDockerClient)(nil).EnsurePublicNetwork), ctx, name)
 }
 
 // GetContainerByID mocks base method.

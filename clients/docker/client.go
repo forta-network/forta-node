@@ -216,11 +216,11 @@ func (d *dockerClient) RemoveImage(ctx context.Context, refStr string) error {
 	return err
 }
 
-func (d *dockerClient) CreatePublicNetwork(ctx context.Context, name string) (string, error) {
+func (d *dockerClient) EnsurePublicNetwork(ctx context.Context, name string) (string, error) {
 	return d.createNetwork(ctx, name, false)
 }
 
-func (d *dockerClient) CreateInternalNetwork(ctx context.Context, name string) (string, error) {
+func (d *dockerClient) EnsureInternalNetwork(ctx context.Context, name string) (string, error) {
 	return d.createNetwork(ctx, name, true)
 }
 
@@ -892,7 +892,7 @@ func NewDockerClient(name string) (*dockerClient, error) {
 	}
 	return &dockerClient{
 		cli:     cli,
-		workers: workers.New(10),
+		workers: workers.New(1),
 		labels:  initLabels(name),
 	}, nil
 }
@@ -908,7 +908,7 @@ func NewAuthDockerClient(name string, username, password string) (*dockerClient,
 	}
 	return &dockerClient{
 		cli:      cli,
-		workers:  workers.New(10),
+		workers:  workers.New(1),
 		username: username,
 		password: password,
 		labels:   initLabels(name),

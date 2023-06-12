@@ -121,6 +121,7 @@ func NewScannerReleaseStore(ctx context.Context, cfg config.Config) (ScannerRele
 		JsonRpcUrl: cfg.Registry.JsonRpc.Url,
 		ENSAddress: cfg.ENSConfig.ContractAddress,
 		Name:       "updater",
+		NoRefresh:  true,
 	})
 	if err != nil {
 		return nil, err
