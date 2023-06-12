@@ -142,12 +142,6 @@ func registryAuthValue(username, password string) string {
 
 // PullImage pulls an image using the given ref.
 func (d *dockerClient) PullImage(ctx context.Context, refStr string) error {
-	return d.workers.Execute(func() ([]interface{}, error) {
-		return nil, d.pullImage(ctx, refStr)
-	}).Error
-}
-
-func (d *dockerClient) pullImage(ctx context.Context, refStr string) error {
 	if d.imageDownloadCooldown != nil && d.imageDownloadCooldown.ShouldCoolDown(refStr) {
 		return fmt.Errorf("too many pull attempts - cooling down: %s", refStr)
 	}
