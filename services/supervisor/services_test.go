@@ -112,6 +112,7 @@ func (s *Suite) SetupTest() {
 	supervisor.config.Config.ChainID = 1
 	supervisor.config.Config.AdvancedConfig.IPFSExperiment = true
 	supervisor.config.Config.InspectionConfig.InspectAtStartup = utils.BoolPtr(false)
+	supervisor.config.Config.AgentLogsConfig.SendIntervalSeconds = 1
 	s.supervisor = supervisor
 }
 
