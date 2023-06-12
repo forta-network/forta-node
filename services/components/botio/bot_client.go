@@ -621,6 +621,7 @@ func (bot *botClient) processCombinationAlert(ctx context.Context, lg *log.Entry
 		lg.WithField(
 			"request", request.Original.RequestId,
 		).WithError(vErr).Error("evaluate combination response validation failed")
+		bot.lifecycleMetrics.BotError("validate.evaluate.alert.response", vErr, botConfig.ID)
 
 		return false
 	}
