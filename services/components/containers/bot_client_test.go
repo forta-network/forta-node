@@ -139,6 +139,7 @@ func (s *BotClientTestSuite) TestTearDownBot() {
 		Image: testImageRef,
 	}
 
+	testErr := errors.New("some error")
 	s.client.EXPECT().GetContainerByName(gomock.Any(), botConfig.ContainerName()).Return(&types.Container{
 		ID:    testContainerID2,
 		Image: testImageRef,
@@ -147,11 +148,11 @@ func (s *BotClientTestSuite) TestTearDownBot() {
 		s.client.EXPECT().GetContainerByName(gomock.Any(), serviceContainerName).Return(&types.Container{
 			ID: testContainerID,
 		}, nil)
-		s.client.EXPECT().DetachNetwork(gomock.Any(), testContainerID, botConfig.ContainerName()).Return(nil)
+		s.client.EXPECT().DetachNetwork(gomock.Any(), testContainerID, botConfig.ContainerName()).Return(testErr)
 	}
-	s.client.EXPECT().RemoveContainer(gomock.Any(), testContainerID2)
-	s.client.EXPECT().RemoveNetworkByName(gomock.Any(), botConfig.ContainerName())
-	s.client.EXPECT().RemoveImage(gomock.Any(), testImageRef)
+	s.client.EXPECT().RemoveContainer(gomock.Any(), testContainerID2).Return(testErr)
+	s.client.EXPECT().RemoveNetworkByName(gomock.Any(), botConfig.ContainerName()).Return(testErr)
+	s.client.EXPECT().RemoveImage(gomock.Any(), testImageRef).Return(testErr)
 
 	s.r.NoError(s.botClient.TearDownBot(context.Background(), botConfig.ContainerName(), true))
 }

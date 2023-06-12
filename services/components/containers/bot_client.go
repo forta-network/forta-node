@@ -15,7 +15,7 @@ import (
 
 // Timeouts
 const (
-	BotPullTimeout  = time.Minute * 5
+	BotPullTimeout  = time.Minute * 10
 	BotStartTimeout = time.Minute * 5
 
 	ImagePullCooldownThreshold = 5
@@ -203,13 +203,4 @@ func (bc *botClient) StartWaitBotContainer(ctx context.Context, containerID stri
 		return fmt.Errorf("failed to start container with id: %v", err)
 	}
 	return bc.client.WaitContainerStart(ctx, containerID)
-}
-
-func hasBotContainer(botList []config.AgentConfig, containerName string) bool {
-	for _, currBot := range botList {
-		if containerName == currBot.ContainerName() {
-			return true
-		}
-	}
-	return false
 }

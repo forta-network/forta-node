@@ -113,6 +113,7 @@ func (s *Suite) SetupTest() {
 	supervisor.config.Config.AdvancedConfig.IPFSExperiment = true
 	supervisor.config.Config.InspectionConfig.InspectAtStartup = utils.BoolPtr(false)
 	supervisor.config.Config.AgentLogsConfig.SendIntervalSeconds = 1
+	supervisor.botLifecycleConfig.Config = supervisor.config.Config
 	s.supervisor = supervisor
 }
 
