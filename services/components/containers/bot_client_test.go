@@ -82,6 +82,19 @@ func (s *BotClientTestSuite) TestEnsureBotImages() {
 	s.r.Equal(retErrs, s.botClient.EnsureBotImages(context.Background(), botConfigs))
 }
 
+func (s *BotClientTestSuite) TestEnsureBotImage() {
+	botConfig := config.AgentConfig{
+		ID:    testBotID1,
+		Image: testImageRef,
+	}
+
+	err := errors.New("err1")
+
+	s.botImageClient.EXPECT().EnsureLocalImage(gomock.Any(), botConfig.ID, botConfig.Image).Return(err)
+
+	s.r.Error(err, s.botClient.EnsureBotImage(context.Background(), botConfig))
+}
+
 func (s *BotClientTestSuite) TestLaunchBot_Exists() {
 	botConfig := config.AgentConfig{
 		ID:    testBotID1,

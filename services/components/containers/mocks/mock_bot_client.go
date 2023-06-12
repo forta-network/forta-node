@@ -36,6 +36,20 @@ func (m *MockBotClient) EXPECT() *MockBotClientMockRecorder {
 	return m.recorder
 }
 
+// EnsureBotImage mocks base method.
+func (m *MockBotClient) EnsureBotImage(ctx context.Context, botConfigs config.AgentConfig) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureBotImage", ctx, botConfigs)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EnsureBotImage indicates an expected call of EnsureBotImage.
+func (mr *MockBotClientMockRecorder) EnsureBotImage(ctx, botConfigs interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureBotImage", reflect.TypeOf((*MockBotClient)(nil).EnsureBotImage), ctx, botConfigs)
+}
+
 // EnsureBotImages mocks base method.
 func (m *MockBotClient) EnsureBotImages(ctx context.Context, botConfigs []config.AgentConfig) []error {
 	m.ctrl.T.Helper()

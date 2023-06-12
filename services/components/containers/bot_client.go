@@ -25,6 +25,7 @@ const (
 // BotClient launches a bot.
 type BotClient interface {
 	EnsureBotImages(ctx context.Context, botConfigs []config.AgentConfig) []error
+	EnsureBotImage(ctx context.Context, botConfigs config.AgentConfig) error
 	LaunchBot(ctx context.Context, botConfig config.AgentConfig) error
 	TearDownBot(ctx context.Context, containerName string, removeImage bool) error
 	StopBot(ctx context.Context, botConfig config.AgentConfig) error
@@ -65,6 +66,14 @@ func (bc *botClient) EnsureBotImages(ctx context.Context, botConfigs []config.Ag
 		})
 	}
 	return bc.botImageClient.EnsureLocalImages(ctx, BotPullTimeout, imagePulls)
+}
+
+// EnsureBotImage ensures that the bot image is locally available.
+func (bc *botClient) EnsureBotImage(ctx context.Context, botConfig config.AgentConfig) error {
+	ctx, cancel := context.WithTimeout(ctx, BotPullTimeout)
+	defer cancel()
+
+	return bc.botImageClient.EnsureLocalImage(ctx, botConfig.ID, botConfig.Image)
 }
 
 // LaunchBot launches a bot by downloading docker image and starting the container.

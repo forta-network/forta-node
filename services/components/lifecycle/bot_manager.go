@@ -88,25 +88,21 @@ func (blm *botLifecycleManager) ManageBots(ctx context.Context) error {
 	// find the bot containers to start
 	addedBotConfigs := FindExtraBots(blm.runningBots, assignedBots)
 
-	// then download all images concurrently
-	var downloadErrs []error
-	if len(addedBotConfigs) > 0 {
-		downloadErrs = blm.botClient.EnsureBotImages(ctx, addedBotConfigs)
-	}
-
 	// and start them
-	for i, addedBotConfig := range addedBotConfigs {
-
+	for _, addedBotConfig := range addedBotConfigs {
+		imageErr := blm.botClient.EnsureBotImage(ctx, addedBotConfig)
 		// skip start if we could not download
-		if downloadErrs[i] != nil {
-			log.WithFields(log.Fields{
-				"bot":   addedBotConfig.ID,
-				"image": addedBotConfig.Image,
-				"error": downloadErrs[i],
-			}).Error("bot image download failed - skipping launch")
+		if err != nil {
+			log.WithFields(
+				log.Fields{
+					"bot":   addedBotConfig.ID,
+					"image": addedBotConfig.Image,
+					"error": imageErr,
+				},
+			).Error("bot image download failed - skipping launch")
 			// drop the bot from the list so it can be picked again next time
 			assignedBots = Drop(addedBotConfig, assignedBots)
-			blm.lifecycleMetrics.FailurePull(downloadErrs[i], addedBotConfig)
+			blm.lifecycleMetrics.FailurePull(imageErr, addedBotConfig)
 			continue
 		}
 
