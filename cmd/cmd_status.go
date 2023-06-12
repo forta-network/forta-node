@@ -30,21 +30,7 @@ const (
 
 var ballPrefix = "⬤ "
 
-func handleFortaStatus(cmd *cobra.Command, args []string) error {
-	format, err := cmd.Flags().GetString("format")
-	if err != nil {
-		return err
-	}
-
-	show, err := cmd.Flags().GetString("show")
-	if err != nil {
-		return err
-	}
-
-	noColor, err := cmd.Flags().GetBool("no-color")
-	if err != nil {
-		return err
-	}
+func handleFortaStatus(cmd *cobra.Command, format, show string, noColor bool) error {
 	if noColor {
 		color.NoColor = true
 		ballPrefix = ""
