@@ -50,11 +50,14 @@ perf-test:
 	go test ./... -tags=perf_test
 
 MOCKREG = $$(pwd)/tests/e2e/misccontracts/contract_mock_registry
+MULTICALL = $$(pwd)/tests/e2e/misccontracts/contract_multicall
 
-.PHONY: e2e-test-mock
-e2e-test-mock:
+.PHONY: e2e-test-contracts
+e2e-test-contracts:
 	solc --bin --abi -o $(MOCKREG) --include-path . --base-path $(MOCKREG) --overwrite --input-file $(MOCKREG)/MockRegistry.sol
 	abigen --out $(MOCKREG)/mock_registry.go --pkg contract_mock_registry --type MockRegistry --abi $(MOCKREG)/MockRegistry.abi --bin $(MOCKREG)/MockRegistry.bin
+	solc --bin --abi -o $(MULTICALL) --include-path . --base-path $(MULTICALL) --overwrite --input-file $(MULTICALL)/Multicall.sol
+	abigen --out $(MULTICALL)/multicall.go --pkg contract_multicall --type Multicall --abi $(MULTICALL)/Multicall.abi --bin $(MULTICALL)/Multicall.bin
 
 .PHONY: e2e-test-deps
 e2e-test-deps:

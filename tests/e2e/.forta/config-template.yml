@@ -41,4 +41,4 @@ log:
   level: trace
 
 advanced:
-  multicallAddress: 0x7C4B73d249705869497134F4eF4C3c9Ef9Ee5Dd5
+  multicallAddress: MULTICALL_ADDRESS

@@ -258,9 +258,10 @@ func NewRegistryStore(ctx context.Context, cfg config.Config) (*registryStore, e
 
 	rc, err := GetRegistryClient(
 		ctx, cfg, registry.ClientConfig{
-			JsonRpcUrl: cfg.Registry.JsonRpc.Url,
-			ENSAddress: cfg.ENSConfig.ContractAddress,
-			Name:       "registry-store",
+			JsonRpcUrl:       cfg.Registry.JsonRpc.Url,
+			ENSAddress:       cfg.ENSConfig.ContractAddress,
+			Name:             "registry-store",
+			MulticallAddress: cfg.AdvancedConfig.MulticallAddress,
 		},
 	)
 	if err != nil {
@@ -470,4 +471,3 @@ func GetRegistryClient(ctx context.Context, cfg config.Config, registryClientCfg
 	}
 	return registry.NewClient(ctx, registryClientCfg)
 }
-
