@@ -59,6 +59,7 @@ func NewManager(
 func (blm *botLifecycleManager) ManageBots(ctx context.Context) error {
 	assignedBots, err := blm.botRegistry.LoadAssignedBots()
 	if err != nil {
+		blm.lifecycleMetrics.SystemError("load.assigned.bots", err)
 		return fmt.Errorf("failed to load assigned bots: %v", err)
 	}
 
