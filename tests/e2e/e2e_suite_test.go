@@ -33,6 +33,7 @@ import (
 	"github.com/forta-network/forta-node/tests/e2e"
 	"github.com/forta-network/forta-node/tests/e2e/ethaccounts"
 	"github.com/forta-network/forta-node/tests/e2e/misccontracts/contract_mock_registry"
+	"github.com/forta-network/forta-node/tests/e2e/misccontracts/contract_multicall"
 	"github.com/forta-network/forta-node/tests/e2e/misccontracts/contract_transparent_upgradeable_proxy"
 	"github.com/forta-network/forta-node/testutils/alertserver"
 	graphql_api "github.com/forta-network/forta-node/testutils/graphql-api"
@@ -106,6 +107,7 @@ type Suite struct {
 	scanner  *bind.TransactOpts
 	operator *bind.TransactOpts
 
+	multicallAddr        common.Address
 	mockRegistryContract *contract_mock_registry.MockRegistry
 
 	releaseManifest    *release.ReleaseManifest
@@ -218,6 +220,19 @@ func (s *Suite) SetupTest() {
 		ChainID: int(networkID),
 	}.ContainerName()
 
+	// deploy multicall contract so we can load the assignment list
+	multicallAddr, err := s.deployContract(
+		Deploy("Multicall", s.deployer, contract_multicall.MulticallMetaData).Construct(),
+	)
+	s.r.NoError(err)
+	s.multicallAddr = multicallAddr
+
+	// update the public mode node config with the multicall address
+	b, err := os.ReadFile(".forta/config-template.yml")
+	s.r.NoError(err)
+	publicModeCfg := strings.Replace(string(b), "MULTICALL_ADDRESS", s.multicallAddr.Hex(), -1)
+	s.r.NoError(os.WriteFile(".forta/config.yml", []byte(publicModeCfg), 0777))
+
 	// deploy mock contract with release and bot info
 	mockRegistryAddr, err := s.deployContract(
 		Deploy("MockRegistry", s.deployer, contract_mock_registry.MockRegistryMetaData).
@@ -238,7 +253,7 @@ func (s *Suite) SetupTest() {
 		ens.StakeAllocatorContract:      mockRegistryAddr.Hex(),
 		ens.MigrationContract:           mockRegistryAddr.Hex(),
 	}
-	b, _ := json.MarshalIndent(ensOverrides, "", "  ")
+	b, _ = json.MarshalIndent(ensOverrides, "", "  ")
 	s.r.NoError(ioutil.WriteFile(".forta/ens-override.json", b, 0644))
 	s.r.NoError(ioutil.WriteFile(".forta-local/ens-override.json", b, 0644))
 

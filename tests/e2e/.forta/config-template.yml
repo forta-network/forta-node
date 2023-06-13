@@ -39,3 +39,6 @@ agentLogs:
 
 log:
   level: trace
+
+advanced:
+  multicallAddress: MULTICALL_ADDRESS
