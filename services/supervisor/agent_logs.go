@@ -81,7 +81,7 @@ func (sup *SupervisorService) doSyncAgentLogs() error {
 		if err != nil {
 			return fmt.Errorf("failed to create scanner token: %v", err)
 		}
-		if err := sup.agentLogsClient.SendLogs(sendLogs, scannerJwt); err != nil {
+		if err := sup.sendAgentLogs(sendLogs, scannerJwt); err != nil {
 			return fmt.Errorf("failed to send agent logs: %v", err)
 		}
 		log.WithField("count", len(sendLogs)).Debug("successfully sent new agent logs")
