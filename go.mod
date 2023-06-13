@@ -4,7 +4,6 @@ go 1.19
 
 require (
 	github.com/creasty/defaults v1.5.2
-	github.com/docker/docker v24.0.2+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/ethereum/go-ethereum v1.11.5
 	github.com/fatih/color v1.13.0
@@ -37,6 +36,10 @@ require (
 	google.golang.org/grpc v1.47.0
 	gopkg.in/yaml.v3 v3.0.1
 )
+
+replace github.com/docker/docker => github.com/moby/moby v20.10.25+incompatible
+
+require github.com/docker/docker v1.6.2
 
 require (
 	bazil.org/fuse v0.0.0-20200117225306-7b5117fecadc // indirect
