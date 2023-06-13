@@ -77,9 +77,9 @@ type SupervisorService struct {
 
 	healthClient health.HealthClient
 
-	agentLogsClient agentlogs.Client
-	prevAgentLogs   agentlogs.Agents
-	inspectionCh    chan *protocol.InspectionResults
+	sendAgentLogs func(agents agentlogs.Agents, authToken string) error
+	prevAgentLogs agentlogs.Agents
+	inspectionCh  chan *protocol.InspectionResults
 }
 
 type SupervisorServiceConfig struct {
@@ -775,7 +775,7 @@ func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*Su
 		botLifecycleConfig: cfg.BotLifecycleConfig,
 		config:             cfg,
 		healthClient:       health.NewClient(),
-		agentLogsClient:    agentlogs.NewClient(cfg.Config.AgentLogsConfig.URL),
+		sendAgentLogs:      agentlogs.NewClient(cfg.Config.AgentLogsConfig.URL).SendLogs,
 		inspectionCh:       make(chan *protocol.InspectionResults),
 	}, nil
 }

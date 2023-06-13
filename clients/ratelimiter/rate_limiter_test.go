@@ -11,7 +11,11 @@ const testClientID = "1"
 
 func TestRateLimiting(t *testing.T) {
 	r := require.New(t)
-	rateLimiter := NewRateLimiter(0.5, 1) // replenish every 2s (1/0.5)
+	rateLimiter := &rateLimiter{
+		rate:           0.5,
+		burst:          1,
+		clientLimiters: make(map[string]*clientLimiter),
+	} // replenish every 2s (1/0.5)
 	reachedLimit := rateLimiter.ExceedsLimit(testClientID)
 	r.False(reachedLimit)
 	reachedLimit = rateLimiter.ExceedsLimit(testClientID)

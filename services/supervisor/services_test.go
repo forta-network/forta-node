@@ -6,7 +6,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/forta-network/forta-core-go/clients/agentlogs"
 	"github.com/forta-network/forta-core-go/release"
+	"github.com/forta-network/forta-core-go/security"
 	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/clients/messaging"
 
@@ -18,6 +21,7 @@ import (
 	mock_clients "github.com/forta-network/forta-node/clients/mocks"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/services/components/containers"
+	mock_containers "github.com/forta-network/forta-node/services/components/containers/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -51,6 +55,7 @@ type Suite struct {
 	releaseClient *mrelease.MockClient
 
 	msgClient *mock_clients.MockMessageClient
+	botClient *mock_containers.MockBotClient
 
 	supervisor *SupervisorService
 
@@ -95,11 +100,23 @@ func (m configMatcher) String() string {
 func (s *Suite) SetupTest() {
 	s.r = require.New(s.T())
 	os.Setenv(config.EnvHostFortaDir, "/tmp/forta")
-	s.dockerClient = mock_clients.NewMockDockerClient(gomock.NewController(s.T()))
-	s.globalClient = mock_clients.NewMockDockerClient(gomock.NewController(s.T()))
-	s.releaseClient = mrelease.NewMockClient(gomock.NewController(s.T()))
+	ctrl := gomock.NewController(s.T())
+	s.dockerClient = mock_clients.NewMockDockerClient(ctrl)
+	s.globalClient = mock_clients.NewMockDockerClient(ctrl)
+	s.releaseClient = mrelease.NewMockClient(ctrl)
+	s.botClient = mock_containers.NewMockBotClient(ctrl)
 
-	s.msgClient = mock_clients.NewMockMessageClient(gomock.NewController(s.T()))
+	s.msgClient = mock_clients.NewMockMessageClient(ctrl)
+
+	dir := s.T().TempDir()
+	ks := keystore.NewKeyStore(dir, keystore.StandardScryptN, keystore.StandardScryptP)
+
+	_, err := ks.NewAccount("Forta123")
+	s.r.NoError(err)
+
+	key, err := security.LoadKeyWithPassphrase(dir, "Forta123")
+	s.r.NoError(err)
+
 	supervisor := &SupervisorService{
 		ctx:           context.Background(),
 		client:        s.dockerClient,
@@ -107,6 +124,7 @@ func (s *Suite) SetupTest() {
 		msgClient:     s.msgClient,
 		releaseClient: s.releaseClient,
 	}
+	supervisor.config.Key = key
 	supervisor.config.Config.TelemetryConfig.Disable = true
 	supervisor.config.Config.Log.Level = "debug"
 	supervisor.config.Config.ChainID = 1
@@ -114,6 +132,7 @@ func (s *Suite) SetupTest() {
 	supervisor.config.Config.InspectionConfig.InspectAtStartup = utils.BoolPtr(false)
 	supervisor.config.Config.AgentLogsConfig.SendIntervalSeconds = 1
 	supervisor.botLifecycleConfig.Config = supervisor.config.Config
+	supervisor.botLifecycle.BotClient = s.botClient
 	s.supervisor = supervisor
 }
 
@@ -230,4 +249,21 @@ func (s *Suite) TestStartServices() {
 	s.dockerClient.EXPECT().WaitContainerStart(s.supervisor.ctx, gomock.Any()).Return(nil).AnyTimes()
 
 	s.r.NoError(s.supervisor.start())
+}
+
+func (s *Suite) TestDoSyncAgentLogs() {
+	s.botClient.EXPECT().LoadBotContainers(gomock.Any()).Return([]types.Container{{
+		Labels: map[string]string{
+			docker.LabelFortaSettingsAgentLogsEnable: "true",
+		},
+	}}, nil)
+	s.dockerClient.EXPECT().GetContainerLogs(gomock.Any(), gomock.Any(), "50", 10000)
+	s.supervisor.sendAgentLogs = func(agents agentlogs.Agents, authToken string) error {
+		return nil
+	}
+	s.r.NoError(s.supervisor.doSyncAgentLogs())
+}
+
+func (s *Suite) TestDoHealthCheck() {
+	s.r.NoError(s.supervisor.doHealthCheck())
 }
