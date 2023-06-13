@@ -548,9 +548,8 @@ func (d *dockerClient) StartContainer(ctx context.Context, config ContainerConfi
 	}
 
 	cont, err := d.cli.ContainerCreate(
-		ctx,
-		cntCfg,
-		hostCfg, nil, config.Name)
+		ctx, cntCfg, hostCfg, nil, nil, config.Name,
+	)
 
 	if err != nil {
 		return nil, err
