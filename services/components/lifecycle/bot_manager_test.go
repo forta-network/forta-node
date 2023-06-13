@@ -101,6 +101,15 @@ func (s *BotLifecycleManagerTestSuite) TestAddUpdateRemove() {
 	s.r.NoError(s.botManager.ManageBots(context.Background()))
 }
 
+func (s *BotLifecycleManagerTestSuite) TestLoadBotsError() {
+	err := errors.New("test err asigned bots")
+	s.botRegistry.EXPECT().LoadAssignedBots().Return(nil, err).Times(1)
+
+	s.lifecycleMetrics.EXPECT().SystemError("load.assigned.bots", err)
+
+	s.r.Error(s.botManager.ManageBots(context.Background()))
+}
+
 func (s *BotLifecycleManagerTestSuite) TestRestart() {
 	botConfigs := []config.AgentConfig{
 		{
