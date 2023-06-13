@@ -31,7 +31,6 @@ const (
 type RegistryStore interface {
 	FindAgentGlobally(agentID string) (*config.AgentConfig, error)
 	GetAgentsIfChanged(scanner string) ([]config.AgentConfig, bool, error)
-	FindScannerShardIDForBot(agentID, scannerAddress string) (uint, uint, uint, error)
 }
 
 type registryStore struct {
@@ -43,7 +42,7 @@ type registryStore struct {
 	lastUpdate           time.Time
 	lastCompletedVersion string
 	loadedBots           []config.AgentConfig
-	invalidBots          []*registry.Agent
+	invalidAssignments   []*registry.Assignment
 	mu                   sync.Mutex
 }
 
@@ -68,61 +67,52 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]config.AgentConfi
 	defer rs.rc.ResetOpts()
 
 	var (
-		loadedBots       []config.AgentConfig
-		invalidBots      []*registry.Agent
-		failedLoadingAny bool
+		loadedBots         []config.AgentConfig
+		invalidAssignments []*registry.Assignment
+		failedLoadingAny   bool
 	)
 
-	err = rs.rc.ForEachAssignedAgent(scanner, func(bot *registry.Agent) error {
-		logger := log.WithField("botId", bot.AgentID)
+	chainId := big.NewInt(int64(rs.cfg.ChainID))
+	assignments, err := rs.rc.GetAssignmentList(nil, chainId, scanner)
+	if err != nil {
+		return nil, false, err
+	}
+
+	for _, assignment := range assignments {
+		logger := log.WithField("botId", assignment.AgentID)
 
 		// if already invalidated, remember it for next time
-		if rs.isInvalidBot(bot) {
-			invalidBots = append(invalidBots, bot)
+		if rs.isInvalidBot(assignment) {
+			invalidAssignments = append(invalidAssignments, assignment)
 			logger.Warn("invalid bot - skipping")
-			return nil
+			continue
 		}
 		// if already loaded, remember it for next time
-		loadedBot, ok := rs.getLoadedBot(bot)
+		loadedBot, ok := rs.getLoadedBot(assignment.AgentManifest)
 		if ok {
 			loadedBots = append(loadedBots, loadedBot)
 			logger.Info("already loaded bot - skipping")
-			return nil
+			continue
 		}
 
 		// try loading the rest of the unrecognized bots
-		botCfg, err := loadBot(rs.ctx, rs.cfg, rs.mc, bot.AgentID, bot.Manifest)
+		botCfg, err := loadAssignment(rs.ctx, rs.cfg, rs.mc, assignment)
 		switch {
 		case err == nil: // yay
 			// get sharding information
-			shardID, shards, target, err := rs.FindScannerShardIDForBot(botCfg.ID, scanner)
-			if err != nil {
-				logger.WithError(err).Warn("could not find shard information for bot")
-				return nil
-			}
-
-			botCfg.ShardConfig = &config.ShardConfig{ShardID: shardID, Shards: shards, Target: target}
-			botCfg.Owner = bot.Owner
 			loadedBots = append(loadedBots, *botCfg) // remember for next time
 			logger.Info("successfully loaded bot")
 
-			return nil
-
 		case errors.Is(err, errInvalidBot):
-			invalidBots = append(invalidBots, bot) // remember for next time
+			invalidAssignments = append(invalidAssignments, assignment) // remember for next time
 			logger.WithError(err).Warn("invalid bot - skipping")
-			return nil
-
 		default:
 			failedLoadingAny = true
 			logger.WithError(err).Warn("could not load bot - skipping")
 			// ignore agent and move on by not returning the error
 			// it will not be recognized next time and will be retried above
-			return nil
+			continue
 		}
-	})
-	if err != nil {
-		return nil, false, err
 	}
 
 	// failed to load all: forget that this attempt existed
@@ -133,7 +123,7 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]config.AgentConfi
 
 	// remember the bots and the update time next time
 	rs.loadedBots = loadedBots
-	rs.invalidBots = invalidBots
+	rs.invalidAssignments = invalidAssignments
 	rs.lastUpdate = time.Now()
 
 	if failedLoadingAny {
@@ -150,73 +140,8 @@ func (rs *registryStore) FindAgentGlobally(agentID string) (*config.AgentConfig,
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the latest ref: %v, agentID: %s", err, agentID)
 	}
-	return loadBot(rs.ctx, rs.cfg, rs.mc, agentID, agt.Manifest)
-}
 
-func (rs *registryStore) FindScannerShardIDForBot(agentID, scannerAddress string) (
-	shardID, shards, target uint, err error,
-) {
-	chainID := rs.cfg.ChainID
-
-	// get manifest cid
-	agt, err := rs.FindAgentGlobally(agentID)
-	if err != nil {
-		return shardID, shards, target, err
-	}
-
-	// fetch manifest
-	agentManifest, err := rs.mc.GetAgentManifest(rs.ctx, agt.Manifest)
-	if err != nil {
-		return shardID, shards, target, err
-	}
-
-	// if bot is sharded, get total number of scanners by chain
-	assigns, err := rs.rc.NumScannersForByChain(agentID, big.NewInt(int64(chainID)))
-	if err != nil {
-		return shardID, shards, target, fmt.Errorf("failed to get assign count: %v", err)
-	}
-
-	// check if there is a default chain setting
-	chainSetting, ok := agentManifest.Manifest.ChainSettings[keyDefaultChainSetting]
-	// if not a sharded bot, shard is always 0
-	if ok {
-		target = chainSetting.Target
-		shards = chainSetting.Shards
-	}
-
-	// check if there is a chain setting for the scanner's chain
-	chainIDStr := strconv.FormatInt(int64(chainID), 10)
-	chainSetting, ok = agentManifest.Manifest.ChainSettings[chainIDStr]
-	// if not a sharded bot, shard is always 0
-	if ok {
-		target = chainSetting.Target
-		shards = chainSetting.Shards
-	}
-
-	// if no sharding specified, shard count is 1 and target is total assigns
-	if shards == 0 {
-		target = uint(assigns.Uint64())
-
-		return 0, minShardCount, target, nil
-	}
-
-	// fallback for target, calculate it from shard to assign ratio.
-	// target defaults to total assigns / shards
-	if target == 0 && shards != 0 {
-		target = uint(assigns.Uint64() / uint64(shards))
-	}
-
-	// get index of the scanner among scanners assigned to the bot for the same chain
-	idx, err := rs.rc.IndexOfAssignedScannerByChain(agentID, scannerAddress, big.NewInt(int64(rs.cfg.ChainID)))
-	if err != nil {
-		return 0, minShardCount, target, fmt.Errorf("failed to get the index of scanner: %v, agentID: %s", err, agentID)
-	}
-
-	if idx == nil {
-		return 0, minShardCount, target, fmt.Errorf("index for %s and %s not found", agentID, scannerAddress)
-	}
-
-	return calculateShardID(target, uint(idx.Uint64())), shards, target, nil
+	return loadBot(rs.ctx, rs.cfg, rs.mc, agentID, agt.Manifest, agt.Owner)
 }
 
 // returns shard id for an index, distributed evenly in an increased order.
@@ -231,25 +156,25 @@ func calculateShardID(target, idx uint) uint {
 	return idx / target
 }
 
-func (rs *registryStore) getLoadedBot(bot *registry.Agent) (config.AgentConfig, bool) {
+func (rs *registryStore) getLoadedBot(manifest string) (config.AgentConfig, bool) {
 	for _, loadedBot := range rs.loadedBots {
-		if bot.Manifest == loadedBot.Manifest {
+		if manifest == loadedBot.Manifest {
 			return loadedBot, true
 		}
 	}
 	return config.AgentConfig{}, false
 }
 
-func (rs *registryStore) isInvalidBot(bot *registry.Agent) bool {
-	for _, invalidBot := range rs.invalidBots {
-		if bot.Manifest == invalidBot.Manifest {
+func (rs *registryStore) isInvalidBot(bot *registry.Assignment) bool {
+	for _, invalidBot := range rs.invalidAssignments {
+		if bot.AgentManifest == invalidBot.AgentManifest {
 			return true
 		}
 	}
 	return false
 }
 
-func loadBot(ctx context.Context, cfg config.Config, mc manifest.Client, agentID string, ref string) (*config.AgentConfig, error) {
+func loadBot(ctx context.Context, cfg config.Config, mc manifest.Client, agentID string, ref string, owner string) (*config.AgentConfig, error) {
 	_, err := cid.Parse(ref)
 	if len(ref) == 0 || err != nil {
 		return nil, fmt.Errorf("%w: invalid bot cid '%s'", errInvalidBot, ref)
@@ -281,6 +206,47 @@ func loadBot(ctx context.Context, cfg config.Config, mc manifest.Client, agentID
 		Image:    image,
 		Manifest: ref,
 		ChainID:  cfg.ChainID,
+		Owner:    owner,
+	}, nil
+}
+
+func loadAssignment(ctx context.Context, cfg config.Config, mc manifest.Client, assignment *registry.Assignment) (*config.AgentConfig, error) {
+	ref := assignment.AgentManifest
+
+	_, err := cid.Parse(ref)
+	if len(ref) == 0 || err != nil {
+		return nil, fmt.Errorf("%w: invalid bot cid '%s'", errInvalidBot, ref)
+	}
+
+	var agentData *manifest.SignedAgentManifest
+	for i := 0; i < 10; i++ {
+		agentData, err = mc.GetAgentManifest(ctx, ref)
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to load the bot manifest: %v", err)
+	}
+
+	if agentData.Manifest.ImageReference == nil {
+		return nil, fmt.Errorf("%w: invalid bot image reference, it is nil", errInvalidBot)
+	}
+
+	image, err := utils.ValidateDiscoImageRef(cfg.Registry.ContainerRegistry, *agentData.Manifest.ImageReference)
+	if err != nil {
+		return nil, fmt.Errorf("%w: invalid bot image reference '%s': %v", errInvalidBot, *agentData.Manifest.ImageReference, err)
+	}
+
+	shardConfig := populateShardConfig(assignment, agentData, cfg.ChainID)
+
+	return &config.AgentConfig{
+		ID:          assignment.AgentID,
+		Image:       image,
+		Manifest:    ref,
+		ChainID:     cfg.ChainID,
+		Owner:       assignment.AgentOwner,
+		ShardConfig: shardConfig,
 	}, nil
 }
 
@@ -290,11 +256,13 @@ func NewRegistryStore(ctx context.Context, cfg config.Config) (*registryStore, e
 		return nil, err
 	}
 
-	rc, err := GetRegistryClient(ctx, cfg, registry.ClientConfig{
-		JsonRpcUrl: cfg.Registry.JsonRpc.Url,
-		ENSAddress: cfg.ENSConfig.ContractAddress,
-		Name:       "registry-store",
-	})
+	rc, err := GetRegistryClient(
+		ctx, cfg, registry.ClientConfig{
+			JsonRpcUrl: cfg.Registry.JsonRpc.Url,
+			ENSAddress: cfg.ENSConfig.ContractAddress,
+			Name:       "registry-store",
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -324,16 +292,60 @@ func NewRegistryStore(ctx context.Context, cfg config.Config) (*registryStore, e
 	}, nil
 }
 
+func populateShardConfig(assignment *registry.Assignment, agentManifest *manifest.SignedAgentManifest, chainID int) *config.ShardConfig {
+	var (
+		target, shards uint
+	)
+
+	// check if there is a default chain setting
+	chainSetting, ok := agentManifest.Manifest.ChainSettings[keyDefaultChainSetting]
+	// if not a sharded bot, shard is always 0
+	if ok {
+		target = chainSetting.Target
+		shards = chainSetting.Shards
+	}
+
+	// check if there is a chain setting for the scanner's chain
+	chainIDStr := strconv.FormatInt(int64(chainID), 10)
+	chainSetting, ok = agentManifest.Manifest.ChainSettings[chainIDStr]
+	// if not a sharded bot, shard is always 0
+	if ok {
+		target = chainSetting.Target
+		shards = chainSetting.Shards
+	}
+
+	// if no sharding specified, shard count is 1 and target is total assigns
+	if shards == 0 {
+		target = uint(assignment.AssignedScanners)
+
+		return createShardConfig(0, minShardCount, target)
+	}
+
+	// fallback for target, calculate it from shard to assign ratio.
+	// target defaults to total assigns / shards
+	if target == 0 && shards != 0 {
+		target = uint(uint64(assignment.AssignedScanners) / uint64(shards))
+	}
+
+	shardID := calculateShardID(target, uint(assignment.ScannerIndex))
+
+	return createShardConfig(shardID, shards, target)
+}
+
+func createShardConfig(shardID, shards, target uint) *config.ShardConfig {
+	return &config.ShardConfig{
+		ShardID: shardID,
+		Target:  target,
+		Shards:  shards,
+	}
+}
+
 type privateRegistryStore struct {
 	ctx context.Context
 	cfg config.Config
 	rc  registry.Client
 	mc  manifest.Client
 	mu  sync.Mutex
-}
-
-func (rs *privateRegistryStore) FindScannerShardIDForBot(agentID, scannerAddress string) (uint, uint, uint, error) {
-	return 0, 0, 0, nil
 }
 
 func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]config.AgentConfig, bool, error) {
@@ -362,7 +374,7 @@ func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]config.Age
 			logger.WithError(err).Error("failed to get bot from registry")
 			continue
 		}
-		agtCfg, err := loadBot(rs.ctx, rs.cfg, rs.mc, agentID, agt.Manifest)
+		agtCfg, err := loadBot(rs.ctx, rs.cfg, rs.mc, agentID, agt.Manifest, agt.Owner)
 		if err != nil {
 			logger.WithError(err).Error("failed to load bot")
 			continue
@@ -458,3 +470,4 @@ func GetRegistryClient(ctx context.Context, cfg config.Config, registryClientCfg
 	}
 	return registry.NewClient(ctx, registryClientCfg)
 }
+
