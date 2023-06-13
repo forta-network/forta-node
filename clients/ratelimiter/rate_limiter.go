@@ -20,13 +20,15 @@ type rateLimiter struct {
 	mu             sync.Mutex
 }
 
+var _ RateLimiter = &rateLimiter{}
+
 type clientLimiter struct {
 	lastReservation time.Time
 	*rate.Limiter
 }
 
 // NewRateLimiter creates a new rate limiter.
-func NewRateLimiter(rateN float64, burst int) RateLimiter {
+func NewRateLimiter(rateN float64, burst int) *rateLimiter {
 	if rateN <= 0 {
 		log.Panic("non-positive rate limiter arg")
 	}
@@ -57,12 +59,16 @@ func (rl *rateLimiter) ExceedsLimit(clientID string) bool {
 func (rl *rateLimiter) autoCleanup() {
 	ticker := time.NewTicker(time.Hour)
 	for range ticker.C {
-		rl.mu.Lock()
-		for clientID, limiter := range rl.clientLimiters {
-			if time.Since(limiter.lastReservation) > time.Minute*10 {
-				delete(rl.clientLimiters, clientID)
-			}
-		}
-		rl.mu.Unlock()
+		rl.doCleanup()
 	}
+}
+
+func (rl *rateLimiter) doCleanup() {
+	rl.mu.Lock()
+	for clientID, limiter := range rl.clientLimiters {
+		if time.Since(limiter.lastReservation) > time.Minute*10 {
+			delete(rl.clientLimiters, clientID)
+		}
+	}
+	rl.mu.Unlock()
 }

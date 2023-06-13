@@ -62,12 +62,16 @@ func (cd *cooldown) ShouldCoolDown(id string) bool {
 func (cd *cooldown) autoCleanup() {
 	ticker := time.NewTicker(time.Hour)
 	for range ticker.C {
-		cd.mu.Lock()
-		for id, cooldownCounter := range cd.counters {
-			if time.Since(cooldownCounter.cooldownEndsAt) > time.Hour {
-				delete(cd.counters, id)
-			}
-		}
-		cd.mu.Unlock()
+		cd.doCleanup()
 	}
+}
+
+func (cd *cooldown) doCleanup() {
+	cd.mu.Lock()
+	for id, cooldownCounter := range cd.counters {
+		if time.Since(cooldownCounter.cooldownEndsAt) > time.Hour {
+			delete(cd.counters, id)
+		}
+	}
+	cd.mu.Unlock()
 }

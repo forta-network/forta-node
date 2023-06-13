@@ -19,4 +19,7 @@ func TestCooldown(t *testing.T) {
 	r.False(coolDown.ShouldCoolDown(testID))
 	r.True(coolDown.ShouldCoolDown(testID))
 	r.True(coolDown.ShouldCoolDown(testID))
+
+	coolDown.doCleanup()
+	r.Len(coolDown.counters, 1)
 }
