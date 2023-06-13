@@ -1,8 +1,9 @@
 package store
 
 import (
-	"errors"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/forta-network/forta-core-go/manifest"
 	mock_manifest "github.com/forta-network/forta-core-go/manifest/mocks"
@@ -59,165 +60,214 @@ func Test_calculateShardID(t *testing.T) {
 		)
 	}
 }
-func TestSetShardInformation(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
-	// Create mocked registry and manifest clients
-	mockRegistryClient := mock_registry.NewMockClient(ctrl)
-	mockManifestClient := mock_manifest.NewMockClient(ctrl)
-
-	rs := &registryStore{
-		rc: mockRegistryClient,
-		mc: mockManifestClient,
+func TestPopulateShardConfig(t *testing.T) {
+	type args struct {
+		assignedScanners int
+		scannerIndex     int
+		chainSettings    map[string]manifest.AgentChainSettings
+		chainID          int
 	}
-
-	scanner := "scanner-1"
-
-	bots := []config.AgentConfig{
+	tests := []struct {
+		name                string
+		args                args
+		expectedShardConfig *config.ShardConfig
+	}{
 		{
-			ID:       "bot-1",
-			Manifest: "manifest-1",
-		},
-		{
-			ID:       "bot-2",
-			Manifest: "manifest-2",
-		},
-	}
-
-	assignments := []*registry.Assignment{
-		{
-			AgentID:          "bot-1",
-			AgentManifest:    "manifest-1",
-			AssignedScanners: 3,
-			ScannerIndex:     1,
-		},
-		{
-			AgentID:          "bot-2",
-			AgentManifest:    "manifest-2",
-			AssignedScanners: 5,
-			ScannerIndex:     2,
-		},
-	}
-
-	manifests := map[string]*manifest.SignedAgentManifest{
-		"manifest-1": {
-			Manifest: &manifest.AgentManifest{
-				ChainSettings: map[string]manifest.AgentChainSettings{
-					keyDefaultChainSetting: {Target: 10, Shards: 2},
-				},
-			},
-		},
-		"manifest-2": {
-			Manifest: &manifest.AgentManifest{
-				ChainSettings: map[string]manifest.AgentChainSettings{
-					keyDefaultChainSetting: {Target: 8, Shards: 1},
-				},
-			},
-		},
-	}
-
-	t.Run(
-		"Successful populateShardedBotConfigs", func(t *testing.T) {
-			mockRegistryClient.EXPECT().GetAssignmentList(nil, gomock.Any(), scanner).Return(assignments, nil)
-
-			mockManifestClient.EXPECT().GetAgentManifest(gomock.Any(), "manifest-1").Return(manifests["manifest-1"], nil)
-			mockManifestClient.EXPECT().GetAgentManifest(gomock.Any(), "manifest-2").Return(manifests["manifest-2"], nil)
-
-			expectedBots := []config.AgentConfig{
-				{
-					ID:       "bot-1",
-					Manifest: "manifest-1",
-					ShardConfig: &config.ShardConfig{
-						ShardID: 0,
-						Shards:  2,
-						Target:  10,
+			name: "can calculate shard based on chain setting",
+			args: args{
+				assignedScanners: 6,
+				scannerIndex:     4,
+				chainSettings: map[string]manifest.AgentChainSettings{
+					"1": {
+						Target: 2,
+						Shards: 3,
 					},
 				},
-				{
-					ID:       "bot-2",
-					Manifest: "manifest-2",
-					ShardConfig: &config.ShardConfig{
-						ShardID: 0,
-						Shards:  1,
-						Target:  8,
+				chainID: 1,
+			},
+			expectedShardConfig: &config.ShardConfig{
+				ShardID: 2,
+				Target:  2,
+				Shards:  3,
+			},
+		}, {
+			name: "can calculate shard based on default setting",
+			args: args{
+				assignedScanners: 6,
+				scannerIndex:     4,
+				chainSettings: map[string]manifest.AgentChainSettings{
+					"default": {
+						Target: 2,
+						Shards: 3,
 					},
 				},
-			}
-
-			result, err := rs.populateShardedBotConfigs(scanner, bots)
-			assert.NoError(t, err, "populateShardedBotConfigs should not return an error")
-			assert.Len(t, result, len(expectedBots), "populateShardedBotConfigs returned a different number of bots")
-
-			for i, bot := range result {
-				expectedBot := expectedBots[i]
-				assert.Equal(t, expectedBot, bot, "populateShardedBotConfigs returned incorrect shard configuration for bot %s", bot.ID)
-			}
+				chainID: 1,
+			},
+			expectedShardConfig: &config.ShardConfig{
+				ShardID: 2,
+				Target:  2,
+				Shards:  3,
+			},
+		}, {
+			name: "chain setting should override default setting",
+			args: args{
+				assignedScanners: 6,
+				scannerIndex:     4,
+				chainSettings: map[string]manifest.AgentChainSettings{
+					"default": {
+						Target: 2,
+						Shards: 3,
+					},
+					"1": {
+						Target: 6,
+						Shards: 1,
+					},
+				},
+				chainID: 1,
+			},
+			expectedShardConfig: &config.ShardConfig{
+				ShardID: 0,
+				Target:  6,
+				Shards:  1,
+			},
+		}, {
+			name: "should return valid config if not sharded",
+			args: args{
+				assignedScanners: 6,
+				scannerIndex:     4,
+				chainSettings:    nil,
+				chainID:          1,
+			},
+			expectedShardConfig: &config.ShardConfig{
+				ShardID: 0,
+				Target:  6,
+				Shards:  1,
+			},
 		},
-	)
+		// Add more test cases as needed
+	}
 
-	t.Run(
-		"Failed GetAssignmentList", func(t *testing.T) {
-			expectedError := errors.New("error getting assignments")
-
-			mockRegistryClient.EXPECT().GetAssignmentList(nil, gomock.Any(), scanner).Return(nil, expectedError)
-
-			result, err := rs.populateShardedBotConfigs(scanner, bots)
-			assert.Error(t, err, "populateShardedBotConfigs should return an error")
-			assert.Nil(t, result, "populateShardedBotConfigs should return nil result")
-			assert.EqualError(t, err, expectedError.Error(), "populateShardedBotConfigs returned incorrect error")
-		},
-	)
-
-	t.Run(
-		"Failed GetAgentManifest", func(t *testing.T) {
-			expectedError := errors.New("error getting agent manifest")
-
-			mockRegistryClient.EXPECT().GetAssignmentList(nil, gomock.Any(), scanner).Return(assignments, nil)
-
-			mockManifestClient.EXPECT().GetAgentManifest(gomock.Any(), "manifest-1").Return(nil, expectedError)
-			mockManifestClient.EXPECT().GetAgentManifest(gomock.Any(), "manifest-2").Return(nil, expectedError)
-
-			result, err := rs.populateShardedBotConfigs(scanner, bots)
-			assert.NoError(t, err, "populateShardedBotConfigs should continue when a single bot fails")
-			for i, bot := range result {
-				expectedBot := bots[i]
-				assert.Equal(t, expectedBot, bot, "populateShardedBotConfigs returned incorrect shard configuration for bot %s", bot.ID)
-			}
-		},
-	)
-
-	t.Run(
-		"No matching assignments", func(t *testing.T) {
-			mockRegistryClient.EXPECT().GetAssignmentList(nil, gomock.Any(), scanner).Return(nil, nil)
-
-			result, err := rs.populateShardedBotConfigs(scanner, bots)
-			assert.NoError(t, err, "populateShardedBotConfigs should not return an error")
-			assert.Len(t, result, len(bots), "populateShardedBotConfigs should return the same number of bots")
-			for _, bot := range result {
-				assert.Nil(t, bot.ShardConfig, "populateShardedBotConfigs should not set ShardConfig for bots with no matching assignment")
-			}
-		},
-	)
-	t.Run(
-		"Failed GetAgentManifest for some bots", func(t *testing.T) {
-			expectedError := errors.New("error getting agent manifest")
-
-			mockRegistryClient.EXPECT().GetAssignmentList(nil, gomock.Any(), scanner).Return(assignments, nil)
-
-			mockManifestClient.EXPECT().GetAgentManifest(gomock.Any(), "manifest-1").Return(nil, expectedError)
-			mockManifestClient.EXPECT().GetAgentManifest(gomock.Any(), "manifest-2").Return(manifests["manifest-2"], nil)
-
-			result, err := rs.populateShardedBotConfigs(scanner, bots)
-			assert.NoError(t, err, "populateShardedBotConfigs should return not an error")
-			for _, agentConfig := range result {
-				switch agentConfig.ID {
-				case "bot-1":
-					assert.Nil(t, agentConfig.ShardConfig, "shard config should be nil for bad bots")
-				case "bot-2":
-					assert.NotNil(t, agentConfig.ShardConfig, "shard config should not be nil for bad bots")
+	for _, tt := range tests {
+		t.Run(
+			tt.name, func(t *testing.T) {
+				assignment := &registry.Assignment{
+					AssignedScanners: tt.args.assignedScanners,
+					ScannerIndex:     tt.args.scannerIndex,
 				}
-			}
+
+				agentManifest := &manifest.SignedAgentManifest{
+					Manifest: &manifest.AgentManifest{
+						ChainSettings: tt.args.chainSettings,
+					},
+				}
+
+				shardConfig := populateShardConfig(assignment, agentManifest, tt.args.chainID)
+				assert.Equal(t, tt.expectedShardConfig, shardConfig)
+			},
+		)
+	}
+}
+
+func TestGetAgentsIfChanged(t *testing.T) {
+	scanner := "your-scanner-id"
+
+	// Set up the initial state of the registryStore
+	// Modify rs.lastCompletedVersion, rs.lastUpdate, rs.loadedBots, and rs.invalidAssignments as needed
+	testBot1 := "test-bot-1"
+	testImage1 := "bafybeicc6ce3dnvjjfbrljtxuzncg2np76qkw5xq3w4af5x2c3m2nivwb4@sha256:5cf63050b113ce2df2a106b20d420c6687d30c28ed98cd42498f46475f642458"
+	testManifest1 := "Qmex2rYHDsYqHcpSLhjow57MHBLpZMM1unPUSbPDYb5yTa"
+
+	tests := []struct {
+		name              string
+		assignmentList    []*registry.Assignment
+		registryClientErr error
+		manifestClientErr error
+		expectedAgents    []config.AgentConfig
+		expectedUpdate    bool
+		expectedErr       error
+		manifest          *manifest.SignedAgentManifest
+	}{
+		{
+			name:              "No update needed",
+			registryClientErr: fmt.Errorf("failed to get assignments"),
+			manifestClientErr: nil,
+			expectedAgents:    nil,
+			expectedUpdate:    false,
+			expectedErr:       fmt.Errorf("failed to get assignments"),
 		},
-	)
+		{
+			name:              "Update needed",
+			registryClientErr: nil,
+			manifestClientErr: nil,
+			assignmentList: []*registry.Assignment{
+				{
+					AgentID:       "test-bot-1",
+					AgentManifest: testManifest1,
+				},
+			},
+			expectedAgents: []config.AgentConfig{
+				{
+					ID:          "test-bot-1",
+					Image:       "/" + testImage1,
+					Manifest:    testManifest1,
+					ShardConfig: &config.ShardConfig{},
+				},
+			},
+			manifest: &manifest.SignedAgentManifest{
+				Manifest: &manifest.AgentManifest{
+					AgentID:        &testBot1,
+					ImageReference: &testImage1,
+				},
+			},
+			expectedUpdate: true,
+			expectedErr:    nil,
+		},
+		// Add more test cases to cover different scenarios and error cases
+	}
+
+	for _, tt := range tests {
+		t.Run(
+			tt.name, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+
+				// Create mock objects
+				mockRegistryClient := mock_registry.NewMockClient(ctrl)
+				mockConfig := config.Config{}
+				mockManifestClient := mock_manifest.NewMockClient(ctrl)
+
+				rs := &registryStore{
+					rc:                   mockRegistryClient,
+					cfg:                  mockConfig,
+					mc:                   mockManifestClient,
+					lastCompletedVersion: "",
+					lastUpdate:           time.Now().Add(-2 * time.Hour),
+				}
+
+
+				// Set up the expectations for the mock objects
+				mockRegistryClient.EXPECT().GetAssignmentHash(scanner).Return(&registry.AssignmentHash{}, tt.registryClientErr).MaxTimes(1)
+				mockRegistryClient.EXPECT().GetAssignmentList(gomock.Any(), gomock.Any(), scanner).Return(tt.assignmentList, tt.registryClientErr).MaxTimes(1)
+				mockRegistryClient.EXPECT().PegLatestBlock().Return(tt.registryClientErr).Do(
+					func() {
+						// Implement the mock behavior based on the test case
+					},
+				).MaxTimes(1)
+				mockRegistryClient.EXPECT().ResetOpts().Do(
+					func() {
+						// Implement the mock behavior based on the test case
+					},
+				).MaxTimes(1)
+
+				mockManifestClient.EXPECT().GetAgentManifest(gomock.Any(), gomock.Any()).Return(tt.manifest, tt.manifestClientErr).MaxTimes(1)
+
+				agents, update, err := rs.GetAgentsIfChanged(scanner)
+
+				assert.Equal(t, len(tt.expectedAgents), len(agents))
+				assert.Equal(t, tt.expectedUpdate, update)
+				assert.Equal(t, tt.expectedErr, err)
+			},
+		)
+	}
 }
