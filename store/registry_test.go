@@ -223,7 +223,6 @@ func TestGetAgentsIfChanged(t *testing.T) {
 			expectedUpdate: true,
 			expectedErr:    nil,
 		},
-		// Add more test cases to cover different scenarios and error cases
 	}
 
 	for _, tt := range tests {
@@ -251,12 +250,12 @@ func TestGetAgentsIfChanged(t *testing.T) {
 				mockRegistryClient.EXPECT().GetAssignmentList(gomock.Any(), gomock.Any(), scanner).Return(tt.assignmentList, tt.registryClientErr).MaxTimes(1)
 				mockRegistryClient.EXPECT().PegLatestBlock().Return(tt.registryClientErr).Do(
 					func() {
-						// Implement the mock behavior based on the test case
+						return
 					},
 				).MaxTimes(1)
 				mockRegistryClient.EXPECT().ResetOpts().Do(
 					func() {
-						// Implement the mock behavior based on the test case
+						return
 					},
 				).MaxTimes(1)
 
