@@ -31,7 +31,6 @@ const (
 type RegistryStore interface {
 	FindAgentGlobally(agentID string) (*config.AgentConfig, error)
 	GetAgentsIfChanged(scanner string) ([]config.AgentConfig, bool, error)
-	FindScannerShardIDForBot(agentID, scannerAddress string) (uint, uint, uint, error)
 }
 
 type registryStore struct {
@@ -91,18 +90,10 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]config.AgentConfi
 		}
 
 		// try loading the rest of the unrecognized bots
-		botCfg, err := loadBot(rs.ctx, rs.cfg, rs.mc, bot.AgentID, bot.Manifest)
+		botCfg, err := loadBot(rs.ctx, rs.cfg, rs.mc, bot.AgentID, bot.Manifest, bot.Owner)
 		switch {
 		case err == nil: // yay
 			// get sharding information
-			shardID, shards, target, err := rs.FindScannerShardIDForBot(botCfg.ID, scanner)
-			if err != nil {
-				logger.WithError(err).Warn("could not find shard information for bot")
-				return nil
-			}
-
-			botCfg.ShardConfig = &config.ShardConfig{ShardID: shardID, Shards: shards, Target: target}
-			botCfg.Owner = bot.Owner
 			loadedBots = append(loadedBots, *botCfg) // remember for next time
 			logger.Info("successfully loaded bot")
 
@@ -131,6 +122,12 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]config.AgentConfi
 		return nil, false, errors.New("loaded zero bots")
 	}
 
+	// populate shard information for loaded bots
+	loadedBots, err = rs.populateShardedBotConfigs(scanner, loadedBots)
+	if err != nil {
+		return nil, false, err
+	}
+
 	// remember the bots and the update time next time
 	rs.loadedBots = loadedBots
 	rs.invalidBots = invalidBots
@@ -150,7 +147,7 @@ func (rs *registryStore) FindAgentGlobally(agentID string) (*config.AgentConfig,
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the latest ref: %v, agentID: %s", err, agentID)
 	}
-	return loadBot(rs.ctx, rs.cfg, rs.mc, agentID, agt.Manifest)
+	return loadBot(rs.ctx, rs.cfg, rs.mc, agentID, agt.Manifest, agt.Owner)
 }
 
 func (rs *registryStore) FindScannerShardIDForBot(agentID, scannerAddress string) (
@@ -230,7 +227,6 @@ func calculateShardID(target, idx uint) uint {
 
 	return idx / target
 }
-
 func (rs *registryStore) getLoadedBot(bot *registry.Agent) (config.AgentConfig, bool) {
 	for _, loadedBot := range rs.loadedBots {
 		if bot.Manifest == loadedBot.Manifest {
@@ -249,7 +245,7 @@ func (rs *registryStore) isInvalidBot(bot *registry.Agent) bool {
 	return false
 }
 
-func loadBot(ctx context.Context, cfg config.Config, mc manifest.Client, agentID string, ref string) (*config.AgentConfig, error) {
+func loadBot(ctx context.Context, cfg config.Config, mc manifest.Client, agentID string, ref string, owner string) (*config.AgentConfig, error) {
 	_, err := cid.Parse(ref)
 	if len(ref) == 0 || err != nil {
 		return nil, fmt.Errorf("%w: invalid bot cid '%s'", errInvalidBot, ref)
@@ -281,6 +277,7 @@ func loadBot(ctx context.Context, cfg config.Config, mc manifest.Client, agentID
 		Image:    image,
 		Manifest: ref,
 		ChainID:  cfg.ChainID,
+		Owner:    owner,
 	}, nil
 }
 
@@ -324,16 +321,91 @@ func NewRegistryStore(ctx context.Context, cfg config.Config) (*registryStore, e
 	}, nil
 }
 
+func (rs *registryStore) populateShardedBotConfigs(scanner string, bots []config.AgentConfig) ([]config.AgentConfig, error) {
+	chainID := big.NewInt(int64(rs.cfg.ChainID))
+	result := make([]config.AgentConfig, len(bots))
+	copy(result, bots)
+	assignments, err := rs.rc.GetAssignmentList(nil, chainID, scanner)
+	if err != nil {
+		log.Warn("failed loading shard information")
+		return nil, err
+	}
+
+	for i := range result {
+		assignment := findAssignmentByID(assignments, result[i].ID)
+		if assignment != nil {
+			shardConfig, err := calculateShardConfig(rs.ctx, result[i], assignment, rs.mc, rs.cfg.ChainID)
+			if err != nil {
+				log.WithError(err).Warn("failed to create shard config")
+				continue
+			}
+			result[i].ShardConfig = shardConfig
+		}
+	}
+
+	return result, nil
+}
+
+func findAssignmentByID(assignments []*registry.Assignment, agentID string) *registry.Assignment {
+	for i := range assignments {
+		if assignments[i].AgentID == agentID {
+			return assignments[i]
+		}
+	}
+	return nil
+}
+
+func calculateShardConfig(ctx context.Context, bot config.AgentConfig, assignment *registry.Assignment, mc manifest.Client, chainID int) (*config.ShardConfig, error) {
+	agentManifest, err := mc.GetAgentManifest(ctx, bot.Manifest)
+	if err != nil {
+		log.Warn("failed fetching agent manifest")
+		return nil, err
+	}
+
+	defaultChainSetting := agentManifest.Manifest.ChainSettings[keyDefaultChainSetting]
+	chainIDStr := strconv.FormatInt(int64(chainID), 10)
+	chainSettings := agentManifest.Manifest.ChainSettings[chainIDStr]
+
+	target, shards := getShardInfo(defaultChainSetting, chainSettings)
+
+	if shards == 0 {
+		target = uint(assignment.AssignedScanners)
+	}
+
+	if target == 0 && shards != 0 {
+		target = uint(uint64(assignment.AssignedScanners) / uint64(shards))
+	}
+
+	shardID := calculateShardID(target, uint(assignment.ScannerIndex))
+	return createShardConfig(target, shardID, shards), nil
+}
+
+func getShardInfo(defaultSetting, chainSettings manifest.AgentChainSettings) (uint, uint) {
+	if defaultSetting.Shards > 0 {
+		return defaultSetting.Target, defaultSetting.Shards
+	}
+
+	if chainSettings.Shards > 0 {
+		return chainSettings.Target, chainSettings.Shards
+	}
+
+	return 0, 0
+}
+
+func createShardConfig(target, shardID, shards uint) *config.ShardConfig {
+	return &config.ShardConfig{
+		ShardID: shardID,
+		Target:  target,
+		Shards:  shards,
+	}
+}
+
 type privateRegistryStore struct {
 	ctx context.Context
 	cfg config.Config
 	rc  registry.Client
 	mc  manifest.Client
 	mu  sync.Mutex
-}
-
-func (rs *privateRegistryStore) FindScannerShardIDForBot(agentID, scannerAddress string) (uint, uint, uint, error) {
-	return 0, 0, 0, nil
 }
 
 func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]config.AgentConfig, bool, error) {
@@ -362,7 +434,7 @@ func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]config.Age
 			logger.WithError(err).Error("failed to get bot from registry")
 			continue
 		}
-		agtCfg, err := loadBot(rs.ctx, rs.cfg, rs.mc, agentID, agt.Manifest)
+		agtCfg, err := loadBot(rs.ctx, rs.cfg, rs.mc, agentID, agt.Manifest, agt.Owner)
 		if err != nil {
 			logger.WithError(err).Error("failed to load bot")
 			continue
@@ -408,6 +480,9 @@ func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]config.Age
 
 func (rs *privateRegistryStore) FindAgentGlobally(agentID string) (*config.AgentConfig, error) {
 	return nil, errors.New("feature not available (private/local registry)")
+}
+func (rs *privateRegistryStore) populateShardedBotConfigs(scanner string, bots []config.AgentConfig) ([]config.AgentConfig, error) {
+	return bots, nil
 }
 
 func (rs *privateRegistryStore) makePrivateModeAgentConfig(
@@ -458,3 +533,4 @@ func GetRegistryClient(ctx context.Context, cfg config.Config, registryClientCfg
 	}
 	return registry.NewClient(ctx, registryClientCfg)
 }
+
