@@ -52,7 +52,7 @@ type LogConfig struct {
 
 type RegistryConfig struct {
 	ChainID                uint64        `yaml:"chainId" json:"chainId" default:"137"`
-	JsonRpc                JsonRpcConfig `yaml:"jsonRpc" json:"jsonRpc" default:"{\"url\": \"https://rpc.ankr.com/polygon\"}"`
+	JsonRpc                JsonRpcConfig `yaml:"jsonRpc" json:"jsonRpc" default:"{\"url\": \"https://polygon-rpc.com\"}"`
 	IPFS                   IPFSConfig    `yaml:"ipfs" json:"ipfs"`
 	ContainerRegistry      string        `yaml:"containerRegistry" json:"containerRegistry" validate:"hostname|hostname_port" default:"disco.forta.network" `
 	Username               string        `yaml:"username" json:"username"`
