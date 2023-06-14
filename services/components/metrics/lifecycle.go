@@ -6,6 +6,7 @@ import (
 
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol"
+	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/config"
 )
@@ -175,6 +176,7 @@ func fromBotSubscriptions(action string, subscriptions []domain.CombinerBotSubsc
 }
 
 func fromBotConfigs(metricName string, details string, botConfigs []config.AgentConfig) (metrics []*protocol.AgentMetric) {
+	details = utils.ObfuscateURLs(details)
 	for _, botConfig := range botConfigs {
 		metric := &protocol.AgentMetric{
 			AgentId:   botConfig.ID,
@@ -192,6 +194,7 @@ func fromBotConfigs(metricName string, details string, botConfigs []config.Agent
 }
 
 func fromBotIDs(metricName string, details string, botIDs []string) (metrics []*protocol.AgentMetric) {
+	details = utils.ObfuscateURLs(details)
 	for _, botID := range botIDs {
 		metrics = append(metrics, &protocol.AgentMetric{
 			AgentId:   botID,
