@@ -67,6 +67,8 @@ type Lifecycle interface {
 
 	BotError(metricName string, err error, botID ...string)
 	SystemError(metricName string, err error)
+
+	SystemStatus(metricName string, details string)
 }
 
 type lifecycle struct {
@@ -166,6 +168,10 @@ func (lc *lifecycle) BotError(metricName string, err error, botIDs ...string) {
 
 func (lc *lifecycle) SystemError(metricName string, err error) {
 	SendAgentMetrics(lc.msgClient, fromBotIDs(fmt.Sprintf("system.error.%s", metricName), err.Error(), []string{"system"}))
+}
+
+func (lc *lifecycle) SystemStatus(metricName string, details string) {
+	SendAgentMetrics(lc.msgClient, fromBotIDs(fmt.Sprintf("system.status.%s", metricName), details, []string{"system"}))
 }
 
 func fromBotSubscriptions(action string, subscriptions []domain.CombinerBotSubscription) (metrics []*protocol.AgentMetric) {
