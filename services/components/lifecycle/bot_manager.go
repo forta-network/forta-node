@@ -3,6 +3,7 @@ package lifecycle
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/forta-network/forta-node/clients/docker"
@@ -62,6 +63,7 @@ func (blm *botLifecycleManager) ManageBots(ctx context.Context) error {
 		blm.lifecycleMetrics.SystemError("load.assigned.bots", err)
 		return fmt.Errorf("failed to load assigned bots: %v", err)
 	}
+	blm.lifecycleMetrics.SystemStatus("load.assigned.bots", strconv.Itoa(len(assignedBots)))
 
 	// find the removed bots and remove them from the pool
 	removedBotConfigs := FindMissingBots(blm.runningBots, assignedBots)

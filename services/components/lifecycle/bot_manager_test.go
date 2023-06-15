@@ -86,6 +86,7 @@ func (s *BotLifecycleManagerTestSuite) TestAddUpdateRemove() {
 	s.botManager.runningBots = alreadyRunning
 
 	s.botRegistry.EXPECT().LoadAssignedBots().Return(latestAssigned, nil).Times(1)
+	s.lifecycleMetrics.EXPECT().SystemStatus("load.assigned.bots", "2")
 
 	s.botContainers.EXPECT().EnsureBotImages(gomock.Any(), []config.AgentConfig{addedBot}).Return([]error{nil}).Times(1)
 	s.botContainers.EXPECT().LaunchBot(gomock.Any(), addedBot).Return(nil).Times(1)

@@ -375,3 +375,15 @@ func (mr *MockLifecycleMockRecorder) SystemError(metricName, err interface{}) *g
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SystemError", reflect.TypeOf((*MockLifecycle)(nil).SystemError), metricName, err)
 }
+
+// SystemStatus mocks base method.
+func (m *MockLifecycle) SystemStatus(metricName, details string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SystemStatus", metricName, details)
+}
+
+// SystemStatus indicates an expected call of SystemStatus.
+func (mr *MockLifecycleMockRecorder) SystemStatus(metricName, details interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SystemStatus", reflect.TypeOf((*MockLifecycle)(nil).SystemStatus), metricName, details)
+}

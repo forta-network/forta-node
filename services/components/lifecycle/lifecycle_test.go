@@ -98,6 +98,7 @@ func (s *LifecycleTestSuite) TestDownloadTimeout() {
 	// given that there is a new bot assignment
 	// and no new assignments after the first time
 	s.botRegistry.EXPECT().LoadAssignedBots().Return(assigned, nil).Times(2)
+	s.lifecycleMetrics.EXPECT().SystemStatus("load.assigned.bots", "1").Times(2)
 
 	// then the bot should be redownloaded, launched, dialed and initialized
 	// upon download timeouts for the first time
@@ -141,6 +142,7 @@ func (s *LifecycleTestSuite) TestLaunchFailure() {
 	// given that there is a new bot assignment
 	// and no new assignments after the first time
 	s.botRegistry.EXPECT().LoadAssignedBots().Return(assigned, nil).Times(2)
+	s.lifecycleMetrics.EXPECT().SystemStatus("load.assigned.bots", "1").Times(2)
 
 	// then the bot should be relaunched, dialed and initialized
 	// upon launch failure for the first time
@@ -185,6 +187,7 @@ func (s *LifecycleTestSuite) TestDialFailure() {
 	// given that there is a new bot assignment
 	// and no new assignments after the first time
 	s.botRegistry.EXPECT().LoadAssignedBots().Return(assigned, nil).Times(2)
+	s.lifecycleMetrics.EXPECT().SystemStatus("load.assigned.bots", "1").Times(2)
 
 	// then there should be no reloading and redialing upon dialing failures
 	s.botContainers.EXPECT().EnsureBotImages(gomock.Any(), assigned).Return([]error{nil}).Times(1)
@@ -213,6 +216,7 @@ func (s *LifecycleTestSuite) TestInitializeFailure() {
 	// given that there is a new bot assignment
 	// and no new assignments after the first time
 	s.botRegistry.EXPECT().LoadAssignedBots().Return(assigned, nil).Times(2)
+	s.lifecycleMetrics.EXPECT().SystemStatus("load.assigned.bots", "1").Times(2)
 
 	err := errors.New("failed to init")
 
@@ -257,6 +261,7 @@ func (s *LifecycleTestSuite) TestExitedRestarted() {
 	// given that there is a new bot assignment
 	// and no new assignments after the first time
 	s.botRegistry.EXPECT().LoadAssignedBots().Return(assigned, nil).Times(2)
+	s.lifecycleMetrics.EXPECT().SystemStatus("load.assigned.bots", "1").Times(2)
 
 	// then there should be restart and reinitialization
 
@@ -320,6 +325,7 @@ func (s *LifecycleTestSuite) TestInactiveRestarted() {
 	// given that there is a new bot assignment
 	// and no new assignments after the first time
 	s.botRegistry.EXPECT().LoadAssignedBots().Return(assigned, nil).Times(1)
+	s.lifecycleMetrics.EXPECT().SystemStatus("load.assigned.bots", "1")
 
 	// then there should be restart and reinitialization
 
@@ -377,8 +383,10 @@ func (s *LifecycleTestSuite) TestUnassigned() {
 
 	// given that there is a new bot assignment
 	s.botRegistry.EXPECT().LoadAssignedBots().Return(assigned, nil).Times(1)
+	s.lifecycleMetrics.EXPECT().SystemStatus("load.assigned.bots", "1")
 	// and the assignment is removed shortly
 	s.botRegistry.EXPECT().LoadAssignedBots().Return(nil, nil).Times(1)
+	s.lifecycleMetrics.EXPECT().SystemStatus("load.assigned.bots", "0")
 
 	// then the bot should be started
 	s.botContainers.EXPECT().EnsureBotImages(gomock.Any(), assigned).Return([]error{nil}).Times(1)
@@ -429,8 +437,10 @@ func (s *LifecycleTestSuite) TestConfigUpdated() {
 
 	// given that there is a new bot assignment
 	s.botRegistry.EXPECT().LoadAssignedBots().Return(assigned, nil).Times(1)
+	s.lifecycleMetrics.EXPECT().SystemStatus("load.assigned.bots", "1")
 	// and the assigned bot's shard config is updated shortly
 	s.botRegistry.EXPECT().LoadAssignedBots().Return(updated, nil).Times(1)
+	s.lifecycleMetrics.EXPECT().SystemStatus("load.assigned.bots", "1")
 
 	// then the config of the bot should be updated
 
