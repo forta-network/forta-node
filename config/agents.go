@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/forta-network/forta-core-go/protocol"
@@ -90,9 +91,12 @@ func (ac AgentConfig) ContainerName() string {
 		return fmt.Sprintf("%s-agent-%s", ContainerNamePrefix, utils.ShortenString(ac.ID, 8))
 	}
 	_, digest := utils.SplitImageRef(ac.Image)
-	return fmt.Sprintf(
-		"%s-agent-%s-%s", ContainerNamePrefix, utils.ShortenString(ac.ID, 8), utils.ShortenString(digest, 4),
-	)
+
+	parts := []string{ContainerNamePrefix, "agent", utils.ShortenString(ac.ID, 8), utils.ShortenString(digest, 4)}
+	if ac.IsSharded() {
+		parts = append(parts, strconv.Itoa(int(ac.ShardConfig.ShardID))) // append the shard id at the end
+	}
+	return strings.Join(parts, "-")
 }
 
 func (ac AgentConfig) GrpcPort() string {
