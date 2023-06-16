@@ -21,7 +21,7 @@ func TestAgentConfig_ContainerNameSharded(t *testing.T) {
 		ShardConfig: &ShardConfig{
 			Shards:  5,
 			ShardID: 3,
-			Target:  3,
+			Target:  4,
 		},
 	}
 	assert.Equal(t, "forta-agent-0x04f65c-de86-3", cfg.ContainerName())
