@@ -26,7 +26,10 @@ const (
 	testBotID1       = "0x0100000000000000000000000000000000000000000000000000000000000000"
 	testBotID2       = "0x0200000000000000000000000000000000000000000000000000000000000000"
 	testBotID3       = "0x0300000000000000000000000000000000000000000000000000000000000000"
-	testImageRef     = "bafybeielvnt5apaxbk6chthc4dc3p6vscpx3ai4uvti7gwh253j7facsxu@sha256:e0e9efb6699b02750f6a9668084d37314f1de3a80da7e19c1d40da73ee57dd45"
+	testImageRef1    = "test-image-ref-1"
+	testImageRef2    = "test-image-ref-2"
+	testImageRef3    = "test-image-ref-3"
+	testImageRef     = testImageRef1
 	testContainerID  = "test-container-id"
 	testContainerID1 = "test-container-id-1"
 	testContainerID2 = "test-container-id-2"
