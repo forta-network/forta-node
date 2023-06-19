@@ -26,6 +26,14 @@ var (
 const (
 	keyDefaultChainSetting = "default"
 	minShardCount          = 1
+
+	// This is the force reload interval that helps us ignore the on-chain assignment
+	// list hash. This helps avoid getting stuck with bad state.
+	//
+	// WARNING: This also affects how fast the nodes react to shard ID changes
+	// because the bot assignment hash may not change for a scanner when
+	// the scanner list for a bot changes (i.e. when another scanner is unassigned).
+	assignmentForceReloadInterval = time.Minute * 5
 )
 
 type RegistryStore interface {
@@ -56,7 +64,8 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]config.AgentConfi
 		return nil, false, err
 	}
 
-	shouldUpdate := rs.lastCompletedVersion != hash.Hash || time.Since(rs.lastUpdate) > 5*time.Minute
+	shouldUpdate := rs.lastCompletedVersion != hash.Hash ||
+		time.Since(rs.lastUpdate) > assignmentForceReloadInterval
 	if !shouldUpdate {
 		return nil, false, nil
 	}
