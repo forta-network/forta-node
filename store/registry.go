@@ -35,7 +35,7 @@ type RegistryStore interface {
 
 type registryStore struct {
 	ctx context.Context
-	mc  manifest.Client
+	bms BotManifestStore
 	rc  registry.Client
 	cfg config.Config
 
@@ -87,16 +87,9 @@ func (rs *registryStore) GetAgentsIfChanged(scanner string) ([]config.AgentConfi
 			logger.Warn("invalid bot - skipping")
 			continue
 		}
-		// if already loaded, remember it for next time
-		loadedBot, ok := rs.getLoadedBot(assignment.AgentManifest)
-		if ok {
-			loadedBots = append(loadedBots, loadedBot)
-			logger.Info("already loaded bot - skipping")
-			continue
-		}
 
 		// try loading the rest of the unrecognized bots
-		botCfg, err := loadAssignment(rs.ctx, rs.cfg, rs.mc, assignment)
+		botCfg, err := rs.loadAssignment(assignment)
 		switch {
 		case err == nil: // yay
 			// get sharding information
@@ -141,7 +134,8 @@ func (rs *registryStore) FindAgentGlobally(agentID string) (*config.AgentConfig,
 		return nil, fmt.Errorf("failed to get the latest ref: %v, agentID: %s", err, agentID)
 	}
 
-	return loadBot(rs.ctx, rs.cfg, rs.mc, agentID, agt.Manifest, agt.Owner)
+	botCfg, _, err := loadBot(rs.ctx, rs.cfg, rs.bms, agentID, agt.Manifest, agt.Owner)
+	return botCfg, err
 }
 
 // returns shard id for an index, distributed evenly in an increased order.
@@ -174,31 +168,26 @@ func (rs *registryStore) isInvalidBot(bot *registry.Assignment) bool {
 	return false
 }
 
-func loadBot(ctx context.Context, cfg config.Config, mc manifest.Client, agentID string, ref string, owner string) (*config.AgentConfig, error) {
+func loadBot(ctx context.Context, cfg config.Config, bms BotManifestStore, agentID string, ref string, owner string) (*config.AgentConfig, *manifest.SignedAgentManifest, error) {
 	_, err := cid.Parse(ref)
 	if len(ref) == 0 || err != nil {
-		return nil, fmt.Errorf("%w: invalid bot cid '%s'", errInvalidBot, ref)
+		return nil, nil, fmt.Errorf("%w: invalid bot cid '%s'", errInvalidBot, ref)
 	}
 
-	var agentData *manifest.SignedAgentManifest
-	for i := 0; i < 10; i++ {
-		agentData, err = mc.GetAgentManifest(ctx, ref)
-		if err == nil {
-			break
-		}
-
-	}
+	signedManifest, err := bms.GetBotManifest(ctx, ref)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load the bot manifest: %v", err)
+		return nil, nil, fmt.Errorf("failed to load the bot manifest: %v", err)
 	}
 
-	if agentData.Manifest.ImageReference == nil {
-		return nil, fmt.Errorf("%w: invalid bot image reference, it is nil", errInvalidBot)
+	if signedManifest.Manifest.ImageReference == nil {
+		return nil, nil, fmt.Errorf("%w: invalid bot image reference, it is nil", errInvalidBot)
 	}
 
-	image, err := utils.ValidateDiscoImageRef(cfg.Registry.ContainerRegistry, *agentData.Manifest.ImageReference)
+	image, err := utils.ValidateDiscoImageRef(
+		cfg.Registry.ContainerRegistry, *signedManifest.Manifest.ImageReference,
+	)
 	if err != nil {
-		return nil, fmt.Errorf("%w: invalid bot image reference '%s': %v", errInvalidBot, *agentData.Manifest.ImageReference, err)
+		return nil, nil, fmt.Errorf("%w: invalid bot image reference '%s': %v", errInvalidBot, *signedManifest.Manifest.ImageReference, err)
 	}
 
 	return &config.AgentConfig{
@@ -207,47 +196,19 @@ func loadBot(ctx context.Context, cfg config.Config, mc manifest.Client, agentID
 		Manifest: ref,
 		ChainID:  cfg.ChainID,
 		Owner:    owner,
-	}, nil
+	}, signedManifest, nil
 }
 
-func loadAssignment(ctx context.Context, cfg config.Config, mc manifest.Client, assignment *registry.Assignment) (*config.AgentConfig, error) {
-	ref := assignment.AgentManifest
-
-	_, err := cid.Parse(ref)
-	if len(ref) == 0 || err != nil {
-		return nil, fmt.Errorf("%w: invalid bot cid '%s'", errInvalidBot, ref)
-	}
-
-	var agentData *manifest.SignedAgentManifest
-	for i := 0; i < 10; i++ {
-		agentData, err = mc.GetAgentManifest(ctx, ref)
-		if err == nil {
-			break
-		}
-	}
+func (rs *registryStore) loadAssignment(assignment *registry.Assignment) (*config.AgentConfig, error) {
+	botCfg, agentData, err := loadBot(rs.ctx, rs.cfg, rs.bms, assignment.AgentID, assignment.AgentManifest, assignment.AgentOwner)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load the bot manifest: %v", err)
+		return nil, err
 	}
 
-	if agentData.Manifest.ImageReference == nil {
-		return nil, fmt.Errorf("%w: invalid bot image reference, it is nil", errInvalidBot)
-	}
+	botCfg.Owner = assignment.AgentOwner
+	botCfg.ShardConfig = populateShardConfig(assignment, agentData, rs.cfg.ChainID)
 
-	image, err := utils.ValidateDiscoImageRef(cfg.Registry.ContainerRegistry, *agentData.Manifest.ImageReference)
-	if err != nil {
-		return nil, fmt.Errorf("%w: invalid bot image reference '%s': %v", errInvalidBot, *agentData.Manifest.ImageReference, err)
-	}
-
-	shardConfig := populateShardConfig(assignment, agentData, cfg.ChainID)
-
-	return &config.AgentConfig{
-		ID:          assignment.AgentID,
-		Image:       image,
-		Manifest:    ref,
-		ChainID:     cfg.ChainID,
-		Owner:       assignment.AgentOwner,
-		ShardConfig: shardConfig,
-	}, nil
+	return botCfg, nil
 }
 
 func NewRegistryStore(ctx context.Context, cfg config.Config) (*registryStore, error) {
@@ -255,6 +216,7 @@ func NewRegistryStore(ctx context.Context, cfg config.Config) (*registryStore, e
 	if err != nil {
 		return nil, err
 	}
+	bms := NewBotManifestStore(mc)
 
 	rc, err := GetRegistryClient(
 		ctx, cfg, registry.ClientConfig{
@@ -288,7 +250,7 @@ func NewRegistryStore(ctx context.Context, cfg config.Config) (*registryStore, e
 	return &registryStore{
 		ctx: ctx,
 		cfg: cfg,
-		mc:  mc,
+		bms: bms,
 		rc:  rc,
 	}, nil
 }
@@ -345,7 +307,7 @@ type privateRegistryStore struct {
 	ctx context.Context
 	cfg config.Config
 	rc  registry.Client
-	mc  manifest.Client
+	bms BotManifestStore
 	mu  sync.Mutex
 }
 
@@ -375,7 +337,7 @@ func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]config.Age
 			logger.WithError(err).Error("failed to get bot from registry")
 			continue
 		}
-		agtCfg, err := loadBot(rs.ctx, rs.cfg, rs.mc, agentID, agt.Manifest, agt.Owner)
+		agtCfg, _, err := loadBot(rs.ctx, rs.cfg, rs.bms, agentID, agt.Manifest, agt.Owner)
 		if err != nil {
 			logger.WithError(err).Error("failed to load bot")
 			continue
@@ -441,6 +403,7 @@ func NewPrivateRegistryStore(ctx context.Context, cfg config.Config) (*privateRe
 	if err != nil {
 		return nil, err
 	}
+	bms := NewBotManifestStore(mc)
 
 	rc, err := GetRegistryClient(ctx, cfg, registry.ClientConfig{
 		JsonRpcUrl: cfg.Registry.JsonRpc.Url,
@@ -454,7 +417,7 @@ func NewPrivateRegistryStore(ctx context.Context, cfg config.Config) (*privateRe
 	return &privateRegistryStore{
 		ctx: ctx,
 		cfg: cfg,
-		mc:  mc,
+		bms: bms,
 		rc:  rc,
 	}, nil
 }
