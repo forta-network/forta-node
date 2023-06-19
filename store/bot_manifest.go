@@ -9,6 +9,10 @@ import (
 	"github.com/patrickmn/go-cache"
 )
 
+const (
+	botManifestExpiry = time.Hour * 6
+)
+
 // BotManifestStore loads bot manifests.
 type BotManifestStore interface {
 	GetBotManifest(ctx context.Context, ref string) (*manifest.SignedAgentManifest, error)
@@ -25,7 +29,7 @@ var _ BotManifestStore = &botManifestStore{}
 // NewBotManifestStore creates a new bot manifest store.
 func NewBotManifestStore(manifestClient manifest.Client) *botManifestStore {
 	return &botManifestStore{
-		manifestCache:  cache.New(time.Hour*6, time.Hour),
+		manifestCache:  cache.New(botManifestExpiry, time.Hour),
 		manifestClient: manifestClient,
 		maxRetries:     10,
 	}
@@ -34,6 +38,7 @@ func NewBotManifestStore(manifestClient manifest.Client) *botManifestStore {
 func (bms *botManifestStore) GetBotManifest(ctx context.Context, ref string) (*manifest.SignedAgentManifest, error) {
 	cachedManifest, ok := bms.manifestCache.Get(ref)
 	if ok {
+		bms.manifestCache.Set(ref, cachedManifest, 0)
 		return cachedManifest.(*manifest.SignedAgentManifest), nil
 	}
 
