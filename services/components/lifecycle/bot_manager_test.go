@@ -60,40 +60,49 @@ func (s *BotLifecycleManagerTestSuite) TestAddUpdateRemove() {
 	alreadyRunning := []config.AgentConfig{
 		{
 			ID:    testBotID1,
-			Image: testImageRef,
+			Image: testImageRef1,
+			ShardConfig: &config.ShardConfig{
+				ShardID: 0,
+				Shards:  2,
+				Target:  1,
+			},
 		},
 		{
 			ID:    testBotID2,
-			Image: testImageRef,
+			Image: testImageRef2,
 		},
 	}
 	latestAssigned := []config.AgentConfig{
 		{
 			ID:    testBotID3,
-			Image: testImageRef,
+			Image: testImageRef3,
 		},
 		{
 			ID:    testBotID1,
-			Image: testImageRef,
+			Image: testImageRef1,
 			ShardConfig: &config.ShardConfig{
-				ShardID: 1,
+				ShardID: 1, // shard config update
+				Shards:  2,
+				Target:  1,
 			},
 		},
 	}
-	addedBot := latestAssigned[0]
-	removedBot := alreadyRunning[1]
+	removedBots := alreadyRunning
+	addedBots := latestAssigned
 
 	s.botManager.runningBots = alreadyRunning
 
 	s.botRegistry.EXPECT().LoadAssignedBots().Return(latestAssigned, nil).Times(1)
 	s.lifecycleMetrics.EXPECT().SystemStatus("load.assigned.bots", "2")
 
-	s.botContainers.EXPECT().EnsureBotImages(gomock.Any(), []config.AgentConfig{addedBot}).Return([]error{nil}).Times(1)
-	s.botContainers.EXPECT().LaunchBot(gomock.Any(), addedBot).Return(nil).Times(1)
+	s.botPool.EXPECT().RemoveBotsWithConfigs(removedBots)
+	s.lifecycleMetrics.EXPECT().StatusStopping(removedBots)
+	s.botContainers.EXPECT().TearDownBot(gomock.Any(), removedBots[0].ContainerName(), true)
+	s.botContainers.EXPECT().TearDownBot(gomock.Any(), removedBots[1].ContainerName(), true)
 
-	s.botPool.EXPECT().RemoveBotsWithConfigs([]config.AgentConfig{removedBot})
-	s.lifecycleMetrics.EXPECT().StatusStopping([]config.AgentConfig{removedBot})
-	s.botContainers.EXPECT().TearDownBot(gomock.Any(), removedBot.ContainerName(), true)
+	s.botContainers.EXPECT().EnsureBotImages(gomock.Any(), addedBots).Return([]error{nil, nil}).Times(1)
+	s.botContainers.EXPECT().LaunchBot(gomock.Any(), addedBots[0]).Return(nil).Times(1)
+	s.botContainers.EXPECT().LaunchBot(gomock.Any(), addedBots[1]).Return(nil).Times(1)
 
 	s.lifecycleMetrics.EXPECT().StatusRunning(latestAssigned).Times(1)
 	s.botPool.EXPECT().UpdateBotsWithLatestConfigs(latestAssigned)
