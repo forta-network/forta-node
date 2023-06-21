@@ -45,6 +45,8 @@ type UpdaterService struct {
 
 	lastChecked        health.TimeTracker
 	lastErr            health.ErrorTracker
+	finalCheck         health.TimeTracker
+	finalCheckErr      health.ErrorTracker
 	latestVersion      health.MessageTracker
 	latestIsPrerelease health.MessageTracker
 }
@@ -117,7 +119,6 @@ func (updater *UpdaterService) Start() error {
 					log.WithError(err).Panic("too many update errors - exiting")
 				}
 				updater.lastErr.Set(err)
-				updater.lastChecked.Set()
 				if err != nil {
 					log.WithError(err).Error("error getting release")
 				}
@@ -133,6 +134,7 @@ func (updater *UpdaterService) updateLatestReleaseWithDelay(delay time.Duration)
 	log.Info("updating latest release")
 
 	// note: if reference is blank, this returns an error
+	updater.lastChecked.Set()
 	latest, err := updater.srs.GetRelease(updater.ctx)
 	if err != nil {
 		return err
@@ -151,20 +153,25 @@ func (updater *UpdaterService) updateLatestReleaseWithDelay(delay time.Duration)
 	}
 
 	// so that all scanners don't update simultaneously, this waits a period of time
+	log.WithFields(log.Fields{"release": latest.Reference, "delay": delay}).Info("delaying update")
 	if delay > 0 {
-		log.WithFields(log.Fields{
-			"release": latest.Reference, "delay": delay,
-		}).Info("delaying update")
-
-		// if a newer release is found while waiting, this returns and tries again
-		// (this resets the delay clock)
-		if foundNew := updater.waitForDelayOrNewerRelease(latest.Reference, delay); foundNew {
-			log.Info("detected newer release while delaying current update - aborting")
-			return nil
-		}
-
-		log.Info("successfully waited before version update")
+		<-time.After(delay)
 	}
+	log.Info("successfully waited before version update")
+
+	for {
+		updater.finalCheck.Set()
+		latest, err = updater.srs.GetRelease(updater.ctx)
+		if err == nil {
+			break
+		}
+		updater.finalCheckErr.Set(err)
+		log.WithError(err).Error("failed to get the latest release just after the delay is over - retrying")
+		time.Sleep(time.Second * 5)
+	}
+	updater.finalCheckErr.Set(nil)
+	log.WithFields(log.Fields{"release": latest.Reference, "delay": delay}).
+		Info("successfully got the latest release once more after the delay")
 
 	updater.latestVersion.Set(latest.ReleaseManifest.Release.Version)
 	updater.latestIsPrerelease.Set(strconv.FormatBool(latest.IsPrerelease))
@@ -178,42 +185,6 @@ func (updater *UpdaterService) updateLatestReleaseWithDelay(delay time.Duration)
 	}).Info("updating to release")
 
 	return nil
-}
-
-// returns true if a newer release is detected, otherwise waits for delay and returns false
-func (updater *UpdaterService) waitForDelayOrNewerRelease(currentRef string, delay time.Duration) bool {
-	detectedCh := make(chan struct{})
-
-	ctx, cancel := context.WithCancel(updater.ctx)
-	defer cancel()
-
-	go updater.waitForNewerRelease(ctx, currentRef, detectedCh)
-
-	select {
-	case <-time.After(delay):
-		return false
-	case <-detectedCh:
-		return true
-	}
-}
-
-// notifies channel is a newer version is detected
-func (updater *UpdaterService) waitForNewerRelease(ctx context.Context, currentRef string, detectedCh chan struct{}) {
-	ticker := time.NewTicker(updater.updateCheckInterval)
-	for {
-		select {
-		case <-ticker.C:
-			if rel, err := updater.srs.GetRelease(updater.ctx); err != nil {
-				log.WithError(err).Error("error getting release during delay (ignoring intermittent)")
-				continue
-			} else if rel.Reference != currentRef {
-				detectedCh <- struct{}{}
-				return
-			}
-		case <-ctx.Done():
-			return
-		}
-	}
 }
 
 // Name returns the name of the service.
@@ -245,6 +216,8 @@ func (updater *UpdaterService) Health() health.Reports {
 	return health.Reports{
 		updater.lastChecked.GetReport("event.checked.time"),
 		updater.lastErr.GetReport("event.checked.error"),
+		updater.finalCheck.GetReport("event.checked.final.time"),
+		updater.finalCheckErr.GetReport("event.checked.final.error"),
 		updater.latestVersion.GetReport("latest.version"),
 		updater.latestIsPrerelease.GetReport("latest.is-prerelease"),
 	}

@@ -2,9 +2,10 @@ package updater
 
 import (
 	"context"
+	"testing"
+
 	"github.com/forta-network/forta-node/store"
 	mock_store "github.com/forta-network/forta-node/store/mocks"
-	"testing"
 
 	"github.com/stretchr/testify/require"
 
@@ -26,13 +27,13 @@ func TestUpdaterService_UpdateLatestRelease(t *testing.T) {
 
 	svs.EXPECT().GetRelease(gomock.Any()).Return(&store.ScannerRelease{
 		Reference: "reference",
-	}, nil).Times(1)
+	}, nil).Times(2)
 
 	err := updater.updateLatestReleaseWithDelay(0)
 	r.NoError(err)
 }
 
-func TestUpdaterService_UpdateLatestReleaseNotCached(t *testing.T) {
+func TestUpdaterService_UpdateLatestRelease_SingleEachTime(t *testing.T) {
 	r := require.New(t)
 
 	svs := mock_store.NewMockScannerReleaseStore(gomock.NewController(t))
@@ -42,11 +43,11 @@ func TestUpdaterService_UpdateLatestReleaseNotCached(t *testing.T) {
 
 	svs.EXPECT().GetRelease(gomock.Any()).Return(&store.ScannerRelease{
 		Reference: "reference1",
-	}, nil).Times(1)
+	}, nil).Times(2)
 
 	svs.EXPECT().GetRelease(gomock.Any()).Return(&store.ScannerRelease{
 		Reference: "reference2",
-	}, nil).Times(1)
+	}, nil).Times(2)
 
 	r.NoError(updater.updateLatestReleaseWithDelay(0))
 	r.Equal("reference1", updater.latestReference)
@@ -55,7 +56,7 @@ func TestUpdaterService_UpdateLatestReleaseNotCached(t *testing.T) {
 	r.Equal("reference2", updater.latestReference)
 }
 
-func TestUpdaterService_UpdateLatestReleaseAbort(t *testing.T) {
+func TestUpdaterService_UpdateLatestRelease_TwoInARow(t *testing.T) {
 	r := require.New(t)
 
 	svs := mock_store.NewMockScannerReleaseStore(gomock.NewController(t))
@@ -63,7 +64,7 @@ func TestUpdaterService_UpdateLatestReleaseAbort(t *testing.T) {
 		context.Background(), svs, "8080", testUpdateDelaySeconds, testUpdateCheckIntervalSeconds,
 	)
 
-	initalLatestRef := updater.latestReference
+	finalRef := "reference2"
 
 	svs.EXPECT().GetRelease(gomock.Any()).Return(&store.ScannerRelease{
 		Reference: "reference1",
@@ -75,6 +76,6 @@ func TestUpdaterService_UpdateLatestReleaseAbort(t *testing.T) {
 
 	r.NoError(updater.updateLatestReleaseWithDelay(updater.updateDelay))
 
-	// update should be ineffective and be aborted
-	r.Equal(initalLatestRef, updater.latestReference)
+	// should update to the latest one
+	r.Equal(finalRef, updater.latestReference)
 }
