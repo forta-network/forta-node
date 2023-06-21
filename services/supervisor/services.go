@@ -74,6 +74,7 @@ type SupervisorService struct {
 	lastCustomTelemetryRequestError health.ErrorTracker
 	lastAgentLogsRequest            health.TimeTracker
 	lastAgentLogsRequestError       health.ErrorTracker
+	autoUpdatesDisabled             health.MessageTracker
 
 	healthClient health.HealthClient
 
@@ -738,6 +739,7 @@ func (sup *SupervisorService) Health() health.Reports {
 		sup.lastCustomTelemetryRequestError.GetReport("event.custom-telemetry-sync.error"),
 		sup.lastAgentLogsRequest.GetReport("event.agent-logs-sync.time"),
 		sup.lastAgentLogsRequestError.GetReport("event.agent-logs-sync.error"),
+		sup.autoUpdatesDisabled.GetReport("auto-updates.disabled"),
 	}
 }
 
@@ -767,7 +769,7 @@ func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*Su
 		return nil, fmt.Errorf("failed to create the release client: %v", err)
 	}
 
-	return &SupervisorService{
+	sup := &SupervisorService{
 		ctx:                ctx,
 		client:             dockerClient,
 		globalClient:       globalClient,
@@ -777,5 +779,8 @@ func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*Su
 		healthClient:       health.NewClient(),
 		sendAgentLogs:      agentlogs.NewClient(cfg.Config.AgentLogsConfig.URL).SendLogs,
 		inspectionCh:       make(chan *protocol.InspectionResults),
-	}, nil
+	}
+	sup.autoUpdatesDisabled.Set(strconv.FormatBool(cfg.Config.AutoUpdate.Disable))
+
+	return sup, nil
 }
