@@ -151,6 +151,12 @@ func (j *JWTAPI) handleJwtRequest(w http.ResponseWriter, req *http.Request) {
 	}
 
 	resp, err := json.Marshal(CreateJWTResponse{Token: jwt})
+	if err != nil {
+		j.lastErr.Set(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = fmt.Fprint(w, "cannot create jwt (json)")
+		return
+	}
 
 	w.WriteHeader(http.StatusOK)
 	_, _ = fmt.Fprintf(w, "%s", resp)
