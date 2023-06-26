@@ -32,6 +32,8 @@ mocks:
 	mockgen -source services/components/botio/bot_client_factory.go -destination services/components/botio/mocks/mock_bot_client_factory.go
 	mockgen -source clients/agentgrpc/dialer.go -destination clients/agentgrpc/mocks/mock_dialer.go
 	mockgen -source clients/agentgrpc/client.go -destination clients/agentgrpc/mocks/mock_client.go
+	mockgen -source services/jwt-provider/provider/jwt.go -destination services/jwt-provider/provider/mocks/mock_jwt.go
+
 
 test:
 	go test -v -count=1 ./... -coverprofile=coverage.out
