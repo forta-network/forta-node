@@ -35,9 +35,9 @@ func (m *MockJWTProvider) EXPECT() *MockJWTProviderMockRecorder {
 }
 
 // CreateJWT mocks base method.
-func (m *MockJWTProvider) CreateJWT(ctx context.Context, ipAddress string, claims map[string]interface{}) (string, error) {
+func (m *MockJWTProvider) CreateJWTFromIP(ctx context.Context, ipAddress string, claims map[string]interface{}) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateJWT", ctx, ipAddress, claims)
+	ret := m.ctrl.Call(m, "CreateJWTFromIP", ctx, ipAddress, claims)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -46,5 +46,5 @@ func (m *MockJWTProvider) CreateJWT(ctx context.Context, ipAddress string, claim
 // CreateJWT indicates an expected call of CreateJWT.
 func (mr *MockJWTProviderMockRecorder) CreateJWT(ctx, ipAddress, claims interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateJWT", reflect.TypeOf((*MockJWTProvider)(nil).CreateJWT), ctx, ipAddress, claims)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateJWTFromIP", reflect.TypeOf((*MockJWTProvider)(nil).CreateJWTFromIP), ctx, ipAddress, claims)
 }

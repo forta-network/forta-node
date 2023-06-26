@@ -8,20 +8,19 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/forta-network/forta-core-go/security"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/docker"
 	"github.com/forta-network/forta-node/config"
+	sec "github.com/forta-network/forta-node/services/components/security"
 )
 
 var ErrCannotFindBotForIP = errors.New("cannot find bot for ip")
 
 type JWTProvider interface {
-	CreateJWT(ctx context.Context, ipAddress string, claims map[string]interface{}) (string, error)
+	CreateJWTFromIP(ctx context.Context, ipAddress string, claims map[string]interface{}) (string, error)
 }
 
 type jwtProvider struct {
@@ -48,7 +47,7 @@ func NewJWTProvider(cfg config.Config) (JWTProvider, error) {
 	}, nil
 }
 
-func (p *jwtProvider) CreateJWT(ctx context.Context, ipAddress string, claims map[string]interface{}) (string, error) {
+func (p *jwtProvider) CreateJWTFromIP(ctx context.Context, ipAddress string, claims map[string]interface{}) (string, error) {
 	logger := log.WithFields(log.Fields{
 		"ip": ipAddress,
 	})
@@ -61,31 +60,13 @@ func (p *jwtProvider) CreateJWT(ctx context.Context, ipAddress string, claims ma
 		"agentId": bot,
 	})
 
-	res, err := p.createBotJWT(bot, claims)
+	res, err := sec.CreateBotJWT(p.key, bot, claims, p.jwtCreatorFunc)
 	if err != nil {
 		logger.WithError(err).Error("error creating jwt")
 		return "", err
 	}
 
 	return res, nil
-}
-
-// requestHash used for "hash" claim in JWT token
-func requestHash(uri string, payload []byte) common.Hash {
-	requestStr := fmt.Sprintf("%s%s", uri, payload)
-
-	return crypto.Keccak256Hash([]byte(requestStr))
-}
-
-// CreateBotJWT returns a bot JWT token. Basically security.ScannerJWT with bot&request info.
-func (p *jwtProvider) createBotJWT(agentID string, claims map[string]interface{}) (string, error) {
-	if claims == nil {
-		claims = make(map[string]interface{})
-	}
-
-	claims["bot-id"] = agentID
-
-	return p.jwtCreatorFunc(p.key, claims)
 }
 
 // agentIDReverseLookup reverse lookup from ip to agent id.

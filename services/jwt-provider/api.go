@@ -135,7 +135,7 @@ func (j *JWTAPI) handleJwtRequest(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	jwt, err := j.provider.CreateJWT(req.Context(), ipAddr, msg.Claims)
+	jwt, err := j.provider.CreateJWTFromIP(req.Context(), ipAddr, msg.Claims)
 	if err == provider.ErrCannotFindBotForIP {
 		j.lastErr.Set(err)
 		w.WriteHeader(http.StatusForbidden)

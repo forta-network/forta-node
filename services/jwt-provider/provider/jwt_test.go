@@ -133,7 +133,7 @@ func TestCreateJWT(t *testing.T) {
 			tc.mockFunc(mockDockerClient)
 
 			// Call the method
-			jwt, err := jp.CreateJWT(context.Background(), ipAddress, claims)
+			jwt, err := jp.CreateJWTFromIP(context.Background(), ipAddress, claims)
 
 			if tc.expectedError != nil {
 				assert.ErrorIs(t, tc.expectedError, err)
