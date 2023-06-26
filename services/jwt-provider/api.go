@@ -17,8 +17,7 @@ import (
 )
 
 const (
-	errBadCreateMessage  = "bad create jwt message body"
-	errFailedToCreateJWT = "can't find bot id from request source"
+	errBadCreateMessage = "bad create jwt message body"
 )
 
 // JWTAPI provides jwt tokens to bots, signed with node's private key..
@@ -132,7 +131,7 @@ func (j *JWTAPI) handleJwtRequest(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		j.lastErr.Set(err)
 		w.WriteHeader(http.StatusUnauthorized)
-		_, _ = fmt.Fprintf(w, "can't extract ip from request %s", req.RemoteAddr)
+		_, _ = fmt.Fprintf(w, "can't extract ip from request: %s", req.RemoteAddr)
 		return
 	}
 
@@ -147,7 +146,7 @@ func (j *JWTAPI) handleJwtRequest(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		j.lastErr.Set(err)
 		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = fmt.Fprint(w, errFailedToCreateJWT)
+		_, _ = fmt.Fprint(w, "cannot create jwt")
 		return
 	}
 
