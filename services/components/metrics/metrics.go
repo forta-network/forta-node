@@ -52,23 +52,26 @@ func SendAgentMetrics(client clients.MessageClient, ms []*protocol.AgentMetric) 
 	}
 }
 
-func CreateAgentMetric(agentID, metric string, value float64) *protocol.AgentMetric {
+func CreateAgentMetric(agt config.AgentConfig, metric string, value float64) *protocol.AgentMetric {
 	return &protocol.AgentMetric{
-		AgentId:   agentID,
+		AgentId:   agt.ID,
 		Timestamp: time.Now().Format(time.RFC3339),
 		Name:      metric,
 		Value:     value,
+		Details:   agt.ShardDetails(),
 	}
 }
 
-func createMetrics(agentID, timestamp string, metricMap map[string]float64) []*protocol.AgentMetric {
+func createMetrics(agt config.AgentConfig, timestamp string, metricMap map[string]float64) []*protocol.AgentMetric {
 	var res []*protocol.AgentMetric
+
 	for name, value := range metricMap {
 		res = append(res, &protocol.AgentMetric{
-			AgentId:   agentID,
+			AgentId:   agt.ID,
 			Timestamp: timestamp,
 			Name:      name,
 			Value:     value,
+			Details:   agt.ShardDetails(),
 		})
 	}
 	return res
@@ -93,7 +96,7 @@ func GetBlockMetrics(agt config.AgentConfig, resp *protocol.EvaluateBlockRespons
 		metrics[MetricBlockSuccess] = 1
 	}
 
-	return createMetrics(agt.ID, resp.Timestamp, metrics)
+	return createMetrics(agt, resp.Timestamp, metrics)
 }
 
 func GetTxMetrics(agt config.AgentConfig, resp *protocol.EvaluateTxResponse, times *domain.TrackingTimestamps) []*protocol.AgentMetric {
@@ -111,7 +114,7 @@ func GetTxMetrics(agt config.AgentConfig, resp *protocol.EvaluateTxResponse, tim
 		metrics[MetricTxSuccess] = 1
 	}
 
-	return createMetrics(agt.ID, resp.Timestamp, metrics)
+	return createMetrics(agt, resp.Timestamp, metrics)
 }
 
 func GetCombinerMetrics(agt config.AgentConfig, resp *protocol.EvaluateAlertResponse, times *domain.TrackingTimestamps) []*protocol.AgentMetric {
@@ -127,7 +130,7 @@ func GetCombinerMetrics(agt config.AgentConfig, resp *protocol.EvaluateAlertResp
 		metrics[MetricCombinerSuccess] = 1
 	}
 
-	return createMetrics(agt.ID, resp.Timestamp, metrics)
+	return createMetrics(agt, resp.Timestamp, metrics)
 }
 
 func GetJSONRPCMetrics(agt config.AgentConfig, at time.Time, success, throttled int, latencyMs time.Duration) []*protocol.AgentMetric {
@@ -143,7 +146,7 @@ func GetJSONRPCMetrics(agt config.AgentConfig, at time.Time, success, throttled 
 		values[MetricJSONRPCThrottled] = float64(throttled)
 		values[MetricJSONRPCRequest] += float64(throttled)
 	}
-	return createMetrics(agt.ID, at.Format(time.RFC3339), values)
+	return createMetrics(agt, at.Format(time.RFC3339), values)
 }
 
 func GetPublicAPIMetrics(botID string, at time.Time, success, throttled int, latencyMs time.Duration) []*protocol.AgentMetric {
@@ -159,5 +162,6 @@ func GetPublicAPIMetrics(botID string, at time.Time, success, throttled int, lat
 		values[MetricPublicAPIProxyThrottled] = float64(throttled)
 		values[MetricPublicAPIProxyRequest] += float64(throttled)
 	}
-	return createMetrics(botID, at.Format(time.RFC3339), values)
+	//TODO: get the shardID into this eventually
+	return createMetrics(config.AgentConfig{ID: botID}, at.Format(time.RFC3339), values)
 }

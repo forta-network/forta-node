@@ -176,7 +176,7 @@ func (lc *lifecycle) SystemStatus(metricName string, details string) {
 
 func fromBotSubscriptions(action string, subscriptions []domain.CombinerBotSubscription) (metrics []*protocol.AgentMetric) {
 	for _, botSub := range subscriptions {
-		metrics = append(metrics, CreateAgentMetric(botSub.Subscriber.BotID, action, 1))
+		metrics = append(metrics, CreateAgentMetric(config.AgentConfig{ID: botSub.Subscriber.BotID}, action, 1))
 	}
 	return
 }

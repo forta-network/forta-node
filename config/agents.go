@@ -33,6 +33,13 @@ type ShardConfig struct {
 	Target  uint `yaml:"target" json:"target"`
 }
 
+func (ac AgentConfig) ShardDetails() string {
+	if !ac.IsSharded() {
+		return ""
+	}
+	return fmt.Sprintf("shard=%d", ac.ShardConfig.ShardID)
+}
+
 func (ac AgentConfig) Equal(b AgentConfig) bool {
 	sameID := strings.EqualFold(ac.ID, b.ID)
 	sameManifest := strings.EqualFold(ac.Manifest, b.Manifest)
