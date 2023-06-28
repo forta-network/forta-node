@@ -10,8 +10,8 @@ import (
 	jwt_provider "github.com/forta-network/forta-node/services/jwt-provider"
 )
 
-func initJWTProvider(cfg config.Config) (*jwt_provider.JWTProvider, error) {
-	return jwt_provider.NewJWTProvider(cfg)
+func initJWTProvider(cfg config.Config) (*jwt_provider.JWTAPI, error) {
+	return jwt_provider.NewJWTAPI(cfg)
 }
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {

@@ -14,14 +14,15 @@ import (
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-core-go/security"
 	"github.com/forta-network/forta-core-go/utils"
+	"github.com/rs/cors"
+	"github.com/sirupsen/logrus"
+
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/clients/ratelimiter"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/services/components/metrics"
-	jwt_provider "github.com/forta-network/forta-node/services/jwt-provider"
-	"github.com/rs/cors"
-	"github.com/sirupsen/logrus"
+	sec "github.com/forta-network/forta-node/services/components/security"
 )
 
 type contextKey int
@@ -172,7 +173,7 @@ func (p *PublicAPIProxy) setAuthBearer(r *http.Request) {
 
 	claims := map[string]interface{}{claimKeyBotOwner: botOwner}
 
-	jwtToken, err := jwt_provider.CreateBotJWT(p.Key, botID, claims)
+	jwtToken, err := sec.CreateBotJWT(p.Key, botID, claims, security.CreateScannerJWT)
 	if err != nil {
 		log.WithError(err).Warn("can't create bot jwt")
 		return
