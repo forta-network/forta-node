@@ -191,8 +191,9 @@ func fromBotConfigs(metricName string, details string, botConfigs []config.Agent
 			Details:   details,
 			Value:     1,
 		}
-		if details == "" && botConfig.IsSharded() {
-			metric.Details = fmt.Sprintf("shard=%d", botConfig.ShardConfig.ShardID)
+		if details == "" {
+			// default details to shard details
+			metric.Details = botConfig.ShardDetails()
 		}
 		metrics = append(metrics, metric)
 	}
