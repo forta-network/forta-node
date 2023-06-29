@@ -329,8 +329,6 @@ github.com/flynn/noise v0.0.0-20180327030543-2492fe189ae6/go.mod h1:1i71OnUq3iUe
 github.com/flynn/noise v1.0.0 h1:DlTHqmzmvcEiKj+4RYo/imoswx/4r6iBlCMfVtrMXpQ=
 github.com/flynn/noise v1.0.0/go.mod h1:xbMo+0i6+IGbYdJhF31t2eR1BIU0CYc12+BNAKwUTag=
 github.com/fogleman/gg v1.2.1-0.20190220221249-0403632d5b90/go.mod h1:R/bRT+9gY/C5z7JzPU0zXsXHKM4/ayA+zqcVNZzPa1k=
-github.com/forta-network/forta-core-go v0.0.0-20230615161025-7ea07e86f712 h1:6TapXMAK3vsb8hyEikshxcSjDq4pdTfRF1cty9xAlI4=
-github.com/forta-network/forta-core-go v0.0.0-20230615161025-7ea07e86f712/go.mod h1:F4O7Yxhs0WSB9iFLiCVSYMPI1wOKuLMZIk8dbVg+J/Y=
 github.com/forta-network/forta-core-go v0.0.0-20230629200836-31bbacef704a h1:x3rlXAXF4G2ay4E2o5gyWKW8AZDm6Ik63AAIAielyss=
 github.com/forta-network/forta-core-go v0.0.0-20230629200836-31bbacef704a/go.mod h1:F4O7Yxhs0WSB9iFLiCVSYMPI1wOKuLMZIk8dbVg+J/Y=
 github.com/forta-network/go-multicall v0.0.0-20230609185354-1436386c6707 h1:f6I7K43i2m6AwHSsDxh0Mf3qFzYt8BKnabSl/zGFmh0=
