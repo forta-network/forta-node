@@ -40,7 +40,7 @@ func TestHandleJwtRequest(t *testing.T) {
 			},
 			mockFunc: func(mockProvider *mock_provider.MockJWTProvider) {
 				// Define the behavior for successful case
-				mockProvider.EXPECT().CreateJWT(gomock.Any(), gomock.Any(), gomock.Any()).Return("mockJWT", nil)
+				mockProvider.EXPECT().CreateJWTFromIP(gomock.Any(), gomock.Any(), gomock.Any()).Return("mockJWT", nil)
 			},
 			expectedHTTPCode: http.StatusOK,
 			expectedResponse: `{"token":"mockJWT"}`,
@@ -85,7 +85,7 @@ func TestHandleJwtRequest(t *testing.T) {
 			},
 			mockFunc: func(mockProvider *mock_provider.MockJWTProvider) {
 				// Define the behavior to make CreateJWTFromIP return ErrCannotFindBotForIP
-				mockProvider.EXPECT().CreateJWT(gomock.Any(), gomock.Any(), gomock.Any()).Return("", provider.ErrCannotFindBotForIP)
+				mockProvider.EXPECT().CreateJWTFromIP(gomock.Any(), gomock.Any(), gomock.Any()).Return("", provider.ErrCannotFindBotForIP)
 			},
 			expectedHTTPCode: http.StatusForbidden,
 			expectedResponse: "can't find bot id from request source 127.0.0.1, err: cannot find bot for ip",

@@ -58,7 +58,6 @@ func TestBotMonitor(t *testing.T) {
 	}))
 
 	// the latest inactivity list is requested: bot 2 is active, the rest are inactive
-	lifecycleMetrics.EXPECT().StatusInactive([]string{testTrackerBotID1, testTrackerBotID3})
 	inactiveBots := botMonitor.GetInactiveBots()
 	r.Len(inactiveBots, 2)
 	r.Equal(testTrackerBotID1, inactiveBots[0])

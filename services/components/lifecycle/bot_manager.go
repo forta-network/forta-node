@@ -84,7 +84,7 @@ func (blm *botLifecycleManager) ManageBots(ctx context.Context) error {
 		if err := blm.botClient.TearDownBot(ctx, removedBotConfig.ContainerName(), true); err != nil {
 			log.WithError(err).WithField("container", removedBotConfig.ContainerName()).
 				Warn("failed to tear down unassigned bot container")
-			blm.lifecycleMetrics.BotError("unassigned.teardown", err, removedBotConfig.ID)
+			blm.lifecycleMetrics.BotError("unassigned.teardown", err, removedBotConfig)
 		}
 	}
 
@@ -173,19 +173,25 @@ func (blm *botLifecycleManager) ExitInactiveBots(ctx context.Context) error {
 	if len(inactiveBotIDs) == 0 {
 		return nil
 	}
+	inactiveCfgs := make([]config.AgentConfig, 0, len(inactiveBotIDs))
 	for _, inactiveBotID := range inactiveBotIDs {
 		botConfig, found := blm.findBotConfigByID(inactiveBotID)
 		logger := log.WithField("bot", inactiveBotID)
 		if !found {
 			logger.Warn("could not find the config for inactive bot - skipping stop")
+			// send this metric by ID, because it doesn't have a shard ID (since it's not found)
+			blm.lifecycleMetrics.StatusInactive(config.AgentConfig{ID: inactiveBotID})
 			continue
 		}
+		inactiveCfgs = append(inactiveCfgs, botConfig)
 		logger.Info("killing inactive bot for reinitialization")
 		if err := blm.botClient.StopBot(ctx, botConfig); err != nil {
 			logger.WithError(err).Error("failed to stop the inactive bot")
 			blm.lifecycleMetrics.FailureStop(fmt.Errorf("failed to stop the inactive bot: %v", err.Error()), botConfig)
 		}
 	}
+	// sends metric with shard IDs
+	blm.lifecycleMetrics.StatusInactive(inactiveCfgs...)
 	return nil
 }
 
@@ -216,7 +222,7 @@ func (blm *botLifecycleManager) RestartExitedBots(ctx context.Context) error {
 		blm.lifecycleMetrics.ActionRestart(restartedBotConfig)
 		if err := blm.botClient.StartWaitBotContainer(ctx, botContainer.ID); err != nil {
 			logger.WithError(err).Error("failed to start exited bot container")
-			blm.lifecycleMetrics.BotError("start.exited.bot.container", fmt.Errorf("failed to start exited bot container: %v", err.Error()), restartedBotConfig.ID)
+			blm.lifecycleMetrics.BotError("start.exited.bot.container", fmt.Errorf("failed to start exited bot container: %v", err.Error()), restartedBotConfig)
 			continue
 		}
 		restartedBotConfigs = append(restartedBotConfigs, restartedBotConfig)
@@ -252,7 +258,7 @@ func (blm *botLifecycleManager) TearDownRunningBots(ctx context.Context) {
 	for _, runningBotConfig := range blm.runningBots {
 		err := blm.botClient.TearDownBot(ctx, runningBotConfig.ContainerName(), false)
 		if err != nil {
-			blm.lifecycleMetrics.BotError("teardown.bot", err, runningBotConfig.ID)
+			blm.lifecycleMetrics.BotError("teardown.bot", err, runningBotConfig)
 			log.WithError(err).WithField("container", runningBotConfig.ContainerName()).
 				Warn("failed to tear down running bot container")
 		}

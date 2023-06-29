@@ -33,6 +33,15 @@ type ShardConfig struct {
 	Target  uint `yaml:"target" json:"target"`
 }
 
+func (ac AgentConfig) ShardID() int32 {
+	if !ac.IsSharded() {
+		// default uint value is 0, so we cannot tell between an unset shardID and actual shard 0
+		// therefore, we return -1 here
+		return -1
+	}
+	return int32(ac.ShardConfig.ShardID)
+}
+
 func (ac AgentConfig) ShardDetails() string {
 	if !ac.IsSharded() {
 		return ""

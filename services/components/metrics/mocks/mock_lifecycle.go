@@ -92,19 +92,19 @@ func (mr *MockLifecycleMockRecorder) ActionUpdate(arg0 ...interface{}) *gomock.C
 }
 
 // BotError mocks base method.
-func (m *MockLifecycle) BotError(metricName string, err error, botID ...string) {
+func (m *MockLifecycle) BotError(metricName string, err error, cfgs ...config.AgentConfig) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{metricName, err}
-	for _, a := range botID {
+	for _, a := range cfgs {
 		varargs = append(varargs, a)
 	}
 	m.ctrl.Call(m, "BotError", varargs...)
 }
 
 // BotError indicates an expected call of BotError.
-func (mr *MockLifecycleMockRecorder) BotError(metricName, err interface{}, botID ...interface{}) *gomock.Call {
+func (mr *MockLifecycleMockRecorder) BotError(metricName, err interface{}, cfgs ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{metricName, err}, botID...)
+	varargs := append([]interface{}{metricName, err}, cfgs...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BotError", reflect.TypeOf((*MockLifecycle)(nil).BotError), varargs...)
 }
 
@@ -277,15 +277,19 @@ func (mr *MockLifecycleMockRecorder) FailureTooManyErrs(arg0 interface{}, arg1 .
 }
 
 // StatusActive mocks base method.
-func (m *MockLifecycle) StatusActive(arg0 []string) {
+func (m *MockLifecycle) StatusActive(arg0 ...config.AgentConfig) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "StatusActive", arg0)
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "StatusActive", varargs...)
 }
 
 // StatusActive indicates an expected call of StatusActive.
-func (mr *MockLifecycleMockRecorder) StatusActive(arg0 interface{}) *gomock.Call {
+func (mr *MockLifecycleMockRecorder) StatusActive(arg0 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StatusActive", reflect.TypeOf((*MockLifecycle)(nil).StatusActive), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StatusActive", reflect.TypeOf((*MockLifecycle)(nil).StatusActive), arg0...)
 }
 
 // StatusAttached mocks base method.
@@ -305,15 +309,19 @@ func (mr *MockLifecycleMockRecorder) StatusAttached(arg0 ...interface{}) *gomock
 }
 
 // StatusInactive mocks base method.
-func (m *MockLifecycle) StatusInactive(arg0 []string) {
+func (m *MockLifecycle) StatusInactive(arg0 ...config.AgentConfig) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "StatusInactive", arg0)
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "StatusInactive", varargs...)
 }
 
 // StatusInactive indicates an expected call of StatusInactive.
-func (mr *MockLifecycleMockRecorder) StatusInactive(arg0 interface{}) *gomock.Call {
+func (mr *MockLifecycleMockRecorder) StatusInactive(arg0 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StatusInactive", reflect.TypeOf((*MockLifecycle)(nil).StatusInactive), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StatusInactive", reflect.TypeOf((*MockLifecycle)(nil).StatusInactive), arg0...)
 }
 
 // StatusInitialized mocks base method.

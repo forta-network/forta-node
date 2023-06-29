@@ -122,9 +122,5 @@ func (bm *botMonitor) GetInactiveBots() (inactive []string) {
 		}
 	}
 
-	if len(inactive) > 0 {
-		bm.lifecycleMetrics.StatusInactive(inactive)
-	}
-
 	return
 }
