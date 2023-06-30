@@ -104,6 +104,7 @@ x-forta-config:
 
   localMode:
     enable: true
+    webhookUrl: https://webhook.site/ba1d1033-8fdc-4f97-8398-b95b51a6de69
     # webhook alerts are sent with a JWT which is signed using this key
     privateKeyHex: 9e3c1e3ef3fc5669b6d469dafe2aa80b3986c5c59715ebcafb7e02076475a68c
     logToStdout: true
