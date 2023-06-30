@@ -67,6 +67,7 @@ type Lifecycle interface {
 
 	BotError(metricName string, err error, botID ...string)
 	SystemError(metricName string, err error)
+	BotInvokeError(componentName string, err error, botID ...string)
 
 	SystemStatus(metricName string, details string)
 }
@@ -164,6 +165,9 @@ func (lc *lifecycle) FailureTooManyErrs(err error, botConfigs ...config.AgentCon
 
 func (lc *lifecycle) BotError(metricName string, err error, botIDs ...string) {
 	SendAgentMetrics(lc.msgClient, fromBotIDs(fmt.Sprintf("agent.error.%s", metricName), err.Error(), botIDs))
+}
+func (lc *lifecycle) BotInvokeError(componentName string, err error, botIDs ...string) {
+	SendAgentMetrics(lc.msgClient, fromBotIDs(fmt.Sprintf("%s.error", componentName), err.Error(), botIDs))
 }
 
 func (lc *lifecycle) SystemError(metricName string, err error) {

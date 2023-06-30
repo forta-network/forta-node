@@ -144,6 +144,7 @@ func NewBotClient(
 }
 
 func isCriticalErr(err error) bool {
+	// remember ignoring UNIMPLEMENTED errors when enabling this logic
 	return false
 	// errStr := err.Error()
 	// return strings.Contains(errStr, codes.DeadlineExceeded.String()) ||
@@ -503,14 +504,13 @@ func (bot *botClient) processTransaction(ctx context.Context, lg *log.Entry, req
 
 	lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
 
-	if err != nil {
-		if status.Code(err) == codes.Unimplemented {
-			return false
-		}
-
+	// submit error metrics
+	if err != nil && status.Code(err) != codes.Unimplemented {
 		lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking bot")
+		bot.lifecycleMetrics.BotInvokeError("tx", err, botConfig.ID)
 	}
 
+	// track error count
 	if bot.errCounter.TooManyErrs(err) {
 		lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down bot")
 		_ = bot.Close()
@@ -571,14 +571,13 @@ func (bot *botClient) processBlock(ctx context.Context, lg *log.Entry, request *
 
 	lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
 
-	if err != nil {
-		if status.Code(err) == codes.Unimplemented {
-			return false
-		}
-
+	// submit error metrics
+	if err != nil && status.Code(err) != codes.Unimplemented {
 		lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking bot")
+		bot.lifecycleMetrics.BotInvokeError("block", err, botConfig.ID)
 	}
 
+	// track error count
 	if bot.errCounter.TooManyErrs(err) {
 		lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down bot")
 		_ = bot.Close()
@@ -588,6 +587,7 @@ func (bot *botClient) processBlock(ctx context.Context, lg *log.Entry, request *
 
 	return false
 }
+
 func (bot *botClient) processCombinationAlert(ctx context.Context, lg *log.Entry, request *botreq.CombinationRequest) bool {
 	botConfig := bot.Config()
 	botClient := bot.grpcClient()
@@ -637,22 +637,10 @@ func (bot *botClient) processCombinationAlert(ctx context.Context, lg *log.Entry
 
 	lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
 
-	if bot.errCounter.TooManyErrs(err) {
-		lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down bot")
-		_ = bot.Close()
-		bot.lifecycleMetrics.FailureTooManyErrs(err, botConfig)
-		return true
-	}
-
-	if err != nil {
-		if status.Code(err) != codes.Unimplemented {
-			lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking bot")
-		}
-
+	// submit error metrics
+	if err != nil && status.Code(err) != codes.Unimplemented {
 		lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking bot")
-		// bot.lifecycleMetrics.SendMetric("combiner.error", err, botConfig.ID)
-
-		return false
+		bot.lifecycleMetrics.BotInvokeError("combiner", err, botConfig.ID)
 	}
 
 	// validate response
@@ -661,8 +649,14 @@ func (bot *botClient) processCombinationAlert(ctx context.Context, lg *log.Entry
 			"request", request.Original.RequestId,
 		).WithError(vErr).Error("evaluate combination response validation failed")
 		bot.lifecycleMetrics.BotError("validate.evaluate.alert.response", vErr, botConfig.ID)
+	}
 
-		return false
+	// track error count
+	if bot.errCounter.TooManyErrs(err) {
+		lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down bot")
+		_ = bot.Close()
+		bot.lifecycleMetrics.FailureTooManyErrs(err, botConfig)
+		return true
 	}
 
 	return false
