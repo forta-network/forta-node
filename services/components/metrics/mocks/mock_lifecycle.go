@@ -108,6 +108,23 @@ func (mr *MockLifecycleMockRecorder) BotError(metricName, err interface{}, botID
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BotError", reflect.TypeOf((*MockLifecycle)(nil).BotError), varargs...)
 }
 
+// BotInvokeError mocks base method.
+func (m *MockLifecycle) BotInvokeError(componentName string, err error, botID ...string) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{componentName, err}
+	for _, a := range botID {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "BotInvokeError", varargs...)
+}
+
+// BotInvokeError indicates an expected call of BotInvokeError.
+func (mr *MockLifecycleMockRecorder) BotInvokeError(componentName, err interface{}, botID ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{componentName, err}, botID...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BotInvokeError", reflect.TypeOf((*MockLifecycle)(nil).BotInvokeError), varargs...)
+}
+
 // ClientClose mocks base method.
 func (m *MockLifecycle) ClientClose(arg0 ...config.AgentConfig) {
 	m.ctrl.T.Helper()
