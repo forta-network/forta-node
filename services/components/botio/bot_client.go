@@ -470,46 +470,47 @@ func (bot *botClient) processTransaction(ctx context.Context, lg *log.Entry, req
 	err := botClient.Invoke(ctx, agentgrpc.MethodEvaluateTx, request.Original, resp)
 	responseTime := time.Now().UTC()
 
-	if err == nil {
-		// truncate findings
-		if len(resp.Findings) > MaxFindings {
-			dropped := len(resp.Findings) - MaxFindings
-			droppedMetric := metrics.CreateAgentMetric(botConfig, metrics.MetricFindingsDropped, float64(dropped))
-			bot.msgClient.PublishProto(
-				messaging.SubjectMetricAgent,
-				&protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{droppedMetric}},
-			)
-			resp.Findings = resp.Findings[:MaxFindings]
-		}
-		var duration time.Duration
-		resp.Timestamp, resp.LatencyMs, duration = calculateResponseTime(&startTime)
-		lg.WithField("duration", duration).Debugf("request successful")
-
-		if resp.Metadata == nil {
-			resp.Metadata = make(map[string]string)
-		}
-		resp.Metadata["imageHash"] = botConfig.ImageHash()
-
-		ts := domain.TrackingTimestampsFromMessage(request.Original.Event.Timestamps)
-		ts.BotRequest = requestTime
-		ts.BotResponse = responseTime
-
-		bot.resultChannels.Tx <- &botreq.TxResult{
-			AgentConfig: botConfig,
-			Request:     request.Original,
-			Response:    resp,
-			Timestamps:  ts,
-		}
-		lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
-
-		return false
+	// truncate findings
+	if len(resp.Findings) > MaxFindings {
+		dropped := len(resp.Findings) - MaxFindings
+		droppedMetric := metrics.CreateAgentMetric(botConfig, metrics.MetricFindingsDropped, float64(dropped))
+		bot.msgClient.PublishProto(
+			messaging.SubjectMetricAgent,
+			&protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{droppedMetric}},
+		)
+		resp.Findings = resp.Findings[:MaxFindings]
 	}
 
-	if status.Code(err) == codes.Unimplemented {
-		return false
+	var duration time.Duration
+	resp.Timestamp, resp.LatencyMs, duration = calculateResponseTime(&startTime)
+	lg.WithField("duration", duration).Debugf("request successful")
+
+	if resp.Metadata == nil {
+		resp.Metadata = make(map[string]string)
+	}
+	resp.Metadata["imageHash"] = botConfig.ImageHash()
+
+	ts := domain.TrackingTimestampsFromMessage(request.Original.Event.Timestamps)
+	ts.BotRequest = requestTime
+	ts.BotResponse = responseTime
+
+	bot.resultChannels.Tx <- &botreq.TxResult{
+		AgentConfig: botConfig,
+		Request:     request.Original,
+		Response:    resp,
+		Timestamps:  ts,
 	}
 
-	lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking bot")
+	lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
+
+	if err != nil {
+		if status.Code(err) == codes.Unimplemented {
+			return false
+		}
+
+		lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking bot")
+	}
+
 	if bot.errCounter.TooManyErrs(err) {
 		lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down bot")
 		_ = bot.Close()
@@ -536,48 +537,48 @@ func (bot *botClient) processBlock(ctx context.Context, lg *log.Entry, request *
 	err := botClient.Invoke(ctx, agentgrpc.MethodEvaluateBlock, request.Original, resp)
 	responseTime := time.Now().UTC()
 
-	if err == nil {
-		// truncate findings
-		if len(resp.Findings) > MaxFindings {
-			dropped := len(resp.Findings) - MaxFindings
-			droppedMetric := metrics.CreateAgentMetric(
-				botConfig, metrics.MetricFindingsDropped, float64(dropped),
-			)
-			bot.msgClient.PublishProto(
-				messaging.SubjectMetricAgent,
-				&protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{droppedMetric}},
-			)
-			resp.Findings = resp.Findings[:MaxFindings]
-		}
-		var duration time.Duration
-		resp.Timestamp, resp.LatencyMs, duration = calculateResponseTime(&startTime)
-		lg.WithField("duration", duration).Debugf("request successful")
+	// truncate findings
+	if len(resp.Findings) > MaxFindings {
+		dropped := len(resp.Findings) - MaxFindings
+		droppedMetric := metrics.CreateAgentMetric(
+			botConfig, metrics.MetricFindingsDropped, float64(dropped),
+		)
+		bot.msgClient.PublishProto(
+			messaging.SubjectMetricAgent,
+			&protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{droppedMetric}},
+		)
+		resp.Findings = resp.Findings[:MaxFindings]
+	}
+	var duration time.Duration
+	resp.Timestamp, resp.LatencyMs, duration = calculateResponseTime(&startTime)
+	lg.WithField("duration", duration).Debugf("request successful")
 
-		if resp.Metadata == nil {
-			resp.Metadata = make(map[string]string)
-		}
-		resp.Metadata["imageHash"] = botConfig.ImageHash()
+	if resp.Metadata == nil {
+		resp.Metadata = make(map[string]string)
+	}
+	resp.Metadata["imageHash"] = botConfig.ImageHash()
 
-		ts := domain.TrackingTimestampsFromMessage(request.Original.Event.Timestamps)
-		ts.BotRequest = requestTime
-		ts.BotResponse = responseTime
+	ts := domain.TrackingTimestampsFromMessage(request.Original.Event.Timestamps)
+	ts.BotRequest = requestTime
+	ts.BotResponse = responseTime
 
-		bot.resultChannels.Block <- &botreq.BlockResult{
-			AgentConfig: botConfig,
-			Request:     request.Original,
-			Response:    resp,
-			Timestamps:  ts,
-		}
-		lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
-
-		return false
+	bot.resultChannels.Block <- &botreq.BlockResult{
+		AgentConfig: botConfig,
+		Request:     request.Original,
+		Response:    resp,
+		Timestamps:  ts,
 	}
 
-	if status.Code(err) == codes.Unimplemented {
-		return false
+	lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
+
+	if err != nil {
+		if status.Code(err) == codes.Unimplemented {
+			return false
+		}
+
+		lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking bot")
 	}
 
-	lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking bot")
 	if bot.errCounter.TooManyErrs(err) {
 		lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down bot")
 		_ = bot.Close()
@@ -587,7 +588,6 @@ func (bot *botClient) processBlock(ctx context.Context, lg *log.Entry, request *
 
 	return false
 }
-
 func (bot *botClient) processCombinationAlert(ctx context.Context, lg *log.Entry, request *botreq.CombinationRequest) bool {
 	botConfig := bot.Config()
 	botClient := bot.grpcClient()
@@ -603,28 +603,6 @@ func (bot *botClient) processCombinationAlert(ctx context.Context, lg *log.Entry
 	requestTime := time.Now().UTC()
 	err := botClient.Invoke(ctx, agentgrpc.MethodEvaluateAlert, request.Original, resp)
 	responseTime := time.Now().UTC()
-
-	if err != nil {
-		if status.Code(err) != codes.Unimplemented {
-			lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking bot")
-		}
-		if bot.errCounter.TooManyErrs(err) {
-			lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down bot")
-			_ = bot.Close()
-			bot.lifecycleMetrics.FailureTooManyErrs(err, botConfig)
-			return true
-		}
-	}
-
-	// validate response
-	if vErr := validateEvaluateAlertResponse(resp); vErr != nil {
-		lg.WithField(
-			"request", request.Original.RequestId,
-		).WithError(vErr).Error("evaluate combination response validation failed")
-		bot.lifecycleMetrics.BotError("validate.evaluate.alert.response", vErr, botConfig.ID)
-
-		return false
-	}
 
 	// truncate findings
 	if len(resp.Findings) > MaxFindings {
@@ -658,6 +636,35 @@ func (bot *botClient) processCombinationAlert(ctx context.Context, lg *log.Entry
 	}
 
 	lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
+
+	if bot.errCounter.TooManyErrs(err) {
+		lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down bot")
+		_ = bot.Close()
+		bot.lifecycleMetrics.FailureTooManyErrs(err, botConfig)
+		return true
+	}
+
+	if err != nil {
+		if status.Code(err) != codes.Unimplemented {
+			lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking bot")
+		}
+
+		lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking bot")
+		// bot.lifecycleMetrics.SendMetric("combiner.error", err, botConfig.ID)
+
+		return false
+	}
+
+	// validate response
+	if vErr := validateEvaluateAlertResponse(resp); vErr != nil {
+		lg.WithField(
+			"request", request.Original.RequestId,
+		).WithError(vErr).Error("evaluate combination response validation failed")
+		bot.lifecycleMetrics.BotError("validate.evaluate.alert.response", vErr, botConfig.ID)
+
+		return false
+	}
+
 	return false
 }
 
