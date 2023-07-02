@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./src",
+    "target": "esnext",
+    "moduleResolution": "node",
+    "outDir": "./build",
+    "allowJs": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "useUnknownInCatchVariables": false,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true
+  },
+  "extends": "@tsconfig/node16/tsconfig.json",
+  // "include": ["stacks", "stacks/Step/constructors/Scan/fragments/core/.ts"]
+}

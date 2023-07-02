@@ -3,7 +3,8 @@
 
 # default logging settings to apply to all containers
 # you can modify these as you wish
-x-logging: &default-logging
+x-logging:
+  &default-logging
   options:
     max-size: "50m"
     max-file: "10"
@@ -11,6 +12,12 @@ x-logging: &default-logging
 services:
   # forta service container definitions
   # you can skip the services if you are not sure about how to modify
+  notifier:
+    extends:
+      file: ./docker-compose-notifier.yml
+      service: notifier
+    networks:
+      - forta-node
 
   service-forta-nats:
     container_name: forta-nats
@@ -53,19 +60,35 @@ services:
       - ${PWD}:/.forta
       - ${PWD}/docker-compose.yml:/.forta/wrapped-config.yml
     depends_on:
+      - notifier
       - service-forta-nats
       - service-forta-json-rpc
       # make sure that scanner depends on all of the bots so it succeeds to attach
-      - bot-1
+      - bot-2
       #- bot-2
 
-  # forta bot definitions
+      # forta bot definitions
 
-  bot-1:
-    container_name: forta-bot-1
+      # bot-1:
+      #   container_name: forta-bot-1
+      #   logging: *default-logging
+      #   # oz-gnosis-events bot
+      #   image: disco.forta.network/bafybeibgyyvbzgbldqculjl4n4hyotlhqn6o3ft2n7hdobvwbt64ouzbri@sha256:a869950a3b8a8af09b95318745e07f8e7a16957c34173595813bb21093badd91
+      #   networks:
+      #     - forta-node
+      #   environment:
+      #     AGENT_GRPC_PORT: 50051
+      #     JSON_RPC_HOST: forta-json-rpc
+      #     JSON_RPC_PORT: 8545
+      # FORTA_BOT_ID:
+      # FORTA_BOT_OWNER:
+      # FORTA_CHAIN_ID:
+
+  bot-2:
+    container_name: forta-oracle-bot
     logging: *default-logging
     # oz-gnosis-events bot
-    image: disco.forta.network/bafybeibgyyvbzgbldqculjl4n4hyotlhqn6o3ft2n7hdobvwbt64ouzbri@sha256:a869950a3b8a8af09b95318745e07f8e7a16957c34173595813bb21093badd91
+    image: disco.forta.network/bafybeigib3mqfx275y4rsyd3zpb3u25qsn6xnguin3yuynwgzqzqcxsksu@sha256:e621c5f2f0d1255b18229e784a76207174c87ac42eea9626b7cc25281beb928d
     networks:
       - forta-node
     environment:
@@ -75,20 +98,20 @@ services:
       # FORTA_BOT_ID:
       # FORTA_BOT_OWNER:
       # FORTA_CHAIN_ID:
-  
-  # bot-2:
-  #   container_name: forta-bot-2
-  #   logging: *default-logging
-  #   image: some-other-bot-image:latest
-  # networks:
-  #   - forta-node
-  # environment:
-  #   AGENT_GRPC_PORT: 50051
-  #   JSON_RPC_HOST: forta-json-rpc
-  #   JSON_RPC_PORT: 8545
-  #   # FORTA_BOT_ID:
-  #   # FORTA_BOT_OWNER:
-  #   # FORTA_CHAIN_ID:
+
+      # bot-2:
+      #   container_name: forta-bot-2
+      #   logging: *default-logging
+      #   image: some-other-bot-image:latest
+      # networks:
+      #   - forta-node
+      # environment:
+      #   AGENT_GRPC_PORT: 50051
+      #   JSON_RPC_HOST: forta-json-rpc
+      #   JSON_RPC_PORT: 8545
+      #   # FORTA_BOT_ID:
+      #   # FORTA_BOT_OWNER:
+      #   # FORTA_CHAIN_ID:
 
 networks:
   forta-node: {}
@@ -96,25 +119,28 @@ networks:
 # specify the forta node config here!
 # this is known to the scanner as a "wrapped config".
 x-forta-config:
-  chainId: 137
+  chainId: 1
 
   scan:
     jsonRpc:
-      url: https://rpc.ankr.com/polygon
+      # url: https://eth-mainnet.alchemyapi.io/v2/EY6V18pyHpLFp4QHTF4Mv88NFaPsw83U
+      url: http://localhost:8545
 
   localMode:
     enable: true
-    webhookUrl: https://webhook.site/ba1d1033-8fdc-4f97-8398-b95b51a6de69
+    # webhookUrl: https://webhook.site/fortaoracle
+    webhookUrl: http://notifier:3000/forta
     # webhook alerts are sent with a JWT which is signed using this key
     privateKeyHex: 9e3c1e3ef3fc5669b6d469dafe2aa80b3986c5c59715ebcafb7e02076475a68c
     logToStdout: true
     # define if it is necessary to use a block range
     # runtimeLimits:
-    #   startBlock: 40293984
-    #   stopBlock: 40293988
+    startBlock: 17596560
+    # stopBlock: 17553593
     standalone:
       enable: true
       # make sure that the scanner knows the bot container names so it can attach
       botContainers:
-        - forta-bot-1
+        # - forta-bot-1
+        - forta-oracle-bot
         #- forta-bot-2
