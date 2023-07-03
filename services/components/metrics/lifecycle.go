@@ -48,8 +48,8 @@ type Lifecycle interface {
 	StatusAttached(...config.AgentConfig)
 	StatusInitialized(...config.AgentConfig)
 	StatusStopping(...config.AgentConfig)
-	StatusActive([]string)
-	StatusInactive([]string)
+	StatusActive(...config.AgentConfig)
+	StatusInactive(...config.AgentConfig)
 
 	ActionUpdate(...config.AgentConfig)
 	ActionRestart(...config.AgentConfig)
@@ -65,7 +65,7 @@ type Lifecycle interface {
 	FailureInitializeValidate(error, ...config.AgentConfig)
 	FailureTooManyErrs(error, ...config.AgentConfig)
 
-	BotError(metricName string, err error, botID ...string)
+	BotError(metricName string, err error, cfgs ...config.AgentConfig)
 	SystemError(metricName string, err error)
 
 	SystemStatus(metricName string, details string)
@@ -106,12 +106,12 @@ func (lc *lifecycle) StatusStopping(botConfigs ...config.AgentConfig) {
 	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricStatusStopping, "", botConfigs))
 }
 
-func (lc *lifecycle) StatusActive(botIDs []string) {
-	SendAgentMetrics(lc.msgClient, fromBotIDs(MetricStatusActive, "", botIDs))
+func (lc *lifecycle) StatusActive(botConfigs ...config.AgentConfig) {
+	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricStatusActive, "", botConfigs))
 }
 
-func (lc *lifecycle) StatusInactive(botIDs []string) {
-	SendAgentMetrics(lc.msgClient, fromBotIDs(MetricStatusInactive, "", botIDs))
+func (lc *lifecycle) StatusInactive(botConfigs ...config.AgentConfig) {
+	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricStatusInactive, "", botConfigs))
 }
 
 func (lc *lifecycle) ActionUpdate(botConfigs ...config.AgentConfig) {
@@ -162,16 +162,16 @@ func (lc *lifecycle) FailureTooManyErrs(err error, botConfigs ...config.AgentCon
 	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricFailureTooManyErrs, err.Error(), botConfigs))
 }
 
-func (lc *lifecycle) BotError(metricName string, err error, botIDs ...string) {
-	SendAgentMetrics(lc.msgClient, fromBotIDs(fmt.Sprintf("agent.error.%s", metricName), err.Error(), botIDs))
+func (lc *lifecycle) BotError(metricName string, err error, botConfigs ...config.AgentConfig) {
+	SendAgentMetrics(lc.msgClient, fromBotConfigs(fmt.Sprintf("agent.error.%s", metricName), err.Error(), botConfigs))
 }
 
 func (lc *lifecycle) SystemError(metricName string, err error) {
-	SendAgentMetrics(lc.msgClient, fromBotIDs(fmt.Sprintf("system.error.%s", metricName), err.Error(), []string{"system"}))
+	SendAgentMetrics(lc.msgClient, systemMetrics(fmt.Sprintf("system.error.%s", metricName), err.Error()))
 }
 
 func (lc *lifecycle) SystemStatus(metricName string, details string) {
-	SendAgentMetrics(lc.msgClient, fromBotIDs(fmt.Sprintf("system.status.%s", metricName), details, []string{"system"}))
+	SendAgentMetrics(lc.msgClient, systemMetrics(fmt.Sprintf("system.status.%s", metricName), details))
 }
 
 func fromBotSubscriptions(action string, subscriptions []domain.CombinerBotSubscription) (metrics []*protocol.AgentMetric) {
@@ -190,26 +190,13 @@ func fromBotConfigs(metricName string, details string, botConfigs []config.Agent
 			Name:      metricName,
 			Details:   details,
 			Value:     1,
-		}
-		if details == "" {
-			// default details to shard details
-			metric.Details = botConfig.ShardDetails()
+			ShardId:   botConfig.ShardID(),
 		}
 		metrics = append(metrics, metric)
 	}
 	return
 }
 
-func fromBotIDs(metricName string, details string, botIDs []string) (metrics []*protocol.AgentMetric) {
-	details = utils.ObfuscateURLs(details)
-	for _, botID := range botIDs {
-		metrics = append(metrics, &protocol.AgentMetric{
-			AgentId:   botID,
-			Timestamp: time.Now().Format(time.RFC3339),
-			Name:      metricName,
-			Details:   details,
-			Value:     1,
-		})
-	}
-	return
+func systemMetrics(metricName string, details string) []*protocol.AgentMetric {
+	return fromBotConfigs(metricName, details, []config.AgentConfig{{ID: "system"}})
 }

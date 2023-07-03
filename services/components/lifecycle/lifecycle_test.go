@@ -345,6 +345,7 @@ func (s *LifecycleTestSuite) TestInactiveRestarted() {
 	s.botGrpc.EXPECT().Close()
 	s.lifecycleMetrics.EXPECT().ClientClose(assigned[0])
 	s.lifecycleMetrics.EXPECT().ClientDial(assigned[0])
+	s.lifecycleMetrics.EXPECT().StatusInactive(assigned[0])
 	s.dialer.EXPECT().DialBot(assigned[0]).Return(s.botGrpc, nil)
 	s.lifecycleMetrics.EXPECT().StatusAttached(assigned[0])
 	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{}, nil)

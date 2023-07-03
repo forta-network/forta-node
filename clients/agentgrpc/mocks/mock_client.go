@@ -126,6 +126,26 @@ func (mr *MockClientMockRecorder) EvaluateTx(ctx, in interface{}, opts ...interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EvaluateTx", reflect.TypeOf((*MockClient)(nil).EvaluateTx), varargs...)
 }
 
+// HealthCheck mocks base method.
+func (m *MockClient) HealthCheck(ctx context.Context, in *protocol.HealthCheckRequest, opts ...grpc.CallOption) (*protocol.HealthCheckResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "HealthCheck", varargs...)
+	ret0, _ := ret[0].(*protocol.HealthCheckResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// HealthCheck indicates an expected call of HealthCheck.
+func (mr *MockClientMockRecorder) HealthCheck(ctx, in interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HealthCheck", reflect.TypeOf((*MockClient)(nil).HealthCheck), varargs...)
+}
+
 // Initialize mocks base method.
 func (m *MockClient) Initialize(ctx context.Context, in *protocol.InitializeRequest, opts ...grpc.CallOption) (*protocol.InitializeResponse, error) {
 	m.ctrl.T.Helper()

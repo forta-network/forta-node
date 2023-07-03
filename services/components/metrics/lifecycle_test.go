@@ -31,7 +31,7 @@ func TestFromBotConfigs(t *testing.T) {
 	r.Equal(bot1Sharded.ID, metrics[0].AgentId)
 	r.NotEmpty(metrics[0].Timestamp)
 	r.Equal(metricName, metrics[0].Name)
-	r.Equal("shard=1", metrics[0].Details)
+	r.Equal(int32(1), metrics[0].ShardId)
 	r.Equal(float64(1), metrics[0].Value)
 
 	r.Equal(bot2NotSharded.ID, metrics[1].AgentId)

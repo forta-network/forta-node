@@ -140,7 +140,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 		var flushed bool
 		batch.Metrics, flushed = pub.metricsAggregator.TryFlush()
 		// detect the active bots from metrics
-		pub.lifecycleMetrics.StatusActive(metrics.FindActiveBotsFromMetrics(batch.Metrics))
+		pub.lifecycleMetrics.StatusActive(metrics.FindActiveBotsFromMetrics(batch.Metrics)...)
 		if flushed {
 			log.Debug("flushed metrics")
 			pub.lastMetricsFlush.Set()

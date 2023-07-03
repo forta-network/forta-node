@@ -71,7 +71,7 @@ func createMetrics(agt config.AgentConfig, timestamp string, metricMap map[strin
 			Timestamp: timestamp,
 			Name:      name,
 			Value:     value,
-			Details:   agt.ShardDetails(),
+			ShardId:   agt.ShardID(),
 		})
 	}
 	return res

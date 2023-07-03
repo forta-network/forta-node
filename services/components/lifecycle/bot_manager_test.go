@@ -155,7 +155,7 @@ func (s *BotLifecycleManagerTestSuite) TestRestart() {
 
 	s.lifecycleMetrics.EXPECT().ActionRestart(botConfigs[1])
 	err := errors.New("failed to start")
-	s.lifecycleMetrics.EXPECT().BotError("start.exited.bot.container", gomock.Any(), testBotID2)
+	s.lifecycleMetrics.EXPECT().BotError("start.exited.bot.container", gomock.Any(), []config.AgentConfig{botConfigs[1]})
 	s.botContainers.EXPECT().StartWaitBotContainer(gomock.Any(), testContainerID2).Return(err)
 
 	// reinitialize only
@@ -178,6 +178,7 @@ func (s *BotLifecycleManagerTestSuite) TestExit() {
 
 	s.botManager.runningBots = botConfigs
 
+	s.lifecycleMetrics.EXPECT().StatusInactive([]config.AgentConfig{botConfigs[1]})
 	s.botMonitor.EXPECT().GetInactiveBots().Return([]string{testBotID2})
 	s.botContainers.EXPECT().StopBot(gomock.Any(), botConfigs[1])
 
