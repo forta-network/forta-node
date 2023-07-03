@@ -58,7 +58,7 @@ func CreateAgentMetric(agt config.AgentConfig, metric string, value float64) *pr
 		Timestamp: time.Now().Format(time.RFC3339),
 		Name:      metric,
 		Value:     value,
-		Details:   agt.ShardDetails(),
+		ShardId:   agt.ShardID(),
 	}
 }
 
