@@ -138,8 +138,8 @@ x-forta-config:
     jsonRpc:
       # url: https://eth-mainnet.alchemyapi.io/v2/EY6V18pyHpLFp4QHTF4Mv88NFaPsw83U
       # url: ${RPC_URL}
-      url: http://localhost:9545
-      # url: https://securityalliance.dev/rpc/
+      # url: http://localhost:9545
+      url: https://securityalliance.dev/rpc/
 
   localMode:
     enable: true
