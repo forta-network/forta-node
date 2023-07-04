@@ -3,6 +3,7 @@ package botio
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -15,8 +16,8 @@ import (
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/services/components/botio/botreq"
 	mock_metrics "github.com/forta-network/forta-node/services/components/metrics/mocks"
-
 	"github.com/golang/mock/gomock"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -235,4 +236,133 @@ func (s *BotClientSuite) TestInitialize_ValidationError() {
 	s.lifecycleMetrics.EXPECT().FailureInitializeValidate(gomock.Any(), s.botClient.configUnsafe)
 
 	s.botClient.Initialize()
+}
+
+func (s *BotClientSuite) TestHealthCheck() {
+	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(
+		&protocol.InitializeResponse{
+		}, nil,
+	).AnyTimes()
+
+	s.lifecycleMetrics.EXPECT().ClientDial(s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().StatusAttached(s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().StatusInitialized(s.botClient.configUnsafe)
+
+	s.botClient.Initialize()
+
+	<-s.botClient.Initialized()
+
+	ctx := context.Background()
+	resp := &protocol.HealthCheckResponse{
+		Status: protocol.HealthCheckResponse_SUCCESS,
+	}
+
+	// Mock HealthCheckAttempt() call
+	s.lifecycleMetrics.EXPECT().HealthCheckAttempt(gomock.Any())
+
+	// Use Do() to modify the request parameter
+	s.botGrpc.EXPECT().
+		Invoke(ctx, agentgrpc.MethodHealthCheck, gomock.Any(), gomock.AssignableToTypeOf(resp)).
+		Do(
+			func(ctx context.Context, method agentgrpc.Method, actualReq, resp interface{}, _ ...interface{}) {
+				// Modify the actualReq parameter
+				if resp, ok := resp.(*protocol.HealthCheckResponse); ok {
+					resp.Status = protocol.HealthCheckResponse_SUCCESS
+				}
+			},
+		).
+		Return(nil)
+
+	// Mock HealthCheckSuccess() call
+	s.lifecycleMetrics.EXPECT().HealthCheckSuccess(gomock.Any())
+
+	// Execute the method
+	result := s.botClient.doHealthCheck(ctx, logrus.WithField("y", "x"))
+
+	s.r.False(result, "Expected healthCheck to return false")
+}
+
+func (s *BotClientSuite) TestHealthCheck_WithError() {
+	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(
+		&protocol.InitializeResponse{
+		}, nil,
+	).AnyTimes()
+
+	s.lifecycleMetrics.EXPECT().ClientDial(s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().StatusAttached(s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().StatusInitialized(s.botClient.configUnsafe)
+
+	s.botClient.Initialize()
+
+	<-s.botClient.Initialized()
+
+	ctx := context.Background()
+	response := &protocol.HealthCheckResponse{
+		Status: protocol.HealthCheckResponse_ERROR,
+		Errors: []*protocol.Error{
+			{
+				Message: "Error 1",
+			},
+			{
+				Message: "Error 2",
+			},
+		},
+	}
+
+	// Mock HealthCheckAttempt() call
+	s.lifecycleMetrics.EXPECT().HealthCheckAttempt(gomock.Any())
+
+	// Use Do() to modify the request parameter
+	s.botGrpc.EXPECT().
+		Invoke(ctx, agentgrpc.MethodHealthCheck, gomock.Any(), gomock.AssignableToTypeOf(response)).
+		Do(
+			func(ctx context.Context, method agentgrpc.Method, actualReq, resp interface{}, _ ...interface{}) {
+				// Modify the actualReq parameter
+				if resp, ok := resp.(*protocol.HealthCheckResponse); ok {
+					resp.Status = response.Status
+					resp.Errors = response.Errors
+				}
+			},
+		).
+		Return(nil)
+
+	// Mock HealthCheckError() call
+	s.lifecycleMetrics.EXPECT().HealthCheckError(gomock.Any(), gomock.Any())
+
+	// Execute the method
+	result := s.botClient.doHealthCheck(ctx, logrus.WithField("y", "x"))
+
+	s.r.False(result, "Expected healthCheck to return false")
+}
+
+func (s *BotClientSuite) TestHealthCheck_WithInvokeError() {
+	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(
+		&protocol.InitializeResponse{
+		}, nil,
+	).AnyTimes()
+
+	s.lifecycleMetrics.EXPECT().ClientDial(s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().StatusAttached(s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().StatusInitialized(s.botClient.configUnsafe)
+
+	s.botClient.Initialize()
+
+	<-s.botClient.Initialized()
+
+	ctx := context.Background()
+
+	invokeErr := fmt.Errorf("failed to invoke method")
+	// Mock HealthCheckAttempt() call
+	s.lifecycleMetrics.EXPECT().HealthCheckAttempt(gomock.Any())
+
+	// Use Do() to modify the request parameter
+	s.botGrpc.EXPECT().Invoke(ctx, agentgrpc.MethodHealthCheck, gomock.Any(), gomock.Any()).Return(invokeErr)
+
+	// Mock HealthCheckError() call
+	s.lifecycleMetrics.EXPECT().HealthCheckError(gomock.Not(gomock.Nil()), gomock.Any())
+
+	// Execute the method
+	result := s.botClient.doHealthCheck(ctx, logrus.WithField("y", "x"))
+
+	s.r.False(result, "Expected healthCheck to return false")
 }

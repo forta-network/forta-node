@@ -20,6 +20,7 @@ import (
 	"github.com/forta-network/forta-node/nodeutils"
 	"github.com/forta-network/forta-node/services/components/botio/botreq"
 	"github.com/forta-network/forta-node/services/components/metrics"
+	"github.com/hashicorp/go-multierror"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -56,10 +57,11 @@ type BotClient interface {
 
 // Constants
 const (
-	DefaultBufferSize        = 2000
-	RequestTimeout           = 30 * time.Second
-	MaxFindings              = 50
-	DefaultInitializeTimeout = 5 * time.Minute
+	DefaultBufferSize          = 2000
+	RequestTimeout             = 30 * time.Second
+	MaxFindings                = 50
+	DefaultInitializeTimeout   = 5 * time.Minute
+	DefaultHealthCheckInterval = time.Second * 30
 )
 
 // botClient receives blocks and transactions, and produces results.
@@ -389,6 +391,7 @@ func (bot *botClient) StartProcessing() {
 	go bot.processTransactions()
 	go bot.processBlocks()
 	go bot.processCombinationAlerts()
+	go bot.processHealthChecks()
 }
 
 func processRequests[R any](
@@ -425,6 +428,7 @@ func (bot *botClient) processTransactions() {
 
 	processRequests(bot.ctx, bot.txRequests, bot.Closed(), lg, bot.processTransaction)
 }
+
 func (bot *botClient) processBlocks() {
 	lg := log.WithFields(
 		log.Fields{
@@ -437,6 +441,32 @@ func (bot *botClient) processBlocks() {
 	<-bot.Initialized()
 
 	processRequests(bot.ctx, bot.blockRequests, bot.Closed(), lg, bot.processBlock)
+}
+
+func (bot *botClient) processHealthChecks() {
+	lg := log.WithFields(
+		log.Fields{
+			"bot":       bot.Config().ID,
+			"component": "bot-client",
+			"evaluate":  "health-check",
+		},
+	)
+
+	<-bot.Initialized()
+
+	t := time.NewTicker(DefaultHealthCheckInterval)
+
+	for {
+		select {
+		case <-bot.ctx.Done():
+			return
+		case <-t.C:
+			exit := bot.doHealthCheck(bot.ctx, lg)
+			if exit {
+				return
+			}
+		}
+	}
 }
 
 func (bot *botClient) processCombinationAlerts() {
@@ -659,6 +689,56 @@ func (bot *botClient) processCombinationAlert(ctx context.Context, lg *log.Entry
 
 	lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
 	return false
+}
+
+func (bot *botClient) doHealthCheck(ctx context.Context, lg *log.Entry) bool {
+	botConfig := bot.Config()
+	botClient := bot.grpcClient()
+
+	if bot.IsClosed() {
+		return true
+	}
+
+	startTime := time.Now()
+
+	lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
+	resp := new(protocol.HealthCheckResponse)
+
+	bot.lifecycleMetrics.HealthCheckAttempt(botConfig)
+	req := new(protocol.HealthCheckRequest)
+	invokeErr := botClient.Invoke(ctx, agentgrpc.MethodHealthCheck, req, resp)
+
+	if isSuccess := isHealthCheckSuccess(invokeErr, resp); isSuccess {
+		bot.lifecycleMetrics.HealthCheckSuccess(botConfig)
+		return false
+	}
+
+	if err := extractHealthCheckError(invokeErr, resp); err != nil {
+		bot.lifecycleMetrics.HealthCheckError(err, botConfig)
+	}
+
+	return false
+}
+
+func isHealthCheckSuccess(invokeErr error, resp *protocol.HealthCheckResponse) bool {
+	isUnimplemented := invokeErr != nil && status.Code(invokeErr) == codes.Unimplemented
+	isHealthyResponse := resp.Status == protocol.HealthCheckResponse_SUCCESS
+	return isUnimplemented || isHealthyResponse
+}
+
+func extractHealthCheckError(invokeErr error, resp *protocol.HealthCheckResponse) error {
+	var err error
+	// catch invocation errors
+	if invokeErr != nil && status.Code(err) != codes.Unimplemented {
+		err = multierror.Append(err, invokeErr)
+	}
+
+	// append response errors
+	for _, e := range resp.Errors {
+		err = multierror.Append(err, fmt.Errorf("%s", e.Message))
+	}
+
+	return err
 }
 
 func validateEvaluateAlertResponse(resp *protocol.EvaluateAlertResponse) (err error) {

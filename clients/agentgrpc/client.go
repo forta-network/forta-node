@@ -24,6 +24,7 @@ const (
 	MethodEvaluateTx    Method = "/network.forta.Agent/EvaluateTx"
 	MethodEvaluateBlock Method = "/network.forta.Agent/EvaluateBlock"
 	MethodEvaluateAlert Method = "/network.forta.Agent/EvaluateAlert"
+	MethodHealthCheck   Method = "/network.forta.Agent/HealthCheck"
 )
 
 // Client makes the gRPC requests to evaluate block and txs and receive results.

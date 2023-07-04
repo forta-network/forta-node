@@ -276,6 +276,55 @@ func (mr *MockLifecycleMockRecorder) FailureTooManyErrs(arg0 interface{}, arg1 .
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailureTooManyErrs", reflect.TypeOf((*MockLifecycle)(nil).FailureTooManyErrs), varargs...)
 }
 
+// HealthCheckAttempt mocks base method.
+func (m *MockLifecycle) HealthCheckAttempt(botConfigs ...config.AgentConfig) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range botConfigs {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "HealthCheckAttempt", varargs...)
+}
+
+// HealthCheckAttempt indicates an expected call of HealthCheckAttempt.
+func (mr *MockLifecycleMockRecorder) HealthCheckAttempt(botConfigs ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HealthCheckAttempt", reflect.TypeOf((*MockLifecycle)(nil).HealthCheckAttempt), botConfigs...)
+}
+
+// HealthCheckError mocks base method.
+func (m *MockLifecycle) HealthCheckError(err error, botConfigs ...config.AgentConfig) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{err}
+	for _, a := range botConfigs {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "HealthCheckError", varargs...)
+}
+
+// HealthCheckError indicates an expected call of HealthCheckError.
+func (mr *MockLifecycleMockRecorder) HealthCheckError(err interface{}, botConfigs ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{err}, botConfigs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HealthCheckError", reflect.TypeOf((*MockLifecycle)(nil).HealthCheckError), varargs...)
+}
+
+// HealthCheckSuccess mocks base method.
+func (m *MockLifecycle) HealthCheckSuccess(botConfigs ...config.AgentConfig) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range botConfigs {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "HealthCheckSuccess", varargs...)
+}
+
+// HealthCheckSuccess indicates an expected call of HealthCheckSuccess.
+func (mr *MockLifecycleMockRecorder) HealthCheckSuccess(botConfigs ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HealthCheckSuccess", reflect.TypeOf((*MockLifecycle)(nil).HealthCheckSuccess), botConfigs...)
+}
+
 // StatusActive mocks base method.
 func (m *MockLifecycle) StatusActive(arg0 ...config.AgentConfig) {
 	m.ctrl.T.Helper()
