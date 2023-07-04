@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile
       target: deploy
     container_name: notifier
+    environment:
+      DISCORDWEBHOOK: ${DISCORDWEBHOOK}
     expose:
       - '3000'
     ports:

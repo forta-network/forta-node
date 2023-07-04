@@ -1,6 +1,6 @@
 import axios from 'axios'
 import TelegramBot from 'node-telegram-bot-api'
-import { Controller, Param, Body, Get, Post, Put, Delete, QueryParam, BodyParam, JsonController } from 'routing-controllers'
+import { Get, Post, QueryParam, BodyParam, JsonController } from 'routing-controllers'
 import { BigNumber, utils } from 'ethers'
 import { APIEmbed, EmbedBuilder } from 'discord.js'
 
@@ -10,7 +10,10 @@ const chatId = '-858059392'
 const explorerUrl = 'https://securityalliance.dev/'
 const bot = new TelegramBot(botKey, { polling: false })
 // const discordWebhookId = '1125156706855436308/RHD91-NS-GFPwitOy2zo_vD-okJzs6u2w92gr0b5zu-4h_WJpWRORGdMwSMmugm1a6Uj?thread_id=1125491936208367666'
-const discordWebhookId = '1125073763189403658/u8fiBDOCHlyEXoTiComokjH604NAKYDI21122kiA0-FeE_3G4UNoVRs9dpWNS698w9Br?thread_id=1124765083747242085'
+// const discordWebhookId = '1125073763189403658/u8fiBDOCHlyEXoTiComokjH604NAKYDI21122kiA0-FeE_3G4UNoVRs9dpWNS698w9Br?thread_id=1124765083747242085'
+const discordWebhookId = process.env.DISCORDWEBHOOK
+
+console.log({ discordWebhookId })
 
 interface FortaAlertBase {
     name: string
@@ -94,15 +97,13 @@ const formatTelegramAlert = (alert: FortaAlert) => {
     let formattedAlert: string
     switch (alert.alertId) {
         case FortaAlertIds.market:
-            formattedAlert = `️💰 [TX](${explorerUrl}tx/${alert.source.transactionHash}) ${alert.description} \n Asset: ${
-                alert.metadata.symbol
-            }\n Amount: ${parseFloat(alert.metadata.amount).toFixed(2)}\n Value: ${usdFormatter.format(parseInt(alert.metadata.usdValue))}`
+            formattedAlert = `️💰 [TX](${explorerUrl}tx/${alert.source.transactionHash}) ${alert.description} \n Asset: ${alert.metadata.symbol
+                }\n Amount: ${parseFloat(alert.metadata.amount).toFixed(2)}\n Value: ${usdFormatter.format(parseInt(alert.metadata.usdValue))}`
 
             break
         case FortaAlertIds.oracle:
-            formattedAlert = `⚠️ [TX](${explorerUrl}tx/${alert.source.transactionHash}) Reported price of ${
-                alert.metadata.cTokenAddress
-            } was rejected\n Anchor Price: ${formatPrice(alert.metadata.anchorPrice)}\n Reporter Price: ${formatPrice(alert.metadata.reporterPrice)}`
+            formattedAlert = `⚠️ [TX](${explorerUrl}tx/${alert.source.transactionHash}) Reported price of ${alert.metadata.cTokenAddress
+                } was rejected\n Anchor Price: ${formatPrice(alert.metadata.anchorPrice)}\n Reporter Price: ${formatPrice(alert.metadata.reporterPrice)}`
 
             break
 
@@ -175,7 +176,9 @@ export class NotificationController {
             .setDescription(message)
             .setTimestamp()
 
-        await sendDiscordAlert(discordWebhookId, [exampleEmbed.data])
+        if (discordWebhookId)
+            await sendDiscordAlert(discordWebhookId, [exampleEmbed.data])
+        else console.warn('NO WEBHOOK ID')
         return 'This action sent alert'
     }
 
@@ -186,7 +189,9 @@ export class NotificationController {
             const message = formatTelegramAlert(alert)
             await sendTelegramAlert(chatId, message)
             const discordMessage = formatDiscordAlert(alert)
-            await sendDiscordAlert(discordWebhookId, [discordMessage])
+            if (discordWebhookId)
+                await sendDiscordAlert(discordWebhookId, [discordMessage])
+            else console.warn('NO WEBHOOK ID')
         }
         return 'This action sent alert'
     }
