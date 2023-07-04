@@ -150,6 +150,8 @@ func (s *BotClientTestSuite) TestTearDownBot() {
 		}, nil)
 		s.client.EXPECT().DetachNetwork(gomock.Any(), testContainerID, botConfig.ContainerName()).Return(testErr)
 	}
+	timeout := BotShutdownTimeout
+	s.client.EXPECT().TerminateContainer(gomock.Any(), testContainerID2, &timeout).Return(testErr)
 	s.client.EXPECT().RemoveContainer(gomock.Any(), testContainerID2).Return(testErr)
 	s.client.EXPECT().RemoveNetworkByName(gomock.Any(), botConfig.ContainerName()).Return(testErr)
 	s.client.EXPECT().RemoveImage(gomock.Any(), testImageRef).Return(testErr)
