@@ -455,6 +455,7 @@ func (bot *botClient) processHealthChecks() {
 	<-bot.Initialized()
 
 	t := time.NewTicker(DefaultHealthCheckInterval)
+	_ = bot.doHealthCheck(bot.ctx, lg)
 
 	for {
 		select {
