@@ -415,17 +415,17 @@ func (mr *MockDockerClientMockRecorder) StopContainer(ctx, id interface{}) *gomo
 }
 
 // TerminateContainer mocks base method.
-func (m *MockDockerClient) TerminateContainer(ctx context.Context, id string) error {
+func (m *MockDockerClient) TerminateContainer(ctx context.Context, id string, timeout *time.Duration) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TerminateContainer", ctx, id)
+	ret := m.ctrl.Call(m, "TerminateContainer", ctx, id, timeout)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // TerminateContainer indicates an expected call of TerminateContainer.
-func (mr *MockDockerClientMockRecorder) TerminateContainer(ctx, id interface{}) *gomock.Call {
+func (mr *MockDockerClientMockRecorder) TerminateContainer(ctx, id, timeout interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TerminateContainer", reflect.TypeOf((*MockDockerClient)(nil).TerminateContainer), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TerminateContainer", reflect.TypeOf((*MockDockerClient)(nil).TerminateContainer), ctx, id, timeout)
 }
 
 // WaitContainerExit mocks base method.

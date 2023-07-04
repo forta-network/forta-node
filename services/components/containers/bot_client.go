@@ -15,8 +15,9 @@ import (
 
 // Timeouts
 const (
-	BotPullTimeout  = time.Minute * 10
-	BotStartTimeout = time.Minute * 5
+	BotPullTimeout     = time.Minute * 10
+	BotStartTimeout    = time.Minute * 5
+	BotShutdownTimeout = time.Minute
 
 	ImagePullCooldownThreshold = 5
 	ImagePullCooldownDuration  = time.Minute * 10
@@ -152,22 +153,43 @@ func (bc *botClient) TearDownBot(ctx context.Context, containerName string, remo
 	// not returning any errors in `if`s below so we keep on by removing whatever is left
 	for _, serviceContainerID := range serviceContainerIDs {
 		if err := bc.client.DetachNetwork(ctx, serviceContainerID, containerName); err != nil {
-			log.WithFields(log.Fields{
-				"network":          containerName,
-				"serviceContainer": serviceContainerID,
-			}).WithError(err).Warn("failed to detach the service container from the bot network")
+			log.WithFields(
+				log.Fields{
+					"network":          containerName,
+					"serviceContainer": serviceContainerID,
+				},
+			).WithError(err).Warn("failed to detach the service container from the bot network")
 		}
 	}
+
+	terminateCtx, terminateCancel := context.WithTimeout(ctx, BotShutdownTimeout)
+	defer terminateCancel()
+
+	timeout := BotShutdownTimeout
+
+	if err := bc.client.TerminateContainer(terminateCtx, container.ID, &timeout); err != nil {
+		log.WithFields(
+			log.Fields{
+				"containerId":   container.ID,
+				"containerName": containerName,
+			},
+		).WithError(err).Warn("failed to terminate the bot container")
+	}
+
 	if err := bc.client.RemoveContainer(ctx, container.ID); err != nil {
-		log.WithFields(log.Fields{
-			"containerId":   container.ID,
-			"containerName": containerName,
-		}).WithError(err).Warn("failed to destroy the bot container")
+		log.WithFields(
+			log.Fields{
+				"containerId":   container.ID,
+				"containerName": containerName,
+			},
+		).WithError(err).Warn("failed to remove the bot container")
 	}
 	if err := bc.client.RemoveNetworkByName(ctx, containerName); err != nil {
-		log.WithFields(log.Fields{
-			"network": containerName,
-		}).WithError(err).Warn("failed to destroy the bot network")
+		log.WithFields(
+			log.Fields{
+				"network": containerName,
+			},
+		).WithError(err).Warn("failed to destroy the bot network")
 	}
 	if !removeImage {
 		return nil

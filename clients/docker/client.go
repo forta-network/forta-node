@@ -33,6 +33,8 @@ const (
 	LabelFortaBotID                     = "network.forta.bot-id"
 
 	LabelFortaSettingsAgentLogsEnable = "network.forta.settings.agent-logs.enable"
+
+	BotShutdownTimeout = time.Minute
 )
 
 type dockerLabel struct {
@@ -595,8 +597,8 @@ func (d *dockerClient) InterruptContainer(ctx context.Context, id string) error 
 }
 
 // TerminateContainer stops a container by sending an termination signal.
-func (d *dockerClient) TerminateContainer(ctx context.Context, id string) error {
-	return d.stopContainer(ctx, id, "SIGTERM")
+func (d *dockerClient) TerminateContainer(ctx context.Context, id string, timeout *time.Duration) error {
+	return d.cli.ContainerStop(ctx, id, timeout)
 }
 
 // TerminateContainer stops a container by sending an termination signal.
@@ -605,6 +607,7 @@ func (d *dockerClient) stopContainer(ctx context.Context, containerID, signal st
 		"id":     containerID,
 		"signal": signal,
 	}).Infof("stopping container")
+
 	err := d.cli.ContainerKill(ctx, containerID, signal)
 	if err == nil {
 		return nil
