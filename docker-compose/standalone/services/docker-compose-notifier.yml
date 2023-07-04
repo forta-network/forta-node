@@ -1,0 +1,11 @@
+services:
+  notifier:
+    build:
+      context: ../../../notifier/
+      dockerfile: Dockerfile
+      target: deploy
+    container_name: notifier
+    expose:
+      - '3000'
+    ports:
+      - '3000:3000'

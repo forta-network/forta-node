@@ -19,6 +19,13 @@ services:
     networks:
       - forta-node
 
+  anvil:
+    extends:
+      file: ./services/docker-compose-foundry.yml
+      service: anvil
+    networks:
+      - forta-node
+
   service-forta-nats:
     container_name: forta-nats
     logging: *default-logging
@@ -61,6 +68,7 @@ services:
       - ${PWD}/docker-compose.yml:/.forta/wrapped-config.yml
     depends_on:
       - notifier
+      - anvil
       - service-forta-nats
       - service-forta-json-rpc
       # make sure that scanner depends on all of the bots so it succeeds to attach
@@ -70,25 +78,11 @@ services:
 
       # forta bot definitions
 
-      # bot-1:
-      #   container_name: forta-bot-1
-      #   logging: *default-logging
-      #   # oz-gnosis-events bot
-      #   image: disco.forta.network/bafybeibgyyvbzgbldqculjl4n4hyotlhqn6o3ft2n7hdobvwbt64ouzbri@sha256:a869950a3b8a8af09b95318745e07f8e7a16957c34173595813bb21093badd91
-      #   networks:
-      #     - forta-node
-      #   environment:
-      #     AGENT_GRPC_PORT: 50051
-      #     JSON_RPC_HOST: forta-json-rpc
-      #     JSON_RPC_PORT: 8545
-      # FORTA_BOT_ID:
-      # FORTA_BOT_OWNER:
-      # FORTA_CHAIN_ID:
-
   bot-3:
     container_name: forta-market-bot
     logging: *default-logging
-    # oz-gnosis-events bot
+    depends_on:
+      - anvil
     image: ghcr.io/ipatka/forta-comet:latest
     networks:
       - forta-node
@@ -100,7 +94,8 @@ services:
   bot-2:
     container_name: forta-oracle-bot
     logging: *default-logging
-    # oz-gnosis-events bot
+    depends_on:
+      - anvil
     image: disco.forta.network/bafybeigib3mqfx275y4rsyd3zpb3u25qsn6xnguin3yuynwgzqzqcxsksu@sha256:e621c5f2f0d1255b18229e784a76207174c87ac42eea9626b7cc25281beb928d
     networks:
       - forta-node
@@ -108,23 +103,6 @@ services:
       AGENT_GRPC_PORT: 50051
       JSON_RPC_HOST: forta-json-rpc
       JSON_RPC_PORT: 8545
-      # FORTA_BOT_ID:
-      # FORTA_BOT_OWNER:
-      # FORTA_CHAIN_ID:
-
-      # bot-2:
-      #   container_name: forta-bot-2
-      #   logging: *default-logging
-      #   image: some-other-bot-image:latest
-      # networks:
-      #   - forta-node
-      # environment:
-      #   AGENT_GRPC_PORT: 50051
-      #   JSON_RPC_HOST: forta-json-rpc
-      #   JSON_RPC_PORT: 8545
-      #   # FORTA_BOT_ID:
-      #   # FORTA_BOT_OWNER:
-      #   # FORTA_CHAIN_ID:
 
 networks:
   forta-node: {}
@@ -137,9 +115,7 @@ x-forta-config:
   scan:
     jsonRpc:
       # url: https://eth-mainnet.alchemyapi.io/v2/EY6V18pyHpLFp4QHTF4Mv88NFaPsw83U
-      # url: ${RPC_URL}
-      # url: http://localhost:9545
-      url: https://securityalliance.dev/rpc/
+      url: http://anvil:9545
 
   localMode:
     enable: true

@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  anvil:
+    # image: ghcr.io/ipatka/foundry:${FOUNDRY_DOCKER_TAG:-latest}
+    # image: ghcr.io/ipatka/foundry:latest-amd
+    image: ghcr.io/foundry-rs/foundry:latest
+    restart: always
+    container_name: 'foundry'
+    command: ['anvil --fork-url https://eth-mainnet.alchemyapi.io/v2/EY6V18pyHpLFp4QHTF4Mv88NFaPsw83U --fork-block-number ${FORK_BLOCK:-17579089} --block-time 5 --host 0.0.0.0']
+    ports:
+      - 9545:8545
