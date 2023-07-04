@@ -9,8 +9,8 @@ const botKey = '6231325118:AAG_tGdf7Db7ndDuIDuX0MHGNgtAcACMz_g'
 const chatId = '-858059392'
 const explorerUrl = 'https://securityalliance.dev/'
 const bot = new TelegramBot(botKey, { polling: false })
-const discordWebhookId = '1125156706855436308/RHD91-NS-GFPwitOy2zo_vD-okJzs6u2w92gr0b5zu-4h_WJpWRORGdMwSMmugm1a6Uj?thread_id=1125491936208367666'
-// const discordWebhookId = '1125073763189403658/u8fiBDOCHlyEXoTiComokjH604NAKYDI21122kiA0-FeE_3G4UNoVRs9dpWNS698w9Br?thread_id=1124765083747242085'
+// const discordWebhookId = '1125156706855436308/RHD91-NS-GFPwitOy2zo_vD-okJzs6u2w92gr0b5zu-4h_WJpWRORGdMwSMmugm1a6Uj?thread_id=1125491936208367666'
+const discordWebhookId = '1125073763189403658/u8fiBDOCHlyEXoTiComokjH604NAKYDI21122kiA0-FeE_3G4UNoVRs9dpWNS698w9Br?thread_id=1124765083747242085'
 
 interface FortaAlertBase {
     name: string
