@@ -42,7 +42,7 @@ type BotClientSuite struct {
 	resultChannels   botreq.SendReceiveChannels
 
 	botClient *botClient
-
+	lg        *logrus.Entry
 	suite.Suite
 }
 
@@ -71,10 +71,13 @@ func (s *BotClientSuite) SetupTest() {
 			},
 		},
 	}
+	s.lg = logrus.WithField("component", "bot-client")
 
-	s.botClient = NewBotClient(context.Background(), config.AgentConfig{
-		ID: testBotID,
-	}, s.msgClient, s.lifecycleMetrics, s.botDialer, s.resultChannels.SendOnly())
+	s.botClient = NewBotClient(
+		context.Background(), config.AgentConfig{
+			ID: testBotID,
+		}, s.msgClient, s.lifecycleMetrics, s.botDialer, s.resultChannels.SendOnly(),
+	)
 }
 
 // TestStartProcessStop tests the starting, processing and stopping flow for a bot.
@@ -288,7 +291,7 @@ func (s *BotClientSuite) TestHealthCheck() {
 	s.lifecycleMetrics.EXPECT().HealthCheckSuccess(gomock.Any())
 
 	// Execute the method
-	result := s.botClient.doHealthCheck(ctx, logrus.WithField("y", "x"))
+	result := s.botClient.doHealthCheck(ctx, s.lg)
 
 	s.r.False(result, "Expected healthCheck to return false")
 }
@@ -341,7 +344,7 @@ func (s *BotClientSuite) TestHealthCheck_WithError() {
 	s.lifecycleMetrics.EXPECT().HealthCheckError(gomock.Any(), gomock.Any())
 
 	// Execute the method
-	result := s.botClient.doHealthCheck(ctx, logrus.WithField("y", "x"))
+	result := s.botClient.doHealthCheck(ctx, s.lg)
 
 	s.r.False(result, "Expected healthCheck to return false")
 }
@@ -373,7 +376,7 @@ func (s *BotClientSuite) TestHealthCheck_WithInvokeError() {
 	s.lifecycleMetrics.EXPECT().HealthCheckError(gomock.Not(gomock.Nil()), gomock.Any())
 
 	// Execute the method
-	result := s.botClient.doHealthCheck(ctx, logrus.WithField("y", "x"))
+	result := s.botClient.doHealthCheck(ctx, s.lg)
 
 	s.r.False(result, "Expected healthCheck to return false")
 }
