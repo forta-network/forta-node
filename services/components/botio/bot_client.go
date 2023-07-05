@@ -510,6 +510,8 @@ func (bot *botClient) processTransaction(ctx context.Context, lg *log.Entry, req
 	}
 
 	lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking bot")
+	bot.lifecycleMetrics.BotError("tx.invoke", err, botConfig)
+
 	if bot.errCounter.TooManyErrs(err) {
 		lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down bot")
 		_ = bot.Close()
@@ -578,6 +580,8 @@ func (bot *botClient) processBlock(ctx context.Context, lg *log.Entry, request *
 	}
 
 	lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking bot")
+	bot.lifecycleMetrics.BotError("block.invoke", err, botConfig)
+
 	if bot.errCounter.TooManyErrs(err) {
 		lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down bot")
 		_ = bot.Close()
@@ -607,7 +611,11 @@ func (bot *botClient) processCombinationAlert(ctx context.Context, lg *log.Entry
 	if err != nil {
 		if status.Code(err) != codes.Unimplemented {
 			lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking bot")
+			return false
 		}
+
+		bot.lifecycleMetrics.BotError("combiner.invoke", err, botConfig)
+
 		if bot.errCounter.TooManyErrs(err) {
 			lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down bot")
 			_ = bot.Close()
