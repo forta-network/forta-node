@@ -3,6 +3,7 @@ package botio
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -155,6 +156,18 @@ func (s *BotClientSuite) TestStartProcessStop() {
 	alertResult := <-s.resultChannels.CombinationAlert
 	combinerResp.Timestamp = alertResult.Response.Timestamp // bypass - hard to match
 	combinerResp.LatencyMs = alertResult.Response.LatencyMs // bypass - hard to match
+
+	// test error while handling
+	invokeErr := fmt.Errorf("failed to invoke")
+	s.botGrpc.EXPECT().Invoke(
+		gomock.Any(), agentgrpc.MethodEvaluateAlert,
+		gomock.AssignableToTypeOf(&protocol.EvaluateAlertRequest{}), gomock.AssignableToTypeOf(&protocol.EvaluateAlertResponse{}),
+	).Return(invokeErr)
+	s.lifecycleMetrics.EXPECT().BotError("combiner.invoke", invokeErr, s.botClient.configUnsafe)
+	s.botClient.CombinationRequestCh() <- &botreq.CombinationRequest{
+		Original: combinerReq,
+	}
+	<-s.resultChannels.CombinationAlert
 
 	s.r.Equal(txReq, txResult.Request)
 	s.r.Equal(txResp, txResult.Response)
