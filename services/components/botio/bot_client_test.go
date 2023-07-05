@@ -79,9 +79,11 @@ func (s *BotClientSuite) SetupTest() {
 
 // TestStartProcessStop tests the starting, processing and stopping flow for a bot.
 func (s *BotClientSuite) TestStartProcessStop() {
-	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{
-		AlertConfig: s.alertConfig,
-	}, nil).AnyTimes()
+	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(
+		&protocol.InitializeResponse{
+			AlertConfig: s.alertConfig,
+		}, nil,
+	).AnyTimes()
 
 	combinerSubscriptions := MakeCombinerBotSubscriptions(s.alertConfig.Subscriptions, s.botClient.Config())
 
@@ -89,8 +91,17 @@ func (s *BotClientSuite) TestStartProcessStop() {
 	s.lifecycleMetrics.EXPECT().StatusAttached(s.botClient.configUnsafe)
 	s.lifecycleMetrics.EXPECT().StatusInitialized(s.botClient.configUnsafe)
 	s.lifecycleMetrics.EXPECT().ActionSubscribe(combinerSubscriptions)
-	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsAlertSubscribe, combinerSubscriptions)
 
+	// test health checks
+	s.lifecycleMetrics.EXPECT().HealthCheckAttempt(s.botClient.configUnsafe).AnyTimes()
+	s.lifecycleMetrics.EXPECT().HealthCheckSuccess(s.botClient.configUnsafe).AnyTimes()
+
+	s.botGrpc.EXPECT().Invoke(
+		gomock.Any(), agentgrpc.MethodHealthCheck,
+		gomock.AssignableToTypeOf(&protocol.HealthCheckRequest{}), gomock.AssignableToTypeOf(&protocol.HealthCheckResponse{}),
+	).Return(nil).AnyTimes()
+
+	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsAlertSubscribe, combinerSubscriptions)
 	s.botClient.StartProcessing()
 	s.botClient.Initialize()
 
