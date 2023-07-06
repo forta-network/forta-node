@@ -10,6 +10,7 @@ import (
 	"github.com/forta-network/forta-node/config"
 	"github.com/hashicorp/go-multierror"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
