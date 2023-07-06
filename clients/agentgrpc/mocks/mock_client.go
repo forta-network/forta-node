@@ -66,6 +66,20 @@ func (mr *MockClientMockRecorder) DialWithRetry(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DialWithRetry", reflect.TypeOf((*MockClient)(nil).DialWithRetry), arg0)
 }
 
+// DoHealthCheck mocks base method.
+func (m *MockClient) DoHealthCheck(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DoHealthCheck", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DoHealthCheck indicates an expected call of DoHealthCheck.
+func (mr *MockClientMockRecorder) DoHealthCheck(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DoHealthCheck", reflect.TypeOf((*MockClient)(nil).DoHealthCheck), ctx)
+}
+
 // EvaluateAlert mocks base method.
 func (m *MockClient) EvaluateAlert(ctx context.Context, in *protocol.EvaluateAlertRequest, opts ...grpc.CallOption) (*protocol.EvaluateAlertResponse, error) {
 	m.ctrl.T.Helper()
