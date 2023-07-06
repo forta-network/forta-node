@@ -118,7 +118,7 @@ func (client *client) Close() error {
 
 func isHealthCheckSuccess(invokeErr error, resp *protocol.HealthCheckResponse) bool {
 	isUnimplemented := invokeErr != nil && status.Code(invokeErr) == codes.Unimplemented
-	isHealthyResponse := resp.Status == protocol.HealthCheckResponse_SUCCESS
+	isHealthyResponse := resp != nil && resp.Status == protocol.HealthCheckResponse_SUCCESS
 	return isUnimplemented || isHealthyResponse
 }
 
