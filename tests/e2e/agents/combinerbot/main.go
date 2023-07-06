@@ -54,6 +54,13 @@ func (as *agentServer) Initialize(context.Context, *protocol.InitializeRequest) 
 	}, nil
 }
 
+func (as *agentServer) HealthCheck(context.Context, *protocol.HealthCheckRequest) (*protocol.HealthCheckResponse, error) {
+	logrus.Infof("requesting to subscribe bot alerts: %s", alertSubscriptions)
+	return &protocol.HealthCheckResponse{
+		Status: protocol.HealthCheckResponse_SUCCESS,
+	}, nil
+}
+
 func (as *agentServer) EvaluateTx(ctx context.Context, txRequest *protocol.EvaluateTxRequest) (*protocol.EvaluateTxResponse, error) {
 	response := &protocol.EvaluateTxResponse{
 		Status: protocol.ResponseStatus_SUCCESS,

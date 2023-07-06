@@ -56,10 +56,11 @@ type BotClient interface {
 
 // Constants
 const (
-	DefaultBufferSize        = 2000
-	RequestTimeout           = 30 * time.Second
-	MaxFindings              = 50
-	DefaultInitializeTimeout = 5 * time.Minute
+	DefaultBufferSize          = 2000
+	RequestTimeout             = 30 * time.Second
+	MaxFindings                = 50
+	DefaultInitializeTimeout   = 5 * time.Minute
+	DefaultHealthCheckInterval = time.Second * 30
 )
 
 // botClient receives blocks and transactions, and produces results.
@@ -389,6 +390,7 @@ func (bot *botClient) StartProcessing() {
 	go bot.processTransactions()
 	go bot.processBlocks()
 	go bot.processCombinationAlerts()
+	go bot.processHealthChecks()
 }
 
 func processRequests[R any](
@@ -425,6 +427,7 @@ func (bot *botClient) processTransactions() {
 
 	processRequests(bot.ctx, bot.txRequests, bot.Closed(), lg, bot.processTransaction)
 }
+
 func (bot *botClient) processBlocks() {
 	lg := log.WithFields(
 		log.Fields{
@@ -437,6 +440,32 @@ func (bot *botClient) processBlocks() {
 	<-bot.Initialized()
 
 	processRequests(bot.ctx, bot.blockRequests, bot.Closed(), lg, bot.processBlock)
+}
+
+func (bot *botClient) processHealthChecks() {
+	lg := log.WithFields(
+		log.Fields{
+			"bot":       bot.Config().ID,
+			"component": "bot-client",
+			"evaluate":  "health-check",
+		},
+	)
+
+	<-bot.Initialized()
+
+	t := time.NewTicker(DefaultHealthCheckInterval)
+
+	for {
+		select {
+		case <-bot.ctx.Done():
+			return
+		case <-t.C:
+			exit := bot.doHealthCheck(bot.ctx, lg)
+			if exit {
+				return
+			}
+		}
+	}
 }
 
 func (bot *botClient) processCombinationAlerts() {
@@ -658,6 +687,30 @@ func (bot *botClient) processCombinationAlert(ctx context.Context, lg *log.Entry
 	}
 
 	lg.WithField("duration", time.Since(startTime)).Debugf("sent results")
+	return false
+}
+
+func (bot *botClient) doHealthCheck(ctx context.Context, lg *log.Entry) bool {
+	botConfig := bot.Config()
+	botClient := bot.grpcClient()
+
+	if bot.IsClosed() {
+		return true
+	}
+
+	startTime := time.Now()
+
+	lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
+
+	bot.lifecycleMetrics.HealthCheckAttempt(botConfig)
+
+	err := botClient.DoHealthCheck(ctx)
+	if err != nil {
+		bot.lifecycleMetrics.HealthCheckError(err, botConfig)
+	} else {
+		bot.lifecycleMetrics.HealthCheckSuccess(botConfig)
+	}
+
 	return false
 }
 

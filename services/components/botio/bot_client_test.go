@@ -3,6 +3,7 @@ package botio
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -15,8 +16,8 @@ import (
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/services/components/botio/botreq"
 	mock_metrics "github.com/forta-network/forta-node/services/components/metrics/mocks"
-
 	"github.com/golang/mock/gomock"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -41,7 +42,7 @@ type BotClientSuite struct {
 	resultChannels   botreq.SendReceiveChannels
 
 	botClient *botClient
-
+	lg        *logrus.Entry
 	suite.Suite
 }
 
@@ -70,17 +71,22 @@ func (s *BotClientSuite) SetupTest() {
 			},
 		},
 	}
+	s.lg = logrus.WithField("component", "bot-client")
 
-	s.botClient = NewBotClient(context.Background(), config.AgentConfig{
-		ID: testBotID,
-	}, s.msgClient, s.lifecycleMetrics, s.botDialer, s.resultChannels.SendOnly())
+	s.botClient = NewBotClient(
+		context.Background(), config.AgentConfig{
+			ID: testBotID,
+		}, s.msgClient, s.lifecycleMetrics, s.botDialer, s.resultChannels.SendOnly(),
+	)
 }
 
 // TestStartProcessStop tests the starting, processing and stopping flow for a bot.
 func (s *BotClientSuite) TestStartProcessStop() {
-	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(&protocol.InitializeResponse{
-		AlertConfig: s.alertConfig,
-	}, nil).AnyTimes()
+	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(
+		&protocol.InitializeResponse{
+			AlertConfig: s.alertConfig,
+		}, nil,
+	).AnyTimes()
 
 	combinerSubscriptions := MakeCombinerBotSubscriptions(s.alertConfig.Subscriptions, s.botClient.Config())
 
@@ -88,8 +94,17 @@ func (s *BotClientSuite) TestStartProcessStop() {
 	s.lifecycleMetrics.EXPECT().StatusAttached(s.botClient.configUnsafe)
 	s.lifecycleMetrics.EXPECT().StatusInitialized(s.botClient.configUnsafe)
 	s.lifecycleMetrics.EXPECT().ActionSubscribe(combinerSubscriptions)
-	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsAlertSubscribe, combinerSubscriptions)
 
+	// test health checks
+	s.lifecycleMetrics.EXPECT().HealthCheckAttempt(s.botClient.configUnsafe).AnyTimes()
+	s.lifecycleMetrics.EXPECT().HealthCheckSuccess(s.botClient.configUnsafe).AnyTimes()
+
+	s.botGrpc.EXPECT().Invoke(
+		gomock.Any(), agentgrpc.MethodHealthCheck,
+		gomock.AssignableToTypeOf(&protocol.HealthCheckRequest{}), gomock.AssignableToTypeOf(&protocol.HealthCheckResponse{}),
+	).Return(nil).AnyTimes()
+
+	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsAlertSubscribe, combinerSubscriptions)
 	s.botClient.StartProcessing()
 	s.botClient.Initialize()
 
@@ -235,4 +250,67 @@ func (s *BotClientSuite) TestInitialize_ValidationError() {
 	s.lifecycleMetrics.EXPECT().FailureInitializeValidate(gomock.Any(), s.botClient.configUnsafe)
 
 	s.botClient.Initialize()
+}
+
+func (s *BotClientSuite) TestHealthCheck() {
+	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(
+		&protocol.InitializeResponse{
+		}, nil,
+	).AnyTimes()
+
+	s.lifecycleMetrics.EXPECT().ClientDial(s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().StatusAttached(s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().StatusInitialized(s.botClient.configUnsafe)
+
+	s.botClient.Initialize()
+
+	<-s.botClient.Initialized()
+
+	ctx := context.Background()
+
+	// Mock HealthCheckAttempt() call
+	s.lifecycleMetrics.EXPECT().HealthCheckAttempt(gomock.Any())
+
+	s.botGrpc.EXPECT().DoHealthCheck(ctx).Return(nil)
+
+	// Mock HealthCheckSuccess() call
+	s.lifecycleMetrics.EXPECT().HealthCheckSuccess(gomock.Any())
+
+	// Execute the method
+	result := s.botClient.doHealthCheck(ctx, s.lg)
+
+	s.r.False(result, "Expected healthCheck to return false")
+}
+
+func (s *BotClientSuite) TestHealthCheck_WithError() {
+	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(
+		&protocol.InitializeResponse{
+		}, nil,
+	).AnyTimes()
+
+	s.lifecycleMetrics.EXPECT().ClientDial(s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().StatusAttached(s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().StatusInitialized(s.botClient.configUnsafe)
+
+	s.botClient.Initialize()
+
+	<-s.botClient.Initialized()
+
+	ctx := context.Background()
+
+	// Mock HealthCheckAttempt() call
+	s.lifecycleMetrics.EXPECT().HealthCheckAttempt(gomock.Any())
+
+	err := fmt.Errorf("health check error")
+	// Use Do() to modify the request parameter
+	s.botGrpc.EXPECT().DoHealthCheck(ctx).Return(err)
+
+
+	// Mock HealthCheckError() call
+	s.lifecycleMetrics.EXPECT().HealthCheckError(gomock.Any(), gomock.Any())
+
+	// Execute the method
+	result := s.botClient.doHealthCheck(ctx, s.lg)
+
+	s.r.False(result, "Expected healthCheck to return false")
 }

@@ -8,6 +8,9 @@ import (
 
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-node/config"
+	"github.com/hashicorp/go-multierror"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -24,12 +27,14 @@ const (
 	MethodEvaluateTx    Method = "/network.forta.Agent/EvaluateTx"
 	MethodEvaluateBlock Method = "/network.forta.Agent/EvaluateBlock"
 	MethodEvaluateAlert Method = "/network.forta.Agent/EvaluateAlert"
+	MethodHealthCheck   Method = "/network.forta.Agent/HealthCheck"
 )
 
 // Client makes the gRPC requests to evaluate block and txs and receive results.
 type Client interface {
 	DialWithRetry(config.AgentConfig) error
 	Invoke(ctx context.Context, method Method, in, out interface{}, opts ...grpc.CallOption) error
+	DoHealthCheck(ctx context.Context) error
 	protocol.AgentClient
 	io.Closer
 }
@@ -86,10 +91,36 @@ func (client *client) Invoke(ctx context.Context, method Method, in, out interfa
 	return client.conn.Invoke(ctx, string(method), in, out, opts...)
 }
 
+// DoHealthCheck invokes and evaluates health checks.
+func (client *client) DoHealthCheck(ctx context.Context) error {
+	req := new(protocol.HealthCheckRequest)
+	resp := new(protocol.HealthCheckResponse)
+
+	invokeErr := client.Invoke(ctx, MethodHealthCheck, req, resp)
+
+	return evaluateHealthCheckResult(invokeErr, resp)
+}
+
 // Close implements io.Closer.
 func (client *client) Close() error {
 	if client.conn != nil {
 		return client.conn.Close()
 	}
 	return nil
+}
+
+func evaluateHealthCheckResult(invokeErr error, resp *protocol.HealthCheckResponse) error {
+	var err error
+
+	// catch invocation errors
+	if invokeErr != nil && status.Code(err) != codes.Unimplemented {
+		err = multierror.Append(err, invokeErr)
+	}
+
+	// append response errors
+	for _, e := range resp.Errors {
+		err = multierror.Append(err, fmt.Errorf("%s", e.Message))
+	}
+
+	return err
 }
