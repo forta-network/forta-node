@@ -150,8 +150,7 @@ func (runner *Runner) removeContainer(container *docker.Container) error {
 
 func (runner *Runner) removeContainerWithProps(name, id string) error {
 	logger := log.WithField("container", id).WithField("name", name)
-	timeout := ContainerTerminateTimeout
-	if err := runner.dockerClient.TerminateContainer(context.Background(), id, &timeout); err != nil {
+	if err := runner.dockerClient.TerminateContainer(context.Background(), id); err != nil {
 		logger.WithError(err).Error("error stopping container")
 	} else {
 		logger.Info("interrupted")

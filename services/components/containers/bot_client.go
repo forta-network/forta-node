@@ -167,7 +167,7 @@ func (bc *botClient) TearDownBot(ctx context.Context, containerName string, remo
 
 	timeout := BotShutdownTimeout
 
-	if err := bc.client.TerminateContainer(terminateCtx, container.ID, &timeout); err != nil {
+	if err := bc.client.ShutdownContainer(terminateCtx, container.ID, &timeout); err != nil {
 		log.WithFields(
 			log.Fields{
 				"containerId":   container.ID,
