@@ -97,11 +97,8 @@ func (client *client) DoHealthCheck(ctx context.Context) error {
 	resp := new(protocol.HealthCheckResponse)
 
 	invokeErr := client.Invoke(ctx, MethodHealthCheck, req, resp)
-	if isSuccess := isHealthCheckSuccess(invokeErr, resp); isSuccess {
-		return nil
-	}
 
-	if err := extractHealthCheckError(invokeErr, resp); err != nil {
+	if err := evaluateHealthCheckResult(invokeErr, resp); err != nil {
 		return err
 	}
 
@@ -116,14 +113,9 @@ func (client *client) Close() error {
 	return nil
 }
 
-func isHealthCheckSuccess(invokeErr error, resp *protocol.HealthCheckResponse) bool {
-	isUnimplemented := invokeErr != nil && status.Code(invokeErr) == codes.Unimplemented
-	isHealthyResponse := resp != nil && resp.Status == protocol.HealthCheckResponse_SUCCESS
-	return isUnimplemented || isHealthyResponse
-}
-
-func extractHealthCheckError(invokeErr error, resp *protocol.HealthCheckResponse) error {
+func evaluateHealthCheckResult(invokeErr error, resp *protocol.HealthCheckResponse) error {
 	var err error
+
 	// catch invocation errors
 	if invokeErr != nil && status.Code(err) != codes.Unimplemented {
 		err = multierror.Append(err, invokeErr)
