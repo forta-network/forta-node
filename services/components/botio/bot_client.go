@@ -20,7 +20,6 @@ import (
 	"github.com/forta-network/forta-node/nodeutils"
 	"github.com/forta-network/forta-node/services/components/botio/botreq"
 	"github.com/forta-network/forta-node/services/components/metrics"
-	"github.com/hashicorp/go-multierror"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -702,43 +701,17 @@ func (bot *botClient) doHealthCheck(ctx context.Context, lg *log.Entry) bool {
 	startTime := time.Now()
 
 	lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
-	resp := new(protocol.HealthCheckResponse)
 
 	bot.lifecycleMetrics.HealthCheckAttempt(botConfig)
-	req := new(protocol.HealthCheckRequest)
-	invokeErr := botClient.Invoke(ctx, agentgrpc.MethodHealthCheck, req, resp)
 
-	if isSuccess := isHealthCheckSuccess(invokeErr, resp); isSuccess {
-		bot.lifecycleMetrics.HealthCheckSuccess(botConfig)
-		return false
-	}
-
-	if err := extractHealthCheckError(invokeErr, resp); err != nil {
+	err := botClient.DoHealthCheck(ctx)
+	if err != nil {
 		bot.lifecycleMetrics.HealthCheckError(err, botConfig)
+	} else {
+		bot.lifecycleMetrics.HealthCheckSuccess(botConfig)
 	}
 
 	return false
-}
-
-func isHealthCheckSuccess(invokeErr error, resp *protocol.HealthCheckResponse) bool {
-	isUnimplemented := invokeErr != nil && status.Code(invokeErr) == codes.Unimplemented
-	isHealthyResponse := resp.Status == protocol.HealthCheckResponse_SUCCESS
-	return isUnimplemented || isHealthyResponse
-}
-
-func extractHealthCheckError(invokeErr error, resp *protocol.HealthCheckResponse) error {
-	var err error
-	// catch invocation errors
-	if invokeErr != nil && status.Code(err) != codes.Unimplemented {
-		err = multierror.Append(err, invokeErr)
-	}
-
-	// append response errors
-	for _, e := range resp.Errors {
-		err = multierror.Append(err, fmt.Errorf("%s", e.Message))
-	}
-
-	return err
 }
 
 func validateEvaluateAlertResponse(resp *protocol.EvaluateAlertResponse) (err error) {
