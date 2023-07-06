@@ -98,11 +98,7 @@ func (client *client) DoHealthCheck(ctx context.Context) error {
 
 	invokeErr := client.Invoke(ctx, MethodHealthCheck, req, resp)
 
-	if err := evaluateHealthCheckResult(invokeErr, resp); err != nil {
-		return err
-	}
-
-	return nil
+	return evaluateHealthCheckResult(invokeErr, resp)
 }
 
 // Close implements io.Closer.
