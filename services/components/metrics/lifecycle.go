@@ -196,7 +196,7 @@ func (lc *lifecycle) HealthCheckError(err error, botConfigs ...config.AgentConfi
 
 func fromBotSubscriptions(action string, subscriptions []domain.CombinerBotSubscription) (metrics []*protocol.AgentMetric) {
 	for _, botSub := range subscriptions {
-		metrics = append(metrics, CreateAgentMetric(config.AgentConfig{ID: botSub.Subscriber.BotID}, action, 1))
+		metrics = append(metrics, CreateAgentMetric(config.AgentConfig{ID: botSub.Subscriber.BotID}, action, 1, fmt.Sprintf("botId=%s", botSub.Subscription.BotId)))
 	}
 	return
 }

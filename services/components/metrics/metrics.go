@@ -52,13 +52,14 @@ func SendAgentMetrics(client clients.MessageClient, ms []*protocol.AgentMetric) 
 	}
 }
 
-func CreateAgentMetric(agt config.AgentConfig, metric string, value float64) *protocol.AgentMetric {
+func CreateAgentMetric(agt config.AgentConfig, metric string, value float64, details string) *protocol.AgentMetric {
 	return &protocol.AgentMetric{
 		AgentId:   agt.ID,
 		Timestamp: time.Now().Format(time.RFC3339),
 		Name:      metric,
 		Value:     value,
 		ShardId:   agt.ShardID(),
+		Details:   details,
 	}
 }
 
