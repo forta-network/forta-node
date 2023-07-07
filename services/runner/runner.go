@@ -25,10 +25,6 @@ var (
 	ErrBadProxyAPI = fmt.Errorf("proxy api must be specified as http(s) when scan api is websocket")
 )
 
-const (
-	ContainerTerminateTimeout = time.Second * 30
-)
-
 // Runner receives and starts the latest updater and supervisor.
 type Runner struct {
 	ctx          context.Context
