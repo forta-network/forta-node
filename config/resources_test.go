@@ -11,7 +11,7 @@ func TestGetAgentResourceLimits(t *testing.T) {
 
 	limits := GetAgentResourceLimits(ResourcesConfig{})
 	r.Equal(CPUsToMicroseconds(0.2), limits.CPUQuota)
-	r.Equal(MiBToBytes(10000), limits.Memory)
+	r.Equal(MiBToBytes(1000), limits.Memory)
 }
 
 func TestGetAgentResourceLimits_CustomValues(t *testing.T) {
