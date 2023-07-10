@@ -83,9 +83,9 @@ func (s *LifecycleTestSuite) SetupTest() {
 	s.botMonitor = mock_lifecycle.NewMockBotMonitor(ctrl)
 
 	// expecting any amount of health calls as we do not focus on testing it in this suite
-	s.lifecycleMetrics.EXPECT().HealthCheckAttempt().AnyTimes()
+	s.lifecycleMetrics.EXPECT().HealthCheckAttempt(gomock.Any()).AnyTimes()
 	s.botGrpc.EXPECT().DoHealthCheck(gomock.Any()).AnyTimes()
-	s.lifecycleMetrics.EXPECT().HealthCheckSuccess().AnyTimes()
+	s.lifecycleMetrics.EXPECT().HealthCheckSuccess(gomock.Any()).AnyTimes()
 
 	botClientFactory := botio.NewBotClientFactory(s.resultChannels.SendOnly(), s.msgClient, s.lifecycleMetrics, s.dialer)
 	s.botPool = NewBotPool(context.Background(), s.lifecycleMetrics, botClientFactory, 0)
