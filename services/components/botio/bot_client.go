@@ -453,13 +453,14 @@ func (bot *botClient) processHealthChecks() {
 
 	<-bot.Initialized()
 
-	t := time.NewTicker(DefaultHealthCheckInterval)
+	ticker := time.NewTicker(DefaultHealthCheckInterval)
 
+	bot.doHealthCheck(bot.ctx, lg)
 	for {
 		select {
 		case <-bot.ctx.Done():
 			return
-		case <-t.C:
+		case <-ticker.C:
 			exit := bot.doHealthCheck(bot.ctx, lg)
 			if exit {
 				return
@@ -642,7 +643,6 @@ func (bot *botClient) processCombinationAlert(ctx context.Context, lg *log.Entry
 			lg.WithField("duration", time.Since(startTime)).WithError(err).Error("error invoking bot")
 			bot.lifecycleMetrics.BotError("combiner.invoke", err, botConfig)
 		}
-
 
 		if bot.errCounter.TooManyErrs(err) {
 			lg.WithField("duration", time.Since(startTime)).Error("too many errors - shutting down bot")
