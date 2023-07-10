@@ -73,7 +73,7 @@ func (runner *Runner) Start() error {
 		return fmt.Errorf("failed to nuke leftover containers at start: %v", err)
 	}
 
-	health.StartServer(runner.ctx, "", healthutils.DefaultHealthServerErrHandler, runner.checkHealth)
+	health.StartServer(runner.ctx, "", healthutils.DefaultHealthServerErrHandler, runner.CheckServiceHealth)
 
 	if runner.cfg.AutoUpdate.Disable {
 		runner.startEmbeddedSupervisor()
@@ -83,6 +83,8 @@ func (runner *Runner) Start() error {
 	}
 
 	go runner.keepContainersAlive()
+
+	StartPrometheusCollector(runner)
 
 	return nil
 }
