@@ -371,6 +371,20 @@ func (mr *MockDockerClientMockRecorder) SetImagePullCooldown(threshold, cooldown
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetImagePullCooldown", reflect.TypeOf((*MockDockerClient)(nil).SetImagePullCooldown), threshold, cooldownDuration)
 }
 
+// ShutdownContainer mocks base method.
+func (m *MockDockerClient) ShutdownContainer(ctx context.Context, id string, timeout *time.Duration) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ShutdownContainer", ctx, id, timeout)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ShutdownContainer indicates an expected call of ShutdownContainer.
+func (mr *MockDockerClientMockRecorder) ShutdownContainer(ctx, id, timeout interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShutdownContainer", reflect.TypeOf((*MockDockerClient)(nil).ShutdownContainer), ctx, id, timeout)
+}
+
 // StartContainer mocks base method.
 func (m *MockDockerClient) StartContainer(ctx context.Context, config docker.ContainerConfig) (*docker.Container, error) {
 	m.ctrl.T.Helper()

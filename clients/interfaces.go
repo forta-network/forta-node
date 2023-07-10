@@ -33,6 +33,7 @@ type DockerClient interface {
 	StopContainer(ctx context.Context, id string) error
 	InterruptContainer(ctx context.Context, id string) error
 	TerminateContainer(ctx context.Context, id string) error
+	ShutdownContainer(ctx context.Context, id string, timeout *time.Duration) error
 	RemoveContainer(ctx context.Context, containerID string) error
 	WaitContainerExit(ctx context.Context, id string) error
 	WaitContainerStart(ctx context.Context, id string) error
