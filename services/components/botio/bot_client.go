@@ -503,7 +503,7 @@ func (bot *botClient) processTransaction(ctx context.Context, lg *log.Entry, req
 		// truncate findings
 		if len(resp.Findings) > MaxFindings {
 			dropped := len(resp.Findings) - MaxFindings
-			droppedMetric := metrics.CreateAgentMetric(botConfig, metrics.MetricFindingsDropped, float64(dropped), "")
+			droppedMetric := metrics.CreateAgentMetric(botConfig, metrics.MetricFindingsDropped, float64(dropped))
 			bot.msgClient.PublishProto(
 				messaging.SubjectMetricAgent,
 				&protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{droppedMetric}},
@@ -572,7 +572,7 @@ func (bot *botClient) processBlock(ctx context.Context, lg *log.Entry, request *
 		if len(resp.Findings) > MaxFindings {
 			dropped := len(resp.Findings) - MaxFindings
 			droppedMetric := metrics.CreateAgentMetric(
-				botConfig, metrics.MetricFindingsDropped, float64(dropped), "",
+				botConfig, metrics.MetricFindingsDropped, float64(dropped),
 			)
 			bot.msgClient.PublishProto(
 				messaging.SubjectMetricAgent,
@@ -665,7 +665,7 @@ func (bot *botClient) processCombinationAlert(ctx context.Context, lg *log.Entry
 	// truncate findings
 	if len(resp.Findings) > MaxFindings {
 		dropped := len(resp.Findings) - MaxFindings
-		droppedMetric := metrics.CreateAgentMetric(botConfig, metrics.MetricFindingsDropped, float64(dropped), "")
+		droppedMetric := metrics.CreateAgentMetric(botConfig, metrics.MetricFindingsDropped, float64(dropped))
 		bot.msgClient.PublishProto(
 			messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{droppedMetric}},
 		)
