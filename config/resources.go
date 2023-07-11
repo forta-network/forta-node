@@ -35,7 +35,7 @@ func CPUsToMicroseconds(cpus float64) int64 {
 
 // MiBToBytes converts given MiB amount to bytes.
 func MiBToBytes(mib int) int64 {
-	return int64(mib * 104858)
+	return int64(mib * 1048580)
 }
 
 // getDefaultCPUQuotaPerAgent returns the default CFS microseconds value allowed per agent
@@ -45,5 +45,5 @@ func getDefaultCPUQuotaPerAgent() int64 {
 
 // getDefaultMemoryPerAgent returns the constant default memory allowed per agent.
 func getDefaultMemoryPerAgent() int64 {
-	return MiBToBytes(10000)
+	return MiBToBytes(1e3)
 }
