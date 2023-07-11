@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/utils"
@@ -29,7 +30,7 @@ func (l promHTTPLogger) Println(v ...interface{}) {
 }
 
 // StartPrometheusExporter starts an exporter.
-func StartPrometheusCollector(serviceHealth ServiceHealth) {
+func StartPrometheusCollector(serviceHealth ServiceHealth, port int) {
 	var collector prometheus.Collector = &promCollector{serviceHealth: serviceHealth}
 	prometheus.MustRegister(collector)
 
@@ -55,7 +56,7 @@ func StartPrometheusCollector(serviceHealth ServiceHealth) {
 	))
 
 	server := &http.Server{
-		Addr:    ":9107", // TODO: Make configurable
+		Addr:    fmt.Sprintf(":%d", port),
 		Handler: mux,
 	}
 
@@ -67,22 +68,64 @@ func (pc *promCollector) Describe(ch chan<- *prometheus.Desc) {
 
 func (pc *promCollector) Collect(ch chan<- prometheus.Metric) {
 	for _, report := range pc.serviceHealth.CheckServiceHealth() {
-		if !strings.Contains(report.Name, "service.inspector") {
+		parts := strings.Split(report.Name, ".service.")
+		if len(parts) != 2 {
 			continue
+		}
+		parts = strings.Split(parts[1], ".")
+		if len(parts) != 2 {
+			continue
+		}
+		serviceName := parts[0]
+		reportName := strings.Join(parts[1:], ".")
+
+		metricName := reportName
+		metricName = strings.ReplaceAll(metricName, "-", "_")
+		metricName = strings.ReplaceAll(metricName, ".", "_")
+		metricName = fmt.Sprintf("forta_%s_%s", serviceName, metricName)
+
+		// converting three types of data to float: timestamp, number, boolean
+		// finally, converting the error messages like value=1 and label=message
+		var (
+			value  float64
+			labels []string
+		)
+		if t, err := time.Parse(time.RFC3339, report.Details); err != nil {
+			value = float64(t.UTC().Unix())
+		} else if n, err := strconv.ParseFloat(report.Details, 64); err != nil {
+			value = n
+		} else if b, err := strconv.ParseBool(report.Details); err != nil {
+			if b {
+				value = 1
+			}
+		} else {
+
+			// important note: the logic in here is used only if we are trying to use an error message
+
+			if report.Status != health.StatusOK {
+				labels = append(labels, string(report.Status), report.Details)
+			}
+
+			switch report.Status {
+			case health.StatusOK, health.StatusInfo, health.StatusUnknown:
+				value = 0
+
+			case health.StatusFailing, health.StatusLagging:
+				value = 1
+
+			case health.StatusDown:
+				value = -1
+			}
+
 		}
 
-		name := strings.Replace(strings.Replace(report.Name, ".", "_", -1), "-", "_", -1)
-		val, err := strconv.ParseFloat(report.Details, 64)
-		if err != nil {
-			continue
-		}
 		ch <- prometheus.MustNewConstMetric(
 			prometheus.NewDesc(
-				prometheus.BuildFQName("forta", "", name),
+				prometheus.BuildFQName("forta", serviceName, metricName),
 				"", nil, nil,
 			),
 			prometheus.GaugeValue,
-			val,
+			value,
 		)
 	}
 }
