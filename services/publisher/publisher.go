@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"os"
 	"path"
+	"strings"
 	"sync"
 	"time"
 
@@ -40,9 +41,11 @@ import (
 )
 
 const (
-	defaultInterval        = time.Second * 15
-	defaultBatchLimit      = 500
-	defaultBatchBufferSize = 100
+	defaultInterval            = time.Second * 15
+	defaultBatchLimit          = 500
+	defaultBatchBufferSize     = 100
+	defaultBatchSendRetryTimes = 3
+	defaultBatchSendRetryDelay = time.Second * 3
 
 	fastReportInterval = time.Minute
 	slowReportInterval = time.Minute * 15
@@ -301,17 +304,29 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 	}
 
 	scannerAddr := pub.cfg.Key.Address.Hex()
-	resp, err := pub.alertClient.PostBatch(&domain.AlertBatchRequest{
-		Scanner:            scannerAddr,
-		ChainID:            int64(batch.ChainId),
-		BlockStart:         int64(batch.BlockStart),
-		BlockEnd:           int64(batch.BlockEnd),
-		AlertCount:         int64(batch.AlertCount),
-		MaxSeverity:        int64(batch.MaxSeverity),
-		Ref:                cid,
-		SignedBatch:        signedBatch,
-		SignedBatchSummary: signedBatchSummary,
-	}, scannerJwt)
+
+	var resp *domain.AlertBatchResponse
+	for i := 0; i < defaultBatchSendRetryTimes; i++ {
+		resp, err = pub.alertClient.PostBatch(&domain.AlertBatchRequest{
+			Scanner:            scannerAddr,
+			ChainID:            int64(batch.ChainId),
+			BlockStart:         int64(batch.BlockStart),
+			BlockEnd:           int64(batch.BlockEnd),
+			AlertCount:         int64(batch.AlertCount),
+			MaxSeverity:        int64(batch.MaxSeverity),
+			Ref:                cid,
+			SignedBatch:        signedBatch,
+			SignedBatchSummary: signedBatchSummary,
+		}, scannerJwt)
+		// we only retry timeouts to avoid side effects to other cases
+		if err != nil && strings.Contains(strings.ToLower(err.Error()), "timeout") {
+			logger.WithError(err).Warn("got timeout while sending batch - retrying")
+			time.Sleep(defaultBatchSendRetryDelay)
+			continue
+		}
+		// do not retry if we got any other error or success
+		break
+	}
 
 	if err != nil {
 		logger.WithError(err).Error("alert while sending batch")
