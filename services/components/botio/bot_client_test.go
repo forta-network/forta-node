@@ -96,13 +96,9 @@ func (s *BotClientSuite) TestStartProcessStop() {
 	s.lifecycleMetrics.EXPECT().ActionSubscribe(combinerSubscriptions)
 
 	// test health checks
-	s.lifecycleMetrics.EXPECT().HealthCheckAttempt(s.botClient.configUnsafe).AnyTimes()
-	s.lifecycleMetrics.EXPECT().HealthCheckSuccess(s.botClient.configUnsafe).AnyTimes()
-
-	s.botGrpc.EXPECT().Invoke(
-		gomock.Any(), agentgrpc.MethodHealthCheck,
-		gomock.AssignableToTypeOf(&protocol.HealthCheckRequest{}), gomock.AssignableToTypeOf(&protocol.HealthCheckResponse{}),
-	).Return(nil).AnyTimes()
+	s.botGrpc.EXPECT().DoHealthCheck(gomock.Any())
+	s.lifecycleMetrics.EXPECT().HealthCheckAttempt(s.botClient.configUnsafe)
+	s.lifecycleMetrics.EXPECT().HealthCheckSuccess(s.botClient.configUnsafe)
 
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsAlertSubscribe, combinerSubscriptions)
 	s.botClient.StartProcessing()
@@ -266,8 +262,7 @@ func (s *BotClientSuite) TestInitialize_ValidationError() {
 
 func (s *BotClientSuite) TestHealthCheck() {
 	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(
-		&protocol.InitializeResponse{
-		}, nil,
+		&protocol.InitializeResponse{}, nil,
 	).AnyTimes()
 
 	s.lifecycleMetrics.EXPECT().ClientDial(s.botClient.configUnsafe)
@@ -296,8 +291,7 @@ func (s *BotClientSuite) TestHealthCheck() {
 
 func (s *BotClientSuite) TestHealthCheck_WithError() {
 	s.botGrpc.EXPECT().Initialize(gomock.Any(), gomock.Any()).Return(
-		&protocol.InitializeResponse{
-		}, nil,
+		&protocol.InitializeResponse{}, nil,
 	).AnyTimes()
 
 	s.lifecycleMetrics.EXPECT().ClientDial(s.botClient.configUnsafe)
@@ -316,7 +310,6 @@ func (s *BotClientSuite) TestHealthCheck_WithError() {
 	err := fmt.Errorf("health check error")
 	// Use Do() to modify the request parameter
 	s.botGrpc.EXPECT().DoHealthCheck(ctx).Return(err)
-
 
 	// Mock HealthCheckError() call
 	s.lifecycleMetrics.EXPECT().HealthCheckError(gomock.Any(), gomock.Any())
