@@ -11,6 +11,7 @@ import (
 	"github.com/forta-network/forta-core-go/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/common/version"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,6 +32,8 @@ func (l promHTTPLogger) Println(v ...interface{}) {
 
 // StartPrometheusExporter starts an exporter.
 func StartPrometheusCollector(serviceHealth ServiceHealth, port int) {
+	prometheus.MustRegister(version.NewCollector("forta_node"))
+
 	var collector prometheus.Collector = &promCollector{serviceHealth: serviceHealth}
 	prometheus.MustRegister(collector)
 
@@ -59,6 +62,7 @@ func StartPrometheusCollector(serviceHealth ServiceHealth, port int) {
 		Addr:    fmt.Sprintf(":%d", port),
 		Handler: mux,
 	}
+	logrus.WithField("port", port).Info("starting prometheus server")
 
 	utils.GoListenAndServe(server)
 }
@@ -73,59 +77,70 @@ func (pc *promCollector) Collect(ch chan<- prometheus.Metric) {
 			continue
 		}
 		parts = strings.Split(parts[1], ".")
-		if len(parts) != 2 {
+		if len(parts) < 2 {
 			continue
 		}
-		serviceName := parts[0]
-		reportName := strings.Join(parts[1:], ".")
+		serviceName := toPrometheusName(parts[0])
+		reportName := toPrometheusName(strings.Join(parts[1:], "."))
 
-		metricName := reportName
-		metricName = strings.ReplaceAll(metricName, "-", "_")
-		metricName = strings.ReplaceAll(metricName, ".", "_")
-		metricName = fmt.Sprintf("forta_%s_%s", serviceName, metricName)
+		value := parseReportValue(report)
 
-		// converting three types of data to float: timestamp, number, boolean
-		// finally, converting the error messages like value=1 and label=message
-		var (
-			value  float64
-			labels []string
-		)
-		if t, err := time.Parse(time.RFC3339, report.Details); err != nil {
-			value = float64(t.UTC().Unix())
-		} else if n, err := strconv.ParseFloat(report.Details, 64); err != nil {
-			value = n
-		} else if b, err := strconv.ParseBool(report.Details); err != nil {
-			if b {
-				value = 1
-			}
-		} else {
-
-			// important note: the logic in here is used only if we are trying to use an error message
-
-			if report.Status != health.StatusOK {
-				labels = append(labels, string(report.Status), report.Details)
-			}
-
-			switch report.Status {
-			case health.StatusOK, health.StatusInfo, health.StatusUnknown:
-				value = 0
-
-			case health.StatusFailing, health.StatusLagging:
-				value = 1
-
-			case health.StatusDown:
-				value = -1
-			}
-
+		metric, err := newPrometheusMetric(value, serviceName, reportName)
+		if err != nil {
+			logrus.WithError(err).WithField("metric", "forta_"+serviceName+"_"+reportName).Error("failed to create metric")
 		}
 
-		ch <- prometheus.MustNewConstMetric(
-			prometheus.NewDesc(
-				prometheus.BuildFQName("forta", serviceName, metricName),
-				"", nil, nil,
-			),
-			prometheus.GaugeValue,
-			value,
-		)
+		ch <- metric
 	}
+}
+
+func newPrometheusMetric(value float64, serviceName, reportName string) (prometheus.Metric, error) {
+	desc := prometheus.NewDesc(
+		prometheus.BuildFQName("forta", serviceName, reportName),
+		"", nil, nil,
+	)
+	metric, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, value)
+	if err != nil {
+		metric = prometheus.NewInvalidMetric(desc, err)
+	}
+	return metric, err
+}
+
+func toPrometheusName(name string) string {
+	name = strings.ReplaceAll(name, "-", "_")
+	name = strings.ReplaceAll(name, ".", "_")
+	return name
+}
+
+// parseReportValue converts to three types of data to float: timestamp, number, boolean.
+// If the value is none of them, finally, it tries to convert the error messages like
+// value=1 and label=message.
+func parseReportValue(report *health.Report) (value float64) {
+	if n, err := strconv.ParseFloat(report.Details, 64); err == nil {
+		value = n
+		return
+	}
+
+	if b, err := strconv.ParseBool(report.Details); err == nil {
+		if b {
+			value = 1
+		}
+		return
+	}
+
+	if t, err := time.Parse(time.RFC3339, report.Details); err == nil {
+		value = float64(t.UTC().Unix())
+		return
+	}
+
+	// important note: the logic in here is used only if we are trying to use an error message
+
+	switch report.Status {
+	case health.StatusOK, health.StatusInfo, health.StatusUnknown:
+		value = 0
+
+	case health.StatusFailing, health.StatusLagging, health.StatusDown:
+		value = 1
+	}
+	return
 }

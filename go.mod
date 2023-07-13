@@ -43,6 +43,7 @@ require (
 	github.com/docker/docker v1.6.2
 	github.com/docker/go-connections v0.4.0
 	github.com/prometheus/client_golang v1.14.0
+	github.com/prometheus/common v0.39.0
 )
 
 require (
@@ -229,7 +230,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/polydawn/refmt v0.0.0-20201211092308-30ac6d18308e // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
-	github.com/prometheus/common v0.39.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/raulk/go-watchdog v1.3.0 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
