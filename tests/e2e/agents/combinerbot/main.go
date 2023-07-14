@@ -96,7 +96,6 @@ func (as *agentServer) EvaluateAlert(ctx context.Context, request *protocol.Eval
 			AlertId:       combinerbotalertid.CombinationAlertID,
 			Name:          "Combination Alert",
 			Description:   request.Event.Alert.Hash,
-			EverestId:     "",
 			Private:       false,
 			Addresses:     nil,
 			Indicators:    nil,
