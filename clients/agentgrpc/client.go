@@ -113,7 +113,7 @@ func evaluateHealthCheckResult(invokeErr error, resp *protocol.HealthCheckRespon
 	var err error
 
 	// catch invocation errors
-	if invokeErr != nil && status.Code(err) != codes.Unimplemented {
+	if invokeErr != nil && status.Code(invokeErr) != codes.Unimplemented {
 		err = multierror.Append(err, invokeErr)
 	}
 
