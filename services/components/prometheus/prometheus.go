@@ -1,4 +1,4 @@
-package runner
+package prometheus
 
 import (
 	"fmt"
@@ -30,8 +30,8 @@ func (l promHTTPLogger) Println(v ...interface{}) {
 	logrus.Error(v...)
 }
 
-// StartPrometheusExporter starts an exporter.
-func StartPrometheusCollector(serviceHealth ServiceHealth, port int) {
+// StartCollector starts a collector.
+func StartCollector(serviceHealth ServiceHealth, port int) {
 	prometheus.MustRegister(version.NewCollector("forta_node"))
 
 	var collector prometheus.Collector = &promCollector{serviceHealth: serviceHealth}

@@ -1,4 +1,4 @@
-package runner
+package prometheus
 
 import (
 	"testing"
@@ -96,5 +96,5 @@ func TestPrometheusCollector(t *testing.T) {
 }
 
 func TestStartPrometheusCollector(t *testing.T) {
-	StartPrometheusCollector(&testServiceHealth{}, 9107)
+	StartCollector(&testServiceHealth{}, 9107)
 }
