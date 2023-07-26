@@ -59,6 +59,7 @@ func (br *botRegistry) LoadAssignedBots() ([]config.AgentConfig, error) {
 	br.lastChecked.Set()
 	agts, changed, err := br.registryStore.GetAgentsIfChanged(br.scannerAddress.Hex())
 	if err != nil {
+		br.lastErr.Set(err)
 		return nil, fmt.Errorf("failed to get the latest bot list: %v", err)
 	}
 
