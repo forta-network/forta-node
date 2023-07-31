@@ -65,11 +65,11 @@ type LifecycleTestSuite struct {
 	suite.Suite
 }
 
-func (s *LifecycleTestSuite) DisableHeartbeatBot() {
+func (s *LifecycleTestSuite) MockNotTimeForHeartbeatBotLoad() {
 	s.botManager.lastHeartbeatLoad = time.Now().UTC().Add(-10 * time.Minute)
 }
 
-func (s *LifecycleTestSuite) EnableHeartbeatBot() {
+func (s *LifecycleTestSuite) MockTimeForHeartbeatBotLoad() {
 	s.botManager.lastHeartbeatLoad = time.Time{}
 }
 
@@ -105,7 +105,7 @@ func (s *LifecycleTestSuite) SetupTest() {
 func (s *LifecycleTestSuite) TestDownloadTimeout() {
 	s.T().Log("should redownload a bot if downloading times out")
 
-	s.DisableHeartbeatBot()
+	s.MockNotTimeForHeartbeatBotLoad()
 	assigned := []config.AgentConfig{
 		{
 			ID:    testBotID1,
@@ -150,7 +150,7 @@ func (s *LifecycleTestSuite) TestDownloadTimeout() {
 func (s *LifecycleTestSuite) TestLaunchFailure() {
 	s.T().Log("should relaunch a bot if launching fails")
 
-	s.DisableHeartbeatBot()
+	s.MockNotTimeForHeartbeatBotLoad()
 	assigned := []config.AgentConfig{
 		{
 			ID:    testBotID1,
@@ -196,7 +196,7 @@ func (s *LifecycleTestSuite) TestLaunchFailure() {
 func (s *LifecycleTestSuite) TestDialFailure() {
 	s.T().Log("should not reload or redial a bot if dialing finally fails")
 
-	s.DisableHeartbeatBot()
+	s.MockNotTimeForHeartbeatBotLoad()
 	assigned := []config.AgentConfig{
 		{
 			ID:    testBotID1,
@@ -226,7 +226,7 @@ func (s *LifecycleTestSuite) TestDialFailure() {
 func (s *LifecycleTestSuite) TestInitializeFailure() {
 	s.T().Log("should reconnect to a bot if initialization finally fails")
 
-	s.DisableHeartbeatBot()
+	s.MockNotTimeForHeartbeatBotLoad()
 	assigned := []config.AgentConfig{
 		{
 			ID:    testBotID1,
@@ -272,7 +272,7 @@ func (s *LifecycleTestSuite) TestInitializeFailure() {
 func (s *LifecycleTestSuite) TestExitedRestarted() {
 	s.T().Log("should restart and reconnect to exited bots")
 
-	s.DisableHeartbeatBot()
+	s.MockNotTimeForHeartbeatBotLoad()
 	assigned := []config.AgentConfig{
 		{
 			ID:    testBotID1,
@@ -337,7 +337,7 @@ func (s *LifecycleTestSuite) TestExitedRestarted() {
 func (s *LifecycleTestSuite) TestInactiveRestarted() {
 	s.T().Log("should restart and reconnect to the inactive and exited bots")
 
-	s.DisableHeartbeatBot()
+	s.MockNotTimeForHeartbeatBotLoad()
 	assigned := []config.AgentConfig{
 		{
 			ID:    testBotID1,
@@ -398,7 +398,7 @@ func (s *LifecycleTestSuite) TestInactiveRestarted() {
 func (s *LifecycleTestSuite) TestUnassigned() {
 	s.T().Log("should tear down unassigned bots")
 
-	s.DisableHeartbeatBot()
+	s.MockNotTimeForHeartbeatBotLoad()
 	assigned := []config.AgentConfig{
 		{
 			ID:    testBotID1,
@@ -443,7 +443,7 @@ func (s *LifecycleTestSuite) TestUnassigned() {
 
 func (s *LifecycleTestSuite) TestHearbeatBotLoads() {
 	s.T().Log("should load heartbeat bot")
-	s.EnableHeartbeatBot()
+	s.MockTimeForHeartbeatBotLoad()
 
 	botsToRun := []config.AgentConfig{
 		*heartbeatBot,
@@ -477,7 +477,7 @@ func (s *LifecycleTestSuite) TestHearbeatBotLoads() {
 func (s *LifecycleTestSuite) TestConfigUpdated() {
 	s.T().Log("should update bot config without tearing down")
 
-	s.DisableHeartbeatBot()
+	s.MockNotTimeForHeartbeatBotLoad()
 	assigned := []config.AgentConfig{
 		{
 			ID:    testBotID1,
