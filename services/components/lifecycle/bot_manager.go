@@ -3,7 +3,6 @@ package lifecycle
 import (
 	"context"
 	"fmt"
-	"github.com/forta-network/forta-node/store"
 	"strconv"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/forta-network/forta-node/services/components/containers"
 	"github.com/forta-network/forta-node/services/components/metrics"
 	"github.com/forta-network/forta-node/services/components/registry"
+	"github.com/forta-network/forta-node/store"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -60,13 +60,14 @@ func NewManager(
 	}
 }
 
-func (blm *botLifecycleManager) setLastHeartbeatTime(t time.Time) {
-	blm.lastHeartbeatLoad = t
-}
-
+// addHeartbeatBotIfDue appends a heartbeat bot to the list of bots
+// Every hour, it includes the bot for a 5 minute period
+// It doesn't run all the time to prevent large batch volume increases
 func (blm *botLifecycleManager) addHeartbeatBotIfDue(cfgs []config.AgentConfig) []config.AgentConfig {
-	// every hour, run the bot for 5 minutes, then treat it as removed
-	if time.Since(blm.lastHeartbeatLoad) > heartbeatBotLoadInterval || time.Since(blm.lastHeartbeatLoad) < heartbeatBotDuration {
+	timeSinceLast := time.Since(blm.lastHeartbeatLoad)
+
+	// if more than an hour ago, or if within 5 minutes, continue to include the heartbeat bot
+	if timeSinceLast > heartbeatBotLoadInterval || timeSinceLast < heartbeatBotDuration {
 		hb, err := blm.botRegistry.LoadHeartbeatBot()
 		if err != nil && err != store.ErrLocalMode {
 			blm.lifecycleMetrics.SystemError("load.heartbeat.bot", err)

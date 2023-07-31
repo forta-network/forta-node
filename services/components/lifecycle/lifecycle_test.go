@@ -66,11 +66,11 @@ type LifecycleTestSuite struct {
 }
 
 func (s *LifecycleTestSuite) DisableHeartbeatBot() {
-	s.botManager.setLastHeartbeatTime(time.Now().UTC().Add(-10 * time.Minute))
+	s.botManager.lastHeartbeatLoad = time.Now().UTC().Add(-10 * time.Minute)
 }
 
 func (s *LifecycleTestSuite) EnableHeartbeatBot() {
-	s.botManager.setLastHeartbeatTime(time.Time{})
+	s.botManager.lastHeartbeatLoad = time.Time{}
 }
 
 func TestLifecycleTestSuite(t *testing.T) {
@@ -449,11 +449,11 @@ func (s *LifecycleTestSuite) TestHearbeatBotLoads() {
 		*heartbeatBot,
 	}
 
-	// given that there is a new bot assignment
-	// and no new assignments after the first time
+	// no assigned bots, but the heartbeat bot still should load
 	s.botRegistry.EXPECT().LoadAssignedBots().Return(nil, nil).Times(1)
 	s.botRegistry.EXPECT().LoadHeartbeatBot().Return(heartbeatBot, nil).Times(1)
 
+	// no assigned bots (assigend is still 0)
 	s.lifecycleMetrics.EXPECT().SystemStatus("load.assigned.bots", "0").Times(1)
 
 	s.botContainers.EXPECT().EnsureBotImages(gomock.Any(), botsToRun).
