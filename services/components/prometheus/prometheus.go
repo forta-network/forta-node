@@ -3,9 +3,7 @@ package prometheus
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/utils"
@@ -70,26 +68,53 @@ func StartCollector(serviceHealth ServiceHealth, port int) {
 func (pc *promCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
+type healthMetric struct {
+	MetricName string
+	Report     *health.Report
+}
+
+func (metric *healthMetric) Value() float64 {
+	return parseReportValue(metric.Report)
+}
+
+func (metric *healthMetric) SinceUnixTs() float64 {
+	return sinceUnixTs(metric.Report.Details)
+}
+
+type healthMetrics []*healthMetric
+
+func (metrics healthMetrics) Get(name string) (*healthMetric, bool) {
+	for _, metric := range metrics {
+		if metric.MetricName == name {
+			return metric, true
+		}
+	}
+	return nil, false
+}
+
 func (pc *promCollector) Collect(ch chan<- prometheus.Metric) {
+	var healthMetrics healthMetrics
 	for _, report := range pc.serviceHealth.CheckServiceHealth() {
 		parts := strings.Split(report.Name, ".service.")
 		if len(parts) != 2 {
 			continue
 		}
-		parts = strings.Split(parts[1], ".")
-		if len(parts) < 2 {
+		subParts := strings.Split(parts[1], ".")
+		if len(subParts) < 2 {
 			continue
 		}
-		serviceName := toPrometheusName(parts[0])
-		reportName := toPrometheusName(strings.Join(parts[1:], "."))
 
-		value := parseReportValue(report)
+		healthMetrics = append(healthMetrics, &healthMetric{
+			MetricName: toPrometheusName(parts[1]),
+			Report:     report,
+		})
+	}
 
-		metric, err := newPrometheusMetric(value, serviceName, reportName)
-		if err != nil {
-			logrus.WithError(err).WithField("metric", "forta_"+serviceName+"_"+reportName).Error("failed to create metric")
-		}
+	sendMetrics(ch, transformHealthMetricsToProm(healthMetrics)...)
+}
 
+func sendMetrics(ch chan<- prometheus.Metric, metrics ...prometheus.Metric) {
+	for _, metric := range metrics {
 		ch <- metric
 	}
 }
@@ -110,37 +135,4 @@ func toPrometheusName(name string) string {
 	name = strings.ReplaceAll(name, "-", "_")
 	name = strings.ReplaceAll(name, ".", "_")
 	return name
-}
-
-// parseReportValue converts to three types of data to float: timestamp, number, boolean.
-// If the value is none of them, finally, it tries to convert the error messages like
-// value=1 and label=message.
-func parseReportValue(report *health.Report) (value float64) {
-	if n, err := strconv.ParseFloat(report.Details, 64); err == nil {
-		value = n
-		return
-	}
-
-	if b, err := strconv.ParseBool(report.Details); err == nil {
-		if b {
-			value = 1
-		}
-		return
-	}
-
-	if t, err := time.Parse(time.RFC3339, report.Details); err == nil {
-		value = float64(t.UTC().Unix())
-		return
-	}
-
-	// important note: the logic in here is used only if we are trying to use an error message
-
-	switch report.Status {
-	case health.StatusOK, health.StatusInfo, health.StatusUnknown:
-		value = 0
-
-	case health.StatusFailing, health.StatusLagging, health.StatusDown:
-		value = 1
-	}
-	return
 }
