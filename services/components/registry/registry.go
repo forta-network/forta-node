@@ -2,6 +2,7 @@ package registry
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/forta-network/forta-node/store"
@@ -15,6 +16,7 @@ import (
 // BotRegistry loads the latest bots from the registry store.
 type BotRegistry interface {
 	LoadAssignedBots() ([]config.AgentConfig, error)
+	LoadHeartbeatBot() (*config.AgentConfig, error)
 	health.Reporter
 }
 
@@ -52,6 +54,17 @@ func New(cfg config.Config, scannerAddress common.Address) (BotRegistry, error) 
 	}
 	service.registryStore = regStr
 	return service, nil
+}
+
+func (br *botRegistry) LoadHeartbeatBot() (*config.AgentConfig, error) {
+	ac, err := br.registryStore.FindAgentGlobally(config.HeartbeatBotID)
+	if err != nil {
+		return nil, err
+	}
+	if ac == nil {
+		return nil, errors.New("cannot not find heartbeat bot")
+	}
+	return ac, nil
 }
 
 // LoadAssignedBots returns the latest bot list for the running scanner.

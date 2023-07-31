@@ -21,6 +21,7 @@ import (
 
 var (
 	errInvalidBot = errors.New("invalid bot")
+	ErrLocalMode  = errors.New("feature not available (private/local registry)")
 )
 
 const (
@@ -391,7 +392,7 @@ func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]config.Age
 }
 
 func (rs *privateRegistryStore) FindAgentGlobally(agentID string) (*config.AgentConfig, error) {
-	return nil, errors.New("feature not available (private/local registry)")
+	return nil, ErrLocalMode
 }
 
 func (rs *privateRegistryStore) makePrivateModeAgentConfig(
