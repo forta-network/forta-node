@@ -19,6 +19,8 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+var heartbeatBot = &config.AgentConfig{ID: config.HeartbeatBotID}
+
 // BotLifecycleManagerTestSuite has unit tests for the bot lifecycle manager.
 type BotLifecycleManagerTestSuite struct {
 	r *require.Assertions
@@ -87,12 +89,15 @@ func (s *BotLifecycleManagerTestSuite) TestAddUpdateRemove() {
 			},
 		},
 	}
+
 	removedBots := alreadyRunning
-	addedBots := latestAssigned
+	addedBots := append(latestAssigned, *heartbeatBot)
 
 	s.botManager.runningBots = alreadyRunning
 
 	s.botRegistry.EXPECT().LoadAssignedBots().Return(latestAssigned, nil).Times(1)
+	s.botRegistry.EXPECT().LoadHeartbeatBot().Return(heartbeatBot, nil).Times(1)
+
 	s.lifecycleMetrics.EXPECT().SystemStatus("load.assigned.bots", "2")
 
 	s.botPool.EXPECT().RemoveBotsWithConfigs(removedBots)
@@ -100,13 +105,14 @@ func (s *BotLifecycleManagerTestSuite) TestAddUpdateRemove() {
 	s.botContainers.EXPECT().TearDownBot(gomock.Any(), removedBots[0].ContainerName(), true)
 	s.botContainers.EXPECT().TearDownBot(gomock.Any(), removedBots[1].ContainerName(), true)
 
-	s.botContainers.EXPECT().EnsureBotImages(gomock.Any(), addedBots).Return([]error{nil, nil}).Times(1)
+	s.botContainers.EXPECT().EnsureBotImages(gomock.Any(), addedBots).Return([]error{nil, nil, nil}).Times(1)
 	s.botContainers.EXPECT().LaunchBot(gomock.Any(), addedBots[0]).Return(nil).Times(1)
 	s.botContainers.EXPECT().LaunchBot(gomock.Any(), addedBots[1]).Return(nil).Times(1)
+	s.botContainers.EXPECT().LaunchBot(gomock.Any(), addedBots[2]).Return(nil).Times(1)
 
-	s.lifecycleMetrics.EXPECT().StatusRunning(latestAssigned).Times(1)
-	s.botPool.EXPECT().UpdateBotsWithLatestConfigs(latestAssigned)
-	s.botMonitor.EXPECT().MonitorBots(GetBotIDs(latestAssigned))
+	s.lifecycleMetrics.EXPECT().StatusRunning(addedBots).Times(1)
+	s.botPool.EXPECT().UpdateBotsWithLatestConfigs(addedBots)
+	s.botMonitor.EXPECT().MonitorBots(GetBotIDs(addedBots))
 
 	s.r.NoError(s.botManager.ManageBots(context.Background()))
 }

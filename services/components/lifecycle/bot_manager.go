@@ -11,12 +11,16 @@ import (
 	"github.com/forta-network/forta-node/services/components/containers"
 	"github.com/forta-network/forta-node/services/components/metrics"
 	"github.com/forta-network/forta-node/services/components/registry"
+	"github.com/forta-network/forta-node/store"
 	log "github.com/sirupsen/logrus"
 )
 
 // Timeouts
 var (
 	botRemoveTimeout = time.Second * 5
+
+	heartbeatBotDuration     = time.Minute * 5
+	heartbeatBotLoadInterval = time.Hour
 )
 
 // BotLifecycleManager manages lifecycles of running bots.
@@ -29,11 +33,12 @@ type BotLifecycleManager interface {
 }
 
 type botLifecycleManager struct {
-	botRegistry      registry.BotRegistry
-	botClient        containers.BotClient
-	botPool          BotPoolUpdater
-	lifecycleMetrics metrics.Lifecycle
-	botMonitor       BotMonitor
+	botRegistry       registry.BotRegistry
+	botClient         containers.BotClient
+	botPool           BotPoolUpdater
+	lifecycleMetrics  metrics.Lifecycle
+	botMonitor        BotMonitor
+	lastHeartbeatLoad time.Time
 
 	runningBots []config.AgentConfig
 }
@@ -55,18 +60,43 @@ func NewManager(
 	}
 }
 
+// addHeartbeatBotIfDue appends a heartbeat bot to the list of bots
+// Every hour, it includes the bot for a 5 minute period
+// It doesn't run all the time to prevent large batch volume increases
+func (blm *botLifecycleManager) addHeartbeatBotIfDue(cfgs []config.AgentConfig) []config.AgentConfig {
+	timeSinceLast := time.Since(blm.lastHeartbeatLoad)
+
+	// if more than an hour ago, or if within 5 minutes, continue to include the heartbeat bot
+	if timeSinceLast > heartbeatBotLoadInterval || timeSinceLast < heartbeatBotDuration {
+		hb, err := blm.botRegistry.LoadHeartbeatBot()
+		if err != nil && err != store.ErrLocalMode {
+			blm.lifecycleMetrics.SystemError("load.heartbeat.bot", err)
+		}
+		if hb != nil {
+			cfgs = append(cfgs, *hb)
+			if timeSinceLast > heartbeatBotLoadInterval {
+				blm.lastHeartbeatLoad = time.Now().UTC()
+			}
+		}
+	}
+	return cfgs
+}
+
 // ManageBots starts containers for assigned bots and stops the containers for unassigned
 // bots and lets other services know.
 func (blm *botLifecycleManager) ManageBots(ctx context.Context) error {
-	assignedBots, err := blm.botRegistry.LoadAssignedBots()
+	botsToRun, err := blm.botRegistry.LoadAssignedBots()
 	if err != nil {
 		blm.lifecycleMetrics.SystemError("load.assigned.bots", err)
 		return fmt.Errorf("failed to load assigned bots: %v", err)
 	}
-	blm.lifecycleMetrics.SystemStatus("load.assigned.bots", strconv.Itoa(len(assignedBots)))
+	blm.lifecycleMetrics.SystemStatus("load.assigned.bots", strconv.Itoa(len(botsToRun)))
+
+	// append the heartbeat bot if due to execute
+	botsToRun = blm.addHeartbeatBotIfDue(botsToRun)
 
 	// find the removed bots and remove them from the pool
-	removedBotConfigs := FindMissingBots(blm.runningBots, assignedBots)
+	removedBotConfigs := FindMissingBots(blm.runningBots, botsToRun)
 	if len(removedBotConfigs) > 0 {
 		if err := blm.botPool.RemoveBotsWithConfigs(removedBotConfigs); err != nil {
 			log.WithError(err).Error("error removing bots")
@@ -89,7 +119,7 @@ func (blm *botLifecycleManager) ManageBots(ctx context.Context) error {
 	}
 
 	// find the bot containers to start
-	addedBotConfigs := FindExtraBots(blm.runningBots, assignedBots)
+	addedBotConfigs := FindExtraBots(blm.runningBots, botsToRun)
 
 	// then download all images concurrently
 	var downloadErrs []error
@@ -108,7 +138,7 @@ func (blm *botLifecycleManager) ManageBots(ctx context.Context) error {
 				"error": downloadErrs[i],
 			}).Error("bot image download failed - skipping launch")
 			// drop the bot from the list so it can be picked again next time
-			assignedBots = Drop(addedBotConfig, assignedBots)
+			botsToRun = Drop(addedBotConfig, botsToRun)
 			blm.lifecycleMetrics.FailurePull(downloadErrs[i], addedBotConfig)
 			continue
 		}
@@ -119,20 +149,20 @@ func (blm *botLifecycleManager) ManageBots(ctx context.Context) error {
 			log.WithError(err).WithField("container", addedBotConfig.ContainerName()).
 				Warn("failed to launch bot")
 			// drop the bot from the list so it can be picked again next time
-			assignedBots = Drop(addedBotConfig, assignedBots)
+			botsToRun = Drop(addedBotConfig, botsToRun)
 			blm.lifecycleMetrics.FailureLaunch(err, addedBotConfig)
 			continue
 		}
 	}
 
 	// then update the pool with latest bots
-	if err := blm.botPool.UpdateBotsWithLatestConfigs(assignedBots); err != nil {
+	if err := blm.botPool.UpdateBotsWithLatestConfigs(botsToRun); err != nil {
 		blm.lifecycleMetrics.SystemError("update.bots.with.latest.configs", err)
 	}
-	blm.lifecycleMetrics.StatusRunning(assignedBots...)
-	blm.botMonitor.MonitorBots(GetBotIDs(assignedBots))
+	blm.lifecycleMetrics.StatusRunning(botsToRun...)
+	blm.botMonitor.MonitorBots(GetBotIDs(botsToRun))
 
-	blm.runningBots = assignedBots
+	blm.runningBots = botsToRun
 	return nil
 }
 
