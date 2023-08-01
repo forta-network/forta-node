@@ -74,7 +74,9 @@ func (blm *botLifecycleManager) addHeartbeatBotIfDue(cfgs []config.AgentConfig) 
 		}
 		if hb != nil {
 			cfgs = append(cfgs, *hb)
-			blm.lastHeartbeatLoad = time.Now().UTC()
+			if timeSinceLast > heartbeatBotLoadInterval {
+				blm.lastHeartbeatLoad = time.Now().UTC()
+			}
 		}
 	}
 	return cfgs
