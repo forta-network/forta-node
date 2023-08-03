@@ -379,6 +379,17 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 	return true, nil
 }
 
+func (pub *Publisher) hasBots() bool {
+	pub.botConfigMu.RLock()
+	defer pub.botConfigMu.RUnlock()
+	for _, bc := range pub.botConfigs {
+		if bc.ID != config.HeartbeatBotID {
+			return true
+		}
+	}
+	return false
+}
+
 func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, bool) {
 	if pub.cfg.PublisherConfig.AlwaysPublish {
 		return "", false
@@ -392,9 +403,8 @@ func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, 
 
 	localModeConfig := &pub.cfg.Config.LocalModeConfig
 	lastBatchSendAttempt := pub.lastBatchSendAttempt
-	pub.botConfigMu.RLock()
-	runsBots := len(pub.botConfigs) > 0
-	pub.botConfigMu.RUnlock()
+
+	runsBots := pub.hasBots()
 
 	switch {
 	case localModeConfig.Enable && localModeConfig.IncludeMetrics:
