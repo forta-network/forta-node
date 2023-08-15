@@ -18,7 +18,7 @@ func newGauge(desc *prometheus.Desc, value float64, labels ...string) prometheus
 	return metric
 }
 
-func transformHealthMetricsToProm(metrics healthMetrics) (promMetrics []prometheus.Metric) {
+func transformHealthMetricsToProm(metricKinds []*MetricKind, metrics HealthMetrics) (promMetrics []prometheus.Metric) {
 	for _, metricKind := range metricKinds {
 		for _, mapping := range metricKind.Mappings {
 			if metric, ok := metrics.Get(mapping.FromHealth); ok {
@@ -39,7 +39,7 @@ type Mapping struct {
 	ToProm     string
 }
 
-var metricKinds = []*MetricKind{
+var knownMetricKinds = []*MetricKind{
 	////////// input stream
 
 	{

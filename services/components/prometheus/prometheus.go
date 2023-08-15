@@ -20,6 +20,7 @@ type ServiceHealth interface {
 
 type promCollector struct {
 	serviceHealth ServiceHealth
+	metricKinds   []*MetricKind
 }
 
 type promHTTPLogger struct{}
@@ -29,10 +30,17 @@ func (l promHTTPLogger) Println(v ...interface{}) {
 }
 
 // StartCollector starts a collector.
-func StartCollector(serviceHealth ServiceHealth, port int) {
+func StartCollector(serviceHealth ServiceHealth, metricKinds []*MetricKind, port int) {
 	prometheus.MustRegister(version.NewCollector("forta_node"))
 
-	var collector prometheus.Collector = &promCollector{serviceHealth: serviceHealth}
+	if metricKinds == nil {
+		metricKinds = knownMetricKinds
+	}
+
+	var collector prometheus.Collector = &promCollector{
+		serviceHealth: serviceHealth,
+		metricKinds:   metricKinds,
+	}
 	prometheus.MustRegister(collector)
 
 	mux := http.NewServeMux()
@@ -68,22 +76,18 @@ func StartCollector(serviceHealth ServiceHealth, port int) {
 func (pc *promCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
-type healthMetric struct {
+type HealthMetric struct {
 	MetricName string
 	Report     *health.Report
 }
 
-func (metric *healthMetric) Value() float64 {
+func (metric *HealthMetric) Value() float64 {
 	return parseReportValue(metric.Report)
 }
 
-func (metric *healthMetric) SinceUnixTs() float64 {
-	return sinceUnixTs(metric.Report.Details)
-}
+type HealthMetrics []*HealthMetric
 
-type healthMetrics []*healthMetric
-
-func (metrics healthMetrics) Get(name string) (*healthMetric, bool) {
+func (metrics HealthMetrics) Get(name string) (*HealthMetric, bool) {
 	for _, metric := range metrics {
 		if metric.MetricName == name {
 			return metric, true
@@ -93,7 +97,7 @@ func (metrics healthMetrics) Get(name string) (*healthMetric, bool) {
 }
 
 func (pc *promCollector) Collect(ch chan<- prometheus.Metric) {
-	var healthMetrics healthMetrics
+	var healthMetrics HealthMetrics
 	for _, report := range pc.serviceHealth.CheckServiceHealth() {
 		parts := strings.Split(report.Name, ".service.")
 		if len(parts) != 2 {
@@ -104,31 +108,19 @@ func (pc *promCollector) Collect(ch chan<- prometheus.Metric) {
 			continue
 		}
 
-		healthMetrics = append(healthMetrics, &healthMetric{
+		healthMetrics = append(healthMetrics, &HealthMetric{
 			MetricName: toPrometheusName(parts[1]),
 			Report:     report,
 		})
 	}
 
-	sendMetrics(ch, transformHealthMetricsToProm(healthMetrics)...)
+	sendMetrics(ch, transformHealthMetricsToProm(pc.metricKinds, healthMetrics)...)
 }
 
 func sendMetrics(ch chan<- prometheus.Metric, metrics ...prometheus.Metric) {
 	for _, metric := range metrics {
 		ch <- metric
 	}
-}
-
-func newPrometheusMetric(value float64, serviceName, reportName string) (prometheus.Metric, error) {
-	desc := prometheus.NewDesc(
-		prometheus.BuildFQName("forta", serviceName, reportName),
-		"", nil, nil,
-	)
-	metric, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, value)
-	if err != nil {
-		metric = prometheus.NewInvalidMetric(desc, err)
-	}
-	return metric, err
 }
 
 func toPrometheusName(name string) string {

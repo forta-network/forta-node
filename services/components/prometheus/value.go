@@ -43,15 +43,3 @@ func parseReportValue(report *health.Report) (value float64) {
 	}
 	return
 }
-
-func sinceUnixTs(numStr string) float64 {
-	num, err := strconv.ParseFloat(numStr, 64)
-	if err != nil {
-		return 0
-	}
-	if num == 0 {
-		return 0
-	}
-	since := time.Since(time.Unix(int64(num), 0))
-	return since.Round(time.Second).Seconds()
-}

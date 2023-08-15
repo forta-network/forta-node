@@ -85,7 +85,7 @@ func (runner *Runner) Start() error {
 
 	go runner.keepContainersAlive()
 
-	prometheus.StartCollector(runner, runner.cfg.PrometheusConfig.Port)
+	prometheus.StartCollector(runner, nil, runner.cfg.PrometheusConfig.Port)
 
 	return nil
 }

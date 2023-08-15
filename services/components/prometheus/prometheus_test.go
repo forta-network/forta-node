@@ -18,37 +18,22 @@ func (*testServiceHealth) CheckServiceHealth() (allReports health.Reports) {
 			Status:  health.StatusOK,
 			Details: "1420687622144",
 		},
-		{
-			Name:    "foo.service.bar.m2",
-			Status:  health.StatusOK,
-			Details: "true",
-		},
-		{
-			Name:    "foo.service.bar.m3",
-			Status:  health.StatusOK,
-			Details: "2020-10-11T01:02:03Z",
-		},
-		{
-			Name:    "foo.service.bar.m4",
-			Status:  health.StatusOK,
-			Details: "message 1",
-		},
-		{
-			Name:    "foo.service.bar.m5",
-			Status:  health.StatusFailing,
-			Details: "message 2",
-		},
-		{
-			Name:    "skipped-invalid-name-pattern",
-			Status:  health.StatusFailing,
-			Details: "message X",
-		},
-		{
-			Name:    "foo.service.skipped-single-name",
-			Status:  health.StatusFailing,
-			Details: "message Y",
-		},
 	}
+}
+
+var testMetricKinds = []*MetricKind{
+	{
+		Desc: prometheus.NewDesc(
+			fqName("service_bar"), "",
+			[]string{"name"}, nil,
+		),
+		Mappings: []*Mapping{
+			{
+				FromHealth: "bar_m1",
+				ToProm:     "m1",
+			},
+		},
+	},
 }
 
 func TestPrometheusCollector(t *testing.T) {
@@ -56,6 +41,7 @@ func TestPrometheusCollector(t *testing.T) {
 
 	collector := &promCollector{
 		serviceHealth: &testServiceHealth{},
+		metricKinds:   testMetricKinds,
 	}
 
 	descCh := make(chan *prometheus.Desc, 1)
@@ -63,7 +49,7 @@ func TestPrometheusCollector(t *testing.T) {
 	close(descCh)
 	r.Len(descCh, 0)
 
-	metricCh := make(chan prometheus.Metric, 5)
+	metricCh := make(chan prometheus.Metric, 1)
 	collector.Collect(metricCh)
 	close(metricCh)
 
@@ -72,29 +58,18 @@ func TestPrometheusCollector(t *testing.T) {
 		allMetrics = append(allMetrics, metric)
 	}
 
+	r.Len(allMetrics, 1)
+
 	var encodedMetric io_prometheus_client.Metric
 
 	m1 := allMetrics[0]
 	r.NoError(m1.Write(&encodedMetric))
 	r.Equal(float64(1420687622144), *encodedMetric.Gauge.Value)
-
-	m2 := allMetrics[1]
-	r.NoError(m2.Write(&encodedMetric))
-	r.Equal(float64(1), *encodedMetric.Gauge.Value)
-
-	m3 := allMetrics[2]
-	r.NoError(m3.Write(&encodedMetric))
-	r.Equal(float64(1602378123), *encodedMetric.Gauge.Value)
-
-	m4 := allMetrics[3]
-	r.NoError(m4.Write(&encodedMetric))
-	r.Equal(float64(0), *encodedMetric.Gauge.Value)
-
-	m5 := allMetrics[4]
-	r.NoError(m5.Write(&encodedMetric))
-	r.Equal(float64(1), *encodedMetric.Gauge.Value)
+	label := encodedMetric.GetLabel()[0]
+	r.Equal("name", label.GetName())
+	r.Equal("m1", label.GetValue())
 }
 
 func TestStartPrometheusCollector(t *testing.T) {
-	StartCollector(&testServiceHealth{}, 9107)
+	StartCollector(&testServiceHealth{}, testMetricKinds, 9107)
 }
