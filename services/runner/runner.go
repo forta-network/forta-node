@@ -16,6 +16,7 @@ import (
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/healthutils"
 	"github.com/forta-network/forta-node/services"
+	"github.com/forta-network/forta-node/services/components/prometheus"
 	"github.com/forta-network/forta-node/store"
 	log "github.com/sirupsen/logrus"
 )
@@ -73,7 +74,7 @@ func (runner *Runner) Start() error {
 		return fmt.Errorf("failed to nuke leftover containers at start: %v", err)
 	}
 
-	health.StartServer(runner.ctx, "", healthutils.DefaultHealthServerErrHandler, runner.checkHealth)
+	health.StartServer(runner.ctx, "", healthutils.DefaultHealthServerErrHandler, runner.CheckServiceHealth)
 
 	if runner.cfg.AutoUpdate.Disable {
 		runner.startEmbeddedSupervisor()
@@ -83,6 +84,8 @@ func (runner *Runner) Start() error {
 	}
 
 	go runner.keepContainersAlive()
+
+	prometheus.StartCollector(runner, nil, runner.cfg.PrometheusConfig.Port)
 
 	return nil
 }

@@ -8,7 +8,8 @@ import (
 	"github.com/forta-network/forta-node/config"
 )
 
-func (runner *Runner) checkHealth() (allReports health.Reports) {
+// CheckServiceHealth checks the health of all node services and returns all health reports.
+func (runner *Runner) CheckServiceHealth() (allReports health.Reports) {
 	containers, err := runner.globalClient.GetFortaServiceContainers(runner.ctx)
 	if err != nil {
 		return health.Reports{

@@ -205,6 +205,10 @@ type AdvancedConfig struct {
 	MulticallAddress string `yaml:"multicallAddress" json:"multicallAddress"`
 }
 
+type PrometheusConfig struct {
+	Port int `yaml:"port" json:"port" default:"9107"`
+}
+
 type Config struct {
 	// runtime values
 
@@ -234,6 +238,7 @@ type Config struct {
 	InspectionConfig InspectionConfig     `yaml:"inspection" json:"inspection"`
 	StorageConfig    StorageConfig        `yaml:"storage" json:"storage"`
 	CombinerConfig   CombinerConfig       `yaml:"combiner" json:"combiner"`
+	PrometheusConfig PrometheusConfig     `yaml:"prometheus" json:"prometheus"`
 	AdvancedConfig   AdvancedConfig       `yaml:"advanced" json:"advanced"`
 }
 
