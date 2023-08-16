@@ -144,7 +144,7 @@
           "refId": "A"
         }
       ],
-      "title": "JSON-RPC",
+      "title": "Last JSON-RPC Activity (Seconds Ago)",
       "type": "timeseries"
     },
     {
@@ -238,7 +238,7 @@
           "refId": "publisher"
         }
       ],
-      "title": "Publisher",
+      "title": "Last Publisher Activity (Seconds Ago)",
       "type": "timeseries"
     },
     {
@@ -344,7 +344,7 @@
           "refId": "combiner output"
         }
       ],
-      "title": "Analyzer - Combiner",
+      "title": "Last Analyzer (Combiner) Activity (Seconds Ago)",
       "type": "timeseries"
     },
     {
@@ -476,7 +476,7 @@
           "refId": "tx output"
         }
       ],
-      "title": "Analyzer - Block and Tx",
+      "title": "Last Analyzer (Block and Tx) Activity (Seconds Ago)",
       "type": "timeseries"
     },
     {
@@ -570,7 +570,7 @@
           "refId": "A"
         }
       ],
-      "title": "Stream",
+      "title": "Last Input Stream Activity (Seconds Ago)",
       "type": "timeseries"
     },
     {
@@ -891,7 +891,7 @@
           "refId": "A"
         }
       ],
-      "title": "Bot Registry",
+      "title": "Last Bot Registry Activity (Seconds Ago)",
       "type": "timeseries"
     },
     {
@@ -1079,7 +1079,7 @@
           "refId": "A"
         }
       ],
-      "title": "Telemetry and logs",
+      "title": "Last Telemetry and Logs Activity (Seconds Ago)",
       "type": "timeseries"
     },
     {
@@ -1501,6 +1501,6 @@
   "timezone": "",
   "title": "Forta Node",
   "uid": "f4ba0ee9-5532-476b-90a2-9c78832738cb",
-  "version": 16,
+  "version": 1,
   "weekStart": ""
 }
