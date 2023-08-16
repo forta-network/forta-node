@@ -121,6 +121,20 @@ func (mr *MockBotClientMockRecorder) Config() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Config", reflect.TypeOf((*MockBotClient)(nil).Config))
 }
 
+// HealthCheckRequestCh mocks base method.
+func (m *MockBotClient) HealthCheckRequestCh() chan<- *botreq.HealthCheckRequest {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HealthCheckRequestCh")
+	ret0, _ := ret[0].(chan<- *botreq.HealthCheckRequest)
+	return ret0
+}
+
+// HealthCheckRequestCh indicates an expected call of HealthCheckRequestCh.
+func (mr *MockBotClientMockRecorder) HealthCheckRequestCh() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HealthCheckRequestCh", reflect.TypeOf((*MockBotClient)(nil).HealthCheckRequestCh))
+}
+
 // Initialize mocks base method.
 func (m *MockBotClient) Initialize() {
 	m.ctrl.T.Helper()

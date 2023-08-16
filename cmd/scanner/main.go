@@ -212,12 +212,28 @@ func initTxAnalyzer(
 	as clients.AlertSender, stream *scanner.TxStreamService,
 	botProcessingComponents components.BotProcessing, msgClient clients.MessageClient,
 ) (*scanner.TxAnalyzerService, error) {
-	return scanner.NewTxAnalyzerService(ctx, scanner.TxAnalyzerServiceConfig{
-		TxChannel:     stream.ReadOnlyTxStream(),
-		AlertSender:   as,
-		MsgClient:     msgClient,
-		BotProcessing: botProcessingComponents,
-	})
+	return scanner.NewTxAnalyzerService(
+		ctx, scanner.TxAnalyzerServiceConfig{
+			TxChannel:     stream.ReadOnlyTxStream(),
+			AlertSender:   as,
+			MsgClient:     msgClient,
+			BotProcessing: botProcessingComponents,
+		},
+	)
+}
+
+func initHealthCheckAnalyzer(
+	ctx context.Context, cfg config.Config,
+	as clients.AlertSender,
+	botProcessingComponents components.BotProcessing, msgClient clients.MessageClient,
+) (*scanner.TxAnalyzerService, error) {
+	return scanner.NewTxAnalyzerService(
+		ctx, scanner.TxAnalyzerServiceConfig{
+			AlertSender:   as,
+			MsgClient:     msgClient,
+			BotProcessing: botProcessingComponents,
+		},
+	)
 }
 
 func initBlockAnalyzer(
@@ -328,6 +344,12 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize tx analyzer: %v", err)
 	}
+
+	healthCheckAnalyzer, err := initHealthCheckAnalyzer(ctx, cfg, alertSender, botProcessingComponents, msgClient)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize health check analyzer: %v", err)
+	}
+
 	blockAnalyzer, err := initBlockAnalyzer(ctx, cfg, alertSender, txStream, botProcessingComponents, msgClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize block analyzer: %v", err)
@@ -352,7 +374,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		health.NewService(ctx, "", healthutils.DefaultHealthServerErrHandler, health.CheckerFrom(
 			summarizeReports,
 			ethClient, traceClient, combinationFeed, blockFeed, txStream,
-			txAnalyzer, blockAnalyzer, combinationAnalyzer,
+			txAnalyzer, blockAnalyzer, combinationAnalyzer, healthCheckAnalyzer,
 			botProcessingComponents.RequestSender,
 			publisherSvc,
 		)),

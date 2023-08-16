@@ -14,6 +14,15 @@ type TxResult struct {
 	Timestamps  *domain.TrackingTimestamps
 }
 
+// HealthCheckResult contains request and response data.
+type HealthCheckResult struct {
+	AgentConfig config.AgentConfig
+	Request     *protocol.HealthCheckRequest
+	Response    *protocol.HealthCheckResponse
+	Timestamps  *domain.TrackingTimestamps
+	InvokeError error
+}
+
 // BlockResult contains request and response data.
 type BlockResult struct {
 	AgentConfig config.AgentConfig
@@ -35,6 +44,7 @@ type SendReceiveChannels struct {
 	Tx               chan *TxResult
 	Block            chan *BlockResult
 	CombinationAlert chan *CombinationAlertResult
+	HealthCheck      chan *HealthCheckResult
 }
 
 // MakeResultChannels makes the result channels and returns.
@@ -43,6 +53,7 @@ func MakeResultChannels() SendReceiveChannels {
 		Tx:               make(chan *TxResult),
 		Block:            make(chan *BlockResult),
 		CombinationAlert: make(chan *CombinationAlertResult),
+		HealthCheck:      make(chan *HealthCheckResult),
 	}
 }
 
@@ -52,6 +63,7 @@ func (src SendReceiveChannels) ReceiveOnly() ReceiveOnlyChannels {
 		Tx:               src.Tx,
 		Block:            src.Block,
 		CombinationAlert: src.CombinationAlert,
+		HealthCheck:      src.HealthCheck,
 	}
 }
 
@@ -61,6 +73,7 @@ func (src SendReceiveChannels) SendOnly() SendOnlyChannels {
 		Tx:               src.Tx,
 		Block:            src.Block,
 		CombinationAlert: src.CombinationAlert,
+		HealthCheck:      src.HealthCheck,
 	}
 }
 
@@ -69,6 +82,7 @@ type ReceiveOnlyChannels struct {
 	Tx               <-chan *TxResult
 	Block            <-chan *BlockResult
 	CombinationAlert <-chan *CombinationAlertResult
+	HealthCheck      <-chan *HealthCheckResult
 }
 
 // SendOnlyChannels has the bot result channels.
@@ -76,4 +90,5 @@ type SendOnlyChannels struct {
 	Tx               chan<- *TxResult
 	Block            chan<- *BlockResult
 	CombinationAlert chan<- *CombinationAlertResult
+	HealthCheck      chan<- *HealthCheckResult
 }

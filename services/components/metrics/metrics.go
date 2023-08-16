@@ -1,9 +1,13 @@
 package metrics
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/forta-network/forta-core-go/domain"
+	"github.com/hashicorp/go-multierror"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-node/clients"
@@ -12,14 +16,19 @@ import (
 )
 
 const (
-	MetricFinding       = "finding"
-	MetricTxRequest     = "tx.request"
-	MetricTxLatency     = "tx.latency"
-	MetricTxError       = "tx.error"
-	MetricTxSuccess     = "tx.success"
-	MetricTxDrop        = "tx.drop"
-	MetricTxBlockAge    = "tx.block.age"
-	MetricTxEventAge    = "tx.event.age"
+	MetricFinding    = "finding"
+	MetricTxRequest  = "tx.request"
+	MetricTxLatency  = "tx.latency"
+	MetricTxError    = "tx.error"
+	MetricTxSuccess  = "tx.success"
+	MetricTxDrop     = "tx.drop"
+	MetricTxBlockAge = "tx.block.age"
+	MetricTxEventAge = "tx.event.age"
+
+	MetricHealthCheckAttempt = "healthcheck.attempt"
+	MetricHealthCheckError   = "healthcheck.error"
+	MetricHealthCheckSuccess = "healthcheck.success"
+
 	MetricBlockBlockAge = "block.block.age"
 	MetricBlockEventAge = "block.event.age"
 	MetricBlockRequest  = "block.request"
@@ -46,19 +55,26 @@ const (
 
 func SendAgentMetrics(client clients.MessageClient, ms []*protocol.AgentMetric) {
 	if len(ms) > 0 {
-		client.PublishProto(messaging.SubjectMetricAgent, &protocol.AgentMetricList{
-			Metrics: ms,
-		})
+		client.PublishProto(
+			messaging.SubjectMetricAgent, &protocol.AgentMetricList{
+				Metrics: ms,
+			},
+		)
 	}
 }
 
 func CreateAgentMetric(agt config.AgentConfig, metric string, value float64) *protocol.AgentMetric {
+	return CreateAgentMetricWithDetails(agt, time.Now().Format(time.RFC3339), metric, value, "")
+}
+
+func CreateAgentMetricWithDetails(agt config.AgentConfig, timestamp string, metric string, value float64, details string) *protocol.AgentMetric {
 	return &protocol.AgentMetric{
 		AgentId:   agt.ID,
-		Timestamp: time.Now().Format(time.RFC3339),
+		Timestamp: timestamp,
 		Name:      metric,
 		Value:     value,
 		ShardId:   agt.ShardID(),
+		Details:   details,
 	}
 }
 
@@ -131,6 +147,41 @@ func GetCombinerMetrics(agt config.AgentConfig, resp *protocol.EvaluateAlertResp
 	}
 
 	return createMetrics(agt, resp.Timestamp, metrics)
+}
+
+func GetHealthCheckMetrics(agt config.AgentConfig, resp *protocol.HealthCheckResponse, times *domain.TrackingTimestamps, invokeErr error) []*protocol.AgentMetric {
+	var metrics []*protocol.AgentMetric
+
+	ts := times.BotRequest.Format(time.RFC3339)
+
+	// add attempt metric
+	metrics = append(metrics, CreateAgentMetricWithDetails(agt, ts, MetricHealthCheckAttempt, 1, ""))
+
+	// evaluator will propagate all errors including network and bot-sourced errors
+	err := evaluateHealthCheckResult(invokeErr, resp)
+	if err != nil {
+		metrics = append(metrics, CreateAgentMetricWithDetails(agt, ts, MetricHealthCheckError, 1, err.Error()))
+	} else {
+		metrics = append(metrics, CreateAgentMetricWithDetails(agt, ts, MetricHealthCheckSuccess, 1, ""))
+	}
+
+	return metrics
+}
+
+func evaluateHealthCheckResult(invokeErr error, resp *protocol.HealthCheckResponse) error {
+	var err error
+
+	// catch invocation errors
+	if invokeErr != nil && status.Code(invokeErr) != codes.Unimplemented {
+		err = multierror.Append(err, invokeErr)
+	}
+
+	// append response errors
+	for _, e := range resp.Errors {
+		err = multierror.Append(err, fmt.Errorf("%s", e.Message))
+	}
+
+	return err
 }
 
 func GetJSONRPCMetrics(agt config.AgentConfig, at time.Time, success, throttled int, latencyMs time.Duration) []*protocol.AgentMetric {

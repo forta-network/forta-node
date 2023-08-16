@@ -18,3 +18,8 @@ type BlockRequest struct {
 type CombinationRequest struct {
 	Original *protocol.EvaluateAlertRequest
 }
+
+// HealthCheckRequest contains the request data.
+type HealthCheckRequest struct {
+	Original *protocol.HealthCheckRequest
+}

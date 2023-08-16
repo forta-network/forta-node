@@ -36,10 +36,6 @@ const (
 	MetricFailureInitializeResponse = "agent.failure.initialize.response"
 	MetricFailureInitializeValidate = "agent.failure.initialize.validate"
 	MetricFailureTooManyErrs        = "agent.failure.too-many-errs"
-
-	MetricHealthCheckAttempt = "agent.health.attempt"
-	MetricHealthCheckSuccess = "agent.health.success"
-	MetricHealthCheckError   = "agent.health.error"
 )
 
 // Lifecycle creates lifecycle metrics. It is useful in
@@ -73,10 +69,6 @@ type Lifecycle interface {
 	SystemError(metricName string, err error)
 
 	SystemStatus(metricName string, details string)
-
-	HealthCheckAttempt(botConfigs ...config.AgentConfig)
-	HealthCheckSuccess(botConfigs ...config.AgentConfig)
-	HealthCheckError(err error, botConfigs ...config.AgentConfig)
 }
 
 type lifecycle struct {
@@ -180,18 +172,6 @@ func (lc *lifecycle) SystemError(metricName string, err error) {
 
 func (lc *lifecycle) SystemStatus(metricName string, details string) {
 	SendAgentMetrics(lc.msgClient, systemMetrics(fmt.Sprintf("system.status.%s", metricName), details))
-}
-
-func (lc *lifecycle) HealthCheckAttempt(botConfigs ...config.AgentConfig) {
-	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricHealthCheckAttempt, "", botConfigs))
-}
-
-func (lc *lifecycle) HealthCheckSuccess(botConfigs ...config.AgentConfig) {
-	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricHealthCheckSuccess, "", botConfigs))
-}
-
-func (lc *lifecycle) HealthCheckError(err error, botConfigs ...config.AgentConfig) {
-	SendAgentMetrics(lc.msgClient, fromBotConfigs(MetricHealthCheckError, err.Error(), botConfigs))
 }
 
 func fromBotSubscriptions(action string, subscriptions []domain.CombinerBotSubscription) (metrics []*protocol.AgentMetric) {

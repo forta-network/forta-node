@@ -46,6 +46,7 @@ type BotClient interface {
 	TxRequestCh() chan<- *botreq.TxRequest
 	BlockRequestCh() chan<- *botreq.BlockRequest
 	CombinationRequestCh() chan<- *botreq.CombinationRequest
+	HealthCheckRequestCh() chan<- *botreq.HealthCheckRequest
 
 	LogStatus()
 
@@ -73,6 +74,7 @@ type botClient struct {
 	txRequests          chan *botreq.TxRequest          // never closed - deallocated when bot is discarded
 	blockRequests       chan *botreq.BlockRequest       // never closed - deallocated when bot is discarded
 	combinationRequests chan *botreq.CombinationRequest // never closed - deallocated when bot is discarded
+	healthCheckRequests chan *botreq.HealthCheckRequest // never closed - deallocated when bot is discarded
 
 	resultChannels botreq.SendOnlyChannels
 
@@ -135,6 +137,7 @@ func NewBotClient(
 		txRequests:          make(chan *botreq.TxRequest, DefaultBufferSize),
 		blockRequests:       make(chan *botreq.BlockRequest, DefaultBufferSize),
 		combinationRequests: make(chan *botreq.CombinationRequest, DefaultBufferSize),
+		healthCheckRequests: make(chan *botreq.HealthCheckRequest, DefaultBufferSize),
 		resultChannels:      resultChannels,
 		errCounter:          nodeutils.NewErrorCounter(3, isCriticalErr),
 		msgClient:           msgClient,
@@ -222,6 +225,11 @@ func (bot *botClient) setGrpcClient(client agentgrpc.Client) {
 // TxRequestCh returns the transaction request channel safely.
 func (bot *botClient) TxRequestCh() chan<- *botreq.TxRequest {
 	return bot.txRequests
+}
+
+// HealthCheckRequestCh returns the transaction request channel safely.
+func (bot *botClient) HealthCheckRequestCh() chan<- *botreq.HealthCheckRequest {
+	return bot.healthCheckRequests
 }
 
 // BlockRequestCh returns the block request channel safely.
@@ -455,16 +463,23 @@ func (bot *botClient) processHealthChecks() {
 
 	ticker := time.NewTicker(DefaultHealthCheckInterval)
 
-	bot.doHealthCheck(bot.ctx, lg)
-	for {
-		select {
-		case <-bot.ctx.Done():
-			return
-		case <-ticker.C:
-			exit := bot.doHealthCheck(bot.ctx, lg)
-			if exit {
+	go func() {
+		for {
+			select {
+			case <-bot.ctx.Done():
 				return
+			case <-ticker.C:
+				bot.healthCheckRequests <- &botreq.HealthCheckRequest{}
 			}
+		}
+	}()
+
+	for {
+		x := <-bot.healthCheckRequests
+		_ = x
+		exit := bot.doHealthCheck(bot.ctx, lg)
+		if exit {
+			return
 		}
 	}
 }
@@ -709,13 +724,23 @@ func (bot *botClient) doHealthCheck(ctx context.Context, lg *log.Entry) bool {
 
 	lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
 
-	bot.lifecycleMetrics.HealthCheckAttempt(botConfig)
+	req := &protocol.HealthCheckRequest{}
+	resp := new(protocol.HealthCheckResponse)
 
-	err := botClient.DoHealthCheck(ctx)
-	if err != nil {
-		bot.lifecycleMetrics.HealthCheckError(err, botConfig)
-	} else {
-		bot.lifecycleMetrics.HealthCheckSuccess(botConfig)
+	requestTime := time.Now().UTC()
+	invokeErr := botClient.Invoke(ctx, agentgrpc.MethodHealthCheck, req, resp)
+	responseTime := time.Now().UTC()
+
+	ts := domain.TrackingTimestampsFromMessage(nil)
+	ts.BotRequest = requestTime
+	ts.BotResponse = responseTime
+
+	bot.resultChannels.HealthCheck <- &botreq.HealthCheckResult{
+		AgentConfig: botConfig,
+		Request:     nil,
+		Response:    resp,
+		InvokeError: invokeErr,
+		Timestamps:  ts,
 	}
 
 	return false
