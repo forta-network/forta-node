@@ -1,7 +1,7 @@
 {
   "__inputs": [
     {
-      "name": "FORTA_NODE",
+      "name": "DS_FORTA_NODE",
       "label": "Forta Node",
       "description": "",
       "type": "datasource",
@@ -56,9 +56,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${FORTA_NODE}"
+        "uid": "${DS_FORTA_NODE}"
       },
-      "description": "Scan and trace API activity",
+      "description": "Seconds since last scan and trace API activity",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -135,7 +135,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${FORTA_NODE}"
+            "uid": "${DS_FORTA_NODE}"
           },
           "editorMode": "builder",
           "expr": "forta_json_rpc_activity_seconds",
@@ -150,9 +150,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${FORTA_NODE}"
+        "uid": "${DS_FORTA_NODE}"
       },
-      "description": "Input/output times observed at the analyzer layer",
+      "description": "Seconds since last batch publish activity",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -212,7 +212,7 @@
         "x": 12,
         "y": 0
       },
-      "id": 1,
+      "id": 4,
       "options": {
         "legend": {
           "calcs": [],
@@ -229,25 +229,24 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${FORTA_NODE}"
+            "uid": "${DS_FORTA_NODE}"
           },
           "editorMode": "builder",
-          "expr": "forta_analyzer_activity_seconds",
-          "instant": true,
-          "key": "Q-d07352be-ef2d-48fb-b2d9-f1e8473eb4df-3",
+          "expr": "forta_publisher_activity_seconds",
+          "instant": false,
           "range": true,
-          "refId": "analyzer"
+          "refId": "publisher"
         }
       ],
-      "title": "Analyzer",
+      "title": "Publisher",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${FORTA_NODE}"
+        "uid": "${DS_FORTA_NODE}"
       },
-      "description": "Input stream activity",
+      "description": "Seconds since the last alert input/output activity observed at the analyzer layer",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -307,7 +306,7 @@
         "x": 0,
         "y": 8
       },
-      "id": 5,
+      "id": 10,
       "options": {
         "legend": {
           "calcs": [],
@@ -324,23 +323,36 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${FORTA_NODE}"
+            "uid": "${DS_FORTA_NODE}"
           },
           "editorMode": "builder",
-          "expr": "forta_stream_activity_seconds",
+          "expr": "forta_analyzer_activity_seconds{name=\"combiner_alert_analyzer_input\"}",
           "instant": false,
           "range": true,
-          "refId": "A"
+          "refId": "combiner input"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_FORTA_NODE}"
+          },
+          "editorMode": "builder",
+          "expr": "forta_analyzer_activity_seconds{name=\"combiner_alert_analyzer_output\"}",
+          "hide": false,
+          "instant": false,
+          "range": true,
+          "refId": "combiner output"
         }
       ],
-      "title": "Stream",
+      "title": "Analyzer - Combiner",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${FORTA_NODE}"
+        "uid": "${DS_FORTA_NODE}"
       },
+      "description": "Seconds since last block/tx input/output observed at the analyzer layer",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -400,7 +412,7 @@
         "x": 12,
         "y": 8
       },
-      "id": 4,
+      "id": 1,
       "options": {
         "legend": {
           "calcs": [],
@@ -417,24 +429,62 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${FORTA_NODE}"
+            "uid": "${DS_FORTA_NODE}"
           },
           "editorMode": "builder",
-          "expr": "forta_publisher_activity_seconds",
+          "exemplar": false,
+          "expr": "forta_analyzer_activity_seconds{name=\"block_analyzer_input\"}",
+          "instant": false,
+          "key": "Q-d07352be-ef2d-48fb-b2d9-f1e8473eb4df-3",
+          "range": true,
+          "refId": "block input"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_FORTA_NODE}"
+          },
+          "editorMode": "builder",
+          "expr": "forta_analyzer_activity_seconds{name=\"block_analyzer_output\"}",
+          "hide": false,
           "instant": false,
           "range": true,
-          "refId": "publisher"
+          "refId": "block output"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_FORTA_NODE}"
+          },
+          "editorMode": "builder",
+          "expr": "forta_analyzer_activity_seconds{name=\"tx_analyzer_input\"}",
+          "hide": false,
+          "instant": false,
+          "range": true,
+          "refId": "tx input"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_FORTA_NODE}"
+          },
+          "editorMode": "builder",
+          "expr": "forta_analyzer_activity_seconds{name=\"tx_analyzer_output\"}",
+          "hide": false,
+          "instant": false,
+          "range": true,
+          "refId": "tx output"
         }
       ],
-      "title": "Publisher",
+      "title": "Analyzer - Block and Tx",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${FORTA_NODE}"
+        "uid": "${DS_FORTA_NODE}"
       },
-      "description": "Presence of errors",
+      "description": "Seconds since last input stream activity",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -470,7 +520,7 @@
               "mode": "off"
             }
           },
-          "displayName": "${__field.name}: ${__field.labels[\"name\"]}",
+          "displayName": "${__field.labels[\"name\"]}",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -494,7 +544,7 @@
         "x": 0,
         "y": 16
       },
-      "id": 9,
+      "id": 5,
       "options": {
         "legend": {
           "calcs": [],
@@ -511,60 +561,24 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${FORTA_NODE}"
+            "uid": "${DS_FORTA_NODE}"
           },
           "editorMode": "builder",
-          "expr": "forta_bot_registry_errors",
+          "expr": "forta_stream_activity_seconds",
           "instant": false,
           "range": true,
-          "refId": "bot registry"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${FORTA_NODE}"
-          },
-          "editorMode": "builder",
-          "expr": "forta_json_rpc_errors",
-          "hide": false,
-          "instant": false,
-          "range": true,
-          "refId": "json-rpc"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${FORTA_NODE}"
-          },
-          "editorMode": "builder",
-          "expr": "forta_publisher_errors",
-          "hide": false,
-          "instant": false,
-          "range": true,
-          "refId": "publisher"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${FORTA_NODE}"
-          },
-          "editorMode": "builder",
-          "expr": "forta_telemetry_errors",
-          "hide": false,
-          "instant": false,
-          "range": true,
-          "refId": "telemetry"
+          "refId": "A"
         }
       ],
-      "title": "Errors",
+      "title": "Stream",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${FORTA_NODE}"
+        "uid": "${DS_FORTA_NODE}"
       },
-      "description": "Inspection results",
+      "description": "Inspection results: 0 means problem (check `forta status` or `forta status all`)",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -641,10 +655,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${FORTA_NODE}"
+            "uid": "${DS_FORTA_NODE}"
           },
           "editorMode": "builder",
-          "expr": "forta_inspector",
+          "exemplar": false,
+          "expr": "forta_inspector{name!=\"last_error\"}",
           "instant": false,
           "range": true,
           "refId": "A"
@@ -656,9 +671,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${FORTA_NODE}"
+        "uid": "${DS_FORTA_NODE}"
       },
-      "description": "Active bot counts (started and running)",
+      "description": "Presence of errors",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -694,7 +709,7 @@
               "mode": "off"
             }
           },
-          "displayName": "${__field.labels[\"name\"]}",
+          "displayName": "${__field.name}: ${__field.labels[\"name\"]}",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -718,7 +733,7 @@
         "x": 0,
         "y": 24
       },
-      "id": 7,
+      "id": 9,
       "options": {
         "legend": {
           "calcs": [],
@@ -735,24 +750,62 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${FORTA_NODE}"
+            "uid": "${DS_FORTA_NODE}"
           },
           "editorMode": "builder",
-          "expr": "forta_active_bots",
+          "expr": "forta_bot_registry_errors",
+          "instant": false,
+          "interval": "",
+          "range": true,
+          "refId": "bot registry"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_FORTA_NODE}"
+          },
+          "editorMode": "builder",
+          "expr": "forta_json_rpc_errors{name!=\"block_by_number\"}",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "range": true,
+          "refId": "json-rpc"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_FORTA_NODE}"
+          },
+          "editorMode": "builder",
+          "expr": "forta_publisher_errors",
+          "hide": false,
           "instant": false,
           "range": true,
-          "refId": "A"
+          "refId": "publisher"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_FORTA_NODE}"
+          },
+          "editorMode": "builder",
+          "expr": "forta_telemetry_errors",
+          "hide": false,
+          "instant": false,
+          "range": true,
+          "refId": "telemetry"
         }
       ],
-      "title": "Active Bots",
+      "title": "Errors",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${FORTA_NODE}"
+        "uid": "${DS_FORTA_NODE}"
       },
-      "description": "Bot assignment list detection activity",
+      "description": "Seconds since last bot assignment list detection activity",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -829,7 +882,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${FORTA_NODE}"
+            "uid": "${DS_FORTA_NODE}"
           },
           "editorMode": "builder",
           "expr": "forta_bot_registry_activity_seconds",
@@ -844,9 +897,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${FORTA_NODE}"
+        "uid": "${DS_FORTA_NODE}"
       },
-      "description": "Telemetry and bot logs activity",
+      "description": "Active bot counts (started and running)",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -906,6 +959,100 @@
         "x": 0,
         "y": 32
       },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_FORTA_NODE}"
+          },
+          "editorMode": "builder",
+          "expr": "forta_active_bots",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Active Bots",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_FORTA_NODE}"
+      },
+      "description": "Seconds since last telemetry and bot logs activity",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "displayName": "${__field.labels[\"name\"]}",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 32
+      },
       "id": 6,
       "options": {
         "legend": {
@@ -923,7 +1070,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${FORTA_NODE}"
+            "uid": "${DS_FORTA_NODE}"
           },
           "editorMode": "builder",
           "expr": "forta_telemetry_activity_seconds",
@@ -933,6 +1080,409 @@
         }
       ],
       "title": "Telemetry and logs",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_FORTA_NODE}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 40
+      },
+      "id": 11,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_FORTA_NODE}"
+          },
+          "editorMode": "builder",
+          "expr": "go_threads",
+          "instant": false,
+          "range": true,
+          "refId": "threads"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_FORTA_NODE}"
+          },
+          "editorMode": "builder",
+          "expr": "go_goroutines",
+          "hide": false,
+          "instant": false,
+          "range": true,
+          "refId": "goroutines"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_FORTA_NODE}"
+          },
+          "expr": "",
+          "hide": false,
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Go: Threads and goroutines",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_FORTA_NODE}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 40
+      },
+      "id": 12,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_FORTA_NODE}"
+          },
+          "editorMode": "builder",
+          "expr": "go_memstats_heap_alloc_bytes",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_FORTA_NODE}"
+          },
+          "editorMode": "builder",
+          "expr": "go_memstats_heap_inuse_bytes",
+          "hide": false,
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Go: Heap",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_FORTA_NODE}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 48
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_FORTA_NODE}"
+          },
+          "editorMode": "builder",
+          "expr": "go_gc_duration_seconds",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Go: GC duration",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_FORTA_NODE}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 48
+      },
+      "id": 14,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_FORTA_NODE}"
+          },
+          "editorMode": "builder",
+          "expr": "go_info",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Go: Version",
       "type": "timeseries"
     }
   ],
@@ -951,6 +1501,6 @@
   "timezone": "",
   "title": "Forta Node",
   "uid": "f4ba0ee9-5532-476b-90a2-9c78832738cb",
-  "version": 13,
+  "version": 16,
   "weekStart": ""
 }
