@@ -6,7 +6,7 @@ require (
 	github.com/creasty/defaults v1.5.2
 	github.com/ethereum/go-ethereum v1.11.5
 	github.com/fatih/color v1.13.0
-	github.com/forta-network/forta-core-go v0.0.0-20230714131804-d7d9aff707db
+	github.com/forta-network/forta-core-go v0.0.0-20230811180632-0b7a5ab5e451
 	github.com/go-playground/validator/v10 v10.9.0
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/goccy/go-json v0.9.4
@@ -43,6 +43,7 @@ require (
 	github.com/docker/docker v1.6.2
 	github.com/docker/go-connections v0.4.0
 	github.com/prometheus/client_golang v1.14.0
+	github.com/prometheus/client_model v0.3.0
 	github.com/prometheus/common v0.39.0
 )
 
@@ -229,7 +230,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/polydawn/refmt v0.0.0-20201211092308-30ac6d18308e // indirect
-	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/raulk/go-watchdog v1.3.0 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
