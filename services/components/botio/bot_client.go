@@ -475,9 +475,8 @@ func (bot *botClient) processHealthChecks() {
 	}()
 
 	for {
-		x := <-bot.healthCheckRequests
-		_ = x
-		exit := bot.doHealthCheck(bot.ctx, lg)
+		req := <-bot.healthCheckRequests
+		exit := bot.doHealthCheck(bot.ctx, lg, req)
 		if exit {
 			return
 		}
@@ -712,7 +711,7 @@ func (bot *botClient) processCombinationAlert(ctx context.Context, lg *log.Entry
 	return false
 }
 
-func (bot *botClient) doHealthCheck(ctx context.Context, lg *log.Entry) bool {
+func (bot *botClient) doHealthCheck(ctx context.Context, lg *log.Entry, request *botreq.HealthCheckRequest) bool {
 	botConfig := bot.Config()
 	botClient := bot.grpcClient()
 
@@ -724,11 +723,10 @@ func (bot *botClient) doHealthCheck(ctx context.Context, lg *log.Entry) bool {
 
 	lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
 
-	req := &protocol.HealthCheckRequest{}
 	resp := new(protocol.HealthCheckResponse)
 
 	requestTime := time.Now().UTC()
-	invokeErr := botClient.Invoke(ctx, agentgrpc.MethodHealthCheck, req, resp)
+	invokeErr := botClient.Invoke(ctx, agentgrpc.MethodHealthCheck, request.Original, resp)
 	responseTime := time.Now().UTC()
 
 	ts := domain.TrackingTimestampsFromMessage(nil)
@@ -737,7 +735,7 @@ func (bot *botClient) doHealthCheck(ctx context.Context, lg *log.Entry) bool {
 
 	bot.resultChannels.HealthCheck <- &botreq.HealthCheckResult{
 		AgentConfig: botConfig,
-		Request:     nil,
+		Request:     request.Original,
 		Response:    resp,
 		InvokeError: invokeErr,
 		Timestamps:  ts,

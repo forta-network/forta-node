@@ -127,7 +127,8 @@ func (s *BotClientSuite) TestStartProcessStop() {
 	combinerResp := &protocol.EvaluateAlertResponse{Metadata: map[string]string{"imageHash": ""}}
 
 	healthCheckReq := &protocol.HealthCheckRequest{}
-	// healthCheckResp := &protocol.HealthCheckResponse{}
+	healthCheckResp := &protocol.HealthCheckResponse{}
+
 	// test health checks
 	s.botGrpc.EXPECT().Invoke(
 		gomock.Any(), agentgrpc.MethodHealthCheck,
@@ -138,9 +139,6 @@ func (s *BotClientSuite) TestStartProcessStop() {
 	}
 
 	healthCheckResult := <-s.resultChannels.HealthCheck
-	_ = healthCheckResult
-	// txResp.Timestamp = healthCheckResult.Timestamps.ToMessage() // bypass - hard to match
-	// txResp.LatencyMs = healthCheckResult.Response.LatencyMs // bypass - hard to match
 
 	// test tx handling
 	s.botGrpc.EXPECT().Invoke(
@@ -196,6 +194,8 @@ func (s *BotClientSuite) TestStartProcessStop() {
 	s.r.Equal(blockResp, blockResult.Response)
 	s.r.Equal(combinerReq, alertResult.Request)
 	s.r.Equal(combinerResp, alertResult.Response)
+	s.r.Equal(healthCheckReq, healthCheckResult.Request)
+	s.r.Equal(healthCheckResp, healthCheckResult.Response)
 
 	s.botGrpc.EXPECT().Close().AnyTimes()
 	s.lifecycleMetrics.EXPECT().ClientClose(s.botClient.configUnsafe).AnyTimes()
@@ -284,20 +284,19 @@ func (s *BotClientSuite) TestHealthCheck() {
 
 	<-s.botClient.Initialized()
 
-	ctx := context.Background()
+	s.botClient.StartProcessing()
 
 	// Mock HealthCheckAttempt() call
-	// test health checks
 	s.botGrpc.EXPECT().Invoke(
 		gomock.Any(), agentgrpc.MethodHealthCheck,
 		gomock.AssignableToTypeOf(&protocol.HealthCheckRequest{}), gomock.AssignableToTypeOf(&protocol.HealthCheckResponse{}),
 	).Return(nil)
 
 	// Execute the method
-	result := s.botClient.doHealthCheck(ctx, s.lg)
+	s.botClient.HealthCheckRequestCh() <- &botreq.HealthCheckRequest{
+		Original: &protocol.HealthCheckRequest{},
+	}
 	<-s.resultChannels.HealthCheck
-
-	s.r.False(result, "Expected healthCheck to return false")
 }
 
 func (s *BotClientSuite) TestHealthCheck_WithError() {
@@ -313,15 +312,19 @@ func (s *BotClientSuite) TestHealthCheck_WithError() {
 
 	<-s.botClient.Initialized()
 
-	ctx := context.Background()
+	s.botClient.StartProcessing()
 
-
+	// test health checks
 	err := fmt.Errorf("health check error")
-	// Use Do() to modify the request parameter
-	s.botGrpc.EXPECT().DoHealthCheck(ctx).Return(err)
+
+	s.botGrpc.EXPECT().Invoke(
+		gomock.Any(), agentgrpc.MethodHealthCheck,
+		gomock.AssignableToTypeOf(&protocol.HealthCheckRequest{}), gomock.AssignableToTypeOf(&protocol.HealthCheckResponse{}),
+	).Return(err)
 
 	// Execute the method
-	result := s.botClient.doHealthCheck(ctx, s.lg)
-
-	s.r.False(result, "Expected healthCheck to return false")
+	s.botClient.HealthCheckRequestCh() <- &botreq.HealthCheckRequest{
+		Original: &protocol.HealthCheckRequest{},
+	}
+	<-s.resultChannels.HealthCheck
 }
