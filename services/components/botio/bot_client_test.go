@@ -133,7 +133,7 @@ func (s *BotClientSuite) TestStartProcessStop() {
 	s.botGrpc.EXPECT().Invoke(
 		gomock.Any(), agentgrpc.MethodHealthCheck,
 		gomock.AssignableToTypeOf(&protocol.HealthCheckRequest{}), gomock.AssignableToTypeOf(&protocol.HealthCheckResponse{}),
-	).Return(nil)
+	).Return(nil).AnyTimes()
 	s.botClient.HealthCheckRequestCh() <- &botreq.HealthCheckRequest{
 		Original: healthCheckReq,
 	}
@@ -290,7 +290,7 @@ func (s *BotClientSuite) TestHealthCheck() {
 	s.botGrpc.EXPECT().Invoke(
 		gomock.Any(), agentgrpc.MethodHealthCheck,
 		gomock.AssignableToTypeOf(&protocol.HealthCheckRequest{}), gomock.AssignableToTypeOf(&protocol.HealthCheckResponse{}),
-	).Return(nil)
+	).Return(nil).AnyTimes()
 
 	// Execute the method
 	s.botClient.HealthCheckRequestCh() <- &botreq.HealthCheckRequest{
@@ -320,7 +320,7 @@ func (s *BotClientSuite) TestHealthCheck_WithError() {
 	s.botGrpc.EXPECT().Invoke(
 		gomock.Any(), agentgrpc.MethodHealthCheck,
 		gomock.AssignableToTypeOf(&protocol.HealthCheckRequest{}), gomock.AssignableToTypeOf(&protocol.HealthCheckResponse{}),
-	).Return(err)
+	).Return(err).AnyTimes()
 
 	// Execute the method
 	s.botClient.HealthCheckRequestCh() <- &botreq.HealthCheckRequest{
