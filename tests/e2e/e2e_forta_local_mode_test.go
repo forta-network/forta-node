@@ -276,9 +276,6 @@ func (s *Suite) runLocalModeAlertHandler(webhookURL, logFileName string, readAle
 	var healthCheckMetric *models.BotMetricSummary
 	for _, metric := range webhookAlerts.Metrics {
 		for _, summary := range metric.Metrics {
-			if strings.Contains(summary.Name, "agent.health") {
-				s.T().Logf("contains metric: %s", summary.Name)
-			}
 			if summary.Name == metrics.MetricHealthCheckSuccess {
 				healthCheckMetric = summary
 				break

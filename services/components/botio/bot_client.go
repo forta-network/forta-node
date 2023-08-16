@@ -461,8 +461,10 @@ func (bot *botClient) processHealthChecks() {
 
 	<-bot.Initialized()
 
-	ticker := time.NewTicker(DefaultHealthCheckInterval)
+	bot.healthCheckRequests <- &botreq.HealthCheckRequest{Original: &protocol.HealthCheckRequest{}}
+	// trigger first healthcheck
 
+	ticker := time.NewTicker(DefaultHealthCheckInterval)
 	go func() {
 		for {
 			select {
