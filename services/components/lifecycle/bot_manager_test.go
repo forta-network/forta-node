@@ -102,8 +102,8 @@ func (s *BotLifecycleManagerTestSuite) TestAddUpdateRemove() {
 
 	s.botPool.EXPECT().RemoveBotsWithConfigs(removedBots)
 	s.lifecycleMetrics.EXPECT().StatusStopping(removedBots)
-	s.botContainers.EXPECT().TearDownBot(gomock.Any(), removedBots[0].ContainerName(), true)
-	s.botContainers.EXPECT().TearDownBot(gomock.Any(), removedBots[1].ContainerName(), true)
+	s.botContainers.EXPECT().TearDownBot(gomock.Any(), removedBots[0].ContainerName())
+	s.botContainers.EXPECT().TearDownBot(gomock.Any(), removedBots[1].ContainerName())
 
 	s.botContainers.EXPECT().EnsureBotImages(gomock.Any(), addedBots).Return([]error{nil, nil, nil}).Times(1)
 	s.botContainers.EXPECT().LaunchBot(gomock.Any(), addedBots[0]).Return(nil).Times(1)
@@ -215,7 +215,7 @@ func (s *BotLifecycleManagerTestSuite) TestCleanup() {
 			State: "exited",
 		},
 	}, nil).Times(1)
-	s.botContainers.EXPECT().TearDownBot(gomock.Any(), unusedBotConfig.ContainerName(), true).Return(nil)
+	s.botContainers.EXPECT().TearDownBot(gomock.Any(), unusedBotConfig.ContainerName()).Return(nil)
 
 	s.r.NoError(s.botManager.CleanupUnusedBots(context.Background()))
 }
@@ -234,8 +234,8 @@ func (s *BotLifecycleManagerTestSuite) TestTearDown() {
 	s.botManager.runningBots = botConfigs
 
 	s.botPool.EXPECT().RemoveBotsWithConfigs(botConfigs)
-	s.botContainers.EXPECT().TearDownBot(gomock.Any(), botConfigs[0].ContainerName(), false).Return(nil)
-	s.botContainers.EXPECT().TearDownBot(gomock.Any(), botConfigs[1].ContainerName(), false).Return(nil)
+	s.botContainers.EXPECT().TearDownBot(gomock.Any(), botConfigs[0].ContainerName()).Return(nil)
+	s.botContainers.EXPECT().TearDownBot(gomock.Any(), botConfigs[1].ContainerName()).Return(nil)
 
 	s.botManager.TearDownRunningBots(context.Background())
 }

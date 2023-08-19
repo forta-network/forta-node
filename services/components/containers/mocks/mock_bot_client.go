@@ -108,15 +108,15 @@ func (mr *MockBotClientMockRecorder) StopBot(ctx, botConfig interface{}) *gomock
 }
 
 // TearDownBot mocks base method.
-func (m *MockBotClient) TearDownBot(ctx context.Context, containerName string, removeImage bool) error {
+func (m *MockBotClient) TearDownBot(ctx context.Context, containerName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TearDownBot", ctx, containerName, removeImage)
+	ret := m.ctrl.Call(m, "TearDownBot", ctx, containerName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // TearDownBot indicates an expected call of TearDownBot.
-func (mr *MockBotClientMockRecorder) TearDownBot(ctx, containerName, removeImage interface{}) *gomock.Call {
+func (mr *MockBotClientMockRecorder) TearDownBot(ctx, containerName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TearDownBot", reflect.TypeOf((*MockBotClient)(nil).TearDownBot), ctx, containerName, removeImage)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TearDownBot", reflect.TypeOf((*MockBotClient)(nil).TearDownBot), ctx, containerName)
 }

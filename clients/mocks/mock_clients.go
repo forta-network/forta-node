@@ -275,6 +275,21 @@ func (mr *MockDockerClientMockRecorder) InterruptContainer(ctx, id interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InterruptContainer", reflect.TypeOf((*MockDockerClient)(nil).InterruptContainer), ctx, id)
 }
 
+// ListImages mocks base method.
+func (m *MockDockerClient) ListImages(ctx context.Context) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListImages", ctx)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListImages indicates an expected call of ListImages.
+func (mr *MockDockerClientMockRecorder) ListImages(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListImages", reflect.TypeOf((*MockDockerClient)(nil).ListImages), ctx)
+}
+
 // Nuke mocks base method.
 func (m *MockDockerClient) Nuke(ctx context.Context) error {
 	m.ctrl.T.Helper()

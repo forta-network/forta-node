@@ -43,6 +43,7 @@ type DockerClient interface {
 	HasLocalImage(ctx context.Context, ref string) (bool, error)
 	EnsureLocalImage(ctx context.Context, name, ref string) error
 	EnsureLocalImages(ctx context.Context, timeoutPerPull time.Duration, imagePulls []docker.ImagePull) []error
+	ListImages(ctx context.Context) ([]string, error)
 	GetContainerLogs(ctx context.Context, containerID, tail string, truncate int) (string, error)
 	GetContainerFromRemoteAddr(ctx context.Context, hostPort string) (*types.Container, error)
 	SetImagePullCooldown(threshold int, cooldownDuration time.Duration)

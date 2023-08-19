@@ -27,6 +27,7 @@ mocks:
 	mockgen -source services/components/lifecycle/bot_manager.go -destination services/components/lifecycle/mocks/mock_bot_manager.go
 	mockgen -source services/components/lifecycle/bot_monitor.go -destination services/components/lifecycle/mocks/mock_bot_monitor.go
 	mockgen -source services/components/containers/bot_client.go -destination services/components/containers/mocks/mock_bot_client.go
+	mockgen -source services/components/containers/image_cleanup.go -destination services/components/containers/mocks/mock_image_cleanup.go
 	mockgen -source services/components/botio/sender.go -destination services/components/botio/mocks/mock_sender.go
 	mockgen -source services/components/botio/bot_client.go -destination services/components/botio/mocks/mock_bot_client.go
 	mockgen -source services/components/botio/bot_client_factory.go -destination services/components/botio/mocks/mock_bot_client_factory.go
