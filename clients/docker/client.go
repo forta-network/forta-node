@@ -794,6 +794,7 @@ func (d *dockerClient) ListImages(ctx context.Context) (imgs []string, err error
 	}
 	for _, imgSummary := range imgSummaries {
 		imgs = append(imgs, imgSummary.RepoTags...)
+		imgs = append(imgs, imgSummary.RepoDigests...)
 	}
 	return
 }
