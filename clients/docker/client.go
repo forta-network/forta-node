@@ -793,8 +793,15 @@ func (d *dockerClient) ListImages(ctx context.Context) (imgs []string, err error
 		return nil, fmt.Errorf("failed to list locally available images: %v", err)
 	}
 	for _, imgSummary := range imgSummaries {
-		imgs = append(imgs, imgSummary.RepoTags...)
-		imgs = append(imgs, imgSummary.RepoDigests...)
+		if len(imgSummary.RepoDigests) > 0 {
+			imgs = append(imgs, imgSummary.RepoDigests[0])
+			continue
+		}
+		if len(imgSummary.RepoTags) > 0 {
+			imgs = append(imgs, imgSummary.RepoTags[0])
+			continue
+		}
+		imgs = append(imgs, imgSummary.ID)
 	}
 	return
 }
