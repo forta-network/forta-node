@@ -57,6 +57,8 @@ func (ic *imageCleanup) Do(ctx context.Context) error {
 		return fmt.Errorf("failed to load the heartbeat bot during cleanup: %v", err)
 	}
 
+	logrus.WithField("image", heartbeatBot.Image).Debug("cleanup: loaded heartbeat bot image reference")
+
 	for _, image := range images {
 		logger := logrus.WithField("image", image)
 
