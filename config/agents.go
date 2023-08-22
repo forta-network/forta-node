@@ -10,9 +10,8 @@ import (
 )
 
 const (
-	AgentGrpcPort     = "50051"
-	HeartbeatBotID    = "0x37ce3df7facea4bd95619655347ffd66f50909d100fa74ae042f122a8b024c29"
-	HeartbeatBotImage = "bafybeicrbhj7ekrl6njozgpncl3jz4y64imxuilomkmaolztbyat5dtxri"
+	AgentGrpcPort  = "50051"
+	HeartbeatBotID = "0x37ce3df7facea4bd95619655347ffd66f50909d100fa74ae042f122a8b024c29"
 )
 
 type AgentConfig struct {

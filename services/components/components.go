@@ -119,7 +119,7 @@ func GetBotLifecycleComponents(ctx context.Context, botLifeConfig BotLifecycleCo
 		botLifeConfig.BotRegistry, botClient, lifecycleMediator,
 		lifecycleMetrics, botMonitor,
 	)
-	imageCleanup := containers.NewImageCleanup(dockerClient, config.HeartbeatBotImage)
+	imageCleanup := containers.NewImageCleanup(dockerClient, botLifeConfig.BotRegistry)
 
 	return BotLifecycle{
 		BotManager:   botManager,

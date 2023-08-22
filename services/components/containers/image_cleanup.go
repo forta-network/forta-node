@@ -8,6 +8,7 @@ import (
 
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/docker"
+	"github.com/forta-network/forta-node/services/components/registry"
 	"github.com/sirupsen/logrus"
 )
 
@@ -20,14 +21,16 @@ type ImageCleanup interface {
 
 type imageCleanup struct {
 	client        clients.DockerClient
+	botRegistry   registry.BotRegistry
 	lastCleanup   time.Time
 	exclusionList []string
 }
 
 // NewImageCleanup creates new.
-func NewImageCleanup(client clients.DockerClient, excludeImages ...string) *imageCleanup {
+func NewImageCleanup(client clients.DockerClient, botRegistry registry.BotRegistry, excludeImages ...string) *imageCleanup {
 	return &imageCleanup{
 		client:        client,
+		botRegistry:   botRegistry,
 		exclusionList: excludeImages,
 	}
 }
@@ -49,10 +52,15 @@ func (ic *imageCleanup) Do(ctx context.Context) error {
 		return fmt.Errorf("failed to list images during image cleanup: %v", err)
 	}
 
+	heartbeatBot, err := ic.botRegistry.LoadHeartbeatBot()
+	if err != nil {
+		return fmt.Errorf("failed to load the heartbeat bot during cleanup: %v", err)
+	}
+
 	for _, image := range images {
 		logger := logrus.WithField("image", image)
 
-		if ic.isExcluded(image) {
+		if ic.isExcluded(image) || image == heartbeatBot.Image {
 			logger.Debug("image is excluded - skipping cleanup")
 			continue
 		}
