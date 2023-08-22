@@ -47,6 +47,8 @@ func (ic *imageCleanup) Do(ctx context.Context) error {
 		return fmt.Errorf("failed to get containers during image cleanup: %v", err)
 	}
 
+	// we list the digest references as the main references for all images
+	// because we pull by digest references
 	images, err := ic.client.ListDigestReferences(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to list images during image cleanup: %v", err)
