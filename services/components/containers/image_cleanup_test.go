@@ -66,14 +66,14 @@ func (s *ImageCleanupTestSuite) TestContainerListError() {
 
 func (s *ImageCleanupTestSuite) TestImagesListError() {
 	s.client.EXPECT().GetContainers(gomock.Any()).Return(docker.ContainerList{}, nil)
-	s.client.EXPECT().ListImages(gomock.Any()).Return(nil, errors.New("test error"))
+	s.client.EXPECT().ListDigestReferences(gomock.Any()).Return(nil, errors.New("test error"))
 
 	s.r.Error(s.imageCleanup.Do(context.Background()))
 }
 
 func (s *ImageCleanupTestSuite) TestHeartbeatBotError() {
 	s.client.EXPECT().GetContainers(gomock.Any()).Return(docker.ContainerList{}, nil)
-	s.client.EXPECT().ListImages(gomock.Any()).Return([]string{testCleanupImage1}, nil)
+	s.client.EXPECT().ListDigestReferences(gomock.Any()).Return([]string{testCleanupImage1}, nil)
 	s.botRegistry.EXPECT().LoadHeartbeatBot().Return(nil, errors.New("test error"))
 
 	s.r.Error(s.imageCleanup.Do(context.Background()))
@@ -83,7 +83,7 @@ func (s *ImageCleanupTestSuite) TestRemoveImageError() {
 	initialLastCleanup := s.imageCleanup.lastCleanup
 
 	s.client.EXPECT().GetContainers(gomock.Any()).Return(docker.ContainerList{}, nil)
-	s.client.EXPECT().ListImages(gomock.Any()).Return([]string{testCleanupImage1}, nil)
+	s.client.EXPECT().ListDigestReferences(gomock.Any()).Return([]string{testCleanupImage1}, nil)
 	s.botRegistry.EXPECT().LoadHeartbeatBot().Return(&config.AgentConfig{Image: testHeartbeatBotImage}, nil)
 	s.client.EXPECT().RemoveImage(gomock.Any(), testCleanupImage1).Return(errors.New("test error"))
 
@@ -101,7 +101,7 @@ func (s *ImageCleanupTestSuite) TestCleanupSuccess() {
 			Image: testCleanupImage2, // image in use by container
 		},
 	}, nil)
-	s.client.EXPECT().ListImages(gomock.Any()).Return(
+	s.client.EXPECT().ListDigestReferences(gomock.Any()).Return(
 		[]string{testCleanupImage1, testCleanupImage2, testCleanupImage3, testHeartbeatBotImage}, nil,
 	)
 	s.botRegistry.EXPECT().LoadHeartbeatBot().Return(&config.AgentConfig{Image: testHeartbeatBotImage}, nil)

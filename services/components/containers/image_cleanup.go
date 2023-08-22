@@ -47,7 +47,7 @@ func (ic *imageCleanup) Do(ctx context.Context) error {
 		return fmt.Errorf("failed to get containers during image cleanup: %v", err)
 	}
 
-	images, err := ic.client.ListImages(ctx)
+	images, err := ic.client.ListDigestReferences(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to list images during image cleanup: %v", err)
 	}
