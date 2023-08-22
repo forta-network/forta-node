@@ -275,6 +275,21 @@ func (mr *MockDockerClientMockRecorder) InterruptContainer(ctx, id interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InterruptContainer", reflect.TypeOf((*MockDockerClient)(nil).InterruptContainer), ctx, id)
 }
 
+// ListDigestReferences mocks base method.
+func (m *MockDockerClient) ListDigestReferences(ctx context.Context) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDigestReferences", ctx)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDigestReferences indicates an expected call of ListDigestReferences.
+func (mr *MockDockerClientMockRecorder) ListDigestReferences(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDigestReferences", reflect.TypeOf((*MockDockerClient)(nil).ListDigestReferences), ctx)
+}
+
 // Nuke mocks base method.
 func (m *MockDockerClient) Nuke(ctx context.Context) error {
 	m.ctrl.T.Helper()

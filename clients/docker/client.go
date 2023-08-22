@@ -786,6 +786,18 @@ func (d *dockerClient) EnsureLocalImages(ctx context.Context, timeoutPerPull tim
 	return
 }
 
+// ListDigestReferences lists all digest references of all images.
+func (d *dockerClient) ListDigestReferences(ctx context.Context) (imgs []string, err error) {
+	imgSummaries, err := d.cli.ImageList(ctx, types.ImageListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list locally available images: %v", err)
+	}
+	for _, imgSummary := range imgSummaries {
+		imgs = append(imgs, imgSummary.RepoDigests...)
+	}
+	return
+}
+
 // GetContainerLogs gets the container logs.
 func (d *dockerClient) GetContainerLogs(ctx context.Context, containerID, tail string, truncate int) (string, error) {
 	r, err := d.cli.ContainerLogs(ctx, containerID, types.ContainerLogsOptions{
