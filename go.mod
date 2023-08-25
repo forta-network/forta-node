@@ -6,7 +6,7 @@ require (
 	github.com/creasty/defaults v1.5.2
 	github.com/ethereum/go-ethereum v1.11.5
 	github.com/fatih/color v1.13.0
-	github.com/forta-network/forta-core-go v0.0.0-20230811180632-0b7a5ab5e451
+	github.com/forta-network/forta-core-go v0.0.0-20230825083015-a1f212a4ad07
 	github.com/go-playground/validator/v10 v10.9.0
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/goccy/go-json v0.9.4
