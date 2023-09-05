@@ -9,6 +9,7 @@ import (
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/agentgrpc"
 	"github.com/forta-network/forta-node/clients/docker"
+	"github.com/forta-network/forta-core-go/clients/agentlogs"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/services/components/botio"
 	"github.com/forta-network/forta-node/services/components/botio/botreq"
@@ -79,10 +80,16 @@ type BotLifecycle struct {
 	BotManager   lifecycle.BotLifecycleManager
 	BotClient    containers.BotClient
 	ImageCleanup containers.ImageCleanup
+	BotLogger    lifecycle.BotLogger
 }
 
 // GetBotLifecycleComponents returns the bot lifecycle management components.
-func GetBotLifecycleComponents(ctx context.Context, botLifeConfig BotLifecycleConfig) (BotLifecycle, error) {
+func GetBotLifecycleComponents(
+	ctx context.Context, 
+	botLifeConfig BotLifecycleConfig,
+	supervisorConfig lifecycle.SupervisorServiceConfig,
+	sendAgentLogs func(agents agentlogs.Agents, authToken string) error,
+) (BotLifecycle, error) {
 	cfg := botLifeConfig.Config
 	// bot image client is helpful for loading local mode agents from a restricted container registry
 	var (
@@ -120,10 +127,17 @@ func GetBotLifecycleComponents(ctx context.Context, botLifeConfig BotLifecycleCo
 		lifecycleMetrics, botMonitor,
 	)
 	imageCleanup := containers.NewImageCleanup(dockerClient, botLifeConfig.BotRegistry)
+	botLogger := lifecycle.NewBotLogger(
+		botClient,
+		dockerClient,
+		supervisorConfig,
+		sendAgentLogs,
+	)
 
 	return BotLifecycle{
 		BotManager:   botManager,
 		BotClient:    botClient,
 		ImageCleanup: imageCleanup,
+		BotLogger: 	  botLogger,
 	}, nil
 }

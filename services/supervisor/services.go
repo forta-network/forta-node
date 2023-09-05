@@ -238,7 +238,7 @@ func (sup *SupervisorService) start() error {
 		sup.msgClient = messaging.NewClient("supervisor", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 	}
 	sup.botLifecycleConfig.MessageClient = sup.msgClient // we are able to set this dependency only here
-	sup.botLifecycle, err = components.GetBotLifecycleComponents(sup.ctx, sup.botLifecycleConfig)
+	sup.botLifecycle, err = components.GetBotLifecycleComponents(sup.ctx, sup.botLifecycleConfig, sup.config, sup.sendAgentLogs)
 	if err != nil {
 		return fmt.Errorf("failed to get bot lifecycle components: %v", err)
 	}
