@@ -301,7 +301,8 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 
 	var resp *domain.AlertBatchResponse
 	for i := 0; i < defaultBatchSendRetryTimes; i++ {
-		scannerJwt, err := security.CreateScannerJWT(
+		var scannerJwt string
+		scannerJwt, err = security.CreateScannerJWT(
 			pub.cfg.Key, map[string]interface{}{
 				"batch": cid,
 			},
