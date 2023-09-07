@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/forta-network/forta-core-go/clients/agentlogs"
 	"github.com/forta-network/forta-core-go/security"
-	"github.com/forta-network/forta-core-go/clients/agentlogs"	
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/docker"
 	"github.com/forta-network/forta-node/services/components/containers"
@@ -19,15 +20,11 @@ type BotLogger interface {
 	SendBotLogs(ctx context.Context) error
 }
 
-type SupervisorServiceConfig struct {
-	Key                *keystore.Key
-}
-
 type botLogger struct {
-	botClient         containers.BotClient
-	dockerClient      clients.DockerClient
-	supervisorConfig  SupervisorServiceConfig
-	prevAgentLogs     agentlogs.Agents
+	botClient     containers.BotClient
+	dockerClient  clients.DockerClient
+	key           *keystore.Key
+	prevAgentLogs agentlogs.Agents
 
 	sendAgentLogs func(agents agentlogs.Agents, authToken string) error
 }
@@ -35,16 +32,16 @@ type botLogger struct {
 var _ BotLogger = &botLogger{}
 
 func NewBotLogger(
-	botClient         containers.BotClient,
-	dockerClient      clients.DockerClient,
-	supervisorConfig  SupervisorServiceConfig,
-	sendAgentLogs     func(agents agentlogs.Agents, authToken string) error,
+	botClient containers.BotClient,
+	dockerClient clients.DockerClient,
+	key *keystore.Key,
+	sendAgentLogs func(agents agentlogs.Agents, authToken string) error,
 ) *botLogger {
 	return &botLogger{
-		botClient:         botClient,
-		dockerClient:      dockerClient,
-		supervisorConfig:  supervisorConfig,
-		sendAgentLogs:     sendAgentLogs,
+		botClient:     botClient,
+		dockerClient:  dockerClient,
+		key:           key,
+		sendAgentLogs: sendAgentLogs,
 	}
 }
 
@@ -97,7 +94,7 @@ func (bl *botLogger) SendBotLogs(ctx context.Context) error {
 
 	if len(sendLogs) > 0 {
 		// TODO: check if possible to set bot_logger as access to create JWT.
-		scannerJwt, err := security.CreateScannerJWT(bl.supervisorConfig.Key, map[string]interface{}{
+		scannerJwt, err := security.CreateScannerJWT(bl.key, map[string]interface{}{
 			"access": "bot_logger",
 		})
 		if err != nil {

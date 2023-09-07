@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/forta-network/forta-core-go/clients/agentlogs"
 	"github.com/forta-network/forta-core-go/release"
 	"github.com/forta-network/forta-core-go/security"
 	"github.com/forta-network/forta-core-go/utils"
@@ -249,19 +248,6 @@ func (s *Suite) TestStartServices() {
 	s.dockerClient.EXPECT().WaitContainerStart(s.supervisor.ctx, gomock.Any()).Return(nil).AnyTimes()
 
 	s.r.NoError(s.supervisor.start())
-}
-
-func (s *Suite) TestDoSyncAgentLogs() {
-	s.botClient.EXPECT().LoadBotContainers(gomock.Any()).Return([]types.Container{{
-		Labels: map[string]string{
-			docker.LabelFortaSettingsAgentLogsEnable: "true",
-		},
-	}}, nil)
-	s.dockerClient.EXPECT().GetContainerLogs(gomock.Any(), gomock.Any(), "50", 10000)
-	s.supervisor.sendAgentLogs = func(agents agentlogs.Agents, authToken string) error {
-		return nil
-	}
-	s.r.NoError(s.supervisor.doSyncAgentLogs())
 }
 
 func (s *Suite) TestDoHealthCheck() {
