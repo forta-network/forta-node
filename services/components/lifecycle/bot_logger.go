@@ -93,7 +93,6 @@ func (bl *botLogger) SendBotLogs(ctx context.Context) error {
 	}
 
 	if len(sendLogs) > 0 {
-		// TODO: check if possible to set bot_logger as access to create JWT.
 		scannerJwt, err := security.CreateScannerJWT(bl.key, map[string]interface{}{
 			"access": "bot_logger",
 		})
