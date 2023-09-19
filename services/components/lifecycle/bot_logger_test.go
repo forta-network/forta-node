@@ -1,8 +1,10 @@
 package lifecycle
 
 import (
+	"context"
 	"testing"
 
+	"github.com/docker/docker/api/types"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/forta-network/forta-core-go/clients/agentlogs"
 	"github.com/forta-network/forta-core-go/security"
@@ -20,7 +22,10 @@ func TestSendBotLogsSuite(t *testing.T) {
 type BotLoggerSuite struct {
 	r *require.Assertions
 
-	botLogger *botLogger
+	botLogger    *botLogger
+	botClient    *mock_containers.MockBotClient
+	dockerClient *mock_clients.MockDockerClient
+	key          *keystore.Key
 	suite.Suite
 }
 
@@ -41,16 +46,36 @@ func (s *BotLoggerSuite) SetupTest() {
 	key, err := security.LoadKeyWithPassphrase(dir, "Forta123")
 	r.NoError(err)
 
-	sendLogsMockFn := func(agents agentlogs.Agents, authToken string) error {
-		return nil
-	}
-
-	botLogger := NewBotLogger(botClient, dockerClient, key, sendLogsMockFn)
-
-	s.botLogger = botLogger
+	s.botClient = botClient
+	s.dockerClient = dockerClient
+	s.key = key
 	s.r = r
 }
 
 func (s *BotLoggerSuite) TestSendBotLogs() {
-	s.r.NotNil(s.botLogger)
+	botLogger := NewBotLogger(
+		s.botClient, s.dockerClient, s.key,
+		func(agents agentlogs.Agents, authToken string) error {
+			s.r.Equal(2, len(agents))
+			s.r.Equal("bot1", agents[0].ID)
+			s.r.Equal("bot2", agents[1].ID)
+			// TODO: test sendLogs = 1 and sendLogs = 0 conditions
+			return nil
+		},
+	)
+	ctx := context.Background()
+
+	mockContainers := []types.Container{
+		{
+			ID:    "bot1",
+			Image: "forta/bot:latest",
+		},
+		{
+			ID:    "bot2",
+			Image: "forta/bot:latest",
+		},
+	}
+	s.botClient.EXPECT().LoadBotContainers(ctx).Return(mockContainers, nil)
+
+	botLogger.SendBotLogs(ctx)
 }
