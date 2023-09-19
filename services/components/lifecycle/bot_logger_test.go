@@ -10,16 +10,24 @@ import (
 	mock_containers "github.com/forta-network/forta-node/services/components/containers/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-func sendLogsMock(agents agentlogs.Agents, authToken string) error {
-	return nil
+func TestSendBotLogsSuite(t *testing.T) {
+	suite.Run(t, &BotLoggerSuite{})
 }
 
-func TestNewBotLogger(t *testing.T) {
-	ctrl := gomock.NewController(t)
+type BotLoggerSuite struct {
+	r *require.Assertions
 
-	r := require.New(t)
+	botLogger *botLogger
+	suite.Suite
+}
+
+func (s *BotLoggerSuite) SetupTest() {
+	t := s.T()
+	ctrl := gomock.NewController(s.T())
+	r := s.Require()
 
 	botClient := mock_containers.NewMockBotClient(ctrl)
 	dockerClient := mock_clients.NewMockDockerClient(ctrl)
@@ -33,6 +41,16 @@ func TestNewBotLogger(t *testing.T) {
 	key, err := security.LoadKeyWithPassphrase(dir, "Forta123")
 	r.NoError(err)
 
-	botLogger := NewBotLogger(botClient, dockerClient, key, sendLogsMock)
-	r.NotNil(botLogger)
+	sendLogsMockFn := func(agents agentlogs.Agents, authToken string) error {
+		return nil
+	}
+
+	botLogger := NewBotLogger(botClient, dockerClient, key, sendLogsMockFn)
+
+	s.botLogger = botLogger
+	s.r = r
+}
+
+func (s *BotLoggerSuite) TestSendBotLogs() {
+	s.r.NotNil(s.botLogger)
 }
