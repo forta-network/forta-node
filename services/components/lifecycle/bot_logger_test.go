@@ -98,7 +98,7 @@ func (s *BotLoggerSuite) TestSendBotLogs() {
 	).Return("some log", nil).Times(1)
 
 	s.botClient.EXPECT().LoadBotContainers(ctx).Return(mockContainers, nil)
-	botLogger.SendBotLogs(ctx)
+	s.r.NoError(botLogger.SendBotLogs(ctx))
 }
 
 // should fail if there is an error loading
@@ -115,7 +115,7 @@ func (s *BotLoggerSuite) TestLoadBotContainersError() {
 	mockContainers := []types.Container{}
 
 	s.botClient.EXPECT().LoadBotContainers(ctx).Return(mockContainers, errors.New("test"))
-	s.r.Error(botLogger.SendBotLogs(ctx), "failed to load the bot containers: test")
+	s.r.EqualError(botLogger.SendBotLogs(ctx), "failed to load the bot containers: test")
 }
 
 // Should not send agent logs if fails
@@ -164,7 +164,7 @@ func (s *BotLoggerSuite) TestGetContainerLogsError() {
 		defaultAgentLogAvgMaxCharsPerLine*defaultAgentLogTailLines,
 	).Return("some log", nil).Times(1)
 
-	botLogger.SendBotLogs(ctx)
+	s.r.NoError(botLogger.SendBotLogs(ctx))
 }
 
 // Fails sending agent logs
@@ -196,5 +196,5 @@ func (s *BotLoggerSuite) TestFailsToSendLogs() {
 		defaultAgentLogAvgMaxCharsPerLine*defaultAgentLogTailLines,
 	).Return("some log", nil).Times(1)
 
-	s.r.Error(botLogger.SendBotLogs(ctx), "failed to send agent logs: test")
+	s.r.EqualError(botLogger.SendBotLogs(ctx), "failed to send agent logs: test")
 }
