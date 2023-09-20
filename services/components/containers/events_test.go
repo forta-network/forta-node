@@ -22,29 +22,7 @@ var (
 	testEventTime          = time.Now()
 )
 
-// type metricsMatcher struct {
-// 	metrics protocol.AgentMetricList
-// }
-
-// func (m *metricsMatcher) Match(x interface{}) bool {
-// 	incoming, ok := x.(protocol.AgentMetricList)
-// 	if !ok {
-// 		return false
-// 	}
-// 	m1 := m.metrics.Metrics[0]
-// 	m2 := incoming.Metrics[0]
-
-// 	sameBot := m1.AgentId == m2.AgentId
-// 	sameDetails := m2.
-// }
-
-// func (m *metricsMatcher) String() string {
-// 	return "metrics"
-// }
-
 func TestListenToDockerEvents(t *testing.T) {
-	//r := require.New(t)
-
 	ctrl := gomock.NewController(t)
 	dockerClient := mock_clients.NewMockDockerClient(ctrl)
 	msgClient := mock_clients.NewMockMessageClient(ctrl)
