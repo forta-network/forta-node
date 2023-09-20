@@ -4,13 +4,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/forta-network/forta-core-go/domain"
-
 	"github.com/docker/docker/api/types"
-	"github.com/golang/protobuf/proto"
-
+	"github.com/docker/docker/api/types/events"
+	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-node/clients/docker"
 	"github.com/forta-network/forta-node/config"
+	"github.com/golang/protobuf/proto"
 )
 
 // DockerClient is a client interface for interacting with docker
@@ -47,6 +46,7 @@ type DockerClient interface {
 	GetContainerLogs(ctx context.Context, containerID, tail string, truncate int) (string, error)
 	GetContainerFromRemoteAddr(ctx context.Context, hostPort string) (*types.Container, error)
 	SetImagePullCooldown(threshold int, cooldownDuration time.Duration)
+	Events(ctx context.Context, since time.Time) (<-chan events.Message, <-chan error)
 }
 
 // MessageClient receives and publishes messages.

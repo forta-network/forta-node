@@ -62,6 +62,16 @@ func CreateAgentMetric(agt config.AgentConfig, metric string, value float64) *pr
 	}
 }
 
+func CreateEventMetric(t time.Time, id string, metric string, details string) *protocol.AgentMetric {
+	return &protocol.AgentMetric{
+		AgentId:   id,
+		Timestamp: t.Format(time.RFC3339),
+		Name:      metric,
+		Value:     1,
+		Details:   details,
+	}
+}
+
 func createMetrics(agt config.AgentConfig, timestamp string, metricMap map[string]float64) []*protocol.AgentMetric {
 	var res []*protocol.AgentMetric
 

@@ -303,7 +303,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 			},
 		)
 		if err != nil {
-			logger.WithError(err).Error("failed to sign cid")
+			logger.WithError(err).Error("failed to create batch jwt")
 			return false, err
 		}
 		resp, err = pub.alertClient.PostBatch(&domain.AlertBatchRequest{

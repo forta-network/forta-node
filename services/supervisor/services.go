@@ -155,6 +155,9 @@ func (sup *SupervisorService) start() error {
 	}
 	commonNodeImage := supervisorContainer.Image
 
+	// start of service network and container launch
+	startTime := time.Now()
+
 	nodeNetworkID, err := sup.client.EnsurePublicNetwork(sup.ctx, config.DockerNetworkName)
 	if err != nil {
 		return err
@@ -387,6 +390,12 @@ func (sup *SupervisorService) start() error {
 		<-sup.inspectionCh
 		log.Info("inspection to completed")
 	}
+
+	go func() {
+		// wait for the publisher so it can catch the metrics
+		time.Sleep(time.Minute)
+		containers.ListenToDockerEvents(sup.ctx, sup.globalClient, sup.msgClient, startTime)
+	}()
 
 	sup.scannerContainer, err = sup.client.StartContainer(
 		sup.ctx, docker.ContainerConfig{
