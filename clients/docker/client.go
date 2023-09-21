@@ -12,16 +12,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goccy/go-json"
-
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/forta-network/forta-core-go/utils/workers"
 	"github.com/forta-network/forta-node/clients/cooldown"
 	"github.com/forta-network/forta-node/config"
+	"github.com/goccy/go-json"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -841,6 +841,13 @@ func makeLabelFilter(labels []dockerLabel) filters.Args {
 		filter.Add("label", fmt.Sprintf("%s=%s", label.Name, label.Value))
 	}
 	return filter
+}
+
+// Events returns channels that send the Docker events and listening/decoding errors.
+func (d *dockerClient) Events(ctx context.Context, since time.Time) (<-chan events.Message, <-chan error) {
+	return d.cli.Events(ctx, types.EventsOptions{
+		Since: since.Format(time.RFC3339),
+	})
 }
 
 func (d *dockerClient) GetContainerFromRemoteAddr(ctx context.Context, hostPort string) (*types.Container, error) {

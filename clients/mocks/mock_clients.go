@@ -10,6 +10,7 @@ import (
 	time "time"
 
 	types "github.com/docker/docker/api/types"
+	events "github.com/docker/docker/api/types/events"
 	domain "github.com/forta-network/forta-core-go/domain"
 	docker "github.com/forta-network/forta-node/clients/docker"
 	config "github.com/forta-network/forta-node/config"
@@ -124,6 +125,21 @@ func (m *MockDockerClient) EnsurePublicNetwork(ctx context.Context, name string)
 func (mr *MockDockerClientMockRecorder) EnsurePublicNetwork(ctx, name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsurePublicNetwork", reflect.TypeOf((*MockDockerClient)(nil).EnsurePublicNetwork), ctx, name)
+}
+
+// Events mocks base method.
+func (m *MockDockerClient) Events(ctx context.Context, since time.Time) (<-chan events.Message, <-chan error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Events", ctx, since)
+	ret0, _ := ret[0].(<-chan events.Message)
+	ret1, _ := ret[1].(<-chan error)
+	return ret0, ret1
+}
+
+// Events indicates an expected call of Events.
+func (mr *MockDockerClientMockRecorder) Events(ctx, since interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Events", reflect.TypeOf((*MockDockerClient)(nil).Events), ctx, since)
 }
 
 // GetContainerByID mocks base method.
