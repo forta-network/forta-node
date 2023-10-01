@@ -309,6 +309,8 @@ func (bot *botClient) initialize() {
 	botClient, err := bot.dialer.DialBot(botConfig)
 	if err != nil {
 		logger.WithError(err).Info("failed to dial bot")
+		bot.lifecycleMetrics.FailureInitialize(err, botConfig)
+		_ = bot.Close()
 		return
 	}
 	bot.setGrpcClient(botClient)
@@ -348,6 +350,7 @@ func (bot *botClient) initialize() {
 	if err := validateInitializeResponse(initializeResponse); err != nil {
 		logger.WithError(err).Warn("bot initialization validation failed")
 		bot.lifecycleMetrics.FailureInitializeValidate(err, botConfig)
+		_ = bot.Close()
 		return
 	}
 
@@ -423,7 +426,11 @@ func (bot *botClient) processTransactions() {
 		},
 	)
 
-	<-bot.Initialized()
+	select {
+	case <-bot.Closed():
+		return
+	case <-bot.Initialized():
+	}
 
 	processRequests(bot.ctx, bot.txRequests, bot.Closed(), lg, bot.processTransaction)
 }
@@ -437,7 +444,11 @@ func (bot *botClient) processBlocks() {
 		},
 	)
 
-	<-bot.Initialized()
+	select {
+	case <-bot.Closed():
+		return
+	case <-bot.Initialized():
+	}
 
 	processRequests(bot.ctx, bot.blockRequests, bot.Closed(), lg, bot.processBlock)
 }
@@ -451,7 +462,11 @@ func (bot *botClient) processHealthChecks() {
 		},
 	)
 
-	<-bot.Initialized()
+	select {
+	case <-bot.Closed():
+		return
+	case <-bot.Initialized():
+	}
 
 	ticker := time.NewTicker(DefaultHealthCheckInterval)
 
@@ -478,7 +493,11 @@ func (bot *botClient) processCombinationAlerts() {
 		},
 	)
 
-	<-bot.Initialized()
+	select {
+	case <-bot.Closed():
+		return
+	case <-bot.Initialized():
+	}
 
 	processRequests(bot.ctx, bot.combinationRequests, bot.Closed(), lg, bot.processCombinationAlert)
 }
