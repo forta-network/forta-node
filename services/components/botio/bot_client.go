@@ -423,7 +423,11 @@ func (bot *botClient) processTransactions() {
 		},
 	)
 
-	<-bot.Initialized()
+	select {
+	case <-bot.Closed():
+		return
+	case <-bot.Initialized():
+	}
 
 	processRequests(bot.ctx, bot.txRequests, bot.Closed(), lg, bot.processTransaction)
 }
@@ -437,7 +441,11 @@ func (bot *botClient) processBlocks() {
 		},
 	)
 
-	<-bot.Initialized()
+	select {
+	case <-bot.Closed():
+		return
+	case <-bot.Initialized():
+	}
 
 	processRequests(bot.ctx, bot.blockRequests, bot.Closed(), lg, bot.processBlock)
 }
@@ -451,7 +459,11 @@ func (bot *botClient) processHealthChecks() {
 		},
 	)
 
-	<-bot.Initialized()
+	select {
+	case <-bot.Closed():
+		return
+	case <-bot.Initialized():
+	}
 
 	ticker := time.NewTicker(DefaultHealthCheckInterval)
 
@@ -478,7 +490,11 @@ func (bot *botClient) processCombinationAlerts() {
 		},
 	)
 
-	<-bot.Initialized()
+	select {
+	case <-bot.Closed():
+		return
+	case <-bot.Initialized():
+	}
 
 	processRequests(bot.ctx, bot.combinationRequests, bot.Closed(), lg, bot.processCombinationAlert)
 }
