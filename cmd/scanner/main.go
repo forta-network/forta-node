@@ -11,8 +11,10 @@ import (
 	"github.com/forta-network/forta-node/store"
 
 	"github.com/forta-network/forta-core-go/domain"
+	"github.com/forta-network/forta-core-go/feeds/timeline"
 	"github.com/forta-network/forta-core-go/protocol/settings"
 	"github.com/forta-network/forta-node/services/components"
+	"github.com/forta-network/forta-node/services/components/estimation"
 	"github.com/forta-network/forta-node/services/publisher"
 	log "github.com/sirupsen/logrus"
 
@@ -31,7 +33,7 @@ import (
 	"github.com/forta-network/forta-node/services/scanner"
 )
 
-func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, cfg config.Config) (*scanner.TxStreamService, feeds.BlockFeed, error) {
+func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, cfg config.Config) (*scanner.TxStreamService, feeds.BlockFeed, *estimation.Estimator, error) {
 	cfg.Scan.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Scan.JsonRpc.Url)
 	cfg.JsonRpcProxy.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Scan.JsonRpc.Url)
 	cfg.Registry.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Registry.JsonRpc.Url)
@@ -42,10 +44,10 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 	chainID := config.ParseBigInt(cfg.ChainID)
 
 	if url == "" {
-		return nil, nil, fmt.Errorf("scan.jsonRpc.url is required")
+		return nil, nil, nil, fmt.Errorf("scan.jsonRpc.url is required")
 	}
 	if cfg.Trace.Enabled && cfg.Trace.JsonRpc.Url == "" {
-		return nil, nil, fmt.Errorf("trace requires a jsonRpc URL if enabled")
+		return nil, nil, nil, fmt.Errorf("trace requires a jsonRpc URL if enabled")
 	}
 
 	var rateLimit *time.Ticker
@@ -91,13 +93,20 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 		End:                 stopBlock,
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// subscribe to block feed so we can detect block end and trigger exit
 	blockErrCh := blockFeed.Subscribe(func(evt *domain.BlockEvent) error {
 		return nil
 	})
+
+	// subscribe to block feed to construct a timeline and estimate performance
+	blockTimeline := timeline.NewBlockTimeline(60)
+	blockFeed.Subscribe(blockTimeline.HandleBlock)
+	chainSettings := settings.GetChainSettings(cfg.ChainID)
+	estimator := estimation.NewEstimator(blockTimeline, chainSettings.BlockThreshold, chainSettings.DistanceToChainHighest)
+
 	// detect end block, wait for scanning to finish, trigger exit
 	go func() {
 		err := <-blockErrCh
@@ -126,10 +135,10 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 		SkipBlocksOlderThan: maxAgePtr,
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create the tx stream service: %v", err)
+		return nil, nil, nil, fmt.Errorf("failed to create the tx stream service: %v", err)
 	}
 
-	return txStream, blockFeed, nil
+	return txStream, blockFeed, estimator, nil
 }
 
 // getBlockOffset either returns the default offset configured for the chain or
@@ -300,7 +309,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, fmt.Errorf("failed to create trace stream eth client: %v", err)
 	}
 
-	txStream, blockFeed, err := initTxStream(ctx, ethClient, traceClient, cfg)
+	txStream, blockFeed, estimator, err := initTxStream(ctx, ethClient, traceClient, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create tx stream: %v", err)
 	}
@@ -355,6 +364,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 			txAnalyzer, blockAnalyzer, combinationAnalyzer,
 			botProcessingComponents.RequestSender,
 			publisherSvc,
+			estimator,
 		)),
 		txStream,
 		txAnalyzer,
@@ -450,6 +460,13 @@ func summarizeReports(reports health.Reports) *health.Report {
 	if ok && len(batchPublishErr.Details) > 0 {
 		summary.Addf("failed to publish the last batch with error '%s'", batchPublishErr.Details)
 		summary.Status(health.StatusFailing)
+	}
+
+	summary.Punc(".")
+
+	jsonRpcPerformance, ok := reports.NameContains("json-rpc-performance")
+	if ok && jsonRpcPerformance.Status != health.StatusUnknown {
+		summary.Addf("json-rpc performance is estimated as %s.", jsonRpcPerformance.Details)
 	}
 
 	return summary.Finish()

@@ -319,6 +319,21 @@ var knownMetricKinds = []*MetricKind{
 		),
 		Mappings: inspectorMetricMappings(),
 	},
+
+	////////// estimator
+
+	{
+		Desc: prometheus.NewDesc(
+			fqName("estimator"), "estimation results",
+			[]string{"name"}, nil,
+		),
+		Mappings: []*Mapping{
+			{
+				FromHealth: "estimator_json_rpc_performance",
+				ToProm:     "json_rpc_performance",
+			},
+		},
+	},
 }
 
 func inspectorMetricMappings() (mappings []*Mapping) {
