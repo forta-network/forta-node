@@ -46,6 +46,10 @@ func (e *Estimator) estimate(atTime time.Time) health.Reports {
 				Name:   "json-rpc-performance",
 				Status: health.StatusUnknown,
 			},
+			{
+				Name:   "json-rpc-delay",
+				Status: health.StatusUnknown,
+			},
 		}
 	}
 
@@ -61,11 +65,17 @@ func (e *Estimator) estimate(atTime time.Time) health.Reports {
 	}
 
 	jsonRpcPerformanceStr := fmt.Sprintf("%.2f", jsonRpcPerformance)
+	delay, _ := e.blockTimeline.GetDelay()
 	return health.Reports{
 		{
 			Name:    "json-rpc-performance",
 			Status:  health.StatusInfo,
 			Details: jsonRpcPerformanceStr,
+		},
+		{
+			Name:    "json-rpc-delay",
+			Status:  health.StatusInfo,
+			Details: delay.String(),
 		},
 	}
 }

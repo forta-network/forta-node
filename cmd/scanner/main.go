@@ -469,6 +469,13 @@ func summarizeReports(reports health.Reports) *health.Report {
 		summary.Addf("json-rpc performance is estimated as %s.", jsonRpcPerformance.Details)
 	}
 
+	summary.Punc(".")
+
+	jsonRpcDelay, ok := reports.NameContains("json-rpc-delay")
+	if ok && jsonRpcPerformance.Status != health.StatusUnknown {
+		summary.Addf("json-rpc delay is %s.", jsonRpcDelay.Details)
+	}
+
 	return summary.Finish()
 }
 
