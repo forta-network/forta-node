@@ -11,13 +11,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TODO: No need to test the estimation score here. That should be moved to the timeline.
 func TestEstimator(t *testing.T) {
 	r := require.New(t)
 
 	blockTimeline := &timeline.BlockTimeline{}
 	threshold := 10
-	expectedDistance := 1
-	estimator := NewEstimator(blockTimeline, threshold, expectedDistance)
+	estimator := NewEstimator(blockTimeline, threshold)
 
 	currMin := time.Now().UTC().Truncate(time.Minute)
 	min1 := currMin.Add(time.Minute * -2)
@@ -45,7 +45,7 @@ func TestEstimator(t *testing.T) {
 	blockTimeline.HandleBlock(blockForTimestamp(min3Ts, "0x300"))
 	result = estimator.estimate(min3)[0]
 	r.Equal(health.StatusInfo, result.Status)
-	r.Equal("0.00", result.Details)
+	r.Equal("1.00", result.Details)
 }
 
 func blockForTimestamp(ts, blockNumber string) *domain.BlockEvent {

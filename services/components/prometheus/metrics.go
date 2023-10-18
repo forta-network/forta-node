@@ -332,6 +332,10 @@ var knownMetricKinds = []*MetricKind{
 				FromHealth: "estimator_json_rpc_performance",
 				ToProm:     "json_rpc_performance",
 			},
+			{
+				FromHealth: "estimator_json_rpc_delay",
+				ToProm:     "json_rpc_delay",
+			},
 		},
 	},
 }

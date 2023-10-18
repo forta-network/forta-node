@@ -105,7 +105,7 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 	blockTimeline := timeline.NewBlockTimeline(60)
 	blockFeed.Subscribe(blockTimeline.HandleBlock)
 	chainSettings := settings.GetChainSettings(cfg.ChainID)
-	estimator := estimation.NewEstimator(blockTimeline, chainSettings.BlockThreshold, chainSettings.DistanceToChainHighest)
+	estimator := estimation.NewEstimator(blockTimeline, chainSettings.BlockThreshold)
 
 	// detect end block, wait for scanning to finish, trigger exit
 	go func() {
@@ -466,15 +466,17 @@ func summarizeReports(reports health.Reports) *health.Report {
 
 	jsonRpcPerformance, ok := reports.NameContains("json-rpc-performance")
 	if ok && jsonRpcPerformance.Status != health.StatusUnknown {
-		summary.Addf("json-rpc performance is estimated as %s.", jsonRpcPerformance.Details)
+		summary.Addf("json-rpc performance is estimated as %s", jsonRpcPerformance.Details)
 	}
 
 	summary.Punc(".")
 
 	jsonRpcDelay, ok := reports.NameContains("json-rpc-delay")
 	if ok && jsonRpcPerformance.Status != health.StatusUnknown {
-		summary.Addf("json-rpc delay is %s.", jsonRpcDelay.Details)
+		summary.Addf("the latest block was received %s after creation.", jsonRpcDelay.Details)
 	}
+
+	summary.Punc(".")
 
 	return summary.Finish()
 }

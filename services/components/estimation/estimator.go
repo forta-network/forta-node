@@ -10,12 +10,11 @@ import (
 
 // Estimator does performance estimations.
 type Estimator struct {
-	blockTimeline    *timeline.BlockTimeline
-	blockThreshold   int
-	expectedDistance int
+	blockTimeline  *timeline.BlockTimeline
+	blockThreshold int
 }
 
-func NewEstimator(blockTimeline *timeline.BlockTimeline, blockThreshold, expectedDistance int) *Estimator {
+func NewEstimator(blockTimeline *timeline.BlockTimeline, blockThreshold int) *Estimator {
 	return &Estimator{
 		blockTimeline:  blockTimeline,
 		blockThreshold: blockThreshold,
@@ -34,13 +33,8 @@ func (e *Estimator) Health() health.Reports {
 }
 
 func (e *Estimator) estimate(atTime time.Time) health.Reports {
-	// need at least two minutes in the time line to start calculating the lag
-	// 1st min: unreliable numbers
-	// 2nd min: reliable numbers
-	// 3rd min: means the 2nd min is over and we should look at that
-	tooEarly := e.blockTimeline.Size() < 3
-	lag, ok := e.blockTimeline.CalculateLag(atTime)
-	if !ok || tooEarly {
+	lag, ok := e.blockTimeline.CalculateLag()
+	if !ok {
 		return health.Reports{
 			{
 				Name:   "json-rpc-performance",
@@ -52,9 +46,6 @@ func (e *Estimator) estimate(atTime time.Time) health.Reports {
 			},
 		}
 	}
-
-	// offset the lag by expected distance
-	lag = lag - int64(e.expectedDistance)
 
 	jsonRpcPerformance := (float64(e.blockThreshold) - float64(lag)) / float64(e.blockThreshold)
 	if jsonRpcPerformance < 0 {
