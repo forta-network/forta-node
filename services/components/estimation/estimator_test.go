@@ -4,55 +4,39 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/forta-network/forta-core-go/clients/health"
-	"github.com/forta-network/forta-core-go/domain"
-	"github.com/forta-network/forta-core-go/feeds/timeline"
 	"github.com/stretchr/testify/require"
 )
 
-// TODO: No need to test the estimation score here. That should be moved to the timeline.
+type testBlockTimeline struct {
+	score float64
+	delay time.Duration
+	ok    bool
+}
+
+func (t *testBlockTimeline) EstimateBlockScore() (float64, bool) {
+	return t.score, t.ok
+}
+
+func (t *testBlockTimeline) GetDelay() (time.Duration, bool) {
+	return t.delay, t.ok
+}
+
 func TestEstimator(t *testing.T) {
 	r := require.New(t)
 
-	blockTimeline := &timeline.BlockTimeline{}
-	threshold := 10
-	estimator := NewEstimator(blockTimeline, threshold)
-
-	currMin := time.Now().UTC().Truncate(time.Minute)
-	min1 := currMin.Add(time.Minute * -2)
-	min2 := currMin.Add(time.Minute * -1)
-	min3 := currMin
-
-	min1Ts := hexutil.EncodeUint64(uint64(min1.Unix()))
-	min2Ts := hexutil.EncodeUint64(uint64(min2.Unix()))
-	min3Ts := hexutil.EncodeUint64(uint64(min3.Unix()))
-
-	// no blocks handled yet: should give unknown estimation result
-	r.Equal(health.StatusUnknown, estimator.estimate(min1)[0].Status)
-
-	// add first minute block number: should give unknown estimation result
-	blockTimeline.HandleBlock(blockForTimestamp(min1Ts, "0x100"))
-	result := estimator.estimate(min1)[0]
-	r.Equal(health.StatusUnknown, result.Status)
-
-	// add second minute block number: should give unknown estimation result
-	blockTimeline.HandleBlock(blockForTimestamp(min2Ts, "0x200"))
-	result = estimator.estimate(min2)[0]
-	r.Equal(health.StatusUnknown, result.Status)
-
-	// add third minute block number: should give an estimation result
-	blockTimeline.HandleBlock(blockForTimestamp(min3Ts, "0x300"))
-	result = estimator.estimate(min3)[0]
-	r.Equal(health.StatusInfo, result.Status)
-	r.Equal("1.00", result.Details)
-}
-
-func blockForTimestamp(ts, blockNumber string) *domain.BlockEvent {
-	return &domain.BlockEvent{
-		Block: &domain.Block{
-			Timestamp: ts,
-			Number:    blockNumber,
-		},
+	blockTimeline := &testBlockTimeline{
+		ok: false,
 	}
+	estimator := NewEstimator(blockTimeline)
+
+	r.Equal(health.StatusUnknown, estimator.Health()[0].Status)
+	r.Equal(health.StatusUnknown, estimator.Health()[1].Status)
+
+	blockTimeline.ok = true
+	blockTimeline.delay = time.Second
+	blockTimeline.score = 0.12
+
+	r.Equal(health.StatusInfo, estimator.Health()[0].Status)
+	r.Equal(health.StatusInfo, estimator.Health()[1].Status)
 }

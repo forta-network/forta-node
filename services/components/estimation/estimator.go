@@ -5,19 +5,23 @@ import (
 	"time"
 
 	"github.com/forta-network/forta-core-go/clients/health"
-	"github.com/forta-network/forta-core-go/feeds/timeline"
 )
+
+// BlockTimeline has block creation and processing knowledge
+// and can make estimations and calculations based on that.
+type BlockTimeline interface {
+	EstimateBlockScore() (float64, bool)
+	GetDelay() (time.Duration, bool)
+}
 
 // Estimator does performance estimations.
 type Estimator struct {
-	blockTimeline  *timeline.BlockTimeline
-	blockThreshold int
+	blockTimeline BlockTimeline
 }
 
-func NewEstimator(blockTimeline *timeline.BlockTimeline, blockThreshold int) *Estimator {
+func NewEstimator(blockTimeline BlockTimeline) *Estimator {
 	return &Estimator{
-		blockTimeline:  blockTimeline,
-		blockThreshold: blockThreshold,
+		blockTimeline: blockTimeline,
 	}
 }
 
@@ -28,12 +32,7 @@ func (e *Estimator) Name() string {
 
 // Health implements health.Reporter.
 func (e *Estimator) Health() health.Reports {
-	// only look at the previous minute
-	return e.estimate(time.Now().Add(time.Minute * -1))
-}
-
-func (e *Estimator) estimate(atTime time.Time) health.Reports {
-	lag, ok := e.blockTimeline.CalculateLag()
+	estimate, ok := e.blockTimeline.EstimateBlockScore()
 	if !ok {
 		return health.Reports{
 			{
@@ -46,16 +45,7 @@ func (e *Estimator) estimate(atTime time.Time) health.Reports {
 			},
 		}
 	}
-
-	jsonRpcPerformance := (float64(e.blockThreshold) - float64(lag)) / float64(e.blockThreshold)
-	if jsonRpcPerformance < 0 {
-		jsonRpcPerformance = 0
-	}
-	if jsonRpcPerformance > 1 {
-		jsonRpcPerformance = 1
-	}
-
-	jsonRpcPerformanceStr := fmt.Sprintf("%.2f", jsonRpcPerformance)
+	jsonRpcPerformanceStr := fmt.Sprintf("%.2f", estimate)
 	delay, _ := e.blockTimeline.GetDelay()
 	return health.Reports{
 		{
