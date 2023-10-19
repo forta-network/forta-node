@@ -63,6 +63,11 @@ const (
 	DefaultHealthCheckInterval = time.Second * 30
 )
 
+// Global vars
+var (
+	HealthCheckInterval = DefaultHealthCheckInterval
+)
+
 // botClient receives blocks and transactions, and produces results.
 type botClient struct {
 	ctx               context.Context
@@ -400,7 +405,11 @@ func processRequests[R any](
 	for {
 		select {
 		case <-ctx.Done():
-			logger.WithError(ctx.Err()).Info("bot context is done")
+			logger.WithError(ctx.Err()).Info("bot context is done - exiting request processing loop")
+			return
+
+		case <-closedCh:
+			logger.Info("bot client is closed - exiting request processing loop")
 			return
 
 		case request := <-reqCh:
@@ -450,37 +459,6 @@ func (bot *botClient) processBlocks() {
 	processRequests(bot.ctx, bot.blockRequests, bot.Closed(), lg, bot.processBlock)
 }
 
-func (bot *botClient) processHealthChecks() {
-	lg := log.WithFields(
-		log.Fields{
-			"bot":       bot.Config().ID,
-			"component": "bot-client",
-			"evaluate":  "health-check",
-		},
-	)
-
-	select {
-	case <-bot.Closed():
-		return
-	case <-bot.Initialized():
-	}
-
-	ticker := time.NewTicker(DefaultHealthCheckInterval)
-
-	bot.doHealthCheck(bot.ctx, lg)
-	for {
-		select {
-		case <-bot.ctx.Done():
-			return
-		case <-ticker.C:
-			exit := bot.doHealthCheck(bot.ctx, lg)
-			if exit {
-				return
-			}
-		}
-	}
-}
-
 func (bot *botClient) processCombinationAlerts() {
 	lg := log.WithFields(
 		log.Fields{
@@ -497,6 +475,37 @@ func (bot *botClient) processCombinationAlerts() {
 	}
 
 	processRequests(bot.ctx, bot.combinationRequests, bot.Closed(), lg, bot.processCombinationAlert)
+}
+
+func (bot *botClient) processHealthChecks() {
+	lg := log.WithFields(
+		log.Fields{
+			"bot":       bot.Config().ID,
+			"component": "bot-client",
+			"evaluate":  "health-check",
+		},
+	)
+
+	select {
+	case <-bot.Closed():
+		return
+	case <-bot.Initialized():
+	}
+
+	ticker := time.NewTicker(HealthCheckInterval)
+
+	bot.doHealthCheck(bot.ctx, lg)
+	for {
+		select {
+		case <-bot.ctx.Done():
+			return
+		case <-ticker.C:
+			exit := bot.doHealthCheck(bot.ctx, lg)
+			if exit {
+				return
+			}
+		}
+	}
 }
 
 func (bot *botClient) processTransaction(ctx context.Context, lg *log.Entry, request *botreq.TxRequest) (exit bool) {
