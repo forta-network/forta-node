@@ -1,9 +1,8 @@
-name: Release & CodeDeploy to Dev
+name: build
 
 on:
   push:
     branches: [master]
-  workflow_dispatch:
 
 env:
   DEFAULT_DEV_VERSION: v0.0.1
