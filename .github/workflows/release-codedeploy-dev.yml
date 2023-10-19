@@ -9,20 +9,20 @@ env:
   DEFAULT_DEV_VERSION: v0.0.1
 
 jobs:
-  # go:
-  #   name: Go
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v2
-  #     - name: Setup
-  #       id: setup
-  #       uses: ./.github/actions/setup
-  #     - name: Validate and test Go code
-  #       id: go
-  #       uses: ./.github/actions/go
-  #       with:
-  #         COVERAGE_THRESHOLD: ${{ vars.COVERAGE_THRESHOLD }}
+  go:
+    name: Go
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup
+        id: setup
+        uses: ./.github/actions/setup
+      - name: Validate and test Go code
+        id: go
+        uses: ./.github/actions/go
+        with:
+          COVERAGE_THRESHOLD: ${{ vars.COVERAGE_THRESHOLD }}
 
   e2e:
     name: E2E Test
@@ -42,7 +42,7 @@ jobs:
 
   containers:
     name: Build and push containers
-    #needs: [go]
+    needs: [go]
     runs-on: ubuntu-20.04
     environment: dev
     outputs:
@@ -91,20 +91,20 @@ jobs:
         run: |
           ./scripts/publish-release.sh ${{ needs.containers.outputs.node-release-cid }} ${{ secrets.DEV_PUBLISH_AUTOTASK_KEY }} ${{ secrets.DEV_PUBLISH_AUTOTASK_URL }}
 
-  # publish-hash-beta:
-  #   name: Publish Hash (Beta) to Contract
-  #   needs: containers
-  #   runs-on: ubuntu-latest
-  #   environment: dev
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v2
-  #     - name: Echo Hash
-  #       run: |
-  #         echo "release-cid=${{ needs.containers.outputs.node-release-cid }}"
-  #     - name: Publish Hash
-  #       run: |
-  #         ./scripts/publish-release.sh ${{ needs.containers.outputs.node-release-cid }} ${{ secrets.DEV_PUBLISH_AUTOTASK_KEY }} ${{ secrets.DEV_PUBLISH_BETA_AUTOTASK_URL }}
+  publish-hash-beta:
+    name: Publish Hash (Beta) to Contract
+    needs: containers
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Echo Hash
+        run: |
+          echo "release-cid=${{ needs.containers.outputs.node-release-cid }}"
+      - name: Publish Hash
+        run: |
+          ./scripts/publish-release.sh ${{ needs.containers.outputs.node-release-cid }} ${{ secrets.DEV_PUBLISH_AUTOTASK_KEY }} ${{ secrets.DEV_PUBLISH_BETA_AUTOTASK_URL }}
 
   build-deploy:
     name: Build and deploy
@@ -178,28 +178,28 @@ jobs:
           s3_folder: dev
           directory: ./dist/
 
-  # release:
-  #   name: Release dev
-  #   #if: ${{ github.ref_name == 'master' }}
-  #   runs-on: ubuntu-20.04
-  #   needs: [build-deploy]
-  #   environment: dev
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v2
-  #     - name: Release
-  #       id: release
-  #       uses: ./.github/actions/release
-  #       with:
-  #         version: ${{ env.DEFAULT_DEV_VERSION }}
-  #         revision: ${{ github.sha }}
-  #         aws_access_key: ${{ secrets.DEV_RELEASE_AWS_ACCESS_KEY }}
-  #         aws_secret_key: ${{ secrets.DEV_RELEASE_AWS_SECRET_KEY }}
-  #         build_artifacts_bucket_name: dev-forta-build-artifacts
-  #         release_artifacts_bucket_name: dev-forta-releases
-  #         release_artifacts_url: https://dist-dev.forta.network/artifacts
-  #         dist_base_url: https://dist-dev.forta.network
-  #         pgp_key_name: ${{ secrets.DEV_PGP_KEY_NAME }}
-  #         pgp_private_key: ${{ secrets.DEV_PGP_PRIVATE_KEY }}
-  #         pgp_public_key: ${{ secrets.DEV_PGP_PUBLIC_KEY }}
-  #         pgp_passphrase: ${{ secrets.DEV_PGP_PASSPHRASE }}
+  release:
+    name: Release dev
+    #if: ${{ github.ref_name == 'master' }}
+    runs-on: ubuntu-20.04
+    needs: [build-deploy]
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Release
+        id: release
+        uses: ./.github/actions/release
+        with:
+          version: ${{ env.DEFAULT_DEV_VERSION }}
+          revision: ${{ github.sha }}
+          aws_access_key: ${{ secrets.DEV_RELEASE_AWS_ACCESS_KEY }}
+          aws_secret_key: ${{ secrets.DEV_RELEASE_AWS_SECRET_KEY }}
+          build_artifacts_bucket_name: dev-forta-build-artifacts
+          release_artifacts_bucket_name: dev-forta-releases
+          release_artifacts_url: https://dist-dev.forta.network/artifacts
+          dist_base_url: https://dist-dev.forta.network
+          pgp_key_name: ${{ secrets.DEV_PGP_KEY_NAME }}
+          pgp_private_key: ${{ secrets.DEV_PGP_PRIVATE_KEY }}
+          pgp_public_key: ${{ secrets.DEV_PGP_PUBLIC_KEY }}
+          pgp_passphrase: ${{ secrets.DEV_PGP_PASSPHRASE }}
