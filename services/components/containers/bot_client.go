@@ -19,8 +19,8 @@ const (
 	BotStartTimeout    = time.Minute * 5
 	BotShutdownTimeout = time.Minute
 
-	ImagePullCooldownThreshold = 3
-	ImagePullCooldownDuration  = time.Minute * 30
+	ImagePullCooldownThreshold = 5
+	ImagePullCooldownDuration  = time.Hour * 4
 )
 
 // BotClient launches a bot.

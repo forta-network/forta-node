@@ -63,6 +63,11 @@ const (
 	DefaultHealthCheckInterval = time.Second * 30
 )
 
+// Global vars
+var (
+	HealthCheckInterval = DefaultHealthCheckInterval
+)
+
 // botClient receives blocks and transactions, and produces results.
 type botClient struct {
 	ctx               context.Context
@@ -400,7 +405,11 @@ func processRequests[R any](
 	for {
 		select {
 		case <-ctx.Done():
-			logger.WithError(ctx.Err()).Info("bot context is done")
+			logger.WithError(ctx.Err()).Info("bot context is done - exiting request processing loop")
+			return
+
+		case <-closedCh:
+			logger.Info("bot client is closed - exiting request processing loop")
 			return
 
 		case request := <-reqCh:
@@ -423,7 +432,11 @@ func (bot *botClient) processTransactions() {
 		},
 	)
 
-	<-bot.Initialized()
+	select {
+	case <-bot.Closed():
+		return
+	case <-bot.Initialized():
+	}
 
 	processRequests(bot.ctx, bot.txRequests, bot.Closed(), lg, bot.processTransaction)
 }
@@ -437,9 +450,31 @@ func (bot *botClient) processBlocks() {
 		},
 	)
 
-	<-bot.Initialized()
+	select {
+	case <-bot.Closed():
+		return
+	case <-bot.Initialized():
+	}
 
 	processRequests(bot.ctx, bot.blockRequests, bot.Closed(), lg, bot.processBlock)
+}
+
+func (bot *botClient) processCombinationAlerts() {
+	lg := log.WithFields(
+		log.Fields{
+			"bot":       bot.Config().ID,
+			"component": "bot-client",
+			"evaluate":  "combination",
+		},
+	)
+
+	select {
+	case <-bot.Closed():
+		return
+	case <-bot.Initialized():
+	}
+
+	processRequests(bot.ctx, bot.combinationRequests, bot.Closed(), lg, bot.processCombinationAlert)
 }
 
 func (bot *botClient) processHealthChecks() {
@@ -451,9 +486,13 @@ func (bot *botClient) processHealthChecks() {
 		},
 	)
 
-	<-bot.Initialized()
+	select {
+	case <-bot.Closed():
+		return
+	case <-bot.Initialized():
+	}
 
-	ticker := time.NewTicker(DefaultHealthCheckInterval)
+	ticker := time.NewTicker(HealthCheckInterval)
 
 	bot.doHealthCheck(bot.ctx, lg)
 	for {
@@ -467,20 +506,6 @@ func (bot *botClient) processHealthChecks() {
 			}
 		}
 	}
-}
-
-func (bot *botClient) processCombinationAlerts() {
-	lg := log.WithFields(
-		log.Fields{
-			"bot":       bot.Config().ID,
-			"component": "bot-client",
-			"evaluate":  "combination",
-		},
-	)
-
-	<-bot.Initialized()
-
-	processRequests(bot.ctx, bot.combinationRequests, bot.Closed(), lg, bot.processCombinationAlert)
 }
 
 func (bot *botClient) processTransaction(ctx context.Context, lg *log.Entry, request *botreq.TxRequest) (exit bool) {
