@@ -102,7 +102,7 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 	})
 
 	// subscribe to block feed to construct a timeline and estimate performance
-	blockTimeline := timeline.NewBlockTimeline(10, cfg.ChainID)
+	blockTimeline := timeline.NewBlockTimeline(cfg.ChainID, 5)
 	blockFeed.Subscribe(blockTimeline.HandleBlock)
 	estimator := estimation.NewEstimator(blockTimeline)
 
