@@ -26,8 +26,9 @@ var (
 
 // UpdaterService receives the release updates.
 type UpdaterService struct {
-	ctx  context.Context
-	port string
+	ctx            context.Context
+	port           string
+	scannerAddress string
 
 	mu             sync.RWMutex
 	releaseClient  release.Client
@@ -38,8 +39,8 @@ type UpdaterService struct {
 	latestReference string
 	latestRelease   *release.ReleaseManifest
 
-	updateDelay         time.Duration
-	updateCheckInterval time.Duration
+	overrideUpdateDelaySeconds *int
+	updateCheckInterval        time.Duration
 
 	errCounter *nodeutils.ErrorCounter
 
@@ -53,22 +54,40 @@ type UpdaterService struct {
 
 // NewUpdaterService creates a new updater service.
 func NewUpdaterService(ctx context.Context, svs store.ScannerReleaseStore,
-	port string, updateDelaySeconds, updateCheckIntervalSeconds int,
+	port, scannerAddress string, overrideUpdateDelaySeconds *int, updateCheckIntervalSeconds int,
 ) *UpdaterService {
 	if updateCheckIntervalSeconds == 0 {
 		updateCheckIntervalSeconds = defaultUpdateCheckIntervalSeconds
 	}
 
 	return &UpdaterService{
-		ctx:                 ctx,
-		port:                port,
-		srs:                 svs,
-		updateDelay:         time.Duration(updateDelaySeconds) * time.Second,
-		updateCheckInterval: time.Duration(updateCheckIntervalSeconds) * time.Second,
+		ctx:                        ctx,
+		port:                       port,
+		scannerAddress:             scannerAddress,
+		srs:                        svs,
+		overrideUpdateDelaySeconds: overrideUpdateDelaySeconds,
+		updateCheckInterval:        time.Duration(updateCheckIntervalSeconds) * time.Second,
 		errCounter: nodeutils.NewErrorCounter(uint(maxConsecutiveUpdateErrors), func(err error) bool {
 			return err != nil // all non-nil errors are critical errors
 		}),
 	}
+}
+
+func (updater *UpdaterService) calculateDelay() time.Duration {
+	if updater.overrideUpdateDelaySeconds != nil {
+		return time.Duration(*updater.overrideUpdateDelaySeconds) * time.Second
+	}
+	// if anything goes wrong, just stick to the default schedule
+	maxUpdateDelay := time.Hour * release.DefaultAutoUpdateHours
+	// take the max auto-update delay from the release manifest if it's non-zero
+	if updater.latestRelease != nil &&
+		updater.latestRelease.Release.Config.AutoUpdateInHours > 0 {
+		maxUpdateDelay = time.Duration(updater.latestRelease.Release.Config.AutoUpdateInHours) * time.Hour
+	}
+	return CalculateReleaseDelay(
+		updater.scannerAddress,
+		maxUpdateDelay,
+	)
 }
 
 func (updater *UpdaterService) handleGetVersion(w http.ResponseWriter, r *http.Request) {
@@ -114,7 +133,7 @@ func (updater *UpdaterService) Start() error {
 				updater.stopServer()
 				return
 			case <-t.C:
-				err := updater.updateLatestReleaseWithDelay(updater.updateDelay)
+				err := updater.updateLatestReleaseWithDelay(updater.calculateDelay())
 				if updater.errCounter.TooManyErrs(err) {
 					log.WithError(err).Panic("too many update errors - exiting")
 				}

@@ -12,7 +12,7 @@ import (
 	"github.com/golang/mock/gomock"
 )
 
-const (
+var (
 	testUpdateCheckIntervalSeconds = 1
 	testUpdateDelaySeconds         = 15
 )
@@ -22,7 +22,7 @@ func TestUpdaterService_UpdateLatestRelease(t *testing.T) {
 
 	svs := mock_store.NewMockScannerReleaseStore(gomock.NewController(t))
 	updater := NewUpdaterService(
-		context.Background(), svs, "8080", testUpdateDelaySeconds, testUpdateCheckIntervalSeconds,
+		context.Background(), svs, "8080", "", &testUpdateDelaySeconds, testUpdateCheckIntervalSeconds,
 	)
 
 	svs.EXPECT().GetRelease(gomock.Any()).Return(&store.ScannerRelease{
@@ -38,7 +38,7 @@ func TestUpdaterService_UpdateLatestRelease_SingleEachTime(t *testing.T) {
 
 	svs := mock_store.NewMockScannerReleaseStore(gomock.NewController(t))
 	updater := NewUpdaterService(
-		context.Background(), svs, "8080", testUpdateDelaySeconds, testUpdateCheckIntervalSeconds,
+		context.Background(), svs, "8080", "", &testUpdateDelaySeconds, testUpdateCheckIntervalSeconds,
 	)
 
 	svs.EXPECT().GetRelease(gomock.Any()).Return(&store.ScannerRelease{
@@ -61,7 +61,7 @@ func TestUpdaterService_UpdateLatestRelease_TwoInARow(t *testing.T) {
 
 	svs := mock_store.NewMockScannerReleaseStore(gomock.NewController(t))
 	updater := NewUpdaterService(
-		context.Background(), svs, "8080", testUpdateDelaySeconds, testUpdateCheckIntervalSeconds,
+		context.Background(), svs, "8080", "", &testUpdateDelaySeconds, testUpdateCheckIntervalSeconds,
 	)
 
 	finalRef := "reference2"
@@ -74,7 +74,7 @@ func TestUpdaterService_UpdateLatestRelease_TwoInARow(t *testing.T) {
 		Reference: "reference2",
 	}, nil).Times(1)
 
-	r.NoError(updater.updateLatestReleaseWithDelay(updater.updateDelay))
+	r.NoError(updater.updateLatestReleaseWithDelay(updater.calculateDelay()))
 
 	// should update to the latest one
 	r.Equal(finalRef, updater.latestReference)

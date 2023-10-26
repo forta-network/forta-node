@@ -70,19 +70,13 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 
-	intervalMs := generateIntervalMs(address)
-	updateDelay := int(intervalMs / 1000)
-	if cfg.AutoUpdate.UpdateDelay != nil {
-		updateDelay = *cfg.AutoUpdate.UpdateDelay
-	}
-
 	srs, err := store.NewScannerReleaseStore(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	updaterService := updater.NewUpdaterService(
-		ctx, srs, config.DefaultContainerPort, updateDelay, cfg.AutoUpdate.CheckIntervalSeconds,
+		ctx, srs, config.DefaultContainerPort, address, cfg.AutoUpdate.UpdateDelay, cfg.AutoUpdate.CheckIntervalSeconds,
 	)
 
 	return []services.Service{
