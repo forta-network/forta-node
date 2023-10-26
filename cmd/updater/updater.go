@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"math/big"
 	"path"
 	"time"
 
@@ -19,15 +18,6 @@ import (
 	"github.com/forta-network/forta-node/store"
 	log "github.com/sirupsen/logrus"
 )
-
-const minUpdateInterval = 1 * time.Minute
-const maxUpdateInterval = 24 * time.Hour
-
-func generateIntervalMs(addr string) int64 {
-	interval := big.NewInt(0)
-	interval.Mod(utils.ScannerIDHexToBigInt(addr), big.NewInt((maxUpdateInterval).Milliseconds()))
-	return interval.Int64() + minUpdateInterval.Milliseconds()
-}
 
 type keyAddress struct {
 	Address string `json:"address"`
