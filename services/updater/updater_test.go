@@ -29,7 +29,7 @@ func TestUpdaterService_UpdateLatestRelease(t *testing.T) {
 		Reference: "reference",
 	}, nil).Times(2)
 
-	err := updater.updateLatestReleaseWithDelay(0)
+	err := updater.updateLatestRelease(true)
 	r.NoError(err)
 }
 
@@ -49,10 +49,10 @@ func TestUpdaterService_UpdateLatestRelease_SingleEachTime(t *testing.T) {
 		Reference: "reference2",
 	}, nil).Times(2)
 
-	r.NoError(updater.updateLatestReleaseWithDelay(0))
+	r.NoError(updater.updateLatestRelease(true))
 	r.Equal("reference1", updater.latestReference)
 
-	r.NoError(updater.updateLatestReleaseWithDelay(0))
+	r.NoError(updater.updateLatestRelease(true))
 	r.Equal("reference2", updater.latestReference)
 }
 
@@ -74,7 +74,7 @@ func TestUpdaterService_UpdateLatestRelease_TwoInARow(t *testing.T) {
 		Reference: "reference2",
 	}, nil).Times(1)
 
-	r.NoError(updater.updateLatestReleaseWithDelay(updater.calculateDelay()))
+	r.NoError(updater.updateLatestRelease(false))
 
 	// should update to the latest one
 	r.Equal(finalRef, updater.latestReference)

@@ -73,16 +73,16 @@ func NewUpdaterService(ctx context.Context, svs store.ScannerReleaseStore,
 	}
 }
 
-func (updater *UpdaterService) calculateDelay() time.Duration {
+func (updater *UpdaterService) calculateDelay(newRelease *release.ReleaseManifest) time.Duration {
 	if updater.overrideUpdateDelaySeconds != nil {
 		return time.Duration(*updater.overrideUpdateDelaySeconds) * time.Second
 	}
 	// if anything goes wrong, just stick to the default schedule
 	maxUpdateDelay := time.Hour * release.DefaultAutoUpdateHours
 	// take the max auto-update delay from the release manifest if it's non-zero
-	if updater.latestRelease != nil &&
-		updater.latestRelease.Release.Config.AutoUpdateInHours > 0 {
-		maxUpdateDelay = time.Duration(updater.latestRelease.Release.Config.AutoUpdateInHours) * time.Hour
+	if newRelease != nil &&
+		newRelease.Release.Config.AutoUpdateInHours > 0 {
+		maxUpdateDelay = time.Duration(newRelease.Release.Config.AutoUpdateInHours) * time.Hour
 	}
 	return CalculateReleaseDelay(
 		updater.scannerAddress,
@@ -117,7 +117,7 @@ func (updater *UpdaterService) Start() error {
 		Handler: http.HandlerFunc(updater.handleGetVersion),
 	}
 
-	if err := updater.updateLatestReleaseWithDelay(0); err != nil {
+	if err := updater.updateLatestRelease(true); err != nil {
 		log.WithError(err).Error("error initializing release")
 		return err
 	}
@@ -133,7 +133,7 @@ func (updater *UpdaterService) Start() error {
 				updater.stopServer()
 				return
 			case <-t.C:
-				err := updater.updateLatestReleaseWithDelay(updater.calculateDelay())
+				err := updater.updateLatestRelease(false)
 				if updater.errCounter.TooManyErrs(err) {
 					log.WithError(err).Panic("too many update errors - exiting")
 				}
@@ -149,7 +149,7 @@ func (updater *UpdaterService) Start() error {
 	return nil
 }
 
-func (updater *UpdaterService) updateLatestReleaseWithDelay(delay time.Duration) error {
+func (updater *UpdaterService) updateLatestRelease(coldStart bool) error {
 	log.Info("updating latest release")
 
 	// note: if reference is blank, this returns an error
@@ -169,6 +169,12 @@ func (updater *UpdaterService) updateLatestReleaseWithDelay(delay time.Duration)
 			"release": latest.Reference,
 		}).Info("no change to release")
 		return nil
+	}
+
+	// zero delay if updater is starting for the first time (i.e. cold start)
+	var delay time.Duration
+	if !coldStart {
+		delay = updater.calculateDelay(&latest.ReleaseManifest)
 	}
 
 	// so that all scanners don't update simultaneously, this waits a period of time
