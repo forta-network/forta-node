@@ -51,7 +51,7 @@ func BuildManifestWithTimestamp(ts time.Time, version, commitSha, nodeImage, rel
 		releaseConfig.DeprecationPolicy.SupportedVersions = []string{version}
 	}
 	if releaseConfig.AutoUpdateInHours == 0 {
-		releaseConfig.AutoUpdateInHours = release.DefaultAutoUpdateHours
+		releaseConfig.AutoUpdateInHours = 1 // release.DefaultAutoUpdateHours
 	}
 
 	releaseInfo.Config = releaseConfig
