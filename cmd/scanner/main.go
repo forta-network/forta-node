@@ -32,7 +32,7 @@ import (
 	"github.com/forta-network/forta-node/services/scanner"
 )
 
-func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, cfg config.Config) (*scanner.TxStreamService, feeds.BlockFeed, *estimation.Estimator, error) {
+func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, cfg config.Config) (*scanner.TxStreamService, feeds.BlockFeed, *estimation.Estimator, estimation.BlockTimeline, error) {
 	cfg.Scan.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Scan.JsonRpc.Url)
 	cfg.JsonRpcProxy.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Scan.JsonRpc.Url)
 	cfg.Registry.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Registry.JsonRpc.Url)
@@ -43,10 +43,10 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 	chainID := config.ParseBigInt(cfg.ChainID)
 
 	if url == "" {
-		return nil, nil, nil, fmt.Errorf("scan.jsonRpc.url is required")
+		return nil, nil, nil, nil, fmt.Errorf("scan.jsonRpc.url is required")
 	}
 	if cfg.Trace.Enabled && cfg.Trace.JsonRpc.Url == "" {
-		return nil, nil, nil, fmt.Errorf("trace requires a jsonRpc URL if enabled")
+		return nil, nil, nil, nil, fmt.Errorf("trace requires a jsonRpc URL if enabled")
 	}
 
 	var rateLimit *time.Ticker
@@ -91,7 +91,7 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 		End:                 stopBlock,
 	})
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	// subscribe to block feed so we can detect block end and trigger exit
@@ -132,10 +132,10 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 		SkipBlocksOlderThan: maxAgePtr,
 	})
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to create the tx stream service: %v", err)
+		return nil, nil, nil, nil, fmt.Errorf("failed to create the tx stream service: %v", err)
 	}
 
-	return txStream, blockFeed, estimator, nil
+	return txStream, blockFeed, estimator, blockTimeline, nil
 }
 
 func initCombinationStream(ctx context.Context, msgClient clients.MessageClient, cfg config.Config) (*scanner.CombinerAlertStreamService, feeds.AlertFeed, error) {
@@ -268,16 +268,6 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 
-	publisherSvc, err := publisher.NewPublisher(ctx, cfg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create publisher: %v", err)
-	}
-
-	alertSender, err := initAlertSender(ctx, key, publisherSvc, cfg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize alert sender: %v", err)
-	}
-
 	ethClient, err := ethereum.NewStreamEthClient(ctx, "chain", cfg.Scan.JsonRpc.Url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create stream eth client: %v", err)
@@ -288,9 +278,19 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, fmt.Errorf("failed to create trace stream eth client: %v", err)
 	}
 
-	txStream, blockFeed, estimator, err := initTxStream(ctx, ethClient, traceClient, cfg)
+	txStream, blockFeed, estimator, blockTimeline, err := initTxStream(ctx, ethClient, traceClient, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create tx stream: %v", err)
+	}
+
+	publisherSvc, err := publisher.NewPublisher(ctx, blockTimeline, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create publisher: %v", err)
+	}
+
+	alertSender, err := initAlertSender(ctx, key, publisherSvc, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize alert sender: %v", err)
 	}
 
 	var waitBots int

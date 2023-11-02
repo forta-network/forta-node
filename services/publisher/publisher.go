@@ -31,6 +31,7 @@ import (
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/clients/storagegrpc"
 	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/services/components/estimation"
 	"github.com/forta-network/forta-node/services/components/metrics"
 	"github.com/forta-network/forta-node/services/publisher/webhooklog"
 	"github.com/forta-network/forta-node/services/storage"
@@ -68,6 +69,8 @@ type Publisher struct {
 
 	batchRefStore    store.StringStore
 	lastReceiptStore store.StringStore
+
+	blockTimeline estimation.BlockTimeline
 
 	server *grpc.Server
 
@@ -178,6 +181,8 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 	if batch.LatestBlockInput == 0 {
 		batch.LatestBlockInput = batch.BlockEnd
 	}
+
+	batch.JsonRpcEstimation, _ = pub.blockTimeline.EstimateBlockScore()
 
 	signedBatch, err := security.SignBatch(pub.cfg.Key, batch)
 	if err != nil {
@@ -838,7 +843,7 @@ func (pub *Publisher) Health() health.Reports {
 	}
 }
 
-func NewPublisher(ctx context.Context, cfg config.Config) (*Publisher, error) {
+func NewPublisher(ctx context.Context, blockTimeline estimation.BlockTimeline, cfg config.Config) (*Publisher, error) {
 	msgClient := messaging.NewClient("metrics", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort))
 	lifecycleMetrics := metrics.NewLifecycleClient(msgClient)
 
@@ -864,19 +869,22 @@ func NewPublisher(ctx context.Context, cfg config.Config) (*Publisher, error) {
 		}
 	}
 
-	return initPublisher(ctx, msgClient, lifecycleMetrics, apiClient, storageClient, PublisherConfig{
-		ChainID:         cfg.ChainID,
-		Key:             key,
-		PublisherConfig: cfg.Publish,
-		ReleaseSummary:  releaseSummary,
-		Config:          cfg,
-	})
+	return initPublisher(ctx, msgClient, lifecycleMetrics, apiClient, storageClient, blockTimeline,
+		PublisherConfig{
+			ChainID:         cfg.ChainID,
+			Key:             key,
+			PublisherConfig: cfg.Publish,
+			ReleaseSummary:  releaseSummary,
+			Config:          cfg,
+		},
+	)
 }
 
 func initPublisher(
 	ctx context.Context, mc clients.MessageClient,
 	lifecycleMetrics metrics.Lifecycle, alertClient clients.AlertAPIClient,
-	storageClient StorageClient, cfg PublisherConfig,
+	storageClient StorageClient, blockTimeline estimation.BlockTimeline,
+	cfg PublisherConfig,
 ) (*Publisher, error) {
 	ipfsClient, err := ipfs.NewClient(fmt.Sprintf("http://%s:5001", config.DockerIpfsContainerName))
 	if err != nil {
@@ -926,6 +934,7 @@ func initPublisher(
 		lifecycleMetrics:  lifecycleMetrics,
 		batchRefStore:     store.NewFileStringStore(path.Join(cfg.Config.FortaDir, ".last-batch")),
 		lastReceiptStore:  store.NewFileStringStore(path.Join(cfg.Config.FortaDir, ".last-receipt")),
+		blockTimeline:     blockTimeline,
 
 		skipEmpty:     cfg.PublisherConfig.Batch.SkipEmpty,
 		skipPublish:   cfg.PublisherConfig.SkipPublish,
