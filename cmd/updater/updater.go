@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"math/big"
 	"path"
 	"time"
 
@@ -19,15 +18,6 @@ import (
 	"github.com/forta-network/forta-node/store"
 	log "github.com/sirupsen/logrus"
 )
-
-const minUpdateInterval = 1 * time.Minute
-const maxUpdateInterval = 24 * time.Hour
-
-func generateIntervalMs(addr string) int64 {
-	interval := big.NewInt(0)
-	interval.Mod(utils.ScannerIDHexToBigInt(addr), big.NewInt((maxUpdateInterval).Milliseconds()))
-	return interval.Int64() + minUpdateInterval.Milliseconds()
-}
 
 type keyAddress struct {
 	Address string `json:"address"`
@@ -70,19 +60,13 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 
-	intervalMs := generateIntervalMs(address)
-	updateDelay := int(intervalMs / 1000)
-	if cfg.AutoUpdate.UpdateDelay != nil {
-		updateDelay = *cfg.AutoUpdate.UpdateDelay
-	}
-
 	srs, err := store.NewScannerReleaseStore(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	updaterService := updater.NewUpdaterService(
-		ctx, srs, config.DefaultContainerPort, updateDelay, cfg.AutoUpdate.CheckIntervalSeconds,
+		ctx, srs, config.DefaultContainerPort, address, cfg.AutoUpdate.UpdateDelay, cfg.AutoUpdate.CheckIntervalSeconds,
 	)
 
 	return []services.Service{
