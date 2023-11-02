@@ -12,7 +12,6 @@ import (
 
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/feeds/timeline"
-	"github.com/forta-network/forta-core-go/protocol/settings"
 	"github.com/forta-network/forta-node/services/components"
 	"github.com/forta-network/forta-node/services/components/estimation"
 	"github.com/forta-network/forta-node/services/publisher"
@@ -88,7 +87,6 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 		Tracing:             cfg.Trace.Enabled,
 		RateLimit:           rateLimit,
 		SkipBlocksOlderThan: maxAgePtr,
-		Offset:              getBlockOffset(cfg),
 		Start:               startBlock,
 		End:                 stopBlock,
 	})
@@ -138,24 +136,6 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 	}
 
 	return txStream, blockFeed, estimator, nil
-}
-
-// getBlockOffset either returns the default offset configured for the chain or
-// the safe offset if required.
-func getBlockOffset(cfg config.Config) int {
-	chainSettings := settings.GetChainSettings(cfg.ChainID)
-
-	if cfg.AdvancedConfig.SafeOffset {
-		return chainSettings.SafeOffset
-	}
-
-	scanURL := strings.Trim(cfg.Scan.JsonRpc.Url, "/")
-	proxyURL := strings.Trim(cfg.JsonRpcProxy.JsonRpc.Url, "/")
-	if len(proxyURL) > 0 && proxyURL != scanURL {
-		return chainSettings.SafeOffset
-	}
-
-	return chainSettings.DefaultOffset
 }
 
 func initCombinationStream(ctx context.Context, msgClient clients.MessageClient, cfg config.Config) (*scanner.CombinerAlertStreamService, feeds.AlertFeed, error) {
