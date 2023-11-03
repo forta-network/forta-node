@@ -127,6 +127,7 @@ func (bp *botPool) UpdateBotsWithLatestConfigs(latestConfigs messaging.AgentPayl
 	// if the pool needs to wait for the first time, detect that and mark done
 	if bp.waitBots > 0 && bp.botWg != nil {
 		bp.botWg.Add(-len(latestConfigs))
+		bp.botWg = nil
 	}
 
 	return nil

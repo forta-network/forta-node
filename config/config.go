@@ -276,6 +276,7 @@ func (cfg *Config) BotsToWait() (waitBots int) {
 		return
 	}
 	waitBots += len(cfg.LocalModeConfig.BotImages)
+	waitBots += len(cfg.LocalModeConfig.BotIDs)
 	waitBots += len(cfg.LocalModeConfig.Standalone.BotContainers)
 	// sharded bots spawn on multiple containers, so total "wait bot" count is shards * target
 	for _, bot := range cfg.LocalModeConfig.ShardedBots {
