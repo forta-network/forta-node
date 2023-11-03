@@ -182,7 +182,10 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 		batch.LatestBlockInput = batch.BlockEnd
 	}
 
-	batch.JsonRpcEstimation, _ = pub.blockTimeline.EstimateBlockScore()
+	blockScoreEstimate, _ := pub.blockTimeline.EstimateBlockScore()
+	batch.Estimation = &protocol.Estimation{
+		BlockScore: blockScoreEstimate,
+	}
 
 	signedBatch, err := security.SignBatch(pub.cfg.Key, batch)
 	if err != nil {
