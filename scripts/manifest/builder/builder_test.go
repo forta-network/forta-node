@@ -25,7 +25,7 @@ const testResultWithDefaultValues = `{
         "supportedVersions": [
           "v0.5.0"
         ],
-        "activatesInHours": 168
+        "activatesInHours": 48
       }
     }
   }
