@@ -25,7 +25,7 @@ type ScannerConfig struct {
 	DisableAutostart     bool          `yaml:"disableAutostart" json:"disableAutostart"`
 	BlockRateLimit       int           `yaml:"blockRateLimit" json:"blockRateLimit" default:"200"`
 	BlockMaxAgeSeconds   int64         `yaml:"blockMaxAgeSeconds" json:"blockMaxAgeSeconds" default:"600"`
-	RetryIntervalSeconds int64         `yaml:"retryIntervalSeconds" json:"retryIntervalSeconds" default:"8"`
+	RetryIntervalSeconds int64         `yaml:"retryIntervalSeconds" json:"retryIntervalSeconds"`
 	AlertAPIURL          string        `yaml:"apiUrl" json:"apiUrl" default:"https://api.forta.network/graphql" validate:"url"`
 }
 

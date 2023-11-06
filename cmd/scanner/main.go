@@ -12,6 +12,7 @@ import (
 
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/feeds/timeline"
+	"github.com/forta-network/forta-core-go/protocol/settings"
 	"github.com/forta-network/forta-node/services/components"
 	"github.com/forta-network/forta-node/services/components/estimation"
 	"github.com/forta-network/forta-node/services/publisher"
@@ -80,7 +81,12 @@ func initTxStream(ctx context.Context, ethClient, traceClient ethereum.Client, c
 		log.Fatal("stop block is not greater than the start block - please check the runtime limits")
 	}
 
-	ethClient.SetRetryInterval(time.Second * time.Duration(cfg.Scan.RetryIntervalSeconds))
+	if cfg.Scan.RetryIntervalSeconds > 0 {
+		ethClient.SetRetryInterval(time.Second * time.Duration(cfg.Scan.RetryIntervalSeconds))
+	} else {
+		chainSettings := settings.GetChainSettings(cfg.ChainID)
+		ethClient.SetRetryInterval(time.Second * time.Duration(chainSettings.JSONRPCRetryIntervalSeconds))
+	}
 
 	blockFeed, err := feeds.NewBlockFeed(ctx, ethClient, traceClient, feeds.BlockFeedConfig{
 		ChainID:             chainID,
