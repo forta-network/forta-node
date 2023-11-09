@@ -284,7 +284,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, fmt.Errorf("failed to create trace stream eth client: %v", err)
 	}
 
-	txStream, blockFeed, _, blockTimeline, err := initTxStream(ctx, ethClient, traceClient, cfg)
+	txStream, blockFeed, estimator, blockTimeline, err := initTxStream(ctx, ethClient, traceClient, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create tx stream: %v", err)
 	}
@@ -349,7 +349,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 			txAnalyzer, blockAnalyzer, combinationAnalyzer,
 			botProcessingComponents.RequestSender,
 			publisherSvc,
-			//estimator,
+			estimator,
 		)),
 		txStream,
 		txAnalyzer,
@@ -449,19 +449,19 @@ func summarizeReports(reports health.Reports) *health.Report {
 
 	summary.Punc(".")
 
-	// jsonRpcPerformance, ok := reports.NameContains("json-rpc-performance")
-	// if ok && jsonRpcPerformance.Status != health.StatusUnknown {
-	// 	summary.Addf("json-rpc performance is estimated as %s", jsonRpcPerformance.Details)
-	// }
+	jsonRpcPerformance, ok := reports.NameContains("json-rpc-performance")
+	if ok && jsonRpcPerformance.Status != health.StatusUnknown {
+		summary.Addf("scan api performance is estimated as %s (this is different from the SLA score).", jsonRpcPerformance.Details)
+	}
 
-	// summary.Punc(".")
+	summary.Punc(".")
 
-	// jsonRpcDelay, ok := reports.NameContains("json-rpc-delay")
-	// if ok && jsonRpcPerformance.Status != health.StatusUnknown {
-	// 	summary.Addf("the latest block was received %s after creation.", jsonRpcDelay.Details)
-	// }
+	jsonRpcDelay, ok := reports.NameContains("json-rpc-delay")
+	if ok && jsonRpcPerformance.Status != health.StatusUnknown {
+		summary.Addf("the latest block was received %s after creation.", jsonRpcDelay.Details)
+	}
 
-	// summary.Punc(".")
+	summary.Punc(".")
 
 	return summary.Finish()
 }
