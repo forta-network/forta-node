@@ -414,6 +414,8 @@ func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, 
 	runsBots := pub.hasBots()
 
 	switch {
+	// exceptional case timing:
+
 	case localModeConfig.Enable && localModeConfig.IncludeMetrics:
 		if len(batch.Metrics) > 0 {
 			return "", false
@@ -426,14 +428,21 @@ func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, 
 	case pub.skipEmpty:
 		return becauseThereAreNoAlerts + " and skipEmpty is enabled", true
 
-	case runsBots && len(batch.Metrics) > 0:
-		return "", false // do not sacrifice metrics
+	// public node timing:
+
+	case len(batch.Metrics) > 0:
+		// do not sacrifice metrics if they are already flushed
+		return "", false
 
 	case runsBots && len(batch.Metrics) == 0:
 		if time.Since(lastBatchSendAttempt) >= fastReportInterval {
 			return "", false
 		}
 		return becauseThereAreNoAlerts + " and metrics and fast report deadline has not exceeded yet", true
+
+	case !runsBots && pub.metricsAggregator.HasPendingBotMetrics():
+		// if the node is not running bots, send pending bot metrics immediately
+		return "", false
 
 	case !runsBots:
 		if time.Since(lastBatchSendAttempt) >= slowReportInterval {
