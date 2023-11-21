@@ -45,10 +45,14 @@ func NewMetricsAggregator(bucketInterval time.Duration) *AgentMetricsAggregator 
 	}
 }
 
-func (ama *AgentMetricsAggregator) IsEmpty() bool {
-	ama.mu.RLock()
-	defer ama.mu.RUnlock()
-	return len(ama.buckets) == 0
+// HasPendingBotMetrics tells if there are bot metrics waiting to be flushed.
+func (ama *AgentMetricsAggregator) HasPendingBotMetrics() bool {
+	for _, bucket := range ama.buckets {
+		if bucket.AgentId != "system" { // rest of the metrics are bot metrics
+			return true
+		}
+	}
+	return false
 }
 
 func (ama *AgentMetricsAggregator) findBucket(agentID string, t time.Time) *metricsBucket {
