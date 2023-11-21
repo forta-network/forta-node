@@ -144,9 +144,12 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 	// flush only if we are publishing so we can make the best use of aggregated metrics
 	if _, skip := pub.shouldSkipPublishing(batch); !skip {
 		var flushed bool
-		batch.Metrics, flushed = pub.metricsAggregator.TryFlush()
+		pub.botConfigMu.RLock()
+		batch.Metrics, flushed = pub.metricsAggregator.TryFlushWithAssigns(pub.botConfigs)
 		// detect the active bots from metrics
 		pub.lifecycleMetrics.StatusActive(metrics.FindActiveBotsFromMetrics(batch.Metrics)...)
+		pub.botConfigMu.RUnlock()
+
 		if flushed {
 			log.Debug("flushed metrics")
 			pub.lastMetricsFlush.Set()

@@ -2,11 +2,13 @@ package publisher
 
 import (
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-core-go/utils"
+	"github.com/forta-network/forta-node/config"
 	"github.com/shopspring/decimal"
 )
 
@@ -117,7 +119,6 @@ func (ama *AgentMetricsAggregator) ForceFlush() []*protocol.AgentMetrics {
 func (ama *AgentMetricsAggregator) TryFlush() ([]*protocol.AgentMetrics, bool) {
 	ama.mu.Lock()
 	defer ama.mu.Unlock()
-
 	now := time.Now()
 	if now.Sub(ama.lastFlush) < ama.bucketInterval {
 		return nil, false
@@ -131,6 +132,38 @@ func (ama *AgentMetricsAggregator) TryFlush() ([]*protocol.AgentMetrics, bool) {
 
 	var allMetrics []*protocol.AgentMetrics
 	for _, bucket := range buckets {
+		allMetrics = append(allMetrics, &bucket.AgentMetrics)
+	}
+
+	return allMetrics, true
+}
+
+// TryFlushWithAssigns checks the flushing condition(s) an returns metrics accordingly while taking assignments into account.
+func (ama *AgentMetricsAggregator) TryFlushWithAssigns(configs []config.AgentConfig) ([]*protocol.AgentMetrics, bool) {
+	ama.mu.Lock()
+	defer ama.mu.Unlock()
+	now := time.Now()
+	if now.Sub(ama.lastFlush) < ama.bucketInterval {
+		return nil, false
+	}
+
+	ama.lastFlush = now
+	buckets := ama.buckets
+	ama.buckets = nil
+
+	(allAgentMetrics)(buckets).Fix()
+
+	var allMetrics []*protocol.AgentMetrics
+	for _, bucket := range buckets {
+		found := false
+		for _, agentConfig := range configs {
+			if strings.EqualFold(agentConfig.ID, bucket.AgentId) {
+				found = true
+			}
+		}
+		if !found {
+			continue
+		}
 		allMetrics = append(allMetrics, &bucket.AgentMetrics)
 	}
 
