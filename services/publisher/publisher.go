@@ -436,6 +436,10 @@ func (pub *Publisher) shouldSkipPublishing(batch *protocol.AlertBatch) (string, 
 		return becauseThereAreNoAlerts + " and metrics and fast report deadline has not exceeded yet", true
 
 	case !runsBots:
+		// if we have pending metrics in slow mode, we should send a batch now instead of waiting
+		if !pub.metricsAggregator.IsEmpty() {
+			return "", false
+		}
 		if time.Since(lastBatchSendAttempt) >= slowReportInterval {
 			return "", false
 		}

@@ -45,6 +45,12 @@ func NewMetricsAggregator(bucketInterval time.Duration) *AgentMetricsAggregator 
 	}
 }
 
+func (ama *AgentMetricsAggregator) IsEmpty() bool {
+	ama.mu.RLock()
+	defer ama.mu.RUnlock()
+	return len(ama.buckets) == 0
+}
+
 func (ama *AgentMetricsAggregator) findBucket(agentID string, t time.Time) *metricsBucket {
 	bucketTime := ama.FindClosestBucketTime(t)
 	for _, bucket := range ama.buckets {
