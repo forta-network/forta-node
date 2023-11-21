@@ -138,6 +138,23 @@ func TestShouldSkipPublishing(t *testing.T) {
 			expectedSkipValue: false,
 		},
 		{
+			name: "has pending metrics and not running bots",
+			publisher: &Publisher{
+				lastBatchSendAttempt: veryRecently,
+				metricsAggregator: &AgentMetricsAggregator{
+					buckets: []*metricsBucket{
+						{
+							AgentMetrics: protocol.AgentMetrics{
+								AgentId: "0x123",
+							},
+						},
+					},
+				},
+			},
+			batch:             &protocol.AlertBatch{},
+			expectedSkipValue: false,
+		},
+		{
 			name: "no metrics, running bots, too early",
 			publisher: &Publisher{
 				lastBatchSendAttempt: veryRecently,
@@ -160,6 +177,7 @@ func TestShouldSkipPublishing(t *testing.T) {
 			name: "no bots, too early",
 			publisher: &Publisher{
 				lastBatchSendAttempt: veryRecently,
+				metricsAggregator:    &AgentMetricsAggregator{},
 			},
 			batch:               &protocol.AlertBatch{},
 			expectedSkipValue:   true,
@@ -169,6 +187,7 @@ func TestShouldSkipPublishing(t *testing.T) {
 			name: "no bots, not early",
 			publisher: &Publisher{
 				lastBatchSendAttempt: time.Now().Add(-slowReportInterval), // not recently
+				metricsAggregator:    &AgentMetricsAggregator{},
 			},
 			batch:             &protocol.AlertBatch{},
 			expectedSkipValue: false,
