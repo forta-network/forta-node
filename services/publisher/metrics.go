@@ -45,16 +45,6 @@ func NewMetricsAggregator(bucketInterval time.Duration) *AgentMetricsAggregator 
 	}
 }
 
-// HasPendingBotMetrics tells if there are bot metrics waiting to be flushed.
-func (ama *AgentMetricsAggregator) HasPendingBotMetrics() bool {
-	for _, bucket := range ama.buckets {
-		if bucket.AgentId != "system" { // rest of the metrics are bot metrics
-			return true
-		}
-	}
-	return false
-}
-
 func (ama *AgentMetricsAggregator) findBucket(agentID string, t time.Time) *metricsBucket {
 	bucketTime := ama.FindClosestBucketTime(t)
 	for _, bucket := range ama.buckets {
