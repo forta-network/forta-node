@@ -17,6 +17,7 @@ import (
 	"github.com/forta-network/forta-core-go/registry"
 	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/store/sharding"
 )
 
 var (
@@ -25,9 +26,6 @@ var (
 )
 
 const (
-	keyDefaultChainSetting = "default"
-	minShardCount          = 1
-
 	// This is the force reload interval that helps us ignore the on-chain assignment
 	// list hash. This helps avoid getting stuck with bad state.
 	//
@@ -148,18 +146,6 @@ func (rs *registryStore) FindAgentGlobally(agentID string) (*config.AgentConfig,
 	return botCfg, err
 }
 
-// returns shard id for an index, distributed evenly in an increased order.
-// Example:
-// Target: 6, Shards: 3
-// should be [0,0,0,0,0,0,1,1,1,1,1,1,2,2,2,2,2,2]
-func calculateShardID(target, idx uint) uint {
-	if target == 0 {
-		return 0
-	}
-
-	return idx / target
-}
-
 func (rs *registryStore) getLoadedBot(manifest string) (config.AgentConfig, bool) {
 	for _, loadedBot := range rs.loadedBots {
 		if manifest == loadedBot.Manifest {
@@ -217,7 +203,21 @@ func (rs *registryStore) loadAssignment(assignment *registry.Assignment) (*confi
 	}
 
 	botCfg.Owner = assignment.AgentOwner
-	botCfg.ShardConfig = populateShardConfig(assignment, agentData, rs.cfg.ChainID)
+
+	if botCfg.ProtocolVersion >= 2 {
+		var ok bool
+		botCfg.ShardConfig, ok = sharding.CalculateShardConfigV2(assignment, agentData)
+		if !ok {
+			return nil, fmt.Errorf("%w: invalid sharding config", errInvalidBot)
+		}
+	} else {
+		botCfg.ShardConfig = sharding.CalculateShardConfig(assignment, agentData, rs.cfg.ChainID)
+	}
+
+	// chain id is found from shard calculation in v2
+	if botCfg.ShardConfig.ChainID > 0 {
+		botCfg.ChainID = int(botCfg.ShardConfig.ChainID)
+	}
 
 	return botCfg, nil
 }
@@ -264,54 +264,6 @@ func NewRegistryStore(ctx context.Context, cfg config.Config) (*registryStore, e
 		bms: bms,
 		rc:  rc,
 	}, nil
-}
-
-func populateShardConfig(assignment *registry.Assignment, agentManifest *manifest.SignedAgentManifest, chainID int) *config.ShardConfig {
-	var (
-		target, shards uint
-	)
-
-	// check if there is a default chain setting
-	chainSetting, ok := agentManifest.Manifest.ChainSettings[keyDefaultChainSetting]
-	// if not a sharded bot, shard is always 0
-	if ok {
-		target = chainSetting.Target
-		shards = chainSetting.Shards
-	}
-
-	// check if there is a chain setting for the scanner's chain
-	chainIDStr := strconv.FormatInt(int64(chainID), 10)
-	chainSetting, ok = agentManifest.Manifest.ChainSettings[chainIDStr]
-	// if not a sharded bot, shard is always 0
-	if ok {
-		target = chainSetting.Target
-		shards = chainSetting.Shards
-	}
-
-	// if no sharding specified, shard count is 1 and target is total assigns
-	if shards == 0 {
-		target = uint(assignment.AssignedScanners)
-
-		return createShardConfig(0, minShardCount, target)
-	}
-
-	// fallback for target, calculate it from shard to assign ratio.
-	// target defaults to total assigns / shards
-	if target == 0 && shards != 0 {
-		target = uint(uint64(assignment.AssignedScanners) / uint64(shards))
-	}
-
-	shardID := calculateShardID(target, uint(assignment.ScannerIndex))
-
-	return createShardConfig(shardID, shards, target)
-}
-
-func createShardConfig(shardID, shards, target uint) *config.ShardConfig {
-	return &config.ShardConfig{
-		ShardID: shardID,
-		Target:  target,
-		Shards:  shards,
-	}
 }
 
 type privateRegistryStore struct {
@@ -367,7 +319,7 @@ func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]config.Age
 				shardConfig := &config.ShardConfig{
 					Shards:  shardedBot.Shards,
 					Target:  shardedBot.Target,
-					ShardID: calculateShardID(shardedBot.Target, botIdx),
+					ShardID: sharding.CalculateShardID(shardedBot.Target, botIdx),
 				}
 
 				agentID := strconv.Itoa(len(agentConfigs) + i + 1)

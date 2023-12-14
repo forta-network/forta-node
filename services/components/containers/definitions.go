@@ -31,27 +31,33 @@ func NewBotContainerConfig(
 ) docker.ContainerConfig {
 	limits := config.GetAgentResourceLimits(resourcesConfig)
 
+	env := map[string]string{
+		config.EnvJsonRpcHost:        config.DockerJSONRPCProxyContainerName,
+		config.EnvJsonRpcPort:        config.DefaultJSONRPCProxyPort,
+		config.EnvJWTProviderHost:    config.DockerJWTProviderContainerName,
+		config.EnvJWTProviderPort:    config.DefaultJWTProviderPort,
+		config.EnvPublicAPIProxyHost: config.DockerPublicAPIProxyContainerName,
+		config.EnvPublicAPIProxyPort: config.DefaultPublicAPIProxyPort,
+		config.EnvAgentGrpcPort:      botConfig.GrpcPort(),
+		config.EnvFortaBotID:         botConfig.ID,
+		config.EnvFortaBotOwner:      botConfig.Owner,
+		config.EnvFortaChainID:       fmt.Sprintf("%d", botConfig.ChainID),
+	}
+	if botConfig.IsSharded() {
+		env[config.EnvFortaShardID] = fmt.Sprintf("%d", botConfig.ShardID())
+		env[config.EnvFortaShardCount] = fmt.Sprintf("%d", botConfig.ShardConfig.Shards)
+	}
+
 	return docker.ContainerConfig{
 		Name:           botConfig.ContainerName(),
 		Image:          botConfig.Image,
 		NetworkID:      networkID,
 		LinkNetworkIDs: []string{},
-		Env: map[string]string{
-			config.EnvJsonRpcHost:        config.DockerJSONRPCProxyContainerName,
-			config.EnvJsonRpcPort:        config.DefaultJSONRPCProxyPort,
-			config.EnvJWTProviderHost:    config.DockerJWTProviderContainerName,
-			config.EnvJWTProviderPort:    config.DefaultJWTProviderPort,
-			config.EnvPublicAPIProxyHost: config.DockerPublicAPIProxyContainerName,
-			config.EnvPublicAPIProxyPort: config.DefaultPublicAPIProxyPort,
-			config.EnvAgentGrpcPort:      botConfig.GrpcPort(),
-			config.EnvFortaBotID:         botConfig.ID,
-			config.EnvFortaBotOwner:      botConfig.Owner,
-			config.EnvFortaChainID:       fmt.Sprintf("%d", botConfig.ChainID),
-		},
-		MaxLogFiles: logConfig.MaxLogFiles,
-		MaxLogSize:  logConfig.MaxLogSize,
-		CPUQuota:    limits.CPUQuota,
-		Memory:      limits.Memory,
+		Env:            env,
+		MaxLogFiles:    logConfig.MaxLogFiles,
+		MaxLogSize:     logConfig.MaxLogSize,
+		CPUQuota:       limits.CPUQuota,
+		Memory:         limits.Memory,
 		Labels: map[string]string{
 			docker.LabelFortaIsBot:                     LabelValueFortaIsBot,
 			docker.LabelFortaSupervisorStrategyVersion: LabelValueStrategyVersion,

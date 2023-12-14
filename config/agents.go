@@ -30,9 +30,10 @@ type AgentConfig struct {
 }
 
 type ShardConfig struct {
-	ShardID uint `yaml:"shardId" json:"shardId"`
-	Shards  uint `yaml:"shards" json:"shards"`
-	Target  uint `yaml:"target" json:"target"`
+	ShardID uint  `yaml:"shardId" json:"shardId"`
+	Shards  uint  `yaml:"shards" json:"shards"`
+	Target  uint  `yaml:"target" json:"target"`
+	ChainID int64 `yaml:"chainId" json:"chainId"`
 }
 
 func (ac AgentConfig) ShardID() int32 {
