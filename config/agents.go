@@ -114,11 +114,11 @@ func (ac AgentConfig) ContainerName() string {
 	parts := []string{ContainerNamePrefix, "agent", utils.ShortenString(ac.ID, 8), utils.ShortenString(digest, 4)}
 
 	if ac.ProtocolVersion >= 2 {
-		parts = append(parts, strconv.Itoa(ac.ChainID)) // append the chain id
+		parts = append(parts, "c"+strconv.Itoa(ac.ChainID)) // append the chain id
 	}
 
 	if ac.IsSharded() {
-		parts = append(parts, strconv.Itoa(int(ac.ShardConfig.ShardID))) // append the shard id at the end
+		parts = append(parts, "s"+strconv.Itoa(int(ac.ShardConfig.ShardID))) // append the shard id at the end
 	}
 	return strings.Join(parts, "-")
 }
