@@ -112,6 +112,11 @@ func (ac AgentConfig) ContainerName() string {
 	_, digest := utils.SplitImageRef(ac.Image)
 
 	parts := []string{ContainerNamePrefix, "agent", utils.ShortenString(ac.ID, 8), utils.ShortenString(digest, 4)}
+
+	if ac.ProtocolVersion >= 2 {
+		parts = append(parts, strconv.Itoa(ac.ChainID)) // append the chain id
+	}
+
 	if ac.IsSharded() {
 		parts = append(parts, strconv.Itoa(int(ac.ShardConfig.ShardID))) // append the shard id at the end
 	}
