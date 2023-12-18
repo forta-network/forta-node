@@ -153,6 +153,18 @@ func TestCalculateShardConfigV2(t *testing.T) {
 			expectedShardConfig: nil,
 			invalid:             true,
 		},
+		{
+			name: "should return a default config if chain ids are not specified",
+			args: args{
+				chainSettings: nil,
+			},
+			expectedShardConfig: &config.ShardConfig{
+				ShardID: 0,
+				Target:  3,
+				Shards:  1,
+				ChainID: 0,
+			},
+		},
 		// Add more test cases as needed
 	}
 

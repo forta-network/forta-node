@@ -210,13 +210,9 @@ func (rs *registryStore) loadAssignment(assignment *registry.Assignment) (*confi
 		if !ok {
 			return nil, fmt.Errorf("%w: invalid sharding config", errInvalidBot)
 		}
+		botCfg.ChainID = int(botCfg.ShardConfig.ChainID)
 	} else {
 		botCfg.ShardConfig = sharding.CalculateShardConfig(assignment, agentData, rs.cfg.ChainID)
-	}
-
-	// chain id is found from shard calculation in v2
-	if botCfg.ShardConfig.ChainID > 0 {
-		botCfg.ChainID = int(botCfg.ShardConfig.ChainID)
 	}
 
 	return botCfg, nil

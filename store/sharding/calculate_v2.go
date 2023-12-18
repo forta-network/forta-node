@@ -15,8 +15,18 @@ import (
 func CalculateShardConfigV2(
 	assignment *registry.Assignment, agentManifest *manifest.SignedAgentManifest,
 ) (*config.ShardConfig, bool) {
-	// we think of each chain in ascending order
+	if agentManifest == nil || agentManifest.Manifest == nil {
+		return nil, false
+	}
 	chainIDs := agentManifest.Manifest.ChainIDs
+
+	// if no chain ids were specified, then default to zero chain id with
+	// default target count (no sharding)
+	if len(chainIDs) == 0 {
+		return CreateShardConfig(defaultShardID, minShardCount, defaultTargetCount, 0), true
+	}
+
+	// we think of each chain in ascending order
 	sort.Slice(chainIDs, func(i, j int) bool {
 		return chainIDs[i] < chainIDs[j]
 	})

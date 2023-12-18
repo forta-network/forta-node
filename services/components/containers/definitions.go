@@ -41,7 +41,9 @@ func NewBotContainerConfig(
 		config.EnvAgentGrpcPort:      botConfig.GrpcPort(),
 		config.EnvFortaBotID:         botConfig.ID,
 		config.EnvFortaBotOwner:      botConfig.Owner,
-		config.EnvFortaChainID:       fmt.Sprintf("%d", botConfig.ChainID),
+	}
+	if botConfig.ChainID > 0 {
+		env[config.EnvFortaChainID] = fmt.Sprintf("%d", botConfig.ChainID)
 	}
 	if botConfig.IsSharded() {
 		env[config.EnvFortaShardID] = fmt.Sprintf("%d", botConfig.ShardID())
