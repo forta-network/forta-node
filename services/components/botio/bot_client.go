@@ -815,6 +815,10 @@ func calculateResponseTime(startTime *time.Time) (timestamp string, latencyMs ui
 func (bot *botClient) ShouldProcessBlock(blockNumberHex string) bool {
 	botConfig := bot.Config()
 
+	if botConfig.ProtocolVersion >= 2 {
+		return false
+	}
+
 	blockNumber, _ := hexutil.DecodeUint64(blockNumberHex)
 	var isAtLeastStartBlock bool
 	if botConfig.StartBlock != nil {
@@ -847,6 +851,10 @@ func (bot *botClient) ShouldProcessAlert(event *protocol.AlertEvent) bool {
 	}
 
 	botConfig := bot.Config()
+
+	if botConfig.ProtocolVersion >= 2 {
+		return false
+	}
 
 	// handle sharding
 	alertCreatedAt, err := time.Parse(time.RFC3339Nano, event.Alert.CreatedAt)
