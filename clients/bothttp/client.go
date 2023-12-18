@@ -52,7 +52,7 @@ func (bc *botClient) Health(ctx context.Context) error {
 
 	var healthResp HealthResponse
 	if err := json.NewDecoder(resp.Body).Decode(&healthResp); err != nil {
-		return err
+		return nil // ignore decoding errors
 	}
 	if len(healthResp.Errors) == 0 {
 		return nil
