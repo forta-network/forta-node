@@ -308,6 +308,12 @@ func (bot *botClient) initialize() {
 		"bot": botConfig.ID,
 	})
 
+	if bot.Config().ProtocolVersion >= 2 {
+		logger.Info("newer protocol version detected - skipping bot initialization")
+		bot.initSuccess(botConfig)
+		return
+	}
+
 	// publish start metric to track bot starts/restarts.
 	bot.lifecycleMetrics.ClientDial(botConfig)
 
@@ -319,12 +325,6 @@ func (bot *botClient) initialize() {
 	bot.setGrpcClient(botClient)
 	bot.lifecycleMetrics.StatusAttached(botConfig)
 	logger.Info("attached to bot")
-
-	if bot.Config().ProtocolVersion >= 2 {
-		logger.Info("newer protocol version detected - skipping bot initialization")
-		bot.initSuccess(botConfig)
-		return
-	}
 
 	ctx, cancel := context.WithTimeout(bot.ctx, DefaultInitializeTimeout)
 	defer cancel()
