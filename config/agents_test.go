@@ -24,7 +24,7 @@ func TestAgentConfig_ContainerNameSharded(t *testing.T) {
 			Target:  4,
 		},
 	}
-	assert.Equal(t, "forta-agent-0x04f65c-de86-3", cfg.ContainerName())
+	assert.Equal(t, "forta-agent-0x04f65c-de86-s3", cfg.ContainerName())
 }
 
 func TestAgentConfig_Equal(t *testing.T) {
