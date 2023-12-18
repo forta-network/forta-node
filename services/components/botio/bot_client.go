@@ -15,6 +15,7 @@ import (
 	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/agentgrpc"
+	"github.com/forta-network/forta-node/clients/bothttp"
 	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/nodeutils"
@@ -85,8 +86,9 @@ type botClient struct {
 	msgClient        clients.MessageClient
 	lifecycleMetrics metrics.Lifecycle
 
-	dialer       agentgrpc.BotDialer
-	clientUnsafe agentgrpc.Client
+	dialer         agentgrpc.BotDialer
+	clientUnsafe   agentgrpc.Client
+	clientV2Unsafe bothttp.Client
 
 	initialized     chan struct{}
 	initializedOnce sync.Once
