@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strconv"
 	"sync"
 	"time"
 
@@ -86,9 +87,9 @@ type botClient struct {
 	msgClient        clients.MessageClient
 	lifecycleMetrics metrics.Lifecycle
 
-	dialer         agentgrpc.BotDialer
-	clientUnsafe   agentgrpc.Client
-	clientV2Unsafe bothttp.Client
+	dialer       agentgrpc.BotDialer
+	clientUnsafe agentgrpc.Client
+	clientV2     bothttp.Client
 
 	initialized     chan struct{}
 	initializedOnce sync.Once
@@ -135,6 +136,7 @@ func NewBotClient(
 	resultChannels botreq.SendOnlyChannels,
 ) *botClient {
 	botCtx, botCtxCancel := context.WithCancel(ctx)
+	healthCheckPortInt, _ := strconv.Atoi(config.DefaultBotHealthCheckPort)
 	return &botClient{
 		ctx:                 botCtx,
 		ctxCancel:           botCtxCancel,
@@ -148,6 +150,7 @@ func NewBotClient(
 		lifecycleMetrics:    lifecycleMetrics,
 		dialer:              botDialer,
 		initialized:         make(chan struct{}),
+		clientV2:            bothttp.NewClient(botCfg.ContainerName(), healthCheckPortInt),
 	}
 }
 
@@ -748,13 +751,13 @@ func (bot *botClient) doHealthCheck(ctx context.Context, lg *log.Entry) bool {
 	lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
 
 	bot.lifecycleMetrics.HealthCheckAttempt(botConfig)
-	// TODO: Support HTTP health checks for v2 bots.
-	if botConfig.ProtocolVersion >= 2 {
-		bot.lifecycleMetrics.HealthCheckSuccess(botConfig)
-		return false
-	}
 
-	err := botClient.DoHealthCheck(ctx)
+	var err error
+	if botConfig.ProtocolVersion >= 2 {
+		err = bot.clientV2.Health(ctx)
+	} else {
+		err = botClient.DoHealthCheck(ctx)
+	}
 	if err != nil {
 		bot.lifecycleMetrics.HealthCheckError(err, botConfig)
 	} else {
