@@ -108,7 +108,7 @@ func GetBotLifecycleComponents(ctx context.Context, botLifeConfig BotLifecycleCo
 	}
 
 	botClient := containers.NewBotClient(
-		botLifeConfig.Config.Log, botLifeConfig.Config.ResourcesConfig,
+		cfg.Log, cfg.ResourcesConfig, cfg.AdvancedConfig.TokenExchangeURL,
 		dockerClient, botImageClient,
 	)
 	lifecycleMetrics := metrics.NewLifecycleClient(botLifeConfig.MessageClient)
