@@ -10,10 +10,7 @@ func FindActiveBotsFromMetrics(allBotMetrics []*protocol.AgentMetrics) (found []
 	for _, botMetrics := range allBotMetrics {
 		botID := botMetrics.AgentId
 		for _, botMetric := range botMetrics.Metrics {
-			if botMetric.Name == MetricTxLatency ||
-				botMetric.Name == MetricBlockLatency ||
-				botMetric.Name == MetricCombinerLatency {
-
+			if botMetric.Name == MetricHealthCheckSuccess {
 				// copy over shardID value so metric will indicate shard
 				cfg := &config.AgentConfig{ID: botID}
 				if botMetric.ShardId >= 0 {

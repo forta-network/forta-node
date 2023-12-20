@@ -13,5 +13,6 @@ const (
 	DefaultStoragePort           = "8525"
 	DefaultPublicAPIProxyPort    = "8535"
 	DefaultJSONRPCProxyPort      = "8545"
+	DefaultBotHealthCheckPort    = "8565"
 	DefaultFortaNodeBinaryPath   = "/forta-node" // the path for the common binary in the container image
 )
