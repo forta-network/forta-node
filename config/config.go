@@ -202,6 +202,7 @@ type CombinerConfig struct {
 type AdvancedConfig struct {
 	IPFSExperiment   bool   `yaml:"ipfsExperiment" json:"ipfsExperiment"`
 	MulticallAddress string `yaml:"multicallAddress" json:"multicallAddress"`
+	TokenExchangeURL string `yaml:"tokenExchangeUrl" json:"tokenExchangeUrl" default:"https://alerts.forta.network/exchange-token"`
 }
 
 type PrometheusConfig struct {

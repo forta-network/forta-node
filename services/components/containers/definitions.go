@@ -28,20 +28,22 @@ type Limits struct {
 func NewBotContainerConfig(
 	networkID string, botConfig config.AgentConfig,
 	logConfig config.LogConfig, resourcesConfig config.ResourcesConfig,
+	tokenExchangeURL string,
 ) docker.ContainerConfig {
 	limits := config.GetAgentResourceLimits(resourcesConfig)
 
 	env := map[string]string{
-		config.EnvJsonRpcHost:          config.DockerJSONRPCProxyContainerName,
-		config.EnvJsonRpcPort:          config.DefaultJSONRPCProxyPort,
-		config.EnvJWTProviderHost:      config.DockerJWTProviderContainerName,
-		config.EnvJWTProviderPort:      config.DefaultJWTProviderPort,
-		config.EnvPublicAPIProxyHost:   config.DockerPublicAPIProxyContainerName,
-		config.EnvPublicAPIProxyPort:   config.DefaultPublicAPIProxyPort,
-		config.EnvAgentGrpcPort:        botConfig.GrpcPort(),
-		config.EnvFortaBotID:           botConfig.ID,
-		config.EnvFortaBotOwner:        botConfig.Owner,
-		config.EnvFortaHealthCheckPort: config.DefaultBotHealthCheckPort,
+		config.EnvJsonRpcHost:           config.DockerJSONRPCProxyContainerName,
+		config.EnvJsonRpcPort:           config.DefaultJSONRPCProxyPort,
+		config.EnvJWTProviderHost:       config.DockerJWTProviderContainerName,
+		config.EnvJWTProviderPort:       config.DefaultJWTProviderPort,
+		config.EnvPublicAPIProxyHost:    config.DockerPublicAPIProxyContainerName,
+		config.EnvPublicAPIProxyPort:    config.DefaultPublicAPIProxyPort,
+		config.EnvAgentGrpcPort:         botConfig.GrpcPort(),
+		config.EnvFortaBotID:            botConfig.ID,
+		config.EnvFortaBotOwner:         botConfig.Owner,
+		config.EnvFortaHealthCheckPort:  config.DefaultBotHealthCheckPort,
+		config.EnvFortaTokenExchangeURL: tokenExchangeURL,
 	}
 	if botConfig.ChainID > 0 {
 		env[config.EnvFortaChainID] = fmt.Sprintf("%d", botConfig.ChainID)

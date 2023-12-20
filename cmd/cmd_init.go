@@ -11,7 +11,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/fatih/color"
-	"github.com/forta-network/forta-node/config"
 	"github.com/spf13/cobra"
 )
 
@@ -35,7 +34,7 @@ func handleFortaInit(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		var buf bytes.Buffer
-		if err := tmpl.Execute(&buf, config.GetEnvDefaults(cfg.Development)); err != nil {
+		if err := tmpl.Execute(&buf, nil); err != nil {
 			return err
 		}
 		if err := os.WriteFile(cfg.ConfigFilePath(), buf.Bytes(), 0644); err != nil {

@@ -34,23 +34,26 @@ type BotClient interface {
 }
 
 type botClient struct {
-	logConfig       config.LogConfig
-	resourcesConfig config.ResourcesConfig
-	client          clients.DockerClient
-	botImageClient  clients.DockerClient
+	logConfig        config.LogConfig
+	resourcesConfig  config.ResourcesConfig
+	tokenExchangeURL string
+	client           clients.DockerClient
+	botImageClient   clients.DockerClient
 }
 
 // NewBotClient creates a new bot client to manage bot containers.
 func NewBotClient(
 	logConfig config.LogConfig, resourcesConfig config.ResourcesConfig,
+	tokenExchangeURL string,
 	client clients.DockerClient, botImageClient clients.DockerClient,
 ) *botClient {
 	botImageClient.SetImagePullCooldown(ImagePullCooldownThreshold, ImagePullCooldownDuration)
 	return &botClient{
-		logConfig:       logConfig,
-		resourcesConfig: resourcesConfig,
-		client:          client,
-		botImageClient:  botImageClient,
+		logConfig:        logConfig,
+		resourcesConfig:  resourcesConfig,
+		tokenExchangeURL: tokenExchangeURL,
+		client:           client,
+		botImageClient:   botImageClient,
 	}
 }
 
@@ -88,7 +91,9 @@ func (bc *botClient) LaunchBot(ctx context.Context, botConfig config.AgentConfig
 
 	case errors.Is(err, docker.ErrContainerNotFound):
 		// if the bot container doesn't exist, create and start the container
-		botContainerCfg := NewBotContainerConfig(botNetworkID, botConfig, bc.logConfig, bc.resourcesConfig)
+		botContainerCfg := NewBotContainerConfig(
+			botNetworkID, botConfig, bc.logConfig, bc.resourcesConfig, bc.tokenExchangeURL,
+		)
 		_, err = bc.client.StartContainer(ctx, botContainerCfg)
 		if err != nil {
 			return fmt.Errorf("failed to start bot container: %v", err)

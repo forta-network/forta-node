@@ -49,7 +49,7 @@ func (s *BotClientTestSuite) SetupTest() {
 
 	s.botImageClient.EXPECT().SetImagePullCooldown(ImagePullCooldownThreshold, ImagePullCooldownDuration)
 
-	s.botClient = NewBotClient(config.LogConfig{}, config.ResourcesConfig{}, s.client, s.botImageClient)
+	s.botClient = NewBotClient(config.LogConfig{}, config.ResourcesConfig{}, "", s.client, s.botImageClient)
 }
 
 func (s *BotClientTestSuite) TestEnsureBotImages() {
@@ -121,7 +121,7 @@ func (s *BotClientTestSuite) TestLaunchBot_DoesNotExist() {
 
 	s.client.EXPECT().EnsurePublicNetwork(gomock.Any(), botConfig.ContainerName()).Return(testBotNetworkID, nil)
 	s.client.EXPECT().GetContainerByName(gomock.Any(), botConfig.ContainerName()).Return(nil, docker.ErrContainerNotFound)
-	botContainerCfg := NewBotContainerConfig(testBotNetworkID, botConfig, config.LogConfig{}, config.ResourcesConfig{})
+	botContainerCfg := NewBotContainerConfig(testBotNetworkID, botConfig, config.LogConfig{}, config.ResourcesConfig{}, "")
 	s.client.EXPECT().StartContainer(gomock.Any(), botContainerCfg).Return(nil, nil)
 	for _, serviceContainerName := range getServiceContainerNames() {
 		s.client.EXPECT().GetContainerByName(gomock.Any(), serviceContainerName).Return(&types.Container{

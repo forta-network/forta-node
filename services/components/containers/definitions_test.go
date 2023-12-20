@@ -13,14 +13,14 @@ func TestContainerEnvVar_ChainID(t *testing.T) {
 	botConfig := config.AgentConfig{
 		ChainID: 0,
 	}
-	containerConfig := NewBotContainerConfig("", botConfig, config.LogConfig{}, config.ResourcesConfig{})
+	containerConfig := NewBotContainerConfig("", botConfig, config.LogConfig{}, config.ResourcesConfig{}, "")
 	env := containerConfig.Env
 	r.Equal("", env[config.EnvFortaChainID])
 
 	botConfig = config.AgentConfig{
 		ChainID: 137,
 	}
-	containerConfig = NewBotContainerConfig("", botConfig, config.LogConfig{}, config.ResourcesConfig{})
+	containerConfig = NewBotContainerConfig("", botConfig, config.LogConfig{}, config.ResourcesConfig{}, "")
 	env = containerConfig.Env
 	r.Equal("137", env[config.EnvFortaChainID])
 }
@@ -31,7 +31,7 @@ func TestContainerEnvVar_Sharding(t *testing.T) {
 	botConfig := config.AgentConfig{
 		ShardConfig: nil,
 	}
-	containerConfig := NewBotContainerConfig("", botConfig, config.LogConfig{}, config.ResourcesConfig{})
+	containerConfig := NewBotContainerConfig("", botConfig, config.LogConfig{}, config.ResourcesConfig{}, "")
 	env := containerConfig.Env
 	r.Equal("", env[config.EnvFortaShardID])
 	r.Equal("", env[config.EnvFortaShardCount])
@@ -43,7 +43,7 @@ func TestContainerEnvVar_Sharding(t *testing.T) {
 			Target:  3,
 		},
 	}
-	containerConfig = NewBotContainerConfig("", botConfig, config.LogConfig{}, config.ResourcesConfig{})
+	containerConfig = NewBotContainerConfig("", botConfig, config.LogConfig{}, config.ResourcesConfig{}, "")
 	env = containerConfig.Env
 	r.Equal("0", env[config.EnvFortaShardID])
 	r.Equal("2", env[config.EnvFortaShardCount])
