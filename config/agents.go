@@ -15,14 +15,15 @@ const (
 )
 
 type AgentConfig struct {
-	ID           string  `yaml:"id" json:"id"`
-	Image        string  `yaml:"image" json:"image"`
-	Manifest     string  `yaml:"manifest" json:"manifest"`
-	IsLocal      bool    `yaml:"isLocal" json:"isLocal"`
-	IsStandalone bool    `yaml:"isStandalone" json:"isStandalone"`
-	StartBlock   *uint64 `yaml:"startBlock" json:"startBlock,omitempty"`
-	StopBlock    *uint64 `yaml:"stopBlock" json:"stopBlock,omitempty"`
-	Owner        string  `yaml:"owner" json:"owner"`
+	ID              string  `yaml:"id" json:"id"`
+	Image           string  `yaml:"image" json:"image"`
+	Manifest        string  `yaml:"manifest" json:"manifest"`
+	IsLocal         bool    `yaml:"isLocal" json:"isLocal"`
+	IsStandalone    bool    `yaml:"isStandalone" json:"isStandalone"`
+	StartBlock      *uint64 `yaml:"startBlock" json:"startBlock,omitempty"`
+	StopBlock       *uint64 `yaml:"stopBlock" json:"stopBlock,omitempty"`
+	Owner           string  `yaml:"owner" json:"owner"`
+	ProtocolVersion int     `yaml:"protocolVersion" json:"protocolVersion"`
 
 	ChainID     int
 	ShardConfig *ShardConfig

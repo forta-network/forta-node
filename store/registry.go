@@ -201,11 +201,12 @@ func loadBot(ctx context.Context, cfg config.Config, bms BotManifestStore, agent
 	}
 
 	return &config.AgentConfig{
-		ID:       agentID,
-		Image:    image,
-		Manifest: ref,
-		ChainID:  cfg.ChainID,
-		Owner:    owner,
+		ID:              agentID,
+		Image:           image,
+		Manifest:        ref,
+		ChainID:         cfg.ChainID,
+		Owner:           owner,
+		ProtocolVersion: signedManifest.Manifest.ProtocolVersion,
 	}, signedManifest, nil
 }
 

@@ -308,6 +308,12 @@ func (bot *botClient) initialize() {
 		"bot": botConfig.ID,
 	})
 
+	if bot.Config().ProtocolVersion >= 2 {
+		logger.Info("newer protocol version detected - skipping bot initialization")
+		bot.initSuccess(botConfig)
+		return
+	}
+
 	// publish start metric to track bot starts/restarts.
 	bot.lifecycleMetrics.ClientDial(botConfig)
 
@@ -392,10 +398,15 @@ func validateInitializeResponse(response *protocol.InitializeResponse) error {
 // StartProcessing launches the goroutines to concurrently process incoming requests
 // from request channels.
 func (bot *botClient) StartProcessing() {
+	go bot.processHealthChecks()
+
+	if bot.Config().ProtocolVersion >= 2 {
+		return
+	}
+
 	go bot.processTransactions()
 	go bot.processBlocks()
 	go bot.processCombinationAlerts()
-	go bot.processHealthChecks()
 }
 
 func processRequests[R any](
@@ -735,6 +746,11 @@ func (bot *botClient) doHealthCheck(ctx context.Context, lg *log.Entry) bool {
 	lg.WithField("duration", time.Since(startTime)).Debugf("sending request")
 
 	bot.lifecycleMetrics.HealthCheckAttempt(botConfig)
+	// TODO: Support HTTP health checks for v2 bots.
+	if botConfig.ProtocolVersion >= 2 {
+		bot.lifecycleMetrics.HealthCheckSuccess(botConfig)
+		return false
+	}
 
 	err := botClient.DoHealthCheck(ctx)
 	if err != nil {
