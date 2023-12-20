@@ -213,6 +213,12 @@ func (blm *botLifecycleManager) ExitInactiveBots(ctx context.Context) error {
 			blm.lifecycleMetrics.StatusInactive(config.AgentConfig{ID: inactiveBotID})
 			continue
 		}
+
+		// TODO: Do not support inactive bot restarts until v2 health check support.
+		if botConfig.ProtocolVersion >= 2 {
+			continue
+		}
+
 		inactiveCfgs = append(inactiveCfgs, botConfig)
 		logger.Info("killing inactive bot for reinitialization")
 		if err := blm.botClient.StopBot(ctx, botConfig); err != nil {

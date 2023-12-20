@@ -11,8 +11,8 @@ import (
 	"github.com/forta-network/forta-core-go/registry"
 	mock_registry "github.com/forta-network/forta-core-go/registry/mocks"
 	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/store/sharding"
 	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -62,117 +62,9 @@ func Test_calculateShardID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(
 			tt.name, func(t *testing.T) {
-				if got := calculateShardID(tt.args.target, tt.args.idx); got != tt.want {
+				if got := sharding.CalculateShardID(tt.args.target, tt.args.idx); got != tt.want {
 					t.Errorf("calculateShardID() = %v, want %v", got, tt.want)
 				}
-			},
-		)
-	}
-}
-
-func TestPopulateShardConfig(t *testing.T) {
-	type args struct {
-		assignedScanners int
-		scannerIndex     int
-		chainSettings    map[string]manifest.AgentChainSettings
-		chainID          int
-	}
-	tests := []struct {
-		name                string
-		args                args
-		expectedShardConfig *config.ShardConfig
-	}{
-		{
-			name: "can calculate shard based on chain setting",
-			args: args{
-				assignedScanners: 6,
-				scannerIndex:     4,
-				chainSettings: map[string]manifest.AgentChainSettings{
-					"1": {
-						Target: 2,
-						Shards: 3,
-					},
-				},
-				chainID: 1,
-			},
-			expectedShardConfig: &config.ShardConfig{
-				ShardID: 2,
-				Target:  2,
-				Shards:  3,
-			},
-		}, {
-			name: "can calculate shard based on default setting",
-			args: args{
-				assignedScanners: 6,
-				scannerIndex:     4,
-				chainSettings: map[string]manifest.AgentChainSettings{
-					"default": {
-						Target: 2,
-						Shards: 3,
-					},
-				},
-				chainID: 1,
-			},
-			expectedShardConfig: &config.ShardConfig{
-				ShardID: 2,
-				Target:  2,
-				Shards:  3,
-			},
-		}, {
-			name: "chain setting should override default setting",
-			args: args{
-				assignedScanners: 6,
-				scannerIndex:     4,
-				chainSettings: map[string]manifest.AgentChainSettings{
-					"default": {
-						Target: 2,
-						Shards: 3,
-					},
-					"1": {
-						Target: 6,
-						Shards: 1,
-					},
-				},
-				chainID: 1,
-			},
-			expectedShardConfig: &config.ShardConfig{
-				ShardID: 0,
-				Target:  6,
-				Shards:  1,
-			},
-		}, {
-			name: "should return valid config if not sharded",
-			args: args{
-				assignedScanners: 6,
-				scannerIndex:     4,
-				chainSettings:    nil,
-				chainID:          1,
-			},
-			expectedShardConfig: &config.ShardConfig{
-				ShardID: 0,
-				Target:  6,
-				Shards:  1,
-			},
-		},
-		// Add more test cases as needed
-	}
-
-	for _, tt := range tests {
-		t.Run(
-			tt.name, func(t *testing.T) {
-				assignment := &registry.Assignment{
-					AssignedScanners: tt.args.assignedScanners,
-					ScannerIndex:     tt.args.scannerIndex,
-				}
-
-				agentManifest := &manifest.SignedAgentManifest{
-					Manifest: &manifest.AgentManifest{
-						ChainSettings: tt.args.chainSettings,
-					},
-				}
-
-				shardConfig := populateShardConfig(assignment, agentManifest, tt.args.chainID)
-				assert.Equal(t, tt.expectedShardConfig, shardConfig)
 			},
 		)
 	}
@@ -210,10 +102,12 @@ func TestGetAgentsIfChanged_UpdateNeeded(t *testing.T) {
 	}
 	assignmentList := []*registry.Assignment{
 		{
-			AgentID:          "test-bot-1",
-			AgentManifest:    testManifest1,
-			AssignedScanners: 6,
-			ScannerIndex:     1, // initial order of the scanner
+			AgentID:       "test-bot-1",
+			AgentManifest: testManifest1,
+			ScannerIndices: registry.ScannerIndices{
+				SameChainAssignedScanners: 6,
+				SameChainScannerIndex:     1, // initial order of the scanner
+			},
 		},
 	}
 
@@ -235,16 +129,18 @@ func TestGetAgentsIfChanged_UpdateNeeded(t *testing.T) {
 	r.True(update)
 	r.Len(agents, len(assignmentList))
 	firstShardID := agents[0].ShardConfig.ShardID
-	r.Equal(assignmentList[0].ScannerIndex, int(firstShardID))
+	r.Equal(assignmentList[0].SameChainScannerIndex, int(firstShardID))
 
 	// it should update the shard id when ordering changes
 
 	updatedAssignmentList := []*registry.Assignment{
 		{
-			AgentID:          "test-bot-1",
-			AgentManifest:    testManifest1,
-			AssignedScanners: 6,
-			ScannerIndex:     2, // scanner order change: 1 => 2
+			AgentID:       "test-bot-1",
+			AgentManifest: testManifest1,
+			ScannerIndices: registry.ScannerIndices{
+				SameChainAssignedScanners: 6,
+				SameChainScannerIndex:     2, // scanner order change: 1 => 2
+			},
 		},
 	}
 
@@ -266,7 +162,7 @@ func TestGetAgentsIfChanged_UpdateNeeded(t *testing.T) {
 	r.True(update)
 	r.Len(agents, len(assignmentList))
 	secondShardID := agents[0].ShardConfig.ShardID
-	r.Equal(updatedAssignmentList[0].ScannerIndex, int(secondShardID))
+	r.Equal(updatedAssignmentList[0].SameChainScannerIndex, int(secondShardID))
 
 	r.NotEqual(firstShardID, secondShardID)
 }
