@@ -1,13 +1,11 @@
 package cmd
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"os"
 	"regexp"
 	"strings"
-	"text/template"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/fatih/color"
@@ -29,15 +27,7 @@ func handleFortaInit(cmd *cobra.Command, args []string) error {
 	}
 
 	if !isConfigFileInitialized() {
-		tmpl, err := template.New("config-template").Parse(defaultConfig)
-		if err != nil {
-			return err
-		}
-		var buf bytes.Buffer
-		if err := tmpl.Execute(&buf, nil); err != nil {
-			return err
-		}
-		if err := os.WriteFile(cfg.ConfigFilePath(), buf.Bytes(), 0644); err != nil {
+		if err := os.WriteFile(cfg.ConfigFilePath(), []byte(defaultConfig), 0644); err != nil {
 			return err
 		}
 	}
