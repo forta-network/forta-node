@@ -8,18 +8,18 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/forta-network/forta-node/clients"
-	"github.com/forta-network/forta-node/clients/ratelimiter"
-	"github.com/rs/cors"
-
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/ethereum"
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-core-go/protocol/settings"
 	"github.com/forta-network/forta-core-go/utils"
+	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/messaging"
+	"github.com/forta-network/forta-node/clients/ratelimiter"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/services/components/metrics"
+	"github.com/rs/cors"
+	"github.com/sirupsen/logrus"
 )
 
 // JsonRpcProxy proxies requests from agents to json-rpc endpoint
@@ -71,12 +71,18 @@ func (p *JsonRpcProxy) Start() error {
 func (p *JsonRpcProxy) metricHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		t := time.Now()
+
+		decodedBody, err := decodeAndReplaceBody(req)
+		if err != nil {
+			logrus.WithError(err).Error("failed to decode request")
+		}
+
 		agentConfig, err := p.botAuthenticator.FindAgentFromRemoteAddr(req.RemoteAddr)
 		if err == nil && p.rateLimiter.ExceedsLimit(agentConfig.ID) {
 			writeTooManyReqsErr(w, req)
 			p.msgClient.PublishProto(
 				messaging.SubjectMetricAgent, &protocol.AgentMetricList{
-					Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, 0, 1, 0),
+					Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, 0, 1, 0, decodedBody.Method),
 				},
 			)
 			return
@@ -88,7 +94,7 @@ func (p *JsonRpcProxy) metricHandler(h http.Handler) http.Handler {
 			duration := time.Since(t)
 			p.msgClient.PublishProto(
 				messaging.SubjectMetricAgent, &protocol.AgentMetricList{
-					Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, 1, 0, duration),
+					Metrics: metrics.GetJSONRPCMetrics(*agentConfig, t, 1, 0, duration, decodedBody.Method),
 				},
 			)
 		}
