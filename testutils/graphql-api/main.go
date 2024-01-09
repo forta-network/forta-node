@@ -47,7 +47,7 @@ type AlertData struct {
 }
 
 type AlertResponse struct {
-	Alerts AlertData `json:"alerts"`
+	Alerts AlertData `json:"alerts0"`
 }
 
 type Response struct {
