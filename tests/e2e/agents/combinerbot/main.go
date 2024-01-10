@@ -114,5 +114,5 @@ func queryPublicAPI(ctx context.Context, bot string) ([]*protocol.AlertEvent, er
 	)
 	graphqlClient := graphql.NewClient(publicAPIAddr)
 
-	return graphqlClient.GetAlerts(ctx, &graphql.AlertsInput{Bots: []string{bot}}, nil)
+	return graphqlClient.GetAlertsBatch(ctx, []*graphql.AlertsInput{{Bots: []string{bot}}}, nil)
 }
