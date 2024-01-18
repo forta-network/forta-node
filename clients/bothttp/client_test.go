@@ -28,12 +28,14 @@ func TestHealth(t *testing.T) {
 	go server.ListenAndServe()
 
 	client := NewClient("localhost", 8183)
-	err := client.Health(context.Background())
+	_, err := client.Health(context.Background())
 	r.NoError(err)
 
 	respData.Errors = append(respData.Errors, "some error msg")
-	err = client.Health(context.Background())
+	_, err = client.Health(context.Background())
 	r.Error(err)
+
+	// TODO: check returned metrics
 
 	server.Close()
 }

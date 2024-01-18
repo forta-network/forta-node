@@ -115,7 +115,7 @@ func (rs *requestSender) SendEvaluateTxRequest(req *protocol.EvaluateTxRequest) 
 		}:
 		default: // do not try to send if the buffer is full
 			lg.WithField("bot", botConfig.ID).Debug("agent tx request buffer is full - skipping")
-			metricsList = append(metricsList, metrics.CreateAgentMetric(botConfig, metrics.MetricTxDrop, 1))
+			metricsList = append(metricsList, metrics.CreateAgentMetricV1(botConfig, metrics.MetricTxDrop, 1))
 		}
 		lg.WithFields(log.Fields{
 			"bot":      botConfig.ID,
@@ -164,7 +164,7 @@ func (rs *requestSender) SendEvaluateBlockRequest(req *protocol.EvaluateBlockReq
 		}:
 		default: // do not try to send if the buffer is full
 			lg.WithField("bot", botConfig.ID).Warn("agent block request buffer is full - skipping")
-			metricsList = append(metricsList, metrics.CreateAgentMetric(botConfig, metrics.MetricBlockDrop, 1))
+			metricsList = append(metricsList, metrics.CreateAgentMetricV1(botConfig, metrics.MetricBlockDrop, 1))
 		}
 		lg.WithFields(
 			log.Fields{
@@ -249,7 +249,7 @@ func (rs *requestSender) SendEvaluateAlertRequest(req *protocol.EvaluateAlertReq
 	}:
 	default: // do not try to send if the buffer is full
 		lg.WithField("bot", botConfig.ID).Warn("agent alert request buffer is full - skipping")
-		metricsList = append(metricsList, metrics.CreateAgentMetric(botConfig, metrics.MetricCombinerDrop, 1))
+		metricsList = append(metricsList, metrics.CreateAgentMetricV1(botConfig, metrics.MetricCombinerDrop, 1))
 	}
 
 	lg.WithFields(

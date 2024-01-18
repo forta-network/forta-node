@@ -53,16 +53,29 @@ func SendAgentMetrics(client clients.MessageClient, ms []*protocol.AgentMetric) 
 	}
 }
 
-func CreateAgentMetric(agt config.AgentConfig, metric string, value float64) *protocol.AgentMetric {
+func CreateAgentMetricV1(agt config.AgentConfig, metric string, value float64) *protocol.AgentMetric {
 	return &protocol.AgentMetric{
 		AgentId:   agt.ID,
 		Timestamp: time.Now().Format(time.RFC3339),
 		Name:      metric,
 		Value:     value,
 		ShardId:   agt.ShardID(),
+		ChainId:   uint64(agt.ChainID),
 	}
 }
 
+func CreateAgentMetricV2(agt config.AgentConfig, metric string, value float64, chainID uint64) *protocol.AgentMetric {
+	return &protocol.AgentMetric{
+		AgentId:   agt.ID,
+		Timestamp: time.Now().Format(time.RFC3339),
+		Name:      metric,
+		Value:     value,
+		ShardId:   agt.ShardID(),
+		ChainId:   chainID,
+	}
+}
+
+// Q: is it okay to not have chain id for the event metric?
 func CreateEventMetric(t time.Time, id string, metric string, details string) *protocol.AgentMetric {
 	return &protocol.AgentMetric{
 		AgentId:   id,
@@ -83,6 +96,7 @@ func createMetrics(agt config.AgentConfig, timestamp string, metricMap map[strin
 			Name:      name,
 			Value:     value,
 			ShardId:   agt.ShardID(),
+			ChainId:   uint64(agt.ChainID),
 		})
 	}
 	return res
@@ -170,15 +184,16 @@ func createJsonRpcMetrics(agt config.AgentConfig, timestamp string, metricMap ma
 			Name:      fmt.Sprintf("%s.%s", name, method),
 			Value:     value,
 			ShardId:   agt.ShardID(),
+			ChainId:   uint64(agt.ChainID),
 		})
 	}
 	return res
 }
 
-func GetPublicAPIMetrics(botID string, at time.Time, success, throttled int, latencyMs time.Duration) []*protocol.AgentMetric {
+func GetPublicAPIMetrics(botID string, at time.Time, success, throttled int, latency time.Duration) []*protocol.AgentMetric {
 	values := make(map[string]float64)
-	if latencyMs > 0 {
-		values[MetricPublicAPIProxyLatency] = float64(latencyMs.Milliseconds())
+	if latency > 0 {
+		values[MetricPublicAPIProxyLatency] = float64(latency.Milliseconds())
 	}
 	if success > 0 {
 		values[MetricPublicAPIProxySuccess] = float64(success)
