@@ -23,7 +23,6 @@ type MetricsMathTest struct {
 }
 
 func TestAgentMetricsAggregator_math(t *testing.T) {
-
 	tests := []*MetricsMathTest{
 		{
 			metrics: []float64{1, 2, 3, 4, 5},
@@ -34,6 +33,7 @@ func TestAgentMetricsAggregator_math(t *testing.T) {
 				Average: 3,
 				Sum:     15,
 				P95:     4,
+				ChainId: 100,
 			},
 		},
 		{
@@ -45,6 +45,7 @@ func TestAgentMetricsAggregator_math(t *testing.T) {
 				Average: 15,
 				Sum:     45,
 				P95:     10,
+				ChainId: 100,
 			},
 		},
 		{
@@ -56,6 +57,7 @@ func TestAgentMetricsAggregator_math(t *testing.T) {
 				Average: 45,
 				Sum:     45,
 				P95:     45,
+				ChainId: 100,
 			},
 		},
 		{
@@ -69,6 +71,7 @@ func TestAgentMetricsAggregator_math(t *testing.T) {
 				Average: 45,
 				Sum:     45,
 				P95:     45,
+				ChainId: 100,
 			},
 		},
 	}
@@ -87,7 +90,7 @@ func TestAgentMetricsAggregator_math(t *testing.T) {
 			})
 		}
 
-		aggregator := publisher.NewMetricsAggregator(testBucketInterval)
+		aggregator := publisher.NewMetricsAggregator(testBucketInterval, 100)
 		err := aggregator.AddAgentMetrics(&protocol.AgentMetricList{Metrics: metrics})
 		assert.NoError(t, err)
 		time.Sleep(testBucketInterval * 2)

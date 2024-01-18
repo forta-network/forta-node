@@ -208,9 +208,7 @@ func (blm *botLifecycleManager) ExitInactiveBots(ctx context.Context) error {
 		botConfig, found := blm.findBotConfigByID(inactiveBotID)
 		logger := log.WithField("bot", inactiveBotID)
 		if !found {
-			logger.Warn("could not find the config for inactive bot - skipping stop")
-			// send this metric by ID, because it doesn't have a shard ID (since it's not found)
-			blm.lifecycleMetrics.StatusInactive(config.AgentConfig{ID: inactiveBotID})
+			logger.Warn("could not find the config for inactive bot - skipping stop", inactiveBotID)
 			continue
 		}
 

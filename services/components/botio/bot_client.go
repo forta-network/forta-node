@@ -545,7 +545,7 @@ func (bot *botClient) processTransaction(ctx context.Context, lg *log.Entry, req
 		// truncate findings
 		if len(resp.Findings) > MaxFindings {
 			dropped := len(resp.Findings) - MaxFindings
-			droppedMetric := metrics.CreateAgentMetric(botConfig, metrics.MetricFindingsDropped, float64(dropped))
+			droppedMetric := metrics.CreateAgentMetricV1(botConfig, domain.MetricFindingsDropped, float64(dropped))
 			bot.msgClient.PublishProto(
 				messaging.SubjectMetricAgent,
 				&protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{droppedMetric}},
@@ -613,8 +613,8 @@ func (bot *botClient) processBlock(ctx context.Context, lg *log.Entry, request *
 		// truncate findings
 		if len(resp.Findings) > MaxFindings {
 			dropped := len(resp.Findings) - MaxFindings
-			droppedMetric := metrics.CreateAgentMetric(
-				botConfig, metrics.MetricFindingsDropped, float64(dropped),
+			droppedMetric := metrics.CreateAgentMetricV1(
+				botConfig, domain.MetricFindingsDropped, float64(dropped),
 			)
 			bot.msgClient.PublishProto(
 				messaging.SubjectMetricAgent,
@@ -706,7 +706,7 @@ func (bot *botClient) processCombinationAlert(ctx context.Context, lg *log.Entry
 	// truncate findings
 	if len(resp.Findings) > MaxFindings {
 		dropped := len(resp.Findings) - MaxFindings
-		droppedMetric := metrics.CreateAgentMetric(botConfig, metrics.MetricFindingsDropped, float64(dropped))
+		droppedMetric := metrics.CreateAgentMetricV1(botConfig, domain.MetricFindingsDropped, float64(dropped))
 		bot.msgClient.PublishProto(
 			messaging.SubjectMetricAgent, &protocol.AgentMetricList{Metrics: []*protocol.AgentMetric{droppedMetric}},
 		)
@@ -754,7 +754,24 @@ func (bot *botClient) doHealthCheck(ctx context.Context, lg *log.Entry) bool {
 
 	var err error
 	if botConfig.ProtocolVersion >= 2 {
-		err = bot.clientV2.Health(ctx)
+		var botMetrics []bothttp.Metrics
+		botMetrics, err = bot.clientV2.Health(ctx)
+
+		if len(botMetrics) != 0 {
+			agentMetrics := make([]*protocol.AgentMetric, 0, len(botMetrics))
+			for _, botMetric := range botMetrics {
+				for metricName, metricValues := range botMetric.DataPoints {
+					for _, metricValue := range metricValues {
+						agentMetrics = append(agentMetrics, metrics.CreateAgentMetricV2(botConfig, metricName, metricValue, botMetric.ChainID))
+					}
+				}
+			}
+
+			bot.msgClient.PublishProto(
+				messaging.SubjectMetricAgent,
+				&protocol.AgentMetricList{Metrics: agentMetrics},
+			)
+		}
 	} else {
 		err = botClient.DoHealthCheck(ctx)
 	}
