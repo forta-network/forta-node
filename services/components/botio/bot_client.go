@@ -763,7 +763,7 @@ func (bot *botClient) doHealthCheck(ctx context.Context, lg *log.Entry) bool {
 			for _, botMetric := range botMetrics {
 				for metricName, metricValues := range botMetric.DataPoints {
 					for _, metricValue := range metricValues {
-						agentMetrics = append(agentMetrics, metrics.CreateAgentMetricV2(botConfig, metricName, float64(metricValue), botMetric.ChainID))
+						agentMetrics = append(agentMetrics, metrics.CreateAgentMetricV2(botConfig, metricName, metricValue, botMetric.ChainID))
 					}
 				}
 			}

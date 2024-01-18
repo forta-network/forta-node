@@ -18,9 +18,8 @@ type HealthResponse struct {
 
 type Metrics struct {
 	// ChainID is the id of the chain the metrics are for
-	ChainID uint64 `json:"chainId"`
-	// Q: data point type should be float64 or int64?
-	DataPoints map[string][]int64 `json:"dataPoints"`
+	ChainID    uint64               `json:"chainId"`
+	DataPoints map[string][]float64 `json:"dataPoints"`
 }
 
 // Client is the bot HTTP client interface.
