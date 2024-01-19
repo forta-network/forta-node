@@ -35,7 +35,30 @@ func TestHealth(t *testing.T) {
 	_, err = client.Health(context.Background())
 	r.Error(err)
 
-	// TODO: check returned metrics
+	respData = HealthResponse{
+		Metrics: []Metrics{
+			{
+				ChainID: 1,
+				DataPoints: map[string][]float64{
+					"tx.success": {1, 2, 3},
+				},
+			},
+			{
+				ChainID: 2,
+				DataPoints: map[string][]float64{
+					"tx.success": {3},
+				},
+			},
+		},
+	}
+	metrics, err := client.Health(context.Background())
+	r.NoError(err)
+	r.EqualValues(respData.Metrics, metrics)
+
+	responseSizeLimit = 1
+
+	_, err = client.Health(context.Background())
+	r.NoError(err)
 
 	server.Close()
 }

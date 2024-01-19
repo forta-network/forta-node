@@ -5,10 +5,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 
 	"github.com/forta-network/forta-core-go/utils/httpclient"
 	"github.com/hashicorp/go-multierror"
+	log "github.com/sirupsen/logrus"
+)
+
+var (
+	// responseSizeLimit is the maximum number of bytes to read from the response body.
+	responseSizeLimit = int64(2 << 20) // 2MB
 )
 
 type HealthResponse struct {
@@ -60,7 +68,14 @@ func (bc *botClient) Health(ctx context.Context) ([]Metrics, error) {
 	}
 
 	var healthResp HealthResponse
-	if err := json.NewDecoder(resp.Body).Decode(&healthResp); err != nil {
+
+	// Limit the response size to a certain number of bytes
+	limitedReader := io.LimitReader(resp.Body, responseSizeLimit)
+	if err := json.NewDecoder(limitedReader).Decode(&healthResp); err != nil {
+		if strings.Contains(err.Error(), "EOF") {
+			log.WithError(err).Error("response size limit for health check is reached")
+		}
+
 		return nil, nil // ignore decoding errors
 	}
 
