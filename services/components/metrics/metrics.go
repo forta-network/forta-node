@@ -60,11 +60,11 @@ func CreateAgentMetricV1(agt config.AgentConfig, metric string, value float64) *
 		Name:      metric,
 		Value:     value,
 		ShardId:   agt.ShardID(),
-		ChainId:   uint64(agt.ChainID),
+		ChainId:   int64(agt.ChainID),
 	}
 }
 
-func CreateAgentMetricV2(agt config.AgentConfig, metric string, value float64, chainID uint64) *protocol.AgentMetric {
+func CreateAgentMetricV2(agt config.AgentConfig, metric string, value float64, chainID int64) *protocol.AgentMetric {
 	return &protocol.AgentMetric{
 		AgentId:   agt.ID,
 		Timestamp: time.Now().Format(time.RFC3339),
@@ -96,7 +96,7 @@ func createMetrics(agt config.AgentConfig, timestamp string, metricMap map[strin
 			Name:      name,
 			Value:     value,
 			ShardId:   agt.ShardID(),
-			ChainId:   uint64(agt.ChainID),
+			ChainId:   int64(agt.ChainID),
 		})
 	}
 	return res
@@ -184,7 +184,7 @@ func createJsonRpcMetrics(agt config.AgentConfig, timestamp string, metricMap ma
 			Name:      fmt.Sprintf("%s.%s", name, method),
 			Value:     value,
 			ShardId:   agt.ShardID(),
-			ChainId:   uint64(agt.ChainID),
+			ChainId:   int64(agt.ChainID),
 		})
 	}
 	return res

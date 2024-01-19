@@ -155,6 +155,15 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 		}
 	}
 
+	// add chain id if it's not set, e.g. EventMetric
+	for _, metric := range batch.Metrics {
+		for _, metricSummary := range metric.Metrics {
+			if metricSummary.ChainId == 0 {
+				metricSummary.ChainId = int64(pub.cfg.ChainID)
+			}
+		}
+	}
+
 	// always add the latest known results
 	pub.latestInspectionResultsMu.RLock()
 	batch.InspectionResults = pub.latestInspectionResults

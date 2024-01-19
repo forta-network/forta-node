@@ -18,7 +18,7 @@ type HealthResponse struct {
 
 type Metrics struct {
 	// ChainID is the id of the chain the metrics are for
-	ChainID    uint64               `json:"chainId"`
+	ChainID    int64                `json:"chainId"`
 	DataPoints map[string][]float64 `json:"dataPoints"`
 }
 
@@ -32,7 +32,7 @@ type botClient struct {
 	httpClient *http.Client
 }
 
-// NewClient creates acnew client.
+// NewClient creates a new client.
 func NewClient(host string, port int) Client {
 	return &botClient{
 		baseUrl:    fmt.Sprintf("http://%s:%d", host, port),

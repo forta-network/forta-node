@@ -13,7 +13,7 @@ import (
 // AgentMetricsAggregator aggregates agents' metrics and produces a list of summary of them when flushed.
 type AgentMetricsAggregator struct {
 	// uint64 is a chain id
-	bucketsByChainID map[uint64][]*metricsBucket
+	bucketsByChainID map[int64][]*metricsBucket
 	bucketInterval   time.Duration
 	lastFlush        time.Time
 	mu               sync.RWMutex
@@ -47,11 +47,11 @@ func NewMetricsAggregator(bucketInterval time.Duration) *AgentMetricsAggregator 
 		mu:               sync.RWMutex{},
 		bucketInterval:   bucketInterval,
 		lastFlush:        time.Now(), // avoid flushing immediately
-		bucketsByChainID: make(map[uint64][]*metricsBucket),
+		bucketsByChainID: make(map[int64][]*metricsBucket),
 	}
 }
 
-func (ama *AgentMetricsAggregator) findBucket(agentID string, chainID uint64, t time.Time) *metricsBucket {
+func (ama *AgentMetricsAggregator) findBucket(agentID string, chainID int64, t time.Time) *metricsBucket {
 	bucketTime := ama.FindClosestBucketTime(t)
 	buckets, ok := ama.bucketsByChainID[chainID]
 	if !ok {
@@ -112,7 +112,7 @@ func (ama *AgentMetricsAggregator) ForceFlush() []*protocol.AgentMetrics {
 
 	ama.lastFlush = now
 	buckets := ama.bucketsByChainID
-	ama.bucketsByChainID = make(map[uint64][]*metricsBucket)
+	ama.bucketsByChainID = make(map[int64][]*metricsBucket)
 
 	(allAgentMetrics)(buckets).Fix()
 
@@ -138,7 +138,7 @@ func (ama *AgentMetricsAggregator) TryFlush() ([]*protocol.AgentMetrics, bool) {
 
 	ama.lastFlush = now
 	buckets := ama.bucketsByChainID
-	ama.bucketsByChainID = make(map[uint64][]*metricsBucket)
+	ama.bucketsByChainID = make(map[int64][]*metricsBucket)
 
 	(allAgentMetrics)(buckets).Fix()
 
@@ -154,7 +154,7 @@ func (ama *AgentMetricsAggregator) TryFlush() ([]*protocol.AgentMetrics, bool) {
 
 // allAgentMetrics is an alias type for post-processing aggregated in-memory metrics
 // before we publish them.
-type allAgentMetrics map[uint64][]*metricsBucket
+type allAgentMetrics map[int64][]*metricsBucket
 
 func (allMetrics allAgentMetrics) Fix() {
 	for _, metricsBuckets := range allMetrics {
