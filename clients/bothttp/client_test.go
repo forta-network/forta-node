@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/require"
 )
 
@@ -51,6 +52,9 @@ func TestHealth(t *testing.T) {
 			},
 		},
 	}
+
+	hook := test.NewGlobal()
+
 	metrics, err := client.Health(context.Background())
 	r.NoError(err)
 	r.EqualValues(respData.Metrics, metrics)
@@ -59,6 +63,8 @@ func TestHealth(t *testing.T) {
 
 	_, err = client.Health(context.Background())
 	r.NoError(err)
+	r.Equal(1, len(hook.Entries))
+	r.Equal("response size limit for health check is reached", hook.LastEntry().Message)
 
 	server.Close()
 }

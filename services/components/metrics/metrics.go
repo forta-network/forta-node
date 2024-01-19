@@ -75,7 +75,6 @@ func CreateAgentMetricV2(agt config.AgentConfig, metric string, value float64, c
 	}
 }
 
-// Q: is it okay to not have chain id for the event metric?
 func CreateEventMetric(t time.Time, id string, metric string, details string) *protocol.AgentMetric {
 	return &protocol.AgentMetric{
 		AgentId:   id,

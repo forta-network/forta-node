@@ -73,7 +73,7 @@ func (bc *botClient) Health(ctx context.Context) ([]Metrics, error) {
 	limitedReader := io.LimitReader(resp.Body, responseSizeLimit)
 	if err := json.NewDecoder(limitedReader).Decode(&healthResp); err != nil {
 		if strings.Contains(err.Error(), "EOF") {
-			log.WithError(err).Error("response size limit for health check is reached")
+			log.WithError(err).Warn("response size limit for health check is reached")
 		}
 
 		return nil, nil // ignore decoding errors

@@ -767,7 +767,7 @@ func (bot *botClient) doHealthCheck(ctx context.Context, lg *log.Entry) bool {
 					}
 				}
 			}
-			// TODO: publish metrics from the health response of the bot v2
+
 			bot.msgClient.PublishProto(
 				messaging.SubjectMetricAgent,
 				&protocol.AgentMetricList{Metrics: agentMetrics},

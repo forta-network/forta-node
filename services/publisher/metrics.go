@@ -12,7 +12,7 @@ import (
 
 // AgentMetricsAggregator aggregates agents' metrics and produces a list of summary of them when flushed.
 type AgentMetricsAggregator struct {
-	// uint64 is a chain id
+	// int64 is a chain id
 	bucketsByChainID map[int64][]*metricsBucket
 	bucketInterval   time.Duration
 	lastFlush        time.Time
