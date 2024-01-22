@@ -545,7 +545,6 @@ func (bot *botClient) processTransaction(ctx context.Context, lg *log.Entry, req
 		// truncate findings
 		if len(resp.Findings) > MaxFindings {
 			dropped := len(resp.Findings) - MaxFindings
-			// TODO: for v1 bots include chain ID from the scanner config
 			droppedMetric := metrics.CreateAgentMetricV1(botConfig, metrics.MetricFindingsDropped, float64(dropped))
 			bot.msgClient.PublishProto(
 				messaging.SubjectMetricAgent,
