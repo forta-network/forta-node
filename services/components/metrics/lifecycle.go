@@ -211,6 +211,7 @@ func fromBotConfigs(metricName string, details string, botConfigs []config.Agent
 			Details:   details,
 			Value:     1,
 			ShardId:   botConfig.ShardID(),
+			ChainId:   int64(botConfig.ChainID),
 		}
 		metrics = append(metrics, metric)
 	}
