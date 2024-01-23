@@ -2,7 +2,6 @@ package lifecycle
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -86,14 +85,12 @@ func (bp *botPool) doLogBotStatuses() {
 
 // UpdateBotsWithLatestConfigs starts and adds new bots and updates the config of updated bots.
 func (bp *botPool) UpdateBotsWithLatestConfigs(latestConfigs messaging.AgentPayload) error {
-	fmt.Println("latestConfigs", latestConfigs)
 	bp.mu.Lock()
 	defer bp.mu.Unlock()
 
 	// add new bots
 	var latestBotClients []botio.BotClient
 	for _, botConfig := range latestConfigs {
-		fmt.Println("botConfig", botConfig)
 		logger := botLogger(botConfig)
 		botClient, ok := bp.getBotClient(botConfig.ContainerName())
 		if ok && !botClient.IsClosed() {

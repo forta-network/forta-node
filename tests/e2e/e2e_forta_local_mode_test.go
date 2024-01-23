@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/forta-network/forta-core-go/clients/webhook/client/models"
+	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-core-go/security"
+	"github.com/forta-network/forta-node/clients/messaging"
 	"github.com/forta-network/forta-node/services/components/metrics"
 	"github.com/forta-network/forta-node/tests/e2e"
 	"github.com/forta-network/forta-node/tests/e2e/agents/combinerbot/combinerbotalertid"
@@ -286,24 +288,46 @@ combiner:
 `
 
 func (s *Suite) TestBotV2Metrics() {
-	webhookURL := "" // should cause the logger to be used
+	configFilePath := path.Join(localModeDir, "config.yml")
+	_ = os.RemoveAll(configFilePath)
 	logFileName := logFileName()
-	logFilePath := path.Join(localModeDir, "logs", logFileName)
-	_ = os.RemoveAll(logFilePath)
-
-	s.runLocalModeAlertHandler(
-		webhookURL, logFileName, func() ([]byte, bool) {
-			b, err := os.ReadFile(logFilePath)
-			b = []byte(strings.TrimSpace(string(b)))
-			fmt.Println("LOG", string(b))
-			return b, err == nil && len(b) > 0
-		},
+	s.r.NoError(
+		ioutil.WriteFile(
+			configFilePath,
+			[]byte(fmt.Sprintf(
+				localModeBotV2Config, "", logFileName, e2e.DefaultMockGraphqlAPIPort,
+			)),
+			0777,
+		),
 	)
 
-	fmt.Println("Logs", s.alertServer.GetLogs())
-	time.Sleep(10 * time.Second)
-	fmt.Println("Logs 2", s.alertServer.GetLogs())
+	// make sure that non-registered local nodes also can start
+	s.forta(localModeDir, "run")
+	defer s.stopForta()
+	// the bot in local mode list should run
+	s.expectUpIn(smallTimeout, "forta-agent")
 
+	messageClient := messaging.NewClient("metrics", "localhost:4222")
+
+	var agentMetricList *protocol.AgentMetricList
+
+	messageClient.Subscribe(messaging.SubjectMetricAgent, func(metrics *protocol.AgentMetricList) error {
+		agentMetricList = metrics
+		return nil
+	})
+
+	for i := 0; i < 10; i++ {
+		time.Sleep(1 * time.Second)
+
+		if agentMetricList != nil {
+			break
+		}
+
+		fmt.Println("waiting for agent metrics")
+	}
+
+	s.r.NotNil(agentMetricList)
+	s.r.Len(agentMetricList.Metrics, 2)
 }
 
 func (s *Suite) runLocalModeAlertHandler(webhookURL, logFileName string, readAlertsFunc func() ([]byte, bool)) {
@@ -314,7 +338,7 @@ func (s *Suite) runLocalModeAlertHandler(webhookURL, logFileName string, readAle
 		ioutil.WriteFile(
 			configFilePath,
 			[]byte(fmt.Sprintf(
-				localModeBotV2Config, webhookURL, logFileName, e2e.DefaultMockGraphqlAPIPort,
+				localModeAlertConfig, webhookURL, logFileName, e2e.DefaultMockGraphqlAPIPort,
 			)),
 			0777,
 		),
@@ -371,7 +395,6 @@ func (s *Suite) runLocalModeAlertHandler(webhookURL, logFileName string, readAle
 
 	s.T().Log(string(b))
 }
-
 func (s *Suite) getTokenFromAlert(tokenAlert *models.Alert) string {
 	tokenAlertMeta, ok := tokenAlert.Metadata.(map[string]interface{})
 	s.r.True(ok)

@@ -2,15 +2,20 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"os"
 
 	"github.com/forta-network/forta-core-go/clients/graphql"
+	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol"
+	"github.com/forta-network/forta-node/clients/bothttp"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/tests/e2e/agents/combinerbot/combinerbotalertid"
+	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
@@ -25,6 +30,16 @@ func main() {
 	protocol.RegisterAgentServer(
 		server, &agentServer{},
 	)
+
+	go func() {
+		r := mux.NewRouter()
+		r.HandleFunc("/health", HandleHealthCheck)
+
+		err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%s", config.DefaultBotHealthCheckPort), r)
+		if err != nil {
+			panic(fmt.Errorf("error while listening health check %w", err))
+		}
+	}()
 
 	log.Println("Starting agent server...")
 	log.Println(server.Serve(lis))
@@ -115,4 +130,28 @@ func queryPublicAPI(ctx context.Context, bot string) ([]*protocol.AlertEvent, er
 	graphqlClient := graphql.NewClient(publicAPIAddr)
 
 	return graphqlClient.GetAlertsBatch(ctx, []*graphql.AlertsInput{{Bots: []string{bot}}}, nil)
+}
+
+func HandleHealthCheck(rw http.ResponseWriter, r *http.Request) {
+	healthResponse := bothttp.HealthResponse{
+		Metrics: []bothttp.Metrics{
+			{
+				ChainID: 1,
+				DataPoints: map[string][]float64{
+					domain.MetricBlockDrop: {1, 2, 3},
+				},
+			},
+			{
+				ChainID: 2,
+				DataPoints: map[string][]float64{
+					domain.MetricBlockDrop: {2},
+				},
+			},
+		},
+	}
+
+	err := json.NewEncoder(rw).Encode(healthResponse)
+	if err != nil {
+		logrus.WithError(err).Warn("can't encode health response")
+	}
 }
