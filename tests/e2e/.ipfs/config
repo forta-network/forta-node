@@ -1,12 +1,30 @@
 {
-  "Identity": {
-    "PeerID": "12D3KooWQnSGodX2FKUriXDoBMsnUPeT8VY4JKGcnBHoyZbFr2Et",
-    "PrivKey": "CAESQPMUlTm0g5Lr56yX8RkPTJFFSpMZxrCsN4jvju8FO2e13mDIgjdS+DpO6sWjMqqe3vhkmx/u8zXKF4DdvFn5KhE="
+  "API": {
+    "HTTPHeaders": {}
+  },
+  "Addresses": {
+    "API": "/ip4/0.0.0.0/tcp/5002",
+    "Announce": null,
+    "Gateway": "/ip4/0.0.0.0/tcp/8181",
+    "NoAnnounce": null,
+    "Swarm": [
+      "/ip4/0.0.0.0/tcp/4002",
+      "/ip6/::/tcp/4002",
+      "/ip4/0.0.0.0/udp/4002/quic-v1",
+      "/ip4/0.0.0.0/udp/4002/quic-v1/webtransport",
+      "/ip6/::/udp/4002/quic-v1",
+      "/ip6/::/udp/4002/quic-v1/webtransport"
+    ]
+  },
+  "AutoNAT": {},
+  "Bootstrap": [],
+  "DNS": {
+    "Resolvers": {}
   },
   "Datastore": {
-    "StorageMax": "10GB",
-    "StorageGCWatermark": 90,
+    "BloomFilterSize": 0,
     "GCPeriod": "1h",
+    "HashOnRead": false,
     "Spec": {
       "mounts": [
         {
@@ -33,25 +51,8 @@
       ],
       "type": "mount"
     },
-    "HashOnRead": false,
-    "BloomFilterSize": 0
-  },
-  "Addresses": {
-    "Swarm": [
-      "/ip4/0.0.0.0/tcp/4002",
-      "/ip6/::/tcp/4002",
-      "/ip4/0.0.0.0/udp/4002/quic",
-      "/ip6/::/udp/4002/quic"
-    ],
-    "Announce": [],
-    "NoAnnounce": [],
-    "API": "/ip4/0.0.0.0/tcp/5002",
-    "Gateway": "/ip4/0.0.0.0/tcp/8181"
-  },
-  "Mounts": {
-    "IPFS": "/ipfs",
-    "IPNS": "/ipns",
-    "FuseAllowOther": false
+    "StorageGCWatermark": 90,
+    "StorageMax": "10GB"
   },
   "Discovery": {
     "MDNS": {
@@ -59,95 +60,76 @@
       "Interval": 10
     }
   },
-  "Routing": {
-    "Type": "none"
+  "Experimental": {
+    "FilestoreEnabled": false,
+    "GraphsyncEnabled": false,
+    "Libp2pStreamMounting": false,
+    "P2pHttpProxy": false,
+    "ShardingEnabled": false,
+    "StrategicProviding": false,
+    "UrlstoreEnabled": false
   },
-  "Ipns": {
-    "RepublishPeriod": "",
-    "RecordLifetime": "",
-    "ResolveCacheSize": 128
-  },
-  "Bootstrap": [],
   "Gateway": {
-    "HTTPHeaders": {
-      "Access-Control-Allow-Headers": [
-        "X-Requested-With",
-        "Range",
-        "User-Agent"
-      ],
-      "Access-Control-Allow-Methods": [
-        "GET"
-      ],
-      "Access-Control-Allow-Origin": [
-        "*"
-      ]
-    },
-    "RootRedirect": "",
-    "Writable": false,
-    "PathPrefixes": [],
     "APICommands": [],
-    "NoFetch": true,
+    "HTTPHeaders": {},
     "NoDNSLink": true,
-    "PublicGateways": null
+    "NoFetch": true,
+    "PathPrefixes": [],
+    "PublicGateways": null,
+    "RootRedirect": "",
+    "Writable": false
   },
-  "API": {
-    "HTTPHeaders": {}
+  "Identity": {
+    "PeerID": "12D3KooWQnSGodX2FKUriXDoBMsnUPeT8VY4JKGcnBHoyZbFr2Et",
+    "PrivKey": "CAESQPMUlTm0g5Lr56yX8RkPTJFFSpMZxrCsN4jvju8FO2e13mDIgjdS+DpO6sWjMqqe3vhkmx/u8zXKF4DdvFn5KhE="
   },
-  "Swarm": {
-    "AddrFilters": null,
-    "DisableBandwidthMetrics": false,
-    "DisableNatPortMap": false,
-    "EnableRelayHop": false,
-    "EnableAutoRelay": false,
-    "Transports": {
-      "Network": {},
-      "Security": {},
-      "Multiplexers": {}
-    },
-    "ConnMgr": {
-      "Type": "basic",
-      "LowWater": 600,
-      "HighWater": 900,
-      "GracePeriod": "20s"
-    }
-  },
-  "AutoNAT": {},
-  "Pubsub": {
-    "Router": "",
-    "DisableSigning": false
-  },
-  "Peering": {
-    "Peers": null
-  },
-  "DNS": {
-    "Resolvers": {}
+  "Internal": {},
+  "Ipns": {
+    "RecordLifetime": "",
+    "RepublishPeriod": "",
+    "ResolveCacheSize": 128
   },
   "Migration": {
     "DownloadSources": [],
     "Keep": ""
   },
-  "Provider": {
-    "Strategy": ""
+  "Mounts": {
+    "FuseAllowOther": false,
+    "IPFS": "/ipfs",
+    "IPNS": "/ipns"
   },
-  "Reprovider": {
-    "Interval": "12h",
-    "Strategy": "all"
-  },
-  "Experimental": {
-    "FilestoreEnabled": false,
-    "UrlstoreEnabled": false,
-    "ShardingEnabled": false,
-    "GraphsyncEnabled": false,
-    "Libp2pStreamMounting": false,
-    "P2pHttpProxy": false,
-    "StrategicProviding": false,
-    "AcceleratedDHTClient": false
-  },
-  "Plugins": {
-    "Plugins": null
+  "Peering": {
+    "Peers": null
   },
   "Pinning": {
     "RemoteServices": {}
   },
-  "Internal": {}
+  "Plugins": {
+    "Plugins": null
+  },
+  "Provider": {
+    "Strategy": ""
+  },
+  "Pubsub": {
+    "DisableSigning": false,
+    "Router": ""
+  },
+  "Reprovider": {},
+  "Routing": {
+    "AcceleratedDHTClient": false,
+    "Type": "none"
+  },
+  "Swarm": {
+    "AddrFilters": null,
+    "ConnMgr": {},
+    "DisableBandwidthMetrics": false,
+    "DisableNatPortMap": false,
+    "EnableAutoRelay": false,
+    "EnableRelayHop": false,
+    "Transports": {
+      "Multiplexers": {},
+      "Network": {},
+      "Security": {}
+    }
+  }
 }

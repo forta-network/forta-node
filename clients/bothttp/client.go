@@ -56,7 +56,6 @@ func (bc *botClient) Health(ctx context.Context) ([]Metrics, error) {
 		return nil, err
 	}
 
-	// TODO: circuit breaker for the response size
 	resp, err := bc.httpClient.Do(req)
 	if err != nil {
 		return nil, err
