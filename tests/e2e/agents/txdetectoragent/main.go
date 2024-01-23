@@ -14,11 +14,14 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol"
+	"github.com/forta-network/forta-node/clients/bothttp"
 	"github.com/forta-network/forta-node/config"
 	jwt_provider "github.com/forta-network/forta-node/services/jwt-provider"
 	"github.com/forta-network/forta-node/tests/e2e/agents/txdetectoragent/testbotalertid"
 	"github.com/forta-network/forta-node/tests/e2e/ethaccounts"
+	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
@@ -43,6 +46,15 @@ func main() {
 		ticker := time.NewTicker(time.Second * 10)
 		for range ticker.C {
 			log.Println("new log", time.Now().UnixNano())
+		}
+	}()
+
+	go func() {
+		r := mux.NewRouter().HandleFunc("/health", HandleHealthCheck)
+
+		err := http.ListenAndServe(fmt.Sprintf(":%s", config.DefaultBotHealthCheckPort), r.GetHandler())
+		if err != nil {
+			panic(fmt.Errorf("error while listening health check %w", err))
 		}
 	}()
 
@@ -116,6 +128,31 @@ func (as *agentServer) EvaluateBlock(context.Context, *protocol.EvaluateBlockReq
 	return &protocol.EvaluateBlockResponse{
 		Status: protocol.ResponseStatus_SUCCESS,
 	}, nil
+}
+
+func HandleHealthCheck(rw http.ResponseWriter, r *http.Request) {
+	fmt.Println("health check triggered")
+	healthResponse := bothttp.HealthResponse{
+		Metrics: []bothttp.Metrics{
+			{
+				ChainID: 1,
+				DataPoints: map[string][]float64{
+					domain.MetricBlockDrop: {1, 2, 3},
+				},
+			},
+			{
+				ChainID: 2,
+				DataPoints: map[string][]float64{
+					domain.MetricBlockDrop: {2},
+				},
+			},
+		},
+	}
+
+	err := json.NewEncoder(rw).Encode(healthResponse)
+	if err != nil {
+		logrus.WithError(err).Warn("can't encode health response")
+	}
 }
 
 func fetchJWTToken() (string, error) {

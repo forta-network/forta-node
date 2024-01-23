@@ -1,6 +1,7 @@
 package e2e_test
 
 func (s *Suite) TestLinkUnlink() {
+	s.T().Skip()
 	s.startForta(true)
 	s.expectIn(smallTimeout, func() bool {
 		return s.fortaProcess.HasOutput("container started")

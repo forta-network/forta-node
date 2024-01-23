@@ -85,11 +85,13 @@ func (blm *botLifecycleManager) addHeartbeatBotIfDue(cfgs []config.AgentConfig) 
 // ManageBots starts containers for assigned bots and stops the containers for unassigned
 // bots and lets other services know.
 func (blm *botLifecycleManager) ManageBots(ctx context.Context) error {
+	fmt.Println("ManageBots")
 	botsToRun, err := blm.botRegistry.LoadAssignedBots()
 	if err != nil {
 		blm.lifecycleMetrics.SystemError("load.assigned.bots", err)
 		return fmt.Errorf("failed to load assigned bots: %v", err)
 	}
+	fmt.Println("ManageBots", botsToRun)
 	blm.lifecycleMetrics.SystemStatus("load.assigned.bots", strconv.Itoa(len(botsToRun)))
 
 	// append the heartbeat bot if due to execute
@@ -156,6 +158,7 @@ func (blm *botLifecycleManager) ManageBots(ctx context.Context) error {
 	}
 
 	// then update the pool with latest bots
+	fmt.Println("updateBotsWithLatestConfigs", botsToRun, blm.botPool)
 	if err := blm.botPool.UpdateBotsWithLatestConfigs(botsToRun); err != nil {
 		blm.lifecycleMetrics.SystemError("update.bots.with.latest.configs", err)
 	}

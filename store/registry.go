@@ -276,14 +276,30 @@ func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]config.Age
 
 	var agentConfigs []config.AgentConfig
 
+	var agentID int
+
+	for _, bot := range rs.cfg.LocalModeConfig.Bots {
+		if bot.BotImage == nil {
+			continue
+		}
+
+		agentID++
+		agentConfig := rs.makePrivateModeAgentConfig(strconv.Itoa(agentID), *bot.BotImage, nil)
+		if bot.ProtocolVersion != nil {
+			agentConfig.ProtocolVersion = *bot.ProtocolVersion
+		}
+
+		agentConfigs = append(agentConfigs, *agentConfig)
+	}
+
 	// load by image references
-	for i, agentImage := range rs.cfg.LocalModeConfig.BotImages {
+	for _, agentImage := range rs.cfg.LocalModeConfig.BotImages {
 		if len(agentImage) == 0 {
 			continue
 		}
 		// forta-agent-1, forta-agent-2, forta-agent-3, ...
-		agentID := strconv.Itoa(i + 1)
-		agentConfigs = append(agentConfigs, *rs.makePrivateModeAgentConfig(agentID, agentImage, nil))
+		agentID++
+		agentConfigs = append(agentConfigs, *rs.makePrivateModeAgentConfig(strconv.Itoa(agentID), agentImage, nil))
 	}
 
 	// load by bot IDs
@@ -307,7 +323,7 @@ func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]config.Age
 	}
 
 	// load sharded bots by image
-	for i, shardedBot := range rs.cfg.LocalModeConfig.ShardedBots {
+	for _, shardedBot := range rs.cfg.LocalModeConfig.ShardedBots {
 		// load bot by image
 		if shardedBot.BotImage != nil {
 			instances := shardedBot.Shards * shardedBot.Target
@@ -318,9 +334,9 @@ func (rs *privateRegistryStore) GetAgentsIfChanged(scanner string) ([]config.Age
 					ShardID: sharding.CalculateShardID(shardedBot.Target, botIdx),
 				}
 
-				agentID := strconv.Itoa(len(agentConfigs) + i + 1)
+				agentID++
 				agentConfigs = append(
-					agentConfigs, *rs.makePrivateModeAgentConfig(agentID, *shardedBot.BotImage, shardConfig),
+					agentConfigs, *rs.makePrivateModeAgentConfig(strconv.Itoa(agentID), *shardedBot.BotImage, shardConfig),
 				)
 			}
 		}

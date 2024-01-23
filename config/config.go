@@ -156,6 +156,7 @@ type LocalModeConfig struct {
 	IncludeMetrics        bool                     `yaml:"includeMetrics" json:"includeMetrics"`
 	BotIDs                []string                 `yaml:"botIds" json:"botIds"`
 	BotImages             []string                 `yaml:"botImages" json:"botImages"`
+	Bots                  []LocalBot               `yaml:"bots" json:"bots"`
 	WebhookURL            string                   `yaml:"webhookUrl" json:"webhookUrl"`
 	LogFileName           string                   `yaml:"logFileName" json:"logFileName"`
 	LogToStdout           bool                     `yaml:"logToStdout" json:"logToStdout"`
@@ -166,6 +167,11 @@ type LocalModeConfig struct {
 	ShardedBots           []*LocalShardedBot       `yaml:"shardedBots" json:"shardedBots"`
 	PrivateKeyHex         string                   `yaml:"privateKeyHex" json:"privateKeyHex"`
 	Standalone            StandaloneModeConfig     `yaml:"standalone" json:"standalone"`
+}
+
+type LocalBot struct {
+	BotImage        *string `yaml:"botImage" json:"botImage"`
+	ProtocolVersion *int    `yaml:"protocolVersion" json:"protocolVersion"`
 }
 
 // IsStandalone checks if the node is in standalone mode. It should only be available

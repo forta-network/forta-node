@@ -753,6 +753,7 @@ func (bot *botClient) doHealthCheck(ctx context.Context, lg *log.Entry) bool {
 	bot.lifecycleMetrics.HealthCheckAttempt(botConfig)
 
 	var err error
+	fmt.Println("BOT VERSION:", botConfig.ProtocolVersion)
 	if botConfig.ProtocolVersion >= 2 {
 		var botMetrics []bothttp.Metrics
 		botMetrics, err = bot.clientV2.Health(ctx)
@@ -766,6 +767,8 @@ func (bot *botClient) doHealthCheck(ctx context.Context, lg *log.Entry) bool {
 					}
 				}
 			}
+
+			fmt.Println("BOT METRICS:", agentMetrics)
 
 			bot.msgClient.PublishProto(
 				messaging.SubjectMetricAgent,
