@@ -55,6 +55,21 @@ func (mr *MockDockerClientMockRecorder) AttachNetwork(ctx, containerID, networkI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttachNetwork", reflect.TypeOf((*MockDockerClient)(nil).AttachNetwork), ctx, containerID, networkID)
 }
 
+// ContainerStats mocks base method.
+func (m *MockDockerClient) ContainerStats(ctx context.Context, containerID string) (*docker.ContainerResources, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ContainerStats", ctx, containerID)
+	ret0, _ := ret[0].(*docker.ContainerResources)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ContainerStats indicates an expected call of ContainerStats.
+func (mr *MockDockerClientMockRecorder) ContainerStats(ctx, containerID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerStats", reflect.TypeOf((*MockDockerClient)(nil).ContainerStats), ctx, containerID)
+}
+
 // DetachNetwork mocks base method.
 func (m *MockDockerClient) DetachNetwork(ctx context.Context, containerID, networkID string) error {
 	m.ctrl.T.Helper()

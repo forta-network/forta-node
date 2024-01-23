@@ -88,7 +88,6 @@ func (es *eventHandler) HandleEvent(ctx context.Context, event *events.Message) 
 	}
 
 	metrics.SendAgentMetrics(es.msgClient, []*protocol.AgentMetric{metric})
-	return
 }
 
 func isOneOf(input string, values ...string) bool {
@@ -101,6 +100,7 @@ func isOneOf(input string, values ...string) bool {
 }
 
 func metricNameFrom(event *events.Message) string {
+	// metric name should be alligned with forta-core-go/domain/metrics.go
 	return strings.Join([]string{"docker", event.Type, event.Action}, ".")
 }
 

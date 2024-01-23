@@ -878,6 +878,22 @@ func (d *dockerClient) GetContainerFromRemoteAddr(ctx context.Context, hostPort 
 	return agentContainer, nil
 }
 
+func (d *dockerClient) ContainerStats(ctx context.Context, id string) (*ContainerResources, error) {
+	stats, err := d.cli.ContainerStatsOneShot(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	var containerResources ContainerResources
+
+	err = json.NewDecoder(stats.Body).Decode(&containerResources)
+	if err != nil {
+		return nil, err
+	}
+
+	return &containerResources, nil
+}
+
 func initLabels(name string) []dockerLabel {
 	if len(name) == 0 {
 		return defaultLabels
