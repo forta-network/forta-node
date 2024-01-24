@@ -1,18 +1,26 @@
 package docker
 
 type ContainerResources struct {
-	CPUStats struct {
-		CPUUsage struct {
-			TotalUsage int64 `json:"total_usage"`
-		} `json:"cpu_usage"`
-	} `json:"cpu_stats"`
-	MemoryStats struct {
-		Usage int `json:"usage"`
-	} `json:"memory_stats"`
-	NetworkStats map[string]struct {
-		// Bytes received
-		RxBytes uint64 `json:"rx_bytes"`
-		// Bytes sent
-		TxBytes uint64 `json:"tx_bytes"`
-	} `json:"networks"`
+	CPUStats     CPUStats                `json:"cpu_stats"`
+	MemoryStats  MemoryStats             `json:"memory_stats"`
+	NetworkStats map[string]NetworkStats `json:"networks"`
+}
+
+type CPUStats struct {
+	CPUUsage CPUUsage `json:"cpu_usage"`
+}
+
+type CPUUsage struct {
+	TotalUsage int64 `json:"total_usage"`
+}
+
+type MemoryStats struct {
+	Usage int `json:"usage"`
+}
+
+type NetworkStats struct {
+	// Bytes received
+	RxBytes uint64 `json:"rx_bytes"`
+	// Bytes sent
+	TxBytes uint64 `json:"tx_bytes"`
 }

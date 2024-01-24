@@ -12,7 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const (
+var (
 	defaultPollingInterval = time.Second * 10
 )
 
