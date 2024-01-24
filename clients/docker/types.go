@@ -9,4 +9,10 @@ type ContainerResources struct {
 	MemoryStats struct {
 		Usage int `json:"usage"`
 	} `json:"memory_stats"`
+	NetworkStats map[string]struct {
+		// Bytes received
+		RxBytes uint64 `json:"rx_bytes"`
+		// Bytes sent
+		TxBytes uint64 `json:"tx_bytes"`
+	} `json:"networks"`
 }

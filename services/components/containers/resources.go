@@ -45,11 +45,25 @@ func PollDockerResources(
 					continue
 				}
 
+				var (
+					bytesSent uint64
+					bytesRecv uint64
+				)
+
+				for _, network := range resources.NetworkStats {
+					bytesSent += network.TxBytes
+					bytesRecv += network.RxBytes
+				}
+
 				metrics.SendAgentMetrics(msgClient, []*protocol.AgentMetric{
 					metrics.CreateResourcesMetric(
 						botID, domain.MetricDockerResourcesCPU, float64(resources.CPUStats.CPUUsage.TotalUsage)),
 					metrics.CreateResourcesMetric(
 						botID, domain.MetricDockerResourcesMemory, float64(resources.MemoryStats.Usage)),
+					metrics.CreateResourcesMetric(
+						botID, domain.MetricDockerResourcesNetworkSent, float64(bytesSent)),
+					metrics.CreateResourcesMetric(
+						botID, domain.MetricDockerResourcesNetworkReceive, float64(bytesRecv)),
 				})
 			}
 		}
