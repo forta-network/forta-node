@@ -21,12 +21,15 @@ func PollDockerResources(
 	ctx context.Context, dockerClient clients.DockerClient,
 	msgClient clients.MessageClient,
 ) {
+	pollingTicker := time.NewTicker(defaultPollingInterval)
+
 	for {
 		select {
 		case <-ctx.Done():
 			logrus.Info("stopping docker resources poller")
 			return
-		case <-time.After(defaultPollingInterval):
+		case <-pollingTicker.C:
+			logrus.Info("polling docker resources")
 			containers, err := dockerClient.GetContainers(ctx)
 			if err != nil {
 				logrus.WithError(err).Error("error while getting docker containers")

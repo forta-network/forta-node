@@ -394,8 +394,8 @@ func (sup *SupervisorService) start() error {
 	go func() {
 		// wait for the publisher so it can catch the metrics
 		time.Sleep(time.Minute)
-		containers.ListenToDockerEvents(sup.ctx, sup.globalClient, sup.msgClient, startTime)
-		containers.PollDockerResources(sup.ctx, sup.globalClient, sup.msgClient)
+		go containers.ListenToDockerEvents(sup.ctx, sup.globalClient, sup.msgClient, startTime)
+		go containers.PollDockerResources(sup.ctx, sup.globalClient, sup.msgClient)
 	}()
 
 	sup.scannerContainer, err = sup.client.StartContainer(
