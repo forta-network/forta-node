@@ -73,10 +73,11 @@ func CreateEventMetric(t time.Time, id string, metric string, details string) *p
 	}
 }
 
-func CreateResourcesMetric(id, metric string, value float64) *protocol.AgentMetric {
+func CreateAgentResourcesMetric(agt config.AgentConfig, t time.Time, metric string, value float64) *protocol.AgentMetric {
 	return &protocol.AgentMetric{
-		AgentId:   id,
-		Timestamp: time.Now().Format(time.RFC3339),
+		AgentId:   agt.ID,
+		ShardId:   agt.ShardID(),
+		Timestamp: t.Format(time.RFC3339),
 		Name:      metric,
 		Value:     value,
 	}
