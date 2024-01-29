@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/errdefs"
@@ -121,6 +120,7 @@ func (s *BotClientTestSuite) TestLaunchBot_Exists() {
 			},
 		},
 	}
+	executed := make(chan bool)
 	s.client.EXPECT().ContainerStats(gomock.Any(), botConfig.ContainerName()).Return(resources, nil).Times(1)
 	s.msgClient.EXPECT().PublishProto(messaging.SubjectMetricAgent, gomock.Any()).Do(func(v1, v2 interface{}) {
 		metrics := v2.(*protocol.AgentMetricList)
@@ -145,15 +145,12 @@ func (s *BotClientTestSuite) TestLaunchBot_Exists() {
 		assert.Equal(s.T(), botConfig.ID, metrics.Metrics[2].AgentId)
 		assert.Equal(s.T(), domain.MetricDockerResourcesNetworkSent, metrics.Metrics[2].Name)
 		assert.Equal(s.T(), float64(456), metrics.Metrics[2].Value)
+
+		close(executed)
 	})
 
 	s.r.NoError(s.botClient.LaunchBot(context.Background(), botConfig))
-
-	ticker := initTicker(DockerResourcesPollingInterval)
-	defer ticker.Stop()
-
-	<-ticker.C
-	time.Sleep(100 * time.Millisecond)
+	<-executed
 }
 
 func (s *BotClientTestSuite) TestLaunchBot_GetContainerError() {
