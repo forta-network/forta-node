@@ -5,19 +5,34 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 
 	"github.com/forta-network/forta-core-go/utils/httpclient"
 	"github.com/hashicorp/go-multierror"
+	log "github.com/sirupsen/logrus"
+)
+
+var (
+	// responseSizeLimit is the maximum number of bytes to read from the response body.
+	responseSizeLimit = int64(2 << 20) // 2MB
 )
 
 type HealthResponse struct {
-	Errors []string `json:"errors"`
+	Errors  []string  `json:"errors"`
+	Metrics []Metrics `json:"metrics"`
+}
+
+type Metrics struct {
+	// ChainID is the id of the chain the metrics are for
+	ChainID    int64                `json:"chainId"`
+	DataPoints map[string][]float64 `json:"dataPoints"`
 }
 
 // Client is the bot HTTP client interface.
 type Client interface {
-	Health(ctx context.Context) error
+	Health(ctx context.Context) ([]Metrics, error)
 }
 
 type botClient struct {
@@ -25,7 +40,7 @@ type botClient struct {
 	httpClient *http.Client
 }
 
-// NewClient creates anew client.
+// NewClient creates a new client.
 func NewClient(host string, port int) Client {
 	return &botClient{
 		baseUrl:    fmt.Sprintf("http://%s:%d", host, port),
@@ -34,31 +49,42 @@ func NewClient(host string, port int) Client {
 }
 
 // Health does a health check on the bot.
-func (bc *botClient) Health(ctx context.Context) error {
+func (bc *botClient) Health(ctx context.Context) ([]Metrics, error) {
 	healthUrl := fmt.Sprintf("%s/health", bc.baseUrl)
 	req, err := http.NewRequestWithContext(ctx, "GET", healthUrl, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
 	resp, err := bc.httpClient.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode > 200 {
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
 	var healthResp HealthResponse
-	if err := json.NewDecoder(resp.Body).Decode(&healthResp); err != nil {
-		return nil // ignore decoding errors
+
+	// Limit the response size to a certain number of bytes
+	limitedReader := io.LimitReader(resp.Body, responseSizeLimit)
+	if err := json.NewDecoder(limitedReader).Decode(&healthResp); err != nil {
+		if strings.Contains(err.Error(), "EOF") {
+			log.WithError(err).Warn("response size limit for health check is reached")
+		}
+
+		return nil, nil // ignore decoding errors
 	}
+
 	if len(healthResp.Errors) == 0 {
-		return nil
+		return healthResp.Metrics, nil
 	}
+
 	for _, errMsg := range healthResp.Errors {
 		err = multierror.Append(err, errors.New(errMsg))
 	}
-	return err
+
+	return healthResp.Metrics, err
 }

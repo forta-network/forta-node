@@ -930,7 +930,7 @@ func initPublisher(
 		cfg:               cfg,
 		ipfs:              ipfsClient,
 		storage:           storageClient,
-		metricsAggregator: NewMetricsAggregator(time.Duration(*cfg.PublisherConfig.Batch.MetricsBucketIntervalSeconds) * time.Second),
+		metricsAggregator: NewMetricsAggregator(time.Duration(*cfg.PublisherConfig.Batch.MetricsBucketIntervalSeconds)*time.Second, int64(cfg.ChainID)),
 		messageClient:     mc,
 		alertClient:       alertClient,
 		localAlertClient:  localAlertClient,

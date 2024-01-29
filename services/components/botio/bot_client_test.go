@@ -96,14 +96,19 @@ func (s *BotClientSuite) TestStartProcessStop() {
 	s.lifecycleMetrics.EXPECT().ActionSubscribe(combinerSubscriptions)
 
 	// test health checks
+	healthCheckChan := make(chan interface{})
 	HealthCheckInterval = time.Second
-	s.botGrpc.EXPECT().DoHealthCheck(gomock.Any()).MinTimes(1)
+	s.botGrpc.EXPECT().DoHealthCheck(gomock.Any()).Return(nil).MinTimes(1)
 	s.lifecycleMetrics.EXPECT().HealthCheckAttempt(s.botClient.configUnsafe).MinTimes(1)
-	s.lifecycleMetrics.EXPECT().HealthCheckSuccess(s.botClient.configUnsafe).MinTimes(1)
+	s.lifecycleMetrics.EXPECT().HealthCheckSuccess(s.botClient.configUnsafe).Do(func(_ interface{}) {
+		close(healthCheckChan)
+	}).MinTimes(1)
 
 	s.msgClient.EXPECT().Publish(messaging.SubjectAgentsAlertSubscribe, combinerSubscriptions)
 	s.botClient.StartProcessing()
 	s.botClient.Initialize()
+
+	<-healthCheckChan
 
 	<-s.botClient.Initialized()
 
@@ -193,8 +198,6 @@ func (s *BotClientSuite) TestStartProcessStop() {
 	s.lifecycleMetrics.EXPECT().ActionUnsubscribe(combinerSubscriptions)
 
 	s.r.NoError(s.botClient.Close())
-	// Using small sleep to allow goroutines to be executed (e.g. health check)
-	time.Sleep(30 * time.Millisecond)
 }
 
 func (s *BotClientSuite) TestCombinerBotSubscriptions() {

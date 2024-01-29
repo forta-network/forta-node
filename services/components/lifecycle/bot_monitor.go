@@ -3,6 +3,7 @@ package lifecycle
 import (
 	"sync"
 
+	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-node/services/components/metrics"
 )
@@ -49,7 +50,7 @@ func (bm *botMonitor) UpdateWithMetrics(botMetrics *protocol.AgentMetricList) er
 	}
 
 	for _, botMetric := range botMetrics.Metrics {
-		if botMetric.Name == metrics.MetricStatusActive {
+		if botMetric.Name == domain.MetricStatusActive {
 			bm.saveBotActivity(botMetric.AgentId)
 		}
 	}

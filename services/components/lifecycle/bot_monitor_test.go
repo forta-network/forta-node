@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol"
-	"github.com/forta-network/forta-node/services/components/metrics"
 	mock_metrics "github.com/forta-network/forta-node/services/components/metrics/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -51,7 +51,7 @@ func TestBotMonitor(t *testing.T) {
 	r.NoError(botMonitor.UpdateWithMetrics(&protocol.AgentMetricList{
 		Metrics: []*protocol.AgentMetric{
 			{
-				Name:    metrics.MetricStatusActive,
+				Name:    domain.MetricStatusActive,
 				AgentId: testTrackerBotID2,
 			},
 		},
