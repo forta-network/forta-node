@@ -11,11 +11,11 @@ type CPUStats struct {
 }
 
 type CPUUsage struct {
-	TotalUsage int64 `json:"total_usage"`
+	TotalUsage uint64 `json:"total_usage"`
 }
 
 type MemoryStats struct {
-	Usage int `json:"usage"`
+	Usage uint64 `json:"usage"`
 }
 
 type NetworkStats struct {

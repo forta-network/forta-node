@@ -884,14 +884,33 @@ func (d *dockerClient) ContainerStats(ctx context.Context, id string) (*Containe
 		return nil, err
 	}
 
-	var containerResources ContainerResources
+	var containerResources types.StatsJSON
 
 	err = json.NewDecoder(stats.Body).Decode(&containerResources)
 	if err != nil {
 		return nil, err
 	}
 
-	return &containerResources, nil
+	resources := ContainerResources{
+		CPUStats: CPUStats{
+			CPUUsage: CPUUsage{
+				TotalUsage: containerResources.CPUStats.CPUUsage.TotalUsage,
+			},
+		},
+		MemoryStats: MemoryStats{
+			Usage: containerResources.MemoryStats.Usage,
+		},
+		NetworkStats: make(map[string]NetworkStats),
+	}
+
+	for name, network := range containerResources.Networks {
+		resources.NetworkStats[name] = NetworkStats{
+			RxBytes: network.RxBytes,
+			TxBytes: network.TxBytes,
+		}
+	}
+
+	return &resources, nil
 }
 
 func initLabels(name string) []dockerLabel {
