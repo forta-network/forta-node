@@ -47,6 +47,7 @@ type DockerClient interface {
 	GetContainerFromRemoteAddr(ctx context.Context, hostPort string) (*types.Container, error)
 	SetImagePullCooldown(threshold int, cooldownDuration time.Duration)
 	Events(ctx context.Context, since time.Time) (<-chan events.Message, <-chan error)
+	ContainerStats(ctx context.Context, containerID string) (*docker.ContainerResources, error)
 }
 
 // MessageClient receives and publishes messages.
