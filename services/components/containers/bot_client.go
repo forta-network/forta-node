@@ -7,9 +7,14 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/errdefs"
+	"github.com/forta-network/forta-core-go/domain"
+	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/docker"
 	"github.com/forta-network/forta-node/config"
+	"github.com/forta-network/forta-node/services/components/metrics"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -21,6 +26,8 @@ const (
 
 	ImagePullCooldownThreshold = 5
 	ImagePullCooldownDuration  = time.Hour * 4
+
+	DockerResourcesPollingInterval = time.Second * 10
 )
 
 // BotClient launches a bot.
@@ -39,6 +46,7 @@ type botClient struct {
 	tokenExchangeURL string
 	client           clients.DockerClient
 	botImageClient   clients.DockerClient
+	msgClient        clients.MessageClient
 }
 
 // NewBotClient creates a new bot client to manage bot containers.
@@ -46,6 +54,7 @@ func NewBotClient(
 	logConfig config.LogConfig, resourcesConfig config.ResourcesConfig,
 	tokenExchangeURL string,
 	client clients.DockerClient, botImageClient clients.DockerClient,
+	msgClient clients.MessageClient,
 ) *botClient {
 	botImageClient.SetImagePullCooldown(ImagePullCooldownThreshold, ImagePullCooldownDuration)
 	return &botClient{
@@ -54,6 +63,7 @@ func NewBotClient(
 		tokenExchangeURL: tokenExchangeURL,
 		client:           client,
 		botImageClient:   botImageClient,
+		msgClient:        msgClient,
 	}
 }
 
@@ -88,7 +98,6 @@ func (bc *botClient) LaunchBot(ctx context.Context, botConfig config.AgentConfig
 	switch {
 	case err == nil:
 		// do not create a new container - we already have it
-
 	case errors.Is(err, docker.ErrContainerNotFound):
 		// if the bot container doesn't exist, create and start the container
 		botContainerCfg := NewBotContainerConfig(
@@ -98,7 +107,6 @@ func (bc *botClient) LaunchBot(ctx context.Context, botConfig config.AgentConfig
 		if err != nil {
 			return fmt.Errorf("failed to start bot container: %v", err)
 		}
-
 	default:
 		return fmt.Errorf("unexpected error while getting the bot container '%s': %v", botConfig.ContainerName(), err)
 	}
@@ -106,7 +114,62 @@ func (bc *botClient) LaunchBot(ctx context.Context, botConfig config.AgentConfig
 	// at this point we have created a new bot container and a new bridge network for the bot
 	// or found the existing container and the network: it's time to ensure that all service containers
 	// are reattached to the bot's network
-	return bc.attachServiceContainers(ctx, botNetworkID)
+	err = bc.attachServiceContainers(ctx, botNetworkID)
+	if err != nil {
+		return fmt.Errorf("failed to attach service containers to the bot network: %v", err)
+	}
+
+	go bc.pollDockerResources(botConfig.ContainerName(), botConfig)
+
+	return nil
+}
+
+// pollDockerResources polls docker resources for bot container and sends them to the publisher.
+func (bc *botClient) pollDockerResources(containerID string, agentConfig config.AgentConfig) {
+	ctx := context.Background()
+	ticker := initTicker(DockerResourcesPollingInterval)
+	defer ticker.Stop()
+
+	for t := range ticker.C {
+		logrus.WithField("containerID", containerID).Debug("polling docker resources")
+		// request docker stats
+		resources, err := bc.client.ContainerStats(ctx, containerID)
+		if errdefs.IsNotFound(err) {
+			logrus.WithError(err).
+				WithField("containerID", containerID).
+				WithField("agentID", agentConfig.ID).
+				Warn("bot container can't be found, stopping docker resources poller")
+			return
+		} else if err != nil {
+			logrus.WithError(err).Error("error while getting container stats", containerID)
+			continue
+		}
+
+		var (
+			bytesSent uint64
+			bytesRecv uint64
+		)
+
+		for _, network := range resources.NetworkStats {
+			bytesSent += network.TxBytes
+			bytesRecv += network.RxBytes
+		}
+
+		logrus.WithField("containerID", containerID).
+			WithField("resources", resources).
+			Debug("sending docker resources metrics")
+
+		metrics.SendAgentMetrics(bc.msgClient, []*protocol.AgentMetric{
+			metrics.CreateAgentResourcesMetric(
+				agentConfig, t, domain.MetricDockerResourcesCPU, float64(resources.CPUStats.CPUUsage.TotalUsage)),
+			metrics.CreateAgentResourcesMetric(
+				agentConfig, t, domain.MetricDockerResourcesMemory, float64(resources.MemoryStats.Usage)),
+			metrics.CreateAgentResourcesMetric(
+				agentConfig, t, domain.MetricDockerResourcesNetworkSent, float64(bytesSent)),
+			metrics.CreateAgentResourcesMetric(
+				agentConfig, t, domain.MetricDockerResourcesNetworkReceive, float64(bytesRecv)),
+		})
+	}
 }
 
 func (bc *botClient) attachServiceContainers(ctx context.Context, botNetworkID string) error {
@@ -222,4 +285,17 @@ func (bc *botClient) StartWaitBotContainer(ctx context.Context, containerID stri
 		return fmt.Errorf("failed to start container with id: %v", err)
 	}
 	return bc.client.WaitContainerStart(ctx, containerID)
+}
+
+func initTicker(interval time.Duration) *time.Ticker {
+	nextTick := time.Now().Truncate(interval).Add(interval)
+	initialSleepDuration := time.Until(nextTick)
+
+	// Sleep until the next interval
+	time.Sleep(initialSleepDuration)
+
+	// Start a ticker that ticks every interval
+	ticker := time.NewTicker(interval)
+
+	return ticker
 }
