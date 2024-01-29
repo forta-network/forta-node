@@ -29,7 +29,7 @@ func PollDockerResources(
 			logrus.Info("stopping docker resources poller")
 			return
 		case <-pollingTicker.C:
-			logrus.Info("polling docker resources")
+			logrus.WithField("interval", defaultPollingInterval).Info("polling docker resources")
 			containers, err := dockerClient.GetContainers(ctx)
 			if err != nil {
 				logrus.WithError(err).Error("error while getting docker containers")
@@ -37,11 +37,13 @@ func PollDockerResources(
 			}
 
 			for _, container := range containers {
+				logrus.WithField("container", container.ID).Debug("getting docker stats")
 				resources, err := dockerClient.ContainerStats(ctx, container.ID)
 				if err != nil {
 					logrus.WithError(err).Error("error while getting container stats", container.ID)
 					continue
 				}
+				logrus.WithField("container", container.ID).Debug("got docker stats")
 
 				botID, ok := container.Labels[docker.LabelFortaBotID]
 				if !ok {
@@ -58,6 +60,7 @@ func PollDockerResources(
 					bytesRecv += network.RxBytes
 				}
 
+				logrus.WithField("container", container.ID).WithField("resources", resources).Debug("sending docker metrics")
 				metrics.SendAgentMetrics(msgClient, []*protocol.AgentMetric{
 					metrics.CreateResourcesMetric(
 						botID, domain.MetricDockerResourcesCPU, float64(resources.CPUStats.CPUUsage.TotalUsage)),
@@ -69,6 +72,8 @@ func PollDockerResources(
 						botID, domain.MetricDockerResourcesNetworkReceive, float64(bytesRecv)),
 				})
 			}
+
+			logrus.WithField("interval", defaultPollingInterval).Info("finished polling docker resources")
 		}
 	}
 }
