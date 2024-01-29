@@ -6,9 +6,7 @@ log:
     environment: development
 storage:
   ipfs:
-    router:
-      nodes:
-        - url: http://localhost:5002
+    url: http://localhost:5002
   delete:
     enabled: true
   maintenance:

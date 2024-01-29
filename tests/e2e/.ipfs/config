@@ -103,33 +103,5 @@
   },
   "Pinning": {
     "RemoteServices": {}
-  },
-  "Plugins": {
-    "Plugins": null
-  },
-  "Provider": {
-    "Strategy": ""
-  },
-  "Pubsub": {
-    "DisableSigning": false,
-    "Router": ""
-  },
-  "Reprovider": {},
-  "Routing": {
-    "AcceleratedDHTClient": false,
-    "Type": "none"
-  },
-  "Swarm": {
-    "AddrFilters": null,
-    "ConnMgr": {},
-    "DisableBandwidthMetrics": false,
-    "DisableNatPortMap": false,
-    "EnableAutoRelay": false,
-    "EnableRelayHop": false,
-    "Transports": {
-      "Multiplexers": {},
-      "Network": {},
-      "Security": {}
-    }
   }
 }

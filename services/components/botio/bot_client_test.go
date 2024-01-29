@@ -193,6 +193,8 @@ func (s *BotClientSuite) TestStartProcessStop() {
 	s.lifecycleMetrics.EXPECT().ActionUnsubscribe(combinerSubscriptions)
 
 	s.r.NoError(s.botClient.Close())
+	// Using small sleep to allow goroutines to be executed (e.g. health check)
+	time.Sleep(30 * time.Millisecond)
 }
 
 func (s *BotClientSuite) TestCombinerBotSubscriptions() {
