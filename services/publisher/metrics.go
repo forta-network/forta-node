@@ -27,7 +27,7 @@ type metricsBucket struct {
 }
 
 type metricsData struct {
-	Counters []uint32
+	Counters []float64
 	Details  string
 }
 
@@ -104,7 +104,7 @@ func (ama *AgentMetricsAggregator) AddAgentMetrics(ms *protocol.AgentMetricList)
 
 		bucket := ama.findBucket(m.AgentId, chainID, t)
 		bucket.MetricsData[m.Name] = metricsData{
-			Counters: append(bucket.MetricsData[m.Name].Counters, uint32(m.Value)),
+			Counters: append(bucket.MetricsData[m.Name].Counters, m.Value),
 			Details:  m.Details,
 		}
 	}
@@ -193,16 +193,16 @@ func (allMetrics allAgentMetrics) PrepareMetrics() {
 	}
 }
 
-func avgMetricArray(data []uint32) float64 {
+func avgMetricArray(data []float64) float64 {
 	sum := decimal.NewFromInt(0)
 	for _, dataPoint := range data {
-		sum = sum.Add(decimal.NewFromInt32(int32(dataPoint)))
+		sum = sum.Add(decimal.NewFromFloat(dataPoint))
 	}
 	f, _ := sum.Div(decimal.NewFromInt32(int32(len(data)))).Round(2).Float64()
 	return f
 }
 
-func maxDataPoint(data []uint32) float64 {
+func maxDataPoint(data []float64) float64 {
 	var max float64
 	for _, dataPoint := range data {
 		if float64(dataPoint) > max {
@@ -212,7 +212,7 @@ func maxDataPoint(data []uint32) float64 {
 	return max
 }
 
-func calcP95(data []uint32) float64 {
+func calcP95(data []float64) float64 {
 	switch len(data) {
 	case 0:
 		return 0
@@ -228,7 +228,7 @@ func calcP95(data []uint32) float64 {
 	return float64(data[k95-1])
 }
 
-func sumNums(data []uint32) (n float64) {
+func sumNums(data []float64) (n float64) {
 	for _, d := range data {
 		n += float64(d)
 	}
