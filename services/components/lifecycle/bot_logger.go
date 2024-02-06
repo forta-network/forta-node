@@ -3,7 +3,6 @@ package lifecycle
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -17,7 +16,7 @@ import (
 
 // BotLogger manages bots logging.
 type BotLogger interface {
-	SendBotLogs(ctx context.Context) error
+	SendBotLogs(ctx context.Context, snapshotInterval time.Duration) error
 }
 
 type botLogger struct {
@@ -47,12 +46,11 @@ func NewBotLogger(
 
 // adjust these better with auto-upgrade later
 const (
-	defaultAgentLogSendInterval       = time.Minute
 	defaultAgentLogTailLines          = 50
 	defaultAgentLogAvgMaxCharsPerLine = 200
 )
 
-func (bl *botLogger) SendBotLogs(ctx context.Context) error {
+func (bl *botLogger) SendBotLogs(ctx context.Context, snapshotInterval time.Duration) error {
 	var (
 		sendLogs agentlogs.Agents
 		keepLogs agentlogs.Agents
@@ -69,7 +67,7 @@ func (bl *botLogger) SendBotLogs(ctx context.Context) error {
 		}
 		logs, err := bl.dockerClient.GetContainerLogs(
 			ctx, container.ID,
-			strconv.Itoa(defaultAgentLogTailLines),
+			fmt.Sprintf("%ds", int64(snapshotInterval.Seconds())),
 			defaultAgentLogAvgMaxCharsPerLine*defaultAgentLogTailLines,
 		)
 		if err != nil {

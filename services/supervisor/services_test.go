@@ -21,6 +21,7 @@ import (
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/services/components/containers"
 	mock_containers "github.com/forta-network/forta-node/services/components/containers/mocks"
+	mock_lifecycle "github.com/forta-network/forta-node/services/components/lifecycle/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -53,8 +54,9 @@ type Suite struct {
 	globalClient  *mock_clients.MockDockerClient
 	releaseClient *mrelease.MockClient
 
-	msgClient *mock_clients.MockMessageClient
-	botClient *mock_containers.MockBotClient
+	msgClient           *mock_clients.MockMessageClient
+	botClient           *mock_containers.MockBotClient
+	botLifeCycleManager *mock_lifecycle.MockBotLifecycleManager
 
 	supervisor *SupervisorService
 
@@ -104,6 +106,7 @@ func (s *Suite) SetupTest() {
 	s.globalClient = mock_clients.NewMockDockerClient(ctrl)
 	s.releaseClient = mrelease.NewMockClient(ctrl)
 	s.botClient = mock_containers.NewMockBotClient(ctrl)
+	s.botLifeCycleManager = mock_lifecycle.NewMockBotLifecycleManager(ctrl)
 
 	s.msgClient = mock_clients.NewMockMessageClient(ctrl)
 
@@ -132,6 +135,7 @@ func (s *Suite) SetupTest() {
 	supervisor.config.Config.AgentLogsConfig.SendIntervalSeconds = 1
 	supervisor.botLifecycleConfig.Config = supervisor.config.Config
 	supervisor.botLifecycle.BotClient = s.botClient
+	supervisor.botLifecycle.BotManager = s.botLifeCycleManager
 	s.supervisor = supervisor
 }
 

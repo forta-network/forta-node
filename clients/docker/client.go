@@ -799,12 +799,12 @@ func (d *dockerClient) ListDigestReferences(ctx context.Context) (imgs []string,
 }
 
 // GetContainerLogs gets the container logs.
-func (d *dockerClient) GetContainerLogs(ctx context.Context, containerID, tail string, truncate int) (string, error) {
+func (d *dockerClient) GetContainerLogs(ctx context.Context, containerID, since string, truncate int) (string, error) {
 	r, err := d.cli.ContainerLogs(ctx, containerID, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Timestamps: true,
-		Tail:       tail,
+		Since:      since,
 	})
 	if err != nil {
 		return "", err

@@ -3,8 +3,8 @@ package lifecycle
 import (
 	"context"
 	"errors"
-	"strconv"
 	"testing"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -87,18 +87,18 @@ func (s *BotLoggerSuite) TestSendBotLogs() {
 	}
 	s.dockerClient.EXPECT().GetContainerLogs(
 		ctx, "bot1",
-		strconv.Itoa(defaultAgentLogTailLines),
+		"60s",
 		defaultAgentLogAvgMaxCharsPerLine*defaultAgentLogTailLines,
 	).Return("some log", nil).Times(1)
 
 	s.dockerClient.EXPECT().GetContainerLogs(
 		ctx, "bot2",
-		strconv.Itoa(defaultAgentLogTailLines),
+		"60s",
 		defaultAgentLogAvgMaxCharsPerLine*defaultAgentLogTailLines,
 	).Return("some log", nil).Times(1)
 
 	s.botClient.EXPECT().LoadBotContainers(ctx).Return(mockContainers, nil)
-	s.r.NoError(botLogger.SendBotLogs(ctx))
+	s.r.NoError(botLogger.SendBotLogs(ctx, time.Minute))
 }
 
 // should fail if there is an error loading
@@ -115,7 +115,7 @@ func (s *BotLoggerSuite) TestLoadBotContainersError() {
 	mockContainers := []types.Container{}
 
 	s.botClient.EXPECT().LoadBotContainers(ctx).Return(mockContainers, errors.New("test"))
-	s.r.EqualError(botLogger.SendBotLogs(ctx), "failed to load the bot containers: test")
+	s.r.EqualError(botLogger.SendBotLogs(ctx, time.Minute), "failed to load the bot containers: test")
 }
 
 // Should not send agent logs if fails
@@ -154,17 +154,17 @@ func (s *BotLoggerSuite) TestGetContainerLogsError() {
 
 	s.dockerClient.EXPECT().GetContainerLogs(
 		ctx, "bot1",
-		strconv.Itoa(defaultAgentLogTailLines),
+		"60s",
 		defaultAgentLogAvgMaxCharsPerLine*defaultAgentLogTailLines,
 	).Return("", errors.New("test")).Times(1)
 
 	s.dockerClient.EXPECT().GetContainerLogs(
 		ctx, "bot2",
-		strconv.Itoa(defaultAgentLogTailLines),
+		"60s",
 		defaultAgentLogAvgMaxCharsPerLine*defaultAgentLogTailLines,
 	).Return("some log", nil).Times(1)
 
-	s.r.NoError(botLogger.SendBotLogs(ctx))
+	s.r.NoError(botLogger.SendBotLogs(ctx, time.Minute))
 }
 
 // Fails sending agent logs
@@ -192,9 +192,9 @@ func (s *BotLoggerSuite) TestFailsToSendLogs() {
 
 	s.dockerClient.EXPECT().GetContainerLogs(
 		ctx, "bot1",
-		strconv.Itoa(defaultAgentLogTailLines),
+		"60s",
 		defaultAgentLogAvgMaxCharsPerLine*defaultAgentLogTailLines,
 	).Return("some log", nil).Times(1)
 
-	s.r.EqualError(botLogger.SendBotLogs(ctx), "failed to send agent logs: test")
+	s.r.EqualError(botLogger.SendBotLogs(ctx, time.Minute), "failed to send agent logs: test")
 }
