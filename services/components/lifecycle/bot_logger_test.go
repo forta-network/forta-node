@@ -12,6 +12,7 @@ import (
 	"github.com/forta-network/forta-core-go/security"
 	"github.com/forta-network/forta-node/clients/docker"
 	mock_clients "github.com/forta-network/forta-node/clients/mocks"
+	"github.com/forta-network/forta-node/config"
 	mock_containers "github.com/forta-network/forta-node/services/components/containers/mocks"
 	mock_registry "github.com/forta-network/forta-node/services/components/registry/mocks"
 	"github.com/golang/mock/gomock"
@@ -26,7 +27,6 @@ func TestSendBotLogsSuite(t *testing.T) {
 type BotLoggerSuite struct {
 	r *require.Assertions
 
-	botLogger     *botLogger
 	botClient     *mock_containers.MockBotClient
 	dockerClient  *mock_clients.MockDockerClient
 	agentRegistry *mock_registry.MockBotRegistry
@@ -64,8 +64,12 @@ func (s *BotLoggerSuite) TestSendBotLogs() {
 		s.botClient, s.dockerClient, s.agentRegistry, s.key,
 		func(agents agentlogs.Agents, authToken string) error {
 			s.r.Equal(2, len(agents))
+
 			s.r.Equal("bot1ID", agents[0].ID)
+			s.r.EqualValues(1, agents[0].ChainID)
+
 			s.r.Equal("bot2ID", agents[1].ID)
+			s.r.EqualValues(2, agents[1].ChainID)
 			return nil
 		},
 	)
@@ -101,6 +105,9 @@ func (s *BotLoggerSuite) TestSendBotLogs() {
 		defaultAgentLogAvgMaxCharsPerLine*defaultAgentLogTailLines,
 	).Return("some log", nil).Times(1)
 
+	s.agentRegistry.EXPECT().GetConfigByID("bot1ID").Return(&config.AgentConfig{ChainID: 1}, nil).Times(1)
+	s.agentRegistry.EXPECT().GetConfigByID("bot2ID").Return(&config.AgentConfig{ChainID: 2}, nil).Times(1)
+
 	s.botClient.EXPECT().LoadBotContainers(ctx).Return(mockContainers, nil)
 	s.r.NoError(botLogger.SendBotLogs(ctx, time.Minute))
 }
@@ -109,7 +116,7 @@ func (s *BotLoggerSuite) TestSendBotLogs() {
 // bot containers
 func (s *BotLoggerSuite) TestLoadBotContainersError() {
 	botLogger := NewBotLogger(
-		s.botClient, s.dockerClient, s.agentRegistry,s.key,
+		s.botClient, s.dockerClient, s.agentRegistry, s.key,
 		func(agents agentlogs.Agents, authToken string) error {
 			return nil
 		},
@@ -126,7 +133,7 @@ func (s *BotLoggerSuite) TestLoadBotContainersError() {
 // to get container logs but continue processing
 func (s *BotLoggerSuite) TestGetContainerLogsError() {
 	botLogger := NewBotLogger(
-		s.botClient, s.dockerClient,s.agentRegistry, s.key,
+		s.botClient, s.dockerClient, s.agentRegistry, s.key,
 		func(agents agentlogs.Agents, authToken string) error {
 			s.r.Equal(1, len(agents))
 			s.r.Equal("bot2ID", agents[0].ID)
@@ -168,13 +175,15 @@ func (s *BotLoggerSuite) TestGetContainerLogsError() {
 		defaultAgentLogAvgMaxCharsPerLine*defaultAgentLogTailLines,
 	).Return("some log", nil).Times(1)
 
+	s.agentRegistry.EXPECT().GetConfigByID("bot2ID").Return(&config.AgentConfig{ChainID: 2}, nil).Times(1)
+
 	s.r.NoError(botLogger.SendBotLogs(ctx, time.Minute))
 }
 
 // Fails sending agent logs
 func (s *BotLoggerSuite) TestFailsToSendLogs() {
 	botLogger := NewBotLogger(
-		s.botClient, s.dockerClient,s.agentRegistry, s.key,
+		s.botClient, s.dockerClient, s.agentRegistry, s.key,
 		func(agents agentlogs.Agents, authToken string) error {
 			return errors.New("test")
 		},
@@ -199,6 +208,8 @@ func (s *BotLoggerSuite) TestFailsToSendLogs() {
 		"60s",
 		defaultAgentLogAvgMaxCharsPerLine*defaultAgentLogTailLines,
 	).Return("some log", nil).Times(1)
+
+	s.agentRegistry.EXPECT().GetConfigByID("bot1ID").Return(&config.AgentConfig{ChainID: 1}, nil).Times(1)
 
 	s.r.EqualError(botLogger.SendBotLogs(ctx, time.Minute), "failed to send agent logs: test")
 }
