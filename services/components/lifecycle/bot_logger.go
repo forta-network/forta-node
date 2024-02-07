@@ -11,6 +11,7 @@ import (
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/docker"
 	"github.com/forta-network/forta-node/services/components/containers"
+	"github.com/forta-network/forta-node/services/components/registry"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -22,6 +23,7 @@ type BotLogger interface {
 type botLogger struct {
 	botClient     containers.BotClient
 	dockerClient  clients.DockerClient
+	agentRegistry registry.BotRegistry
 	key           *keystore.Key
 	prevAgentLogs agentlogs.Agents
 
@@ -33,12 +35,14 @@ var _ BotLogger = &botLogger{}
 func NewBotLogger(
 	botClient containers.BotClient,
 	dockerClient clients.DockerClient,
+	agentRegistry registry.BotRegistry,
 	key *keystore.Key,
 	sendAgentLogs func(agents agentlogs.Agents, authToken string) error,
 ) *botLogger {
 	return &botLogger{
 		botClient:     botClient,
 		dockerClient:  dockerClient,
+		agentRegistry: agentRegistry,
 		key:           key,
 		sendAgentLogs: sendAgentLogs,
 	}
@@ -75,10 +79,17 @@ func (bl *botLogger) SendBotLogs(ctx context.Context, snapshotInterval time.Dura
 			continue
 		}
 
+		agentID := container.Labels[docker.LabelFortaBotID]
 		agent := &agentlogs.Agent{
-			ID:   container.Labels[docker.LabelFortaBotID],
+			ID:   agentID,
 			Logs: logs,
 		}
+
+		agentConfig, err := bl.agentRegistry.GetConfigByID(agentID)
+		if err == nil {
+			agent.ChainID = int64(agentConfig.ChainID)
+		}
+
 		// don't send if it's the same with previous logs but keep it for next time
 		// so we can check
 		keepLogs = append(keepLogs, agent)
