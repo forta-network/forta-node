@@ -38,6 +38,7 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		Config:         cfg,
 		ScannerAddress: key.Address,
 		BotRegistry:    botRegistry,
+		Key:            key,
 	}
 	svc, err := supervisor.NewSupervisorService(ctx, supervisor.SupervisorServiceConfig{
 		Config:             cfg,

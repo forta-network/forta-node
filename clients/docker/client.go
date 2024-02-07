@@ -825,19 +825,15 @@ func (d *dockerClient) GetContainerLogs(ctx context.Context, containerID, since 
 		b = b[:defaultAgentLogAvgMaxCharsPerLine*tail]
 	}
 
-	// remove strange 8-byte prefix in each line
-	lines := strings.Split(string(b), "\n")
-	for i, line := range lines {
-		if len(line) == 0 {
-			continue
+	// remove 8-byte prefix in each line
+	// https://github.com/moby/moby/issues/8223
+	bs := bytes.Split(b, []byte("\n"))
+	for i, v := range bs {
+		if len(v) > 8 {
+			bs[i] = v[8:]
 		}
-		prefixEnd := strings.Index(line, "2") // timestamp beginning
-		if prefixEnd < 0 || prefixEnd > len(line) {
-			continue
-		}
-		lines[i] = line[prefixEnd:]
 	}
-	return strings.Join(lines, "\n"), nil
+	return string(bytes.Join(bs, []byte("\n"))), nil
 }
 
 func (d *dockerClient) labelFilter() filters.Args {
