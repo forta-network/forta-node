@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/forta-network/forta-core-go/clients/agentlogs"
 	"github.com/forta-network/forta-core-go/clients/health"
 	"github.com/forta-network/forta-core-go/manifest"
 	"github.com/forta-network/forta-core-go/protocol"
@@ -78,9 +77,7 @@ type SupervisorService struct {
 
 	healthClient health.HealthClient
 
-	sendAgentLogs func(agents agentlogs.Agents, authToken string) error
-	prevAgentLogs agentlogs.Agents
-	inspectionCh  chan *protocol.InspectionResults
+	inspectionCh chan *protocol.InspectionResults
 }
 
 type SupervisorServiceConfig struct {
@@ -786,7 +783,6 @@ func NewSupervisorService(ctx context.Context, cfg SupervisorServiceConfig) (*Su
 		botLifecycleConfig: cfg.BotLifecycleConfig,
 		config:             cfg,
 		healthClient:       health.NewClient(),
-		sendAgentLogs:      agentlogs.NewClient(cfg.Config.AgentLogsConfig.URL).SendLogs,
 		inspectionCh:       make(chan *protocol.InspectionResults),
 	}
 	sup.autoUpdatesDisabled.Set(strconv.FormatBool(cfg.Config.AutoUpdate.Disable))
