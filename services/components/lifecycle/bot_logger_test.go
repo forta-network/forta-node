@@ -96,13 +96,13 @@ func (s *BotLoggerSuite) TestSendBotLogs() {
 	s.dockerClient.EXPECT().GetContainerLogs(
 		ctx, "bot1",
 		"60s",
-		defaultAgentLogAvgMaxCharsPerLine*defaultAgentLogTailLines,
+		defaultAgentLogTailLines,
 	).Return("some log", nil).Times(1)
 
 	s.dockerClient.EXPECT().GetContainerLogs(
 		ctx, "bot2",
 		"60s",
-		defaultAgentLogAvgMaxCharsPerLine*defaultAgentLogTailLines,
+		defaultAgentLogTailLines,
 	).Return("some log", nil).Times(1)
 
 	s.agentRegistry.EXPECT().GetConfigByID("bot1ID").Return(&config.AgentConfig{ChainID: 1}, nil).Times(1)
@@ -166,13 +166,13 @@ func (s *BotLoggerSuite) TestGetContainerLogsError() {
 	s.dockerClient.EXPECT().GetContainerLogs(
 		ctx, "bot1",
 		"60s",
-		defaultAgentLogAvgMaxCharsPerLine*defaultAgentLogTailLines,
+		defaultAgentLogTailLines,
 	).Return("", errors.New("test")).Times(1)
 
 	s.dockerClient.EXPECT().GetContainerLogs(
 		ctx, "bot2",
 		"60s",
-		defaultAgentLogAvgMaxCharsPerLine*defaultAgentLogTailLines,
+		defaultAgentLogTailLines,
 	).Return("some log", nil).Times(1)
 
 	s.agentRegistry.EXPECT().GetConfigByID("bot2ID").Return(&config.AgentConfig{ChainID: 2}, nil).Times(1)
@@ -206,7 +206,7 @@ func (s *BotLoggerSuite) TestFailsToSendLogs() {
 	s.dockerClient.EXPECT().GetContainerLogs(
 		ctx, "bot1",
 		"60s",
-		defaultAgentLogAvgMaxCharsPerLine*defaultAgentLogTailLines,
+		defaultAgentLogTailLines,
 	).Return("some log", nil).Times(1)
 
 	s.agentRegistry.EXPECT().GetConfigByID("bot1ID").Return(&config.AgentConfig{ChainID: 1}, nil).Times(1)

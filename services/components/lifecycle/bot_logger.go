@@ -50,8 +50,7 @@ func NewBotLogger(
 
 // adjust these better with auto-upgrade later
 const (
-	defaultAgentLogTailLines          = 50
-	defaultAgentLogAvgMaxCharsPerLine = 200
+	defaultAgentLogTailLines = 600
 )
 
 func (bl *botLogger) SendBotLogs(ctx context.Context, snapshotInterval time.Duration) error {
@@ -72,7 +71,7 @@ func (bl *botLogger) SendBotLogs(ctx context.Context, snapshotInterval time.Dura
 		logs, err := bl.dockerClient.GetContainerLogs(
 			ctx, container.ID,
 			fmt.Sprintf("%ds", int64(snapshotInterval.Seconds())),
-			defaultAgentLogAvgMaxCharsPerLine*defaultAgentLogTailLines,
+			defaultAgentLogTailLines,
 		)
 		if err != nil {
 			log.WithError(err).Warn("failed to get agent container logs")

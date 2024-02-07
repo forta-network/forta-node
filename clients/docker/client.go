@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -798,13 +799,18 @@ func (d *dockerClient) ListDigestReferences(ctx context.Context) (imgs []string,
 	return
 }
 
+const (
+	defaultAgentLogAvgMaxCharsPerLine = 200
+)
+
 // GetContainerLogs gets the container logs.
-func (d *dockerClient) GetContainerLogs(ctx context.Context, containerID, since string, truncate int) (string, error) {
+func (d *dockerClient) GetContainerLogs(ctx context.Context, containerID, since string, tail int) (string, error) {
 	r, err := d.cli.ContainerLogs(ctx, containerID, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Timestamps: true,
 		Since:      since,
+		Tail:       strconv.Itoa(tail),
 	})
 	if err != nil {
 		return "", err
@@ -813,9 +819,12 @@ func (d *dockerClient) GetContainerLogs(ctx context.Context, containerID, since 
 	if err != nil {
 		return "", err
 	}
-	if truncate >= 0 && len(b) > truncate {
-		b = b[:truncate]
+
+	// limit the log size
+	if tail >= 0 && len(b) > defaultAgentLogAvgMaxCharsPerLine*tail {
+		b = b[:defaultAgentLogAvgMaxCharsPerLine*tail]
 	}
+
 	// remove strange 8-byte prefix in each line
 	lines := strings.Split(string(b), "\n")
 	for i, line := range lines {
