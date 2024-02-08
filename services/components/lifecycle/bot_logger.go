@@ -50,7 +50,7 @@ func NewBotLogger(
 
 // adjust these better with auto-upgrade later
 const (
-	defaultAgentLogTailLines = 600
+	defaultAgentLogTailLines = 300
 )
 
 func (bl *botLogger) SendBotLogs(ctx context.Context, snapshotInterval time.Duration) error {
