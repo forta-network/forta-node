@@ -73,8 +73,6 @@ func (br *botRegistry) LoadHeartbeatBot() (*config.AgentConfig, error) {
 
 // LoadAssignedBots returns the latest bot list for the running scanner.
 func (br *botRegistry) LoadAssignedBots() ([]config.AgentConfig, error) {
-	br.mu.Lock()
-	defer br.mu.Unlock()
 
 	br.lastChecked.Set()
 	agts, changed, err := br.registryStore.GetAgentsIfChanged(br.scannerAddress.Hex())
@@ -85,7 +83,11 @@ func (br *botRegistry) LoadAssignedBots() ([]config.AgentConfig, error) {
 	logger := log.WithField("component", "bot-loader")
 	if changed {
 		br.lastChangeDetected.Set()
+		
+		br.mu.Lock()
+		defer br.mu.Unlock()
 		br.botConfigs = agts
+		
 		logger.WithField("count", len(agts)).Info("updated bot list")
 	} else {
 		logger.Debug("no bot list changes detected")
@@ -95,8 +97,8 @@ func (br *botRegistry) LoadAssignedBots() ([]config.AgentConfig, error) {
 }
 
 func (br *botRegistry) GetConfigByID(agentID string) (*config.AgentConfig, error) {
-	br.mu.Lock()
-	defer br.mu.Unlock()
+	br.mu.RLock()
+	defer br.mu.RUnlock()
 
 	for _, ac := range br.botConfigs {
 		if ac.ID == agentID {

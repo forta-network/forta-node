@@ -800,7 +800,7 @@ func (d *dockerClient) ListDigestReferences(ctx context.Context) (imgs []string,
 }
 
 const (
-	defaultAgentLogAvgMaxCharsPerLine = 200
+	defaultAgentLogAvgMaxCharsPerLine = 1000
 )
 
 // GetContainerLogs gets the container logs.
