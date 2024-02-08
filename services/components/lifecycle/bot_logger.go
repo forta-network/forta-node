@@ -102,7 +102,7 @@ func (bl *botLogger) SendBotLogs(ctx context.Context, snapshotInterval time.Dura
 
 	if len(sendLogs) > 0 {
 		scannerJwt, err := security.CreateScannerJWT(bl.key, map[string]interface{}{
-			"access": "bot_logger",
+			"access": "agent_logs",
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create scanner token: %v", err)
