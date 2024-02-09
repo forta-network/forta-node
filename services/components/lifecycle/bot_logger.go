@@ -3,7 +3,6 @@ package lifecycle
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -12,17 +11,19 @@ import (
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/docker"
 	"github.com/forta-network/forta-node/services/components/containers"
+	"github.com/forta-network/forta-node/services/components/registry"
 	log "github.com/sirupsen/logrus"
 )
 
 // BotLogger manages bots logging.
 type BotLogger interface {
-	SendBotLogs(ctx context.Context) error
+	SendBotLogs(ctx context.Context, snapshotInterval time.Duration) error
 }
 
 type botLogger struct {
 	botClient     containers.BotClient
 	dockerClient  clients.DockerClient
+	agentRegistry registry.BotRegistry
 	key           *keystore.Key
 	prevAgentLogs agentlogs.Agents
 
@@ -34,12 +35,14 @@ var _ BotLogger = &botLogger{}
 func NewBotLogger(
 	botClient containers.BotClient,
 	dockerClient clients.DockerClient,
+	agentRegistry registry.BotRegistry,
 	key *keystore.Key,
 	sendAgentLogs func(agents agentlogs.Agents, authToken string) error,
 ) *botLogger {
 	return &botLogger{
 		botClient:     botClient,
 		dockerClient:  dockerClient,
+		agentRegistry: agentRegistry,
 		key:           key,
 		sendAgentLogs: sendAgentLogs,
 	}
@@ -47,12 +50,10 @@ func NewBotLogger(
 
 // adjust these better with auto-upgrade later
 const (
-	defaultAgentLogSendInterval       = time.Minute
-	defaultAgentLogTailLines          = 50
-	defaultAgentLogAvgMaxCharsPerLine = 200
+	defaultAgentLogTailLines = 120
 )
 
-func (bl *botLogger) SendBotLogs(ctx context.Context) error {
+func (bl *botLogger) SendBotLogs(ctx context.Context, snapshotInterval time.Duration) error {
 	var (
 		sendLogs agentlogs.Agents
 		keepLogs agentlogs.Agents
@@ -69,18 +70,30 @@ func (bl *botLogger) SendBotLogs(ctx context.Context) error {
 		}
 		logs, err := bl.dockerClient.GetContainerLogs(
 			ctx, container.ID,
-			strconv.Itoa(defaultAgentLogTailLines),
-			defaultAgentLogAvgMaxCharsPerLine*defaultAgentLogTailLines,
+			fmt.Sprintf("%ds", int64(snapshotInterval.Seconds())),
+			defaultAgentLogTailLines,
 		)
 		if err != nil {
 			log.WithError(err).Warn("failed to get agent container logs")
 			continue
 		}
 
+		if len(logs) == 0 {
+			log.WithField("agent", container.Labels[docker.LabelFortaBotID]).Debug("no logs found for agent")
+			continue
+		}
+
+		agentID := container.Labels[docker.LabelFortaBotID]
 		agent := &agentlogs.Agent{
-			ID:   container.Labels[docker.LabelFortaBotID],
+			ID:   agentID,
 			Logs: logs,
 		}
+
+		agentConfig, err := bl.agentRegistry.GetConfigByID(agentID)
+		if err == nil {
+			agent.ChainID = int64(agentConfig.ChainID)
+		}
+
 		// don't send if it's the same with previous logs but keep it for next time
 		// so we can check
 		keepLogs = append(keepLogs, agent)
@@ -94,7 +107,7 @@ func (bl *botLogger) SendBotLogs(ctx context.Context) error {
 
 	if len(sendLogs) > 0 {
 		scannerJwt, err := security.CreateScannerJWT(bl.key, map[string]interface{}{
-			"access": "bot_logger",
+			"access": "agent_logs",
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create scanner token: %v", err)

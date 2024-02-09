@@ -2,6 +2,7 @@ package registry
 
 import (
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -20,6 +21,7 @@ func TestLoadAssignedBots(t *testing.T) {
 	botReg := &botRegistry{
 		scannerAddress: common.HexToAddress(utils.ZeroAddress),
 		registryStore:  regStore,
+		mu:             &sync.RWMutex{},
 	}
 
 	cfgs := []config.AgentConfig{{}}

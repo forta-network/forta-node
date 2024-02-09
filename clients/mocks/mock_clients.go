@@ -203,18 +203,18 @@ func (mr *MockDockerClientMockRecorder) GetContainerFromRemoteAddr(ctx, hostPort
 }
 
 // GetContainerLogs mocks base method.
-func (m *MockDockerClient) GetContainerLogs(ctx context.Context, containerID, tail string, truncate int) (string, error) {
+func (m *MockDockerClient) GetContainerLogs(ctx context.Context, containerID, since string, truncate int) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetContainerLogs", ctx, containerID, tail, truncate)
+	ret := m.ctrl.Call(m, "GetContainerLogs", ctx, containerID, since, truncate)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetContainerLogs indicates an expected call of GetContainerLogs.
-func (mr *MockDockerClientMockRecorder) GetContainerLogs(ctx, containerID, tail, truncate interface{}) *gomock.Call {
+func (mr *MockDockerClientMockRecorder) GetContainerLogs(ctx, containerID, since, truncate interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainerLogs", reflect.TypeOf((*MockDockerClient)(nil).GetContainerLogs), ctx, containerID, tail, truncate)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainerLogs", reflect.TypeOf((*MockDockerClient)(nil).GetContainerLogs), ctx, containerID, since, truncate)
 }
 
 // GetContainers mocks base method.

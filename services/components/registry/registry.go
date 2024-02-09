@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/forta-network/forta-node/store"
 
@@ -17,6 +18,7 @@ import (
 type BotRegistry interface {
 	LoadAssignedBots() ([]config.AgentConfig, error)
 	LoadHeartbeatBot() (*config.AgentConfig, error)
+	GetConfigByID(agentID string) (*config.AgentConfig, error)
 	health.Reporter
 }
 
@@ -27,6 +29,7 @@ type botRegistry struct {
 
 	registryStore store.RegistryStore
 
+	mu         *sync.RWMutex
 	botConfigs []config.AgentConfig
 
 	lastChecked        health.TimeTracker
@@ -39,6 +42,7 @@ func New(cfg config.Config, scannerAddress common.Address) (BotRegistry, error) 
 	service := &botRegistry{
 		cfg:            cfg,
 		scannerAddress: scannerAddress,
+		mu:             &sync.RWMutex{},
 	}
 	var (
 		regStr store.RegistryStore
@@ -69,6 +73,7 @@ func (br *botRegistry) LoadHeartbeatBot() (*config.AgentConfig, error) {
 
 // LoadAssignedBots returns the latest bot list for the running scanner.
 func (br *botRegistry) LoadAssignedBots() ([]config.AgentConfig, error) {
+
 	br.lastChecked.Set()
 	agts, changed, err := br.registryStore.GetAgentsIfChanged(br.scannerAddress.Hex())
 	if err != nil {
@@ -78,13 +83,29 @@ func (br *botRegistry) LoadAssignedBots() ([]config.AgentConfig, error) {
 	logger := log.WithField("component", "bot-loader")
 	if changed {
 		br.lastChangeDetected.Set()
+		
+		br.mu.Lock()
 		br.botConfigs = agts
+		br.mu.Unlock()
+		
 		logger.WithField("count", len(agts)).Info("updated bot list")
 	} else {
 		logger.Debug("no bot list changes detected")
 	}
 
 	return br.botConfigs, nil
+}
+
+func (br *botRegistry) GetConfigByID(agentID string) (*config.AgentConfig, error) {
+	br.mu.RLock()
+	defer br.mu.RUnlock()
+
+	for _, ac := range br.botConfigs {
+		if ac.ID == agentID {
+			return &ac, nil
+		}
+	}
+	return nil, fmt.Errorf("cannot find bot with ID %s", agentID)
 }
 
 // Name implements health.Reporter interface.

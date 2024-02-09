@@ -130,6 +130,7 @@ func GetBotLifecycleComponents(
 	botLogger := lifecycle.NewBotLogger(
 		botClient,
 		dockerClient,
+		botLifeConfig.BotRegistry,
 		botLifeConfig.Key,
 		agentlogs.NewClient(botLifeConfig.Config.AgentLogsConfig.URL).SendLogs,
 	)
