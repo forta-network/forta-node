@@ -85,8 +85,8 @@ func (br *botRegistry) LoadAssignedBots() ([]config.AgentConfig, error) {
 		br.lastChangeDetected.Set()
 		
 		br.mu.Lock()
-		defer br.mu.Unlock()
 		br.botConfigs = agts
+		br.mu.Unlock()
 		
 		logger.WithField("count", len(agts)).Info("updated bot list")
 	} else {
