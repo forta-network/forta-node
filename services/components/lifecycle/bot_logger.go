@@ -78,6 +78,11 @@ func (bl *botLogger) SendBotLogs(ctx context.Context, snapshotInterval time.Dura
 			continue
 		}
 
+		if len(logs) == 0 {
+			log.WithField("agent", container.Labels[docker.LabelFortaBotID]).Debug("no logs found for agent")
+			continue
+		}
+
 		agentID := container.Labels[docker.LabelFortaBotID]
 		agent := &agentlogs.Agent{
 			ID:   agentID,
