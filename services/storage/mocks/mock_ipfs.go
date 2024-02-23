@@ -72,17 +72,22 @@ func (mr *MockIPFSClientMockRecorder) Cat(path interface{}) *gomock.Call {
 }
 
 // FilesCp mocks base method.
-func (m *MockIPFSClient) FilesCp(ctx context.Context, src, dest string) error {
+func (m *MockIPFSClient) FilesCp(ctx context.Context, src, dest string, options ...shell.FilesOpt) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FilesCp", ctx, src, dest)
+	varargs := []interface{}{ctx, src, dest}
+	for _, a := range options {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "FilesCp", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // FilesCp indicates an expected call of FilesCp.
-func (mr *MockIPFSClientMockRecorder) FilesCp(ctx, src, dest interface{}) *gomock.Call {
+func (mr *MockIPFSClientMockRecorder) FilesCp(ctx, src, dest interface{}, options ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FilesCp", reflect.TypeOf((*MockIPFSClient)(nil).FilesCp), ctx, src, dest)
+	varargs := append([]interface{}{ctx, src, dest}, options...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FilesCp", reflect.TypeOf((*MockIPFSClient)(nil).FilesCp), varargs...)
 }
 
 // FilesLs mocks base method.
