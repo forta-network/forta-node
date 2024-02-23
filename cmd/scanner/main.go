@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/exp/slog"
 
 	"github.com/forta-network/forta-node/store"
 
@@ -473,6 +476,6 @@ func isNotFoundErr(errMsg string) bool {
 }
 
 func Run() {
-	gethlog.Root().SetHandler(gethlog.StdoutHandler)
+	gethlog.SetDefault(gethlog.NewLogger(slog.NewTextHandler(os.Stdout, nil)))
 	services.ContainerMain("scanner", initServices)
 }

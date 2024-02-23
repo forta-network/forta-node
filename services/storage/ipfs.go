@@ -16,7 +16,7 @@ type IPFSClient interface {
 	FilesRead(ctx context.Context, path string, options ...ipfsapi.FilesOpt) (io.ReadCloser, error)
 	FilesWrite(ctx context.Context, path string, data io.Reader, options ...ipfsapi.FilesOpt) error
 	FilesRm(ctx context.Context, path string, force bool) error
-	FilesCp(ctx context.Context, src string, dest string) error
+	FilesCp(ctx context.Context, src string, dest string, options ...ipfsapi.FilesOpt) error
 	FilesStat(ctx context.Context, path string, options ...ipfsapi.FilesOpt) (*ipfsapi.FilesStatObject, error)
 	FilesMkdir(ctx context.Context, path string, options ...ipfsapi.FilesOpt) error
 	FilesLs(ctx context.Context, path string, options ...ipfsapi.FilesOpt) ([]*ipfsapi.MfsLsEntry, error)
