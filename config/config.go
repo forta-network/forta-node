@@ -45,7 +45,7 @@ type JsonRpcProxyConfig struct {
 }
 
 type JsonRpcCacheConfig struct {
-	DispatcherURL            string `yaml:"dispatcherUrl" json:"dispatcherUrl" validate:"url"`
+	DispatcherURL            string `yaml:"dispatcherUrl" json:"dispatcherUrl" validate:"omitempty,url"`
 	CacheExpirePeriodSeconds int    `yaml:"cacheExpirePeriodSeconds" json:"cacheExpirePeriodSeconds" default:"300"`
 }
 

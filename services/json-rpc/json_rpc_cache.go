@@ -133,7 +133,9 @@ type PresignedURLItem struct {
 func (c *JsonRpcCache) pollEvents() {
 	dispatcherClient := http.DefaultClient
 	dispatcherClient.Timeout = 10 * time.Second
+
 	dispatcherURL, _ := url.Parse(c.cfg.DispatcherURL)
+	dispatcherPath := dispatcherURL.Path
 
 	r2Client := http.DefaultClient
 
@@ -143,14 +145,14 @@ func (c *JsonRpcCache) pollEvents() {
 		log.Info("Polling for combined block events")
 
 		bucket := time.Now().Truncate(time.Second * 10).Unix()
-		dispatcherURL.Path, err = url.JoinPath(dispatcherURL.Path, fmt.Sprintf("%d", bucket))
+		dispatcherURL.Path, err = url.JoinPath(dispatcherPath, fmt.Sprintf("%d", bucket))
 		if err != nil {
 			continue
 		}
 
 		resp, err := dispatcherClient.Get(dispatcherURL.String())
 		if err != nil {
-			log.WithError(err).Error("Failed to get R2 url from dispatcher")
+			log.WithError(err).Debug("Failed to get R2 url from dispatcher")
 			continue
 		}
 
