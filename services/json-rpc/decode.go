@@ -29,8 +29,20 @@ func decodeBody(req *http.Request) (*jsonRpcReq, error) {
 }
 
 func decodeAndReplaceBody(req *http.Request) (*jsonRpcReq, error) {
-	b, _ := io.ReadAll(req.Body)
+	b, err := io.ReadAll(req.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read request body")
+	}
 	req.Body.Close()
 	req.Body = io.NopCloser(bytes.NewBuffer(b))
-	return decodeBody(req)
+
+	decodedBody, err := decodeBody(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode json-rpc request body")
+	}
+
+	req.Body.Close()
+
+	req.Body = io.NopCloser(bytes.NewBuffer(b))
+	return decodedBody, nil
 }
