@@ -15,6 +15,10 @@ func initJsonRpcProxy(ctx context.Context, cfg config.Config) (*jrp.JsonRpcProxy
 	return jrp.NewJsonRpcProxy(ctx, cfg)
 }
 
+func initJsonRpcCache(ctx context.Context, cfg config.Config) (*jrp.JsonRpcCache, error) {
+	return jrp.NewJsonRpcCache(ctx, cfg.JsonRpcCache)
+}
+
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
 	// can't dial localhost - need to dial host gateway from container
 	cfg.Scan.JsonRpc.Url = utils.ConvertToDockerHostURL(cfg.Scan.JsonRpc.Url)
@@ -25,12 +29,18 @@ func initServices(ctx context.Context, cfg config.Config) ([]services.Service, e
 		return nil, err
 	}
 
+	cache, err := initJsonRpcCache(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	return []services.Service{
 		health.NewService(
 			ctx, "", healthutils.DefaultHealthServerErrHandler,
 			health.CheckerFrom(summarizeReports, proxy),
 		),
 		proxy,
+		cache,
 	}, nil
 }
 

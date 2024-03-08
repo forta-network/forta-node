@@ -63,6 +63,17 @@ func (c *JsonRpcCache) Start() error {
 	return nil
 }
 
+func (p *JsonRpcCache) Stop() error {
+	if p.server != nil {
+		return p.server.Close()
+	}
+	return nil
+}
+
+func (p *JsonRpcCache) Name() string {
+	return "json-rpc-cache"
+}
+
 func (c *JsonRpcCache) Handler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		req, err := decodeBody(r)
