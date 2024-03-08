@@ -44,6 +44,11 @@ type JsonRpcProxyConfig struct {
 	RateLimitConfig *RateLimitConfig `yaml:"rateLimit" json:"rateLimit"`
 }
 
+type JsonRpcCacheConfig struct {
+	DispatcherURL            string `yaml:"dispatcherUrl" json:"dispatcherUrl" validate:"url"`
+	CacheExpirePeriodSeconds int    `yaml:"cacheExpirePeriodSeconds" json:"cacheExpirePeriodSeconds" default:"300"`
+}
+
 type LogConfig struct {
 	Level       string `yaml:"level" json:"level" default:"info" `
 	MaxLogSize  string `yaml:"maxLogSize" json:"maxLogSize" default:"50m" `
