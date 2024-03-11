@@ -45,7 +45,9 @@ func (c *cache) Append(events *protocol.CombinedBlockEvents) {
 		keys := make([]string, 0)
 
 		// eth_blockNumber
-		val, ok := cc.get("eth_blockNumber", "[]")
+		method := "eth_blockNumber"
+		params := "[]"
+		val, ok := cc.get(method, params)
 		if ok {
 			blockNumber := val.(string)
 			actualBlockNumber, err := strconv.ParseInt(strings.Replace(blockNumber, "0x", "", -1), 16, 64)
@@ -59,15 +61,18 @@ func (c *cache) Append(events *protocol.CombinedBlockEvents) {
 			}
 
 			if newBlockNumber > actualBlockNumber {
-				cc.put("eth_blockNumber", "", event.Block.Number)
+				cc.put(method, params, event.Block.Number)
 			}
 		} else {
-			cc.put("eth_blockNumber", "[]", event.Block.Number)
+			cc.put(method, params, event.Block.Number)
 		}
 
-		keys = append(keys, "eth_blockNumber")
+		keys = append(keys, cacheKey(method, params))
 
 		// eth_getBlockByNumber
+		method = "eth_getBlockByNumber"
+		params = fmt.Sprintf(`["%s", "true"]`, event.Block.Number)
+
 		blockByNumber := &domain.Block{
 			Difficulty:       &event.Block.Difficulty,
 			ExtraData:        &event.Block.ExtraData,
@@ -114,10 +119,13 @@ func (c *cache) Append(events *protocol.CombinedBlockEvents) {
 			}
 		}
 
-		cc.put("eth_getBlockByNumber", fmt.Sprintf(`["%s", "true"]`, event.Block.Number), blockByNumber)
-		keys = append(keys, "eth_getBlockByNumber"+fmt.Sprintf(`["%s", "true"]`, event.Block.Number))
+		cc.put(method, params, blockByNumber)
+		keys = append(keys, cacheKey(method, params))
 
 		// eth_getLogs
+		method = "eth_getLogs"
+		params = fmt.Sprintf(`[{"fromBlock":"%s","toBlock":"%s"}]`, event.Block.Number, event.Block.Number)
+
 		logsByBlock := make([]domain.LogEntry, len(event.Logs))
 		for i, log := range event.Logs {
 			logsByBlock[i] = domain.LogEntry{
@@ -137,10 +145,13 @@ func (c *cache) Append(events *protocol.CombinedBlockEvents) {
 			}
 		}
 
-		cc.put("eth_getLogs", fmt.Sprintf(`[{"fromBlock":"%s","toBlock":"%s"}]`, event.Block.Number, event.Block.Number), logsByBlock)
-		keys = append(keys, "eth_getLogs"+fmt.Sprintf(`[{"fromBlock":"%s","toBlock":"%s"}]`, event.Block.Number, event.Block.Number))
+		cc.put(method, params, logsByBlock)
+		keys = append(keys, cacheKey(method, params))
 
 		// trace_block
+		method = "trace_block"
+		params = fmt.Sprintf(`["%s"]`, event.Block.Number)
+
 		traceBlock := make([]domain.Trace, len(event.Traces))
 		blockNumber, err := strconv.ParseInt(strings.Replace(event.Block.Number, "0x", "", -1), 16, 64)
 		if err != nil {
@@ -197,8 +208,8 @@ func (c *cache) Append(events *protocol.CombinedBlockEvents) {
 			}
 		}
 
-		cc.put("trace_block", fmt.Sprintf(`["%s"]`, event.Block.Number), traceBlock)
-		keys = append(keys, "trace_block"+fmt.Sprintf(`["%s"]`, event.Block.Number))
+		cc.put(method, params, traceBlock)
+		keys = append(keys, cacheKey(method, params))
 
 		garbage[chainID] = keys
 	}
@@ -222,13 +233,13 @@ type chainCache struct {
 func (c *chainCache) put(method string, params string, result interface{}) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.data[method+params] = result
+	c.data[cacheKey(method, params)] = result
 }
 
 func (c *chainCache) get(method string, params string) (interface{}, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	result, ok := c.data[method+params]
+	result, ok := c.data[cacheKey(method, params)]
 
 	return result, ok
 }
@@ -239,4 +250,8 @@ func (c *chainCache) collectGarbage(keys []string) {
 	for _, key := range keys {
 		delete(c.data, key)
 	}
+}
+
+func cacheKey(method, params string) string {
+	return method + params
 }

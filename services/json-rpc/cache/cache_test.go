@@ -16,17 +16,17 @@ func TestCache(t *testing.T) {
 
 	cache.Append(events)
 
-	blockNumber, ok := cache.Get(1, "eth_blockNumber", "")
+	blockNumber, ok := cache.Get(1, "eth_blockNumber", "[]")
 	assert.True(t, ok)
 	assert.Equal(t, "1", blockNumber)
 
-	blockNumber, ok = cache.Get(2, "eth_blockNumber", "")
+	blockNumber, ok = cache.Get(2, "eth_blockNumber", "[]")
 	assert.True(t, ok)
 	assert.Equal(t, "101", blockNumber)
 
 	time.Sleep(time.Second)
 
-	blockNumber, ok = cache.Get(1, "eth_blockNumber", "")
+	blockNumber, ok = cache.Get(1, "eth_blockNumber", "[]")
 	assert.False(t, ok)
 	assert.Empty(t, blockNumber)
 }
