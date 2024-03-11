@@ -1,4 +1,4 @@
-package json_rpc
+package json_rpc_cache
 
 import (
 	"testing"

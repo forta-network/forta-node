@@ -12,6 +12,7 @@ import (
 	types "github.com/docker/docker/api/types"
 	events "github.com/docker/docker/api/types/events"
 	domain "github.com/forta-network/forta-core-go/domain"
+	protocol "github.com/forta-network/forta-core-go/protocol"
 	docker "github.com/forta-network/forta-node/clients/docker"
 	config "github.com/forta-network/forta-node/config"
 	gomock "github.com/golang/mock/gomock"
@@ -707,4 +708,42 @@ func (m *MockIPAuthenticator) FindContainerNameFromRemoteAddr(ctx context.Contex
 func (mr *MockIPAuthenticatorMockRecorder) FindContainerNameFromRemoteAddr(ctx, hostPort interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindContainerNameFromRemoteAddr", reflect.TypeOf((*MockIPAuthenticator)(nil).FindContainerNameFromRemoteAddr), ctx, hostPort)
+}
+
+// MockCombinedBlockEventsClient is a mock of CombinedBlockEventsClient interface.
+type MockCombinedBlockEventsClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockCombinedBlockEventsClientMockRecorder
+}
+
+// MockCombinedBlockEventsClientMockRecorder is the mock recorder for MockCombinedBlockEventsClient.
+type MockCombinedBlockEventsClientMockRecorder struct {
+	mock *MockCombinedBlockEventsClient
+}
+
+// NewMockCombinedBlockEventsClient creates a new mock instance.
+func NewMockCombinedBlockEventsClient(ctrl *gomock.Controller) *MockCombinedBlockEventsClient {
+	mock := &MockCombinedBlockEventsClient{ctrl: ctrl}
+	mock.recorder = &MockCombinedBlockEventsClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockCombinedBlockEventsClient) EXPECT() *MockCombinedBlockEventsClientMockRecorder {
+	return m.recorder
+}
+
+// GetCombinedBlockEvents mocks base method.
+func (m *MockCombinedBlockEventsClient) GetCombinedBlockEvents(bucket int64) (*protocol.CombinedBlockEvents, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCombinedBlockEvents", bucket)
+	ret0, _ := ret[0].(*protocol.CombinedBlockEvents)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCombinedBlockEvents indicates an expected call of GetCombinedBlockEvents.
+func (mr *MockCombinedBlockEventsClientMockRecorder) GetCombinedBlockEvents(bucket interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCombinedBlockEvents", reflect.TypeOf((*MockCombinedBlockEventsClient)(nil).GetCombinedBlockEvents), bucket)
 }

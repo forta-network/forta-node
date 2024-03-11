@@ -1,197 +1,15 @@
-package json_rpc
+package json_rpc_cache
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/andybalholm/brotli"
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol"
-	"github.com/forta-network/forta-core-go/utils"
-	"github.com/forta-network/forta-node/clients"
-	"github.com/forta-network/forta-node/config"
-	"github.com/gogo/protobuf/proto"
-	log "github.com/sirupsen/logrus"
 )
-
-type JsonRpcCache struct {
-	ctx              context.Context
-	cfg              config.JsonRpcCacheConfig
-	botAuthenticator clients.IPAuthenticator
-
-	server *http.Server
-
-	cache *cache
-}
-
-func NewJsonRpcCache(ctx context.Context, cfg config.JsonRpcCacheConfig) (*JsonRpcCache, error) {
-	botAuthenticator, err := clients.NewBotAuthenticator(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return &JsonRpcCache{
-		ctx:              ctx,
-		cfg:              cfg,
-		botAuthenticator: botAuthenticator,
-	}, nil
-}
-
-func (c *JsonRpcCache) Start() error {
-	c.cache = &cache{
-		chains:      make(map[uint64]*chainCache),
-		cacheExpire: time.Duration(c.cfg.CacheExpirePeriodSeconds) * time.Second,
-	}
-
-	c.server = &http.Server{
-		Addr:    ":8575",
-		Handler: c.Handler(),
-	}
-
-	utils.GoListenAndServe(c.server)
-
-	go c.pollEvents()
-
-	return nil
-}
-
-func (p *JsonRpcCache) Stop() error {
-	if p.server != nil {
-		return p.server.Close()
-	}
-	return nil
-}
-
-func (p *JsonRpcCache) Name() string {
-	return "json-rpc-cache"
-}
-
-func (c *JsonRpcCache) Handler() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		req, err := decodeBody(r)
-		if err != nil {
-			writeBadRequest(w, req, err)
-			return
-		}
-
-		agentConfig, err := c.botAuthenticator.FindAgentFromRemoteAddr(r.RemoteAddr)
-		if agentConfig == nil || err != nil {
-			writeUnauthorized(w, nil)
-			return
-		}
-
-		chainID, err := strconv.ParseInt(r.Header.Get("X-Forta-Chain-ID"), 10, 64)
-		if err != nil {
-			writeBadRequest(w, req, fmt.Errorf("missing or invalid chain id header"))
-			return
-		}
-
-		result, ok := c.cache.Get(uint64(chainID), req.Method, req.Params)
-		if !ok {
-			resp := &jsonRpcResp{
-				ID:     req.ID,
-				Result: nil,
-			}
-
-			if err := json.NewEncoder(w).Encode(resp); err != nil {
-				log.WithError(err).Error("failed to write jsonrpc response body")
-			}
-			return
-		}
-
-		b, err := json.Marshal(result)
-		if err != nil {
-			writeBadRequest(w, req, err)
-			return
-		}
-
-		resp := &jsonRpcResp{
-			ID:     req.ID,
-			Result: json.RawMessage(b),
-		}
-
-		if err := json.NewEncoder(w).Encode(resp); err != nil {
-			log.WithError(err).Error("failed to write jsonrpc response body")
-		}
-	})
-}
-
-type PresignedURLItem struct {
-	Bucket       int64  `dynamodbav:"bucket"`
-	PresignedURL string `dynamodbav:"presigned_url"`
-	ExpiresAt    int64  `dynamodbav:"expires_at"`
-}
-
-func (c *JsonRpcCache) pollEvents() {
-	dispatcherClient := http.DefaultClient
-	dispatcherClient.Timeout = 10 * time.Second
-
-	dispatcherURL, _ := url.Parse(c.cfg.DispatcherURL)
-	dispatcherPath := dispatcherURL.Path
-
-	r2Client := http.DefaultClient
-
-	var err error
-	for {
-		time.Sleep(1 * time.Second)
-		log.Info("Polling for combined block events")
-
-		bucket := time.Now().Truncate(time.Second * 10).Unix()
-		dispatcherURL.Path, err = url.JoinPath(dispatcherPath, fmt.Sprintf("%d", bucket))
-		if err != nil {
-			continue
-		}
-
-		resp, err := dispatcherClient.Get(dispatcherURL.String())
-		if err != nil {
-			log.WithError(err).Debug("Failed to get R2 url from dispatcher")
-			continue
-		}
-
-		var item PresignedURLItem
-		err = json.NewDecoder(resp.Body).Decode(&item)
-		if err != nil {
-			log.WithError(err).Error("Failed to decode presigned url")
-			continue
-		}
-
-		err = resp.Body.Close()
-		if err != nil {
-			continue
-		}
-
-		resp, err = r2Client.Get(item.PresignedURL)
-		if err != nil {
-			log.WithError(err).Error("Failed to get combined block events from R2")
-			continue
-		}
-
-		b, err := io.ReadAll(brotli.NewReader(resp.Body))
-		if err != nil {
-			log.WithError(err).Error("Failed to uncompress combined block events")
-			continue
-		}
-
-		var events protocol.CombinedBlockEvents
-
-		err = proto.Unmarshal(b, &events)
-		if err != nil {
-			log.WithError(err).Error("Failed to unmarshal combined block events")
-			continue
-		}
-
-		log.Info("Added combined block events to local cache")
-		c.cache.Append(&events)
-	}
-}
 
 type cache struct {
 	chains      map[uint64]*chainCache
@@ -227,7 +45,7 @@ func (c *cache) Append(events *protocol.CombinedBlockEvents) {
 		keys := make([]string, 0)
 
 		// eth_blockNumber
-		val, ok := cc.get("eth_blockNumber", "")
+		val, ok := cc.get("eth_blockNumber", "[]")
 		if ok {
 			blockNumber := val.(string)
 			actualBlockNumber, err := strconv.ParseInt(strings.Replace(blockNumber, "0x", "", -1), 16, 64)
@@ -244,7 +62,7 @@ func (c *cache) Append(events *protocol.CombinedBlockEvents) {
 				cc.put("eth_blockNumber", "", event.Block.Number)
 			}
 		} else {
-			cc.put("eth_blockNumber", "", event.Block.Number)
+			cc.put("eth_blockNumber", "[]", event.Block.Number)
 		}
 
 		keys = append(keys, "eth_blockNumber")
@@ -315,7 +133,7 @@ func (c *cache) Append(events *protocol.CombinedBlockEvents) {
 			}
 
 			for i, topic := range log.Topics {
-				logsByBlock[len(logsByBlock)-1].Topics[i] = &topic
+				logsByBlock[i].Topics = append(logsByBlock[i].Topics, &topic)
 			}
 		}
 

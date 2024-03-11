@@ -8,27 +8,28 @@ import (
 	"net/http"
 )
 
-type jsonRpcReq struct {
+type JsonRpcReq struct {
 	ID     json.RawMessage `json:"id"`
 	Method string          `json:"method"`
-	Params string          `json:"params"`
+	Params json.RawMessage `json:"params"`
 }
 
-type jsonRpcResp struct {
+type JsonRpcResp struct {
 	ID     json.RawMessage `json:"id"`
 	Result json.RawMessage `json:"result"`
-	Error  jsonRpcError    `json:"error"`
+	Error  *JsonRpcError   `json:"error"`
 }
 
-func decodeBody(req *http.Request) (*jsonRpcReq, error) {
-	var decodedBody jsonRpcReq
+func DecodeBody(req *http.Request) (*JsonRpcReq, error) {
+	var decodedBody JsonRpcReq
 	if err := json.NewDecoder(req.Body).Decode(&decodedBody); err != nil {
+		fmt.Println(err)
 		return nil, fmt.Errorf("failed to decode json-rpc request body")
 	}
 	return &decodedBody, nil
 }
 
-func decodeAndReplaceBody(req *http.Request) (*jsonRpcReq, error) {
+func decodeAndReplaceBody(req *http.Request) (*JsonRpcReq, error) {
 	b, err := io.ReadAll(req.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read request body")
@@ -36,7 +37,7 @@ func decodeAndReplaceBody(req *http.Request) (*jsonRpcReq, error) {
 	req.Body.Close()
 	req.Body = io.NopCloser(bytes.NewBuffer(b))
 
-	decodedBody, err := decodeBody(req)
+	decodedBody, err := DecodeBody(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode json-rpc request body")
 	}

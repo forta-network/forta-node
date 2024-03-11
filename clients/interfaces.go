@@ -7,6 +7,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/events"
 	"github.com/forta-network/forta-core-go/domain"
+	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-node/clients/docker"
 	"github.com/forta-network/forta-node/config"
 	"github.com/golang/protobuf/proto"
@@ -67,4 +68,8 @@ type IPAuthenticator interface {
 	FindAgentFromRemoteAddr(hostPort string) (*config.AgentConfig, error)
 	FindContainerNameFromRemoteAddr(ctx context.Context, hostPort string) (string, error)
 	FindAgentByContainerName(containerName string) (*config.AgentConfig, error)
+}
+
+type CombinedBlockEventsClient interface {
+	GetCombinedBlockEvents(bucket int64) (*protocol.CombinedBlockEvents, error)
 }

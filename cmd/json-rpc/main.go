@@ -9,14 +9,15 @@ import (
 	"github.com/forta-network/forta-node/healthutils"
 	"github.com/forta-network/forta-node/services"
 	jrp "github.com/forta-network/forta-node/services/json-rpc"
+	jrpcache "github.com/forta-network/forta-node/services/json-rpc/cache"
 )
 
 func initJsonRpcProxy(ctx context.Context, cfg config.Config) (*jrp.JsonRpcProxy, error) {
 	return jrp.NewJsonRpcProxy(ctx, cfg)
 }
 
-func initJsonRpcCache(ctx context.Context, cfg config.Config) (*jrp.JsonRpcCache, error) {
-	return jrp.NewJsonRpcCache(ctx, cfg.JsonRpcCache)
+func initJsonRpcCache(ctx context.Context, cfg config.Config) (*jrpcache.JsonRpcCache, error) {
+	return jrpcache.NewJsonRpcCache(ctx, cfg.JsonRpcCache)
 }
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {

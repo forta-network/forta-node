@@ -25,7 +25,7 @@ func TestTooManyReqsError(t *testing.T) {
 
 	resp := recorder.Result()
 	r.Equal(http.StatusTooManyRequests, resp.StatusCode)
-	var errResp errorResponse
+	var errResp ErrorResponse
 	r.NoError(json.NewDecoder(resp.Body).Decode(&errResp))
 	r.Equal("2.0", errResp.JSONRPC)
 	var id int
