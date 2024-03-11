@@ -7,13 +7,17 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type ErrorResponse struct {
-	JSONRPC string          `json:"jsonrpc"`
-	ID      json.RawMessage `json:"id"`
-	Error   JsonRpcError    `json:"error"`
+type requestPayload struct {
+	ID int `json:"id"`
 }
 
-type JsonRpcError struct {
+type errorResponse struct {
+	JSONRPC string       `json:"jsonrpc"`
+	ID      int          `json:"id"`
+	Error   jsonRpcError `json:"error"`
+}
+
+type jsonRpcError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
@@ -21,16 +25,16 @@ type JsonRpcError struct {
 func writeTooManyReqsErr(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusTooManyRequests)
 
-	var reqPayload JsonRpcReq
+	var reqPayload requestPayload
 	if err := json.NewDecoder(req.Body).Decode(&reqPayload); err != nil {
 		log.WithError(err).Error("failed to decode jsonrpc request body")
 		return
 	}
 
-	if err := json.NewEncoder(w).Encode(&ErrorResponse{
+	if err := json.NewEncoder(w).Encode(&errorResponse{
 		JSONRPC: "2.0",
 		ID:      reqPayload.ID,
-		Error: JsonRpcError{
+		Error: jsonRpcError{
 			Code:    -32000,
 			Message: "agent exceeds scan node request limit",
 		},

@@ -297,8 +297,7 @@ func (sup *SupervisorService) start() error {
 				hostFortaDir:           config.DefaultContainerFortaDirPath,
 			},
 			Ports: map[string]string{
-				"":     config.DefaultHealthPort, // random host port
-				"8575": config.DefaultBotJSONRPCCachePort,
+				"": config.DefaultHealthPort, // random host port
 			},
 			DialHost:       true,
 			NetworkID:      nodeNetworkID,

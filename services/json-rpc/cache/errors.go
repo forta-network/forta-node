@@ -4,11 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 
-	jrp "github.com/forta-network/forta-node/services/json-rpc"
 	log "github.com/sirupsen/logrus"
 )
 
-func writeBadRequest(w http.ResponseWriter, req *jrp.JsonRpcReq, err error) {
+func writeBadRequest(w http.ResponseWriter, req *jsonRpcReq, err error) {
 	if req == nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
@@ -16,10 +15,10 @@ func writeBadRequest(w http.ResponseWriter, req *jrp.JsonRpcReq, err error) {
 
 	w.WriteHeader(http.StatusBadRequest)
 
-	if err := json.NewEncoder(w).Encode(&jrp.ErrorResponse{
+	if err := json.NewEncoder(w).Encode(&errorResponse{
 		JSONRPC: "2.0",
 		ID:      req.ID,
-		Error: jrp.JsonRpcError{
+		Error: jsonRpcError{
 			Code:    -32600,
 			Message: err.Error(),
 		},
@@ -28,13 +27,13 @@ func writeBadRequest(w http.ResponseWriter, req *jrp.JsonRpcReq, err error) {
 	}
 }
 
-func writeUnauthorized(w http.ResponseWriter, req *jrp.JsonRpcReq) {
+func writeUnauthorized(w http.ResponseWriter, req *jsonRpcReq) {
 	w.WriteHeader(http.StatusUnauthorized)
 
-	if err := json.NewEncoder(w).Encode(&jrp.ErrorResponse{
+	if err := json.NewEncoder(w).Encode(&errorResponse{
 		JSONRPC: "2.0",
 		ID:      req.ID,
-		Error: jrp.JsonRpcError{
+		Error: jsonRpcError{
 			Code:    -32000,
 			Message: "unauthorized",
 		},

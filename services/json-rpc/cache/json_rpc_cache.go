@@ -12,7 +12,6 @@ import (
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/r2cbe"
 	"github.com/forta-network/forta-node/config"
-	jrp "github.com/forta-network/forta-node/services/json-rpc"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -78,7 +77,7 @@ func (p *JsonRpcCache) Name() string {
 
 func (c *JsonRpcCache) Handler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		req, err := jrp.DecodeBody(r)
+		req, err := decodeBody(r)
 		if err != nil {
 			writeBadRequest(w, req, err)
 			return
@@ -98,10 +97,10 @@ func (c *JsonRpcCache) Handler() http.Handler {
 
 		result, ok := c.cache.Get(uint64(chainID), req.Method, string(req.Params))
 		if !ok {
-			resp := &jrp.JsonRpcResp{
+			resp := &jsonRpcResp{
 				ID:     req.ID,
 				Result: nil,
-				Error: &jrp.JsonRpcError{
+				Error: &jsonRpcError{
 					Code:    -32603,
 					Message: "result not found in cache",
 				},
@@ -119,7 +118,7 @@ func (c *JsonRpcCache) Handler() http.Handler {
 			return
 		}
 
-		resp := &jrp.JsonRpcResp{
+		resp := &jsonRpcResp{
 			ID:     req.ID,
 			Result: json.RawMessage(b),
 		}

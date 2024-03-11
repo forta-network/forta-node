@@ -10,7 +10,6 @@ import (
 
 	mock_clients "github.com/forta-network/forta-node/clients/mocks"
 	"github.com/forta-network/forta-node/config"
-	jrp "github.com/forta-network/forta-node/services/json-rpc"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -55,7 +54,7 @@ func TestJsonRpcCache(t *testing.T) {
 
 	<-appended
 
-	jrpReq := jrp.JsonRpcReq{
+	jrpReq := jsonRpcReq{
 		ID:     json.RawMessage("1"),
 		Method: "eth_blockNumber",
 		Params: json.RawMessage("[]"),
@@ -73,7 +72,7 @@ func TestJsonRpcCache(t *testing.T) {
 	require.Equal(t, 200, rw.Code)
 
 	b = rw.Body.Bytes()
-	var resp jrp.JsonRpcResp
+	var resp jsonRpcResp
 	require.NoError(t, json.Unmarshal(b, &resp))
 	require.Nil(t, resp.Error)
 

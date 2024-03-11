@@ -45,7 +45,7 @@ type JsonRpcProxyConfig struct {
 }
 
 type JsonRpcCacheConfig struct {
-	DispatcherURL            string `yaml:"dispatcherUrl" json:"dispatcherUrl" validate:"omitempty,url"`
+	DispatcherURL            string `yaml:"dispatcherUrl" json:"dispatcherUrl" default:"https://dispatcher.forta.network/batch" validate:"omitempty,url"`
 	CacheExpirePeriodSeconds int    `yaml:"cacheExpirePeriodSeconds" json:"cacheExpirePeriodSeconds" default:"300"`
 }
 
