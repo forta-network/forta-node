@@ -130,19 +130,21 @@ func (c *JsonRpcCache) Handler() http.Handler {
 }
 
 func (c *JsonRpcCache) pollEvents() {
+	bucket := time.Now().Truncate(time.Second * 10).Unix()
+
 	for {
 		time.Sleep(1 * time.Second)
-		log.Info("Polling for combined block events")
-
-		bucket := time.Now().Truncate(time.Second * 10).Unix()
+		log.Info("Polling for combined block events", "bucket", bucket)
 
 		events, err := c.cbeClient.GetCombinedBlockEvents(bucket)
 		if err != nil {
-			log.WithError(err).Error("Failed to get combined block events")
+			log.WithError(err).Error("Failed to get combined block events", "bucket", bucket)
+			bucket = time.Now().Truncate(time.Second * 10).Unix()
 			continue
 		}
 
-		log.Info("Added combined block events to local cache")
+		log.Info("Added combined block events to local cache", "bucket", bucket, "events", len(events.Events))
 		c.cache.Append(events)
+		bucket += 10
 	}
 }
