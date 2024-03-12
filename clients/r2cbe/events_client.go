@@ -4,19 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/andybalholm/brotli"
 	"github.com/forta-network/forta-core-go/protocol"
+	"github.com/forta-network/forta-core-go/utils/httpclient"
 	"google.golang.org/protobuf/proto"
 )
 
 type combinedBlockEventsClient struct {
-	dispatcherClient *http.Client
-	r2Client         *http.Client
-
 	dispatcherURL  *url.URL
 	dispatcherPath string
 }
@@ -24,14 +21,9 @@ type combinedBlockEventsClient struct {
 func NewCombinedBlockEventsClient(dispatcherURL string) *combinedBlockEventsClient {
 	u, _ := url.Parse(dispatcherURL)
 
-	dispatcherClient := http.DefaultClient
-	dispatcherClient.Timeout = 10 * time.Second
-
 	return &combinedBlockEventsClient{
-		dispatcherClient: dispatcherClient,
-		r2Client:         http.DefaultClient,
-		dispatcherURL:    u,
-		dispatcherPath:   u.Path,
+		dispatcherURL:  u,
+		dispatcherPath: u.Path,
 	}
 }
 
@@ -47,7 +39,7 @@ func (c *combinedBlockEventsClient) GetCombinedBlockEvents(bucket int64) (_ *pro
 		return nil, err
 	}
 
-	resp, err := c.dispatcherClient.Get(c.dispatcherURL.String())
+	resp, err := httpclient.Default.Get(c.dispatcherURL.String())
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +52,11 @@ func (c *combinedBlockEventsClient) GetCombinedBlockEvents(bucket int64) (_ *pro
 		return nil, err
 	}
 
-	resp, err = c.r2Client.Get(item.PresignedURL)
+	if item.ExpiresAt < time.Now().Unix() {
+		return nil, fmt.Errorf("presigned URL expired")
+	}
+
+	resp, err = httpclient.Default.Get(item.PresignedURL)
 	if err != nil {
 		return nil, err
 	}

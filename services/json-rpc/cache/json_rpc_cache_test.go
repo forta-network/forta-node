@@ -44,10 +44,7 @@ func TestJsonRpcCache(t *testing.T) {
 		cfg: config.JsonRpcCacheConfig{
 			CacheExpirePeriodSeconds: 300,
 		},
-		cache: &cache{
-			chains:      make(map[uint64]*chainCache),
-			cacheExpire: 300 * time.Second,
-		},
+		cache: NewCache(300 * time.Second),
 	}
 
 	go jrpCache.pollEvents()

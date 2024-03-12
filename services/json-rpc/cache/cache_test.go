@@ -9,10 +9,7 @@ import (
 )
 
 func TestCache(t *testing.T) {
-	cache := cache{
-		chains:      make(map[uint64]*chainCache),
-		cacheExpire: time.Millisecond * 500,
-	}
+	cache := NewCache(time.Millisecond * 500)
 
 	cache.Append(events)
 

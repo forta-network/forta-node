@@ -26,7 +26,7 @@ type JsonRpcCache struct {
 
 	server *http.Server
 
-	cache *cache
+	cache *inMemory
 
 	cbeClient clients.CombinedBlockEventsClient
 }
@@ -45,10 +45,7 @@ func NewJsonRpcCache(ctx context.Context, cfg config.JsonRpcCacheConfig) (*JsonR
 }
 
 func (c *JsonRpcCache) Start() error {
-	c.cache = &cache{
-		chains:      make(map[uint64]*chainCache),
-		cacheExpire: time.Duration(c.cfg.CacheExpirePeriodSeconds) * time.Second,
-	}
+	c.cache = NewCache(time.Duration(c.cfg.CacheExpirePeriodSeconds) * time.Second)
 
 	c.server = &http.Server{
 		Addr:    ":8575",
@@ -145,6 +142,6 @@ func (c *JsonRpcCache) pollEvents() {
 
 		log.Info("Added combined block events to local cache", "bucket", bucket, "events", len(events.Events))
 		c.cache.Append(events)
-		bucket += 10
+		bucket += 10 // 10 seconds
 	}
 }

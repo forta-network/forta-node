@@ -4,78 +4,55 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol"
+	"github.com/patrickmn/go-cache"
 )
 
-type cache struct {
-	chains      map[uint64]*chainCache
-	cacheExpire time.Duration
+type inMemory struct {
+	cache *cache.Cache
 }
 
-func (c *cache) collectGarbage(garbage map[uint64][]string) {
-	for chainID, keys := range garbage {
-		c.chains[chainID].collectGarbage(keys)
+func NewCache(expire time.Duration) *inMemory {
+	return &inMemory{
+		cache: cache.New(expire, expire),
 	}
 }
 
-func (c *cache) Append(events *protocol.CombinedBlockEvents) {
-	garbage := make(map[uint64][]string, 0)
-	defer func() {
-		go func() {
-			time.Sleep(c.cacheExpire)
-			c.collectGarbage(garbage)
-		}()
-	}()
-
+func (c *inMemory) Append(events *protocol.CombinedBlockEvents) {
 	for _, event := range events.Events {
 		chainID := event.ChainID
-		cc, ok := c.chains[chainID]
-		if !ok {
-			cc = &chainCache{
-				mu:   &sync.RWMutex{},
-				data: make(map[string]interface{}),
-			}
-			c.chains[chainID] = cc
-		}
-
-		keys := make([]string, 0)
 
 		// eth_blockNumber
 		method := "eth_blockNumber"
 		params := "[]"
 
-		if val, ok := cc.get(method, params); ok {
+		if val, ok := c.cache.Get(cacheKey(chainID, method, params)); ok {
 			blockNumber, ok := val.(string)
 
-			// if the new block number is later than the cached one, update the cache
+			// if the new block number is later than the cached one, update the inMemory
 			if ok && isLater(blockNumber, event.Block.Number) {
-				cc.put(method, params, event.Block.Number)
+				c.cache.SetDefault(cacheKey(chainID, method, params), event.Block.Number)
 			}
 		} else {
-			cc.put(method, params, event.Block.Number)
+			c.cache.SetDefault(cacheKey(chainID, method, params), event.Block.Number)
 		}
-
-		keys = append(keys, cacheKey(method, params))
 
 		// eth_getBlockByNumber
 		method = "eth_getBlockByNumber"
 		params = fmt.Sprintf(`["%s", "true"]`, event.Block.Number)
 
 		block := domain.BlockFromCombinedBlockEvent(event)
-		cc.put(method, params, block)
-		keys = append(keys, cacheKey(method, params))
+		c.cache.SetDefault(cacheKey(chainID, method, params), block)
 
 		// eth_getLogs
 		method = "eth_getLogs"
 		params = fmt.Sprintf(`[{"fromBlock":"%s","toBlock":"%s"}]`, event.Block.Number, event.Block.Number)
 
 		logs := domain.LogsFromCombinedBlockEvent(event)
-		cc.put(method, params, logs)
-		keys = append(keys, cacheKey(method, params))
+		c.cache.SetDefault(cacheKey(chainID, method, params), logs)
 
 		// trace_block
 		method = "trace_block"
@@ -83,53 +60,17 @@ func (c *cache) Append(events *protocol.CombinedBlockEvents) {
 
 		traces, err := domain.TracesFromCombinedBlockEvent(event)
 		if err == nil {
-			cc.put(method, params, traces)
-			keys = append(keys, cacheKey(method, params))
+			c.cache.SetDefault(cacheKey(chainID, method, params), traces)
 		}
-
-		garbage[chainID] = keys
 	}
 }
 
-func (c *cache) Get(chainId uint64, method string, params string) (interface{}, bool) {
-	cc, ok := c.chains[chainId]
-	if ok {
-		return cc.get(method, params)
-	}
-
-	return nil, false
+func (c *inMemory) Get(chainId uint64, method string, params string) (interface{}, bool) {
+	return c.cache.Get(cacheKey(chainId, method, params))
 }
 
-type chainCache struct {
-	mu *sync.RWMutex
-	// key is method + params
-	data map[string]interface{}
-}
-
-func (c *chainCache) put(method string, params string, result interface{}) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.data[cacheKey(method, params)] = result
-}
-
-func (c *chainCache) get(method string, params string) (interface{}, bool) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	result, ok := c.data[cacheKey(method, params)]
-
-	return result, ok
-}
-
-func (c *chainCache) collectGarbage(keys []string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	for _, key := range keys {
-		delete(c.data, key)
-	}
-}
-
-func cacheKey(method, params string) string {
-	return method + params
+func cacheKey(chainId uint64, method, params string) string {
+	return fmt.Sprintf("%d-%s-%s", chainId, method, params)
 }
 
 func isLater(actual, new string) bool {
