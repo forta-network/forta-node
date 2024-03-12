@@ -70,6 +70,6 @@ type IPAuthenticator interface {
 	FindAgentByContainerName(containerName string) (*config.AgentConfig, error)
 }
 
-type CombinedBlockEventsClient interface {
-	GetCombinedBlockEvents(bucket int64) (*protocol.CombinedBlockEvents, error)
+type BlocksDataClient interface {
+	GetBlocksData(bucket int64) (*protocol.BlocksData, error)
 }

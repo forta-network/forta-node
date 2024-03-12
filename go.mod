@@ -42,7 +42,7 @@ require (
 	github.com/andybalholm/brotli v1.1.0
 	github.com/docker/docker v1.6.2
 	github.com/docker/go-connections v0.4.0
-	github.com/forta-network/forta-core-go v0.0.0-20240311161131-92809f963403
+	github.com/forta-network/forta-core-go v0.0.0-20240312150426-832d1633b86b
 	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/client_model v0.3.0
 	github.com/prometheus/common v0.39.0

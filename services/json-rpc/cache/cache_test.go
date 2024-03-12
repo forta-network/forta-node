@@ -11,7 +11,7 @@ import (
 func TestCache(t *testing.T) {
 	cache := NewCache(time.Millisecond * 500)
 
-	cache.Append(events)
+	cache.Append(blocks)
 
 	blockNumber, ok := cache.Get(1, "eth_blockNumber", "[]")
 	assert.True(t, ok)
@@ -28,11 +28,11 @@ func TestCache(t *testing.T) {
 	assert.Empty(t, blockNumber)
 }
 
-var events = &protocol.CombinedBlockEvents{
-	Events: []*protocol.CombinedBlockEvent{
+var blocks = &protocol.BlocksData{
+	Blocks: []*protocol.BlockData{
 		{
 			ChainID: 1,
-			Block: &protocol.CombinedBlock{
+			Block: &protocol.BlockWithTransactions{
 				Hash:   "0xaaaa",
 				Number: "1",
 				Transactions: []*protocol.Transaction{
@@ -63,7 +63,7 @@ var events = &protocol.CombinedBlockEvents{
 		},
 		{
 			ChainID: 2,
-			Block: &protocol.CombinedBlock{
+			Block: &protocol.BlockWithTransactions{
 				Hash:   "0xffff",
 				Number: "100",
 				Transactions: []*protocol.Transaction{
@@ -83,7 +83,7 @@ var events = &protocol.CombinedBlockEvents{
 		},
 		{
 			ChainID: 2,
-			Block: &protocol.CombinedBlock{
+			Block: &protocol.BlockWithTransactions{
 				Hash:   "0xfffd",
 				Number: "101",
 				Transactions: []*protocol.Transaction{

@@ -710,40 +710,40 @@ func (mr *MockIPAuthenticatorMockRecorder) FindContainerNameFromRemoteAddr(ctx, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindContainerNameFromRemoteAddr", reflect.TypeOf((*MockIPAuthenticator)(nil).FindContainerNameFromRemoteAddr), ctx, hostPort)
 }
 
-// MockCombinedBlockEventsClient is a mock of CombinedBlockEventsClient interface.
-type MockCombinedBlockEventsClient struct {
+// MockBlocksDataClient is a mock of BlocksDataClient interface.
+type MockBlocksDataClient struct {
 	ctrl     *gomock.Controller
-	recorder *MockCombinedBlockEventsClientMockRecorder
+	recorder *MockBlocksDataClientMockRecorder
 }
 
-// MockCombinedBlockEventsClientMockRecorder is the mock recorder for MockCombinedBlockEventsClient.
-type MockCombinedBlockEventsClientMockRecorder struct {
-	mock *MockCombinedBlockEventsClient
+// MockBlocksDataClientMockRecorder is the mock recorder for MockBlocksDataClient.
+type MockBlocksDataClientMockRecorder struct {
+	mock *MockBlocksDataClient
 }
 
-// NewMockCombinedBlockEventsClient creates a new mock instance.
-func NewMockCombinedBlockEventsClient(ctrl *gomock.Controller) *MockCombinedBlockEventsClient {
-	mock := &MockCombinedBlockEventsClient{ctrl: ctrl}
-	mock.recorder = &MockCombinedBlockEventsClientMockRecorder{mock}
+// NewMockBlocksDataClient creates a new mock instance.
+func NewMockBlocksDataClient(ctrl *gomock.Controller) *MockBlocksDataClient {
+	mock := &MockBlocksDataClient{ctrl: ctrl}
+	mock.recorder = &MockBlocksDataClientMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockCombinedBlockEventsClient) EXPECT() *MockCombinedBlockEventsClientMockRecorder {
+func (m *MockBlocksDataClient) EXPECT() *MockBlocksDataClientMockRecorder {
 	return m.recorder
 }
 
-// GetCombinedBlockEvents mocks base method.
-func (m *MockCombinedBlockEventsClient) GetCombinedBlockEvents(bucket int64) (*protocol.CombinedBlockEvents, error) {
+// GetBlocksData mocks base method.
+func (m *MockBlocksDataClient) GetBlocksData(bucket int64) (*protocol.BlocksData, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCombinedBlockEvents", bucket)
-	ret0, _ := ret[0].(*protocol.CombinedBlockEvents)
+	ret := m.ctrl.Call(m, "GetBlocksData", bucket)
+	ret0, _ := ret[0].(*protocol.BlocksData)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetCombinedBlockEvents indicates an expected call of GetCombinedBlockEvents.
-func (mr *MockCombinedBlockEventsClientMockRecorder) GetCombinedBlockEvents(bucket interface{}) *gomock.Call {
+// GetBlocksData indicates an expected call of GetBlocksData.
+func (mr *MockBlocksDataClientMockRecorder) GetBlocksData(bucket interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCombinedBlockEvents", reflect.TypeOf((*MockCombinedBlockEventsClient)(nil).GetCombinedBlockEvents), bucket)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlocksData", reflect.TypeOf((*MockBlocksDataClient)(nil).GetBlocksData), bucket)
 }

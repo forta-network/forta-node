@@ -21,12 +21,12 @@ var (
 
 func TestJsonRpcCache(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	eventsClient := mock_clients.NewMockCombinedBlockEventsClient(ctrl)
+	blocksDataClient := mock_clients.NewMockBlocksDataClient(ctrl)
 	authenticator := mock_clients.NewMockIPAuthenticator(ctrl)
 
 	count := 0
 	appended := make(chan struct{})
-	eventsClient.EXPECT().GetCombinedBlockEvents(gomock.Any()).Return(events, nil).Do(func(any) {
+	blocksDataClient.EXPECT().GetBlocksData(gomock.Any()).Return(blocks, nil).Do(func(any) {
 		count++
 		if count == 2 {
 			close(appended)
@@ -40,7 +40,7 @@ func TestJsonRpcCache(t *testing.T) {
 	jrpCache := JsonRpcCache{
 		ctx:              context.TODO(),
 		botAuthenticator: authenticator,
-		cbeClient:        eventsClient,
+		blocksDataClient: blocksDataClient,
 		cfg: config.JsonRpcCacheConfig{
 			CacheExpirePeriodSeconds: 300,
 		},

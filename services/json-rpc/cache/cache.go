@@ -21,8 +21,8 @@ func NewCache(expire time.Duration) *inMemory {
 	}
 }
 
-func (c *inMemory) Append(events *protocol.CombinedBlockEvents) {
-	for _, event := range events.Events {
+func (c *inMemory) Append(blocksData *protocol.BlocksData) {
+	for _, event := range blocksData.Blocks {
 		chainID := event.ChainID
 
 		// eth_blockNumber
@@ -44,7 +44,7 @@ func (c *inMemory) Append(events *protocol.CombinedBlockEvents) {
 		method = "eth_getBlockByNumber"
 		params = fmt.Sprintf(`["%s", "true"]`, event.Block.Number)
 
-		block := domain.BlockFromCombinedBlockEvent(event)
+		block := domain.BlockFromBlockData(event)
 		c.cache.SetDefault(cacheKey(chainID, method, params), block)
 
 		// eth_getLogs

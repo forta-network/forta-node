@@ -10,7 +10,7 @@ import (
 
 	"github.com/forta-network/forta-core-go/utils"
 	"github.com/forta-network/forta-node/clients"
-	"github.com/forta-network/forta-node/clients/r2cbe"
+	"github.com/forta-network/forta-node/clients/blocksdata"
 	"github.com/forta-network/forta-node/config"
 	log "github.com/sirupsen/logrus"
 )
@@ -28,7 +28,7 @@ type JsonRpcCache struct {
 
 	cache *inMemory
 
-	cbeClient clients.CombinedBlockEventsClient
+	blocksDataClient clients.BlocksDataClient
 }
 
 func NewJsonRpcCache(ctx context.Context, cfg config.JsonRpcCacheConfig) (*JsonRpcCache, error) {
@@ -52,7 +52,7 @@ func (c *JsonRpcCache) Start() error {
 		Handler: c.Handler(),
 	}
 
-	c.cbeClient = r2cbe.NewCombinedBlockEventsClient(c.cfg.DispatcherURL)
+	c.blocksDataClient = blocksdata.NewCombinedBlockEventsClient(c.cfg.DispatcherURL)
 
 	utils.GoListenAndServe(c.server)
 
@@ -133,14 +133,14 @@ func (c *JsonRpcCache) pollEvents() {
 		time.Sleep(1 * time.Second)
 		log.Info("Polling for combined block events", "bucket", bucket)
 
-		events, err := c.cbeClient.GetCombinedBlockEvents(bucket)
+		events, err := c.blocksDataClient.GetBlocksData(bucket)
 		if err != nil {
 			log.WithError(err).Error("Failed to get combined block events", "bucket", bucket)
 			bucket = time.Now().Truncate(time.Second * 10).Unix()
 			continue
 		}
 
-		log.Info("Added combined block events to local cache", "bucket", bucket, "events", len(events.Events))
+		log.Info("Added combined block events to local cache", "bucket", bucket, "events", len(events.Blocks))
 		c.cache.Append(events)
 		bucket += 10 // 10 seconds
 	}

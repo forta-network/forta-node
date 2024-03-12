@@ -1,4 +1,4 @@
-package r2cbe
+package blocksdata
 
 import (
 	"encoding/json"
@@ -13,15 +13,15 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type combinedBlockEventsClient struct {
+type blocksDataClient struct {
 	dispatcherURL  *url.URL
 	dispatcherPath string
 }
 
-func NewCombinedBlockEventsClient(dispatcherURL string) *combinedBlockEventsClient {
+func NewCombinedBlockEventsClient(dispatcherURL string) *blocksDataClient {
 	u, _ := url.Parse(dispatcherURL)
 
-	return &combinedBlockEventsClient{
+	return &blocksDataClient{
 		dispatcherURL:  u,
 		dispatcherPath: u.Path,
 	}
@@ -33,7 +33,7 @@ type PresignedURLItem struct {
 	ExpiresAt    int64  `json:"expiresAt"`
 }
 
-func (c *combinedBlockEventsClient) GetCombinedBlockEvents(bucket int64) (_ *protocol.CombinedBlockEvents, err error) {
+func (c *blocksDataClient) GetBlocksData(bucket int64) (_ *protocol.BlocksData, err error) {
 	c.dispatcherURL.Path, err = url.JoinPath(c.dispatcherPath, fmt.Sprintf("%d", bucket))
 	if err != nil {
 		return nil, err
@@ -66,12 +66,12 @@ func (c *combinedBlockEventsClient) GetCombinedBlockEvents(bucket int64) (_ *pro
 		return nil, err
 	}
 
-	var events protocol.CombinedBlockEvents
+	var blocks protocol.BlocksData
 
-	err = proto.Unmarshal(b, &events)
+	err = proto.Unmarshal(b, &blocks)
 	if err != nil {
 		return nil, err
 	}
 
-	return &events, nil
+	return &blocks, nil
 }
