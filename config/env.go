@@ -21,8 +21,8 @@ const (
 
 	EnvJsonRpcHost           = "JSON_RPC_HOST"
 	EnvJsonRpcPort           = "JSON_RPC_PORT"
-	EnvCacheJsonRpcCachePort = "CACHE_JSON_RPC_PORT"
-	EnvCacheRequestTimeout   = "CACHE_REQUEST_TIMEOUT"
-	EnvCacheRequestInterval  = "CACHE_REQUEST_INTERVAL"
-	EnvCacheSupportedChains  = "CACHE_SUPPORTED_CHAINS"
+	EnvCacheJsonRpcCachePort = "JSON_RPC_CACHE_PORT"
+	EnvCacheRequestTimeout   = "JSON_RPC_CACHE_TIMEOUT"
+	EnvCacheRequestInterval  = "JSON_RPC_CACHE_INTERVAL"
+	EnvCacheSupportedChains  = "JSON_RPC_CACHE_SUPPORTED_CHAINS"
 )
