@@ -17,6 +17,17 @@ import (
 
 const (
 	ChainIDHeader = "X-Forta-Chain-ID"
+
+	// These values will be injected into the agent container to configure SDK
+	// SDKRequestTimeout timeout until the SDK must fallback to the RPC Node
+	// Value in seconds and can be a float.
+	SDKRequestTimeout = "5"
+	// SDKRequestInterval interval between SDK requests
+	// Value in seconds and can be a float.
+	SDKRequestInterval = "1"
+	// SDKSupportedChains comma separated list of supported chains
+	// Chains' data not filtered on the cache side.
+	SDKSupportedChains = "1,137,56,43114,42161,10,250,8453"
 )
 
 type JsonRpcCache struct {

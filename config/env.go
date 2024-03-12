@@ -6,8 +6,6 @@ const (
 	EnvReleaseInfo  = "FORTA_RELEASE_INFO"
 
 	// Agent env vars
-	EnvJsonRpcHost           = "JSON_RPC_HOST"
-	EnvJsonRpcPort           = "JSON_RPC_PORT"
 	EnvJWTProviderHost       = "FORTA_JWT_PROVIDER_HOST"
 	EnvJWTProviderPort       = "FORTA_JWT_PROVIDER_PORT"
 	EnvPublicAPIProxyHost    = "FORTA_PUBLIC_API_PROXY_HOST"
@@ -20,4 +18,11 @@ const (
 	EnvFortaShardID          = "FORTA_SHARD_ID"
 	EnvFortaShardCount       = "FORTA_SHARD_COUNT"
 	EnvFortaTokenExchangeURL = "FORTA_TOKEN_EXCHANGE_URL"
+
+	EnvJsonRpcHost           = "JSON_RPC_HOST"
+	EnvJsonRpcPort           = "JSON_RPC_PORT"
+	EnvCacheJsonRpcCachePort = "CACHE_JSON_RPC_PORT"
+	EnvCacheRequestTimeout   = "CACHE_REQUEST_TIMEOUT"
+	EnvCacheRequestInterval  = "CACHE_REQUEST_INTERVAL"
+	EnvCacheSupportedChains  = "CACHE_SUPPORTED_CHAINS"
 )
