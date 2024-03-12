@@ -130,18 +130,23 @@ func (c *JsonRpcCache) pollEvents() {
 	bucket := time.Now().Truncate(time.Second * 10).Unix()
 
 	for {
-		time.Sleep(1 * time.Second)
+		// wait for the next bucket
+		<-time.After(time.Duration(bucket-time.Now().Unix()) * time.Second)
+
 		log.Info("Polling for combined block events", "bucket", bucket)
 
-		events, err := c.blocksDataClient.GetBlocksData(bucket)
-		if err != nil {
-			log.WithError(err).Error("Failed to get combined block events", "bucket", bucket)
-			bucket = time.Now().Truncate(time.Second * 10).Unix()
-			continue
-		}
+		// blocksDataClient internally retries on failure and to not block on the retry, we run it in a goroutine
+		go func() {
+			events, err := c.blocksDataClient.GetBlocksData(bucket)
+			if err != nil {
+				log.WithError(err).Error("Failed to get combined block events", "bucket", bucket)
+				return
+			}
 
-		log.Info("Added combined block events to local cache", "bucket", bucket, "events", len(events.Blocks))
-		c.cache.Append(events)
+			log.Info("Added combined block events to local cache", "bucket", bucket, "events", len(events.Blocks))
+			c.cache.Append(events)
+		}()
+
 		bucket += 10 // 10 seconds
 	}
 }
