@@ -56,6 +56,7 @@ func CreateAgentResourcesMetric(agt config.AgentConfig, t time.Time, metric stri
 	return &protocol.AgentMetric{
 		AgentId:   agt.ID,
 		ShardId:   agt.ShardID(),
+		ChainId:   int64(agt.ChainID),
 		Timestamp: t.Format(time.RFC3339),
 		Name:      metric,
 		Value:     value,
