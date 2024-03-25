@@ -134,7 +134,7 @@ func (c *JsonRpcCache) Handler() http.Handler {
 			c.msgClient.PublishProto(
 				messaging.SubjectMetricAgent, &protocol.AgentMetricList{
 					Metrics: []*protocol.AgentMetric{
-						metrics.CreateDetailedAgentMetricV2(*agentConfig, domain.MetricJSONRPCCacheMiss, 1, details, chainID),
+						metrics.CreateDetailedAgentMetricV2(*agentConfig, fmt.Sprintf("%s.%s", domain.MetricJSONRPCCacheMiss, req.Method), 1, details, chainID),
 					},
 				},
 			)
@@ -153,7 +153,7 @@ func (c *JsonRpcCache) Handler() http.Handler {
 		c.msgClient.PublishProto(
 			messaging.SubjectMetricAgent, &protocol.AgentMetricList{
 				Metrics: []*protocol.AgentMetric{
-					metrics.CreateDetailedAgentMetricV2(*agentConfig, domain.MetricJSONRPCCacheHit, 1, details, chainID),
+					metrics.CreateDetailedAgentMetricV2(*agentConfig, fmt.Sprintf("%s.%s", domain.MetricJSONRPCCacheHit, req.Method), 1, details, chainID),
 					metrics.CreateDetailedAgentMetricV2(*agentConfig, domain.MetricJSONRPCCacheLatency, since, details, chainID),
 				},
 			},
