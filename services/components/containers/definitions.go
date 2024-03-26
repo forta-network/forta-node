@@ -48,7 +48,6 @@ func NewBotContainerConfig(
 		config.EnvCacheJsonRpcCachePort: config.DefaultBotJSONRPCCachePort,
 		config.EnvCacheRequestTimeout:   jrpcache.BotCacheRequestTimeoutSeconds,
 		config.EnvCacheRequestInterval:  jrpcache.BotCacheRequestIntervalSeconds,
-		config.EnvCacheSupportedChains:  jrpcache.BotCacheSupportedChains,
 	}
 	if botConfig.ChainID > 0 {
 		env[config.EnvFortaChainID] = fmt.Sprintf("%d", botConfig.ChainID)

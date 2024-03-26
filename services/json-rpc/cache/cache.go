@@ -26,6 +26,8 @@ func (c *inMemory) Append(blocksData *protocol.BlocksData) {
 	for _, event := range blocksData.Blocks {
 		chainID := event.ChainID
 
+		c.cache.SetDefault(cacheKey(chainID, "timestamp", ""), time.Now())
+
 		// eth_blockNumber
 		method := "eth_blockNumber"
 		params := "[]"

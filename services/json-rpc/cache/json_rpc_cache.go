@@ -16,6 +16,7 @@ import (
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/services/components/metrics"
 	"github.com/forta-network/forta-node/services/components/registry"
+	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -29,9 +30,6 @@ const (
 	// BotCacheRequestInterval interval between bot requests
 	// Value in seconds and can be a float.
 	BotCacheRequestIntervalSeconds = "1"
-	// BotCacheSupportedChains comma separated list of supported chains
-	// Chains' data not filtered on the cache side.
-	BotCacheSupportedChains = "1,137,56,43114,42161,10,250,8453"
 )
 
 type JsonRpcCache struct {
@@ -66,9 +64,13 @@ func NewJsonRpcCache(ctx context.Context, cfg config.JsonRpcCacheConfig, botRegi
 func (c *JsonRpcCache) Start() error {
 	c.cache = NewCache(time.Duration(c.cfg.CacheExpirePeriodSeconds) * time.Second)
 
+	r := mux.NewRouter()
+	r.Handle("/", c.Handler())
+	r.Handle("/health/{chainID}", c.HealthHandler())
+
 	c.server = &http.Server{
 		Addr:    ":8575",
-		Handler: c.Handler(),
+		Handler: r,
 	}
 
 	c.blocksDataClient = blocksdata.NewBlocksDataClient(c.cfg.DispatcherURL)
@@ -158,6 +160,31 @@ func (c *JsonRpcCache) Handler() http.Handler {
 				},
 			},
 		)
+	})
+}
+
+func (c *JsonRpcCache) HealthHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		chainID, err := strconv.ParseInt(mux.Vars(r)["chainID"], 10, 64)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("chain id must be an integer"))
+			return
+		}
+
+		t, ok := c.cache.Get(uint64(chainID), "timestamp", "")
+		if !ok {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+
+		timestamp := t.(time.Time)
+		if time.Since(timestamp) > time.Minute {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
 	})
 }
 
