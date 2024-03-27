@@ -195,6 +195,14 @@ func (c *JsonRpcCache) pollBlocksData() {
 		// wait for the next bucket
 		<-time.After(time.Duration(bucket-time.Now().Unix()) * time.Second)
 
+		c.msgClient.PublishProto(
+			messaging.SubjectMetricAgent, &protocol.AgentMetricList{
+				Metrics: []*protocol.AgentMetric{
+					metrics.CreateSystemMetric(domain.MetricJSONRPCCacheSize, float64(c.cache.cache.ItemCount()), ""),
+				},
+			},
+		)
+
 		agents, err := c.botRegistry.LoadAssignedBots()
 		if err == nil && len(agents) == 0 {
 			log.Warn("No agents assigned to the scanner, skipping polling for BlocksData")
@@ -218,7 +226,6 @@ func (c *JsonRpcCache) pollBlocksData() {
 				messaging.SubjectMetricAgent, &protocol.AgentMetricList{
 					Metrics: []*protocol.AgentMetric{
 						metrics.CreateSystemMetric(domain.MetricJSONRPCCachePollSuccess, float64(len(blocksData.Blocks)), fmt.Sprintf("%d", b)),
-						metrics.CreateSystemMetric(domain.MetricJSONRPCCacheSize, float64(c.cache.cache.ItemCount()), ""),
 					},
 				},
 			)
