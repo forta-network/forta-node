@@ -39,12 +39,15 @@ require (
 replace github.com/docker/docker => github.com/moby/moby v20.10.25+incompatible
 
 require (
+	github.com/andybalholm/brotli v1.1.0
+	github.com/cenkalti/backoff/v4 v4.1.3
 	github.com/docker/docker v1.6.2
 	github.com/docker/go-connections v0.4.0
-	github.com/forta-network/forta-core-go v0.0.0-20240306085049-a1ac54ae90f5
+	github.com/forta-network/forta-core-go v0.0.0-20240315154515-c71e1f3bd5e2
 	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/client_model v0.3.0
 	github.com/prometheus/common v0.39.0
+	google.golang.org/protobuf v1.28.1
 )
 
 require (
@@ -60,7 +63,6 @@ require (
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.2.0 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
-	github.com/cenkalti/backoff/v4 v4.1.3 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/containerd/cgroups v1.0.4 // indirect
 	github.com/coreos/go-systemd/v22 v22.4.0 // indirect
@@ -286,7 +288,6 @@ require (
 	golang.org/x/tools v0.2.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
 	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa // indirect
-	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

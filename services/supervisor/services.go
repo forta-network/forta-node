@@ -299,6 +299,9 @@ func (sup *SupervisorService) start() error {
 			Ports: map[string]string{
 				"": config.DefaultHealthPort, // random host port
 			},
+			Files: map[string][]byte{
+				"passphrase": []byte(sup.config.Passphrase),
+			},
 			DialHost:       true,
 			NetworkID:      nodeNetworkID,
 			LinkNetworkIDs: []string{natsNetworkID},

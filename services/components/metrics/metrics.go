@@ -42,12 +42,34 @@ func CreateAgentMetricV2(agt config.AgentConfig, metric string, value float64, c
 	}
 }
 
+func CreateDetailedAgentMetricV2(agt config.AgentConfig, metric string, value float64, details string, chainID int64) *protocol.AgentMetric {
+	return &protocol.AgentMetric{
+		AgentId:   agt.ID,
+		Timestamp: time.Now().Format(time.RFC3339),
+		Name:      metric,
+		Value:     value,
+		ShardId:   agt.ShardID(),
+		ChainId:   chainID,
+		Details:   details,
+	}
+}
+
 func CreateEventMetric(t time.Time, id string, metric string, details string) *protocol.AgentMetric {
 	return &protocol.AgentMetric{
 		AgentId:   id,
 		Timestamp: t.Format(time.RFC3339),
 		Name:      metric,
 		Value:     1,
+		Details:   details,
+	}
+}
+
+func CreateSystemMetric(metric string, value float64, details string) *protocol.AgentMetric {
+	return &protocol.AgentMetric{
+		AgentId:   "system",
+		Timestamp: time.Now().Format(time.RFC3339),
+		Name:      metric,
+		Value:     value,
 		Details:   details,
 	}
 }

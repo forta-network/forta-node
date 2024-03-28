@@ -44,6 +44,11 @@ type JsonRpcProxyConfig struct {
 	RateLimitConfig *RateLimitConfig `yaml:"rateLimit" json:"rateLimit"`
 }
 
+type JsonRpcCacheConfig struct {
+	DispatcherURL            string `yaml:"dispatcherUrl" json:"dispatcherUrl" default:"https://dispatcher.forta.network/batch" validate:"omitempty,url"`
+	CacheExpirePeriodSeconds int    `yaml:"cacheExpirePeriodSeconds" json:"cacheExpirePeriodSeconds" default:"300"`
+}
+
 type LogConfig struct {
 	Level       string `yaml:"level" json:"level" default:"info" `
 	MaxLogSize  string `yaml:"maxLogSize" json:"maxLogSize" default:"50m" `
@@ -227,6 +232,7 @@ type Config struct {
 	Registry         RegistryConfig       `yaml:"registry" json:"registry"`
 	Publish          PublisherConfig      `yaml:"publish" json:"publish"`
 	JsonRpcProxy     JsonRpcProxyConfig   `yaml:"jsonRpcProxy" json:"jsonRpcProxy"`
+	JsonRpcCache     JsonRpcCacheConfig   `yaml:"jsonRpcCache" json:"jsonRpcCache"`
 	PublicAPIProxy   PublicAPIProxyConfig `yaml:"publicApiProxy" json:"publicApiProxy"`
 	Log              LogConfig            `yaml:"log" json:"log"`
 	ResourcesConfig  ResourcesConfig      `yaml:"resources" json:"resources"`

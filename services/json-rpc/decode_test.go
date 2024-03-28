@@ -23,5 +23,6 @@ func TestDecodeAndReplaceBody(t *testing.T) {
 
 	// still can read body because it was replaced
 	b, err := io.ReadAll(req.Body)
+	r.NoError(err)
 	r.Equal(bodyStr, string(b))
 }
