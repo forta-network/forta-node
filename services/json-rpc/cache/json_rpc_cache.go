@@ -203,8 +203,7 @@ func (c *JsonRpcCache) pollBlocksData() {
 			},
 		)
 
-		agents, err := c.botRegistry.LoadAssignedBots()
-		if err == nil && len(agents) == 0 {
+		if !c.PollRequired() {
 			log.Warn("No agents assigned to the scanner, skipping polling for BlocksData")
 			bucket += 10 // 10 seconds
 			continue
@@ -236,4 +235,21 @@ func (c *JsonRpcCache) pollBlocksData() {
 
 		bucket += 10 // 10 seconds
 	}
+}
+
+func (c *JsonRpcCache) PollRequired() bool {
+	agents, err := c.botRegistry.LoadAssignedBots()
+	if err == nil && len(agents) == 0 {
+		return false
+	}
+
+	for _, agent := range agents {
+		// Cache is available only for protocol version 2
+		// So we don't need to poll BlocksData if there are no agents with protocol version 2
+		if agent.ProtocolVersion == 2 {
+			return true
+		}
+	}
+
+	return false
 }
