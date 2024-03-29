@@ -1,6 +1,7 @@
 package json_rpc_cache
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -10,6 +11,12 @@ import (
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/patrickmn/go-cache"
 	log "github.com/sirupsen/logrus"
+)
+
+var (
+	blockByNumberParams = `["%s",true]`
+	logsParams          = `[{"fromBlock":"%s","toBlock":"%s"}]`
+	traceBlockParams    = `["%s"]`
 )
 
 type inMemory struct {
@@ -47,7 +54,7 @@ func (c *inMemory) Append(blocksData *protocol.BlocksData) {
 
 		// eth_getBlockByNumber
 		method = "eth_getBlockByNumber"
-		params = fmt.Sprintf(`["%s",true]`, event.Block.Number)
+		params = fmt.Sprintf(blockByNumberParams, event.Block.Number)
 		log.Debugf("caching block. chainID: %d method: %s params: %s", chainID, method, params)
 
 		block := domain.BlockFromBlockData(event)
@@ -55,7 +62,7 @@ func (c *inMemory) Append(blocksData *protocol.BlocksData) {
 
 		// eth_getLogs
 		method = "eth_getLogs"
-		params = fmt.Sprintf(`[{"fromBlock":"%s","toBlock":"%s"}]`, event.Block.Number, event.Block.Number)
+		params = fmt.Sprintf(logsParams, event.Block.Number, event.Block.Number)
 
 		log.Debugf("caching logs. chainID: %d method: %s params: %s", chainID, method, params)
 
@@ -64,7 +71,7 @@ func (c *inMemory) Append(blocksData *protocol.BlocksData) {
 
 		// trace_block
 		method = "trace_block"
-		params = fmt.Sprintf(`["%s"]`, event.Block.Number)
+		params = fmt.Sprintf(traceBlockParams, event.Block.Number)
 
 		log.Debugf("caching traces. chainID: %d method: %s params: %s", chainID, method, params)
 
@@ -75,8 +82,54 @@ func (c *inMemory) Append(blocksData *protocol.BlocksData) {
 	}
 }
 
-func (c *inMemory) Get(chainId uint64, method string, params string) (interface{}, bool) {
-	return c.cache.Get(cacheKey(chainId, method, params))
+func (c *inMemory) Get(chainId uint64, method string, params []byte) (interface{}, bool) {
+	var key string
+	switch method {
+	case "eth_blockNumber":
+		key = cacheKey(chainId, method, "[]")
+	case "eth_getBlockByNumber":
+		var p []interface{}
+		err := json.Unmarshal(params, &p)
+		if err != nil {
+			return nil, false
+		}
+
+		blockNumber, ok := p[0].(string)
+		if !ok {
+			return nil, false
+		}
+
+		key = cacheKey(chainId, method, fmt.Sprintf(blockByNumberParams, blockNumber))
+	case "eth_getLogs":
+		var p []map[string]string
+		err := json.Unmarshal(params, &p)
+		if err != nil {
+			return nil, false
+		}
+
+		if len(p) == 0 {
+			return nil, false
+		}
+
+		key = cacheKey(chainId, method, fmt.Sprintf(logsParams, p[0]["fromBlock"], p[0]["toBlock"]))
+	case "trace_block":
+		var p []interface{}
+		err := json.Unmarshal(params, &p)
+		if err != nil {
+			return nil, false
+		}
+
+		blockNumber, ok := p[0].(string)
+		if !ok {
+			return nil, false
+		}
+
+		key = cacheKey(chainId, method, fmt.Sprintf(traceBlockParams, blockNumber))
+	default:
+		key = cacheKey(chainId, method, string(params))
+	}
+
+	return c.cache.Get(key)
 }
 
 func cacheKey(chainId uint64, method, params string) string {

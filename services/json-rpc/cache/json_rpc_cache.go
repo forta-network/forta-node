@@ -129,7 +129,7 @@ func (c *JsonRpcCache) Handler() http.Handler {
 		details := fmt.Sprintf("chainID: %d method: %s params: %s", chainID, req.Method, string(req.Params))
 		log.Debugf("jsonrpc cache request. %s", details)
 
-		result, ok := c.cache.Get(uint64(chainID), req.Method, string(req.Params))
+		result, ok := c.cache.Get(uint64(chainID), req.Method, req.Params)
 		if !ok {
 			log.Debugf("cache miss. %s", details)
 			c.msgClient.PublishProto(
@@ -177,7 +177,7 @@ func (c *JsonRpcCache) HealthHandler() http.Handler {
 			return
 		}
 
-		t, ok := c.cache.Get(uint64(chainID), "timestamp", "")
+		t, ok := c.cache.Get(uint64(chainID), "timestamp", []byte{})
 		if !ok {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			return

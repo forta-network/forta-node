@@ -13,17 +13,29 @@ func TestCache(t *testing.T) {
 
 	cache.Append(blocks)
 
-	blockNumber, ok := cache.Get(1, "eth_blockNumber", "[]")
+	blockNumber, ok := cache.Get(1, "eth_blockNumber", []byte("[]"))
 	assert.True(t, ok)
 	assert.Equal(t, "1", blockNumber)
 
-	blockNumber, ok = cache.Get(2, "eth_blockNumber", "[]")
+	blockNumber, ok = cache.Get(2, "eth_blockNumber", []byte("[]"))
 	assert.True(t, ok)
 	assert.Equal(t, "101", blockNumber)
 
+	block, ok := cache.Get(1, "eth_getBlockByNumber", []byte(`[ "1", true] `))
+	assert.True(t, ok)
+	assert.NotEmpty(t, block)
+
+	logs, ok := cache.Get(1, "eth_getLogs", []byte(`[ { "toBlock":"1", "fromBlock":"1" } ]`))
+	assert.True(t, ok)
+	assert.NotEmpty(t, logs)
+
+	trace, ok := cache.Get(1, "trace_block", []byte(`[ "1" ]`))
+	assert.True(t, ok)
+	assert.NotEmpty(t, trace)
+
 	time.Sleep(time.Second)
 
-	blockNumber, ok = cache.Get(1, "eth_blockNumber", "[]")
+	blockNumber, ok = cache.Get(1, "eth_blockNumber", []byte("[]"))
 	assert.False(t, ok)
 	assert.Empty(t, blockNumber)
 }

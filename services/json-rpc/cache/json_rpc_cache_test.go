@@ -90,6 +90,9 @@ func TestJsonRpcCache_NoAgentsAssigned(t *testing.T) {
 	blocksDataClient := mock_clients.NewMockBlocksDataClient(ctrl)
 	authenticator := mock_clients.NewMockIPAuthenticator(ctrl)
 	botRegistry := mock_registry.NewMockBotRegistry(ctrl)
+	msgClient := mock_clients.NewMockMessageClient(ctrl)
+
+	msgClient.EXPECT().PublishProto(gomock.Any(), gomock.Any()).AnyTimes()
 
 	loaded := make(chan struct{})
 	botRegistry.EXPECT().LoadAssignedBots().Return([]config.AgentConfig{}, nil).AnyTimes().Do(func() {
@@ -106,6 +109,7 @@ func TestJsonRpcCache_NoAgentsAssigned(t *testing.T) {
 		},
 		cache:       NewCache(300 * time.Second),
 		botRegistry: botRegistry,
+		msgClient:   msgClient,
 	}
 
 	go jrpCache.pollBlocksData()
