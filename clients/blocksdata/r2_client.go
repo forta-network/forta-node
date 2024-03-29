@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"time"
 
@@ -65,11 +66,15 @@ func (c *blocksDataClient) GetBlocksData(bucket int64) (_ *protocol.BlocksData, 
 			return err
 		}
 
-		if resp.StatusCode == 404 && bytes.Contains(b, []byte("too old")) {
+		if resp.StatusCode == http.StatusForbidden {
+			return backoff.Permanent(fmt.Errorf("forbidden"))
+		}
+
+		if resp.StatusCode == http.StatusNotFound && bytes.Contains(b, []byte("too old")) {
 			return fmt.Errorf("%s", b)
 		}
 
-		if resp.StatusCode != 200 {
+		if resp.StatusCode != http.StatusOK {
 			return fmt.Errorf("unexpected status code: %d, body: %s", resp.StatusCode, b)
 		}
 

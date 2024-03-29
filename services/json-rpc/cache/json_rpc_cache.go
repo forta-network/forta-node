@@ -248,13 +248,5 @@ func (c *JsonRpcCache) PollRequired() bool {
 		return false
 	}
 
-	for _, agent := range agents {
-		// Cache is available only for protocol version 2
-		// So we don't need to poll BlocksData if there are no agents with protocol version 2
-		if agent.ProtocolVersion == 2 {
-			return true
-		}
-	}
-
-	return false
+	return true
 }
