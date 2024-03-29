@@ -95,17 +95,16 @@ func (p *JsonRpcCache) Name() string {
 
 func (c *JsonRpcCache) Handler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var err error
+		agentConfig, err := c.botAuthenticator.FindAgentFromRemoteAddr(r.RemoteAddr)
+		if err != nil {
+			writeUnauthorized(w, nil)
+			return
+		}
+
 		t := time.Now()
 		req, err := decodeBody(r)
 		if err != nil {
 			writeBadRequest(w, req, err)
-			return
-		}
-
-		agentConfig, err := c.botAuthenticator.FindAgentFromRemoteAddr(r.RemoteAddr)
-		if agentConfig == nil || err != nil {
-			writeUnauthorized(w, req)
 			return
 		}
 
@@ -165,6 +164,12 @@ func (c *JsonRpcCache) Handler() http.Handler {
 
 func (c *JsonRpcCache) HealthHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := c.botAuthenticator.FindAgentFromRemoteAddr(r.RemoteAddr)
+		if err != nil {
+			writeUnauthorized(w, nil)
+			return
+		}
+
 		chainID, err := strconv.ParseInt(mux.Vars(r)["chainID"], 10, 64)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
