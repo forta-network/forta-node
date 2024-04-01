@@ -2,6 +2,7 @@ package blocksdata
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,7 +10,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/andybalholm/brotli"
 	backoff "github.com/cenkalti/backoff/v4"
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-core-go/utils/httpclient"
@@ -102,11 +102,18 @@ func (c *blocksDataClient) GetBlocksData(bucket int64) (_ *protocol.BlocksData, 
 			return err
 		}
 
+		defer resp.Body.Close()
+
 		if resp.StatusCode != 200 {
 			return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 		}
 
-		b, err := io.ReadAll(brotli.NewReader(resp.Body))
+		gzipReader, err := gzip.NewReader(resp.Body)
+		if err != nil {
+			return err
+		}
+
+		b, err := io.ReadAll(gzipReader)
 		if err != nil {
 			return err
 		}
