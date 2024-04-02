@@ -5,6 +5,7 @@ import (
 
 	"github.com/forta-network/forta-node/clients/docker"
 	"github.com/forta-network/forta-node/config"
+	jrpcache "github.com/forta-network/forta-node/services/json-rpc/cache"
 )
 
 // Label values
@@ -44,6 +45,9 @@ func NewBotContainerConfig(
 		config.EnvFortaBotOwner:         botConfig.Owner,
 		config.EnvFortaHealthCheckPort:  config.DefaultBotHealthCheckPort,
 		config.EnvFortaTokenExchangeURL: tokenExchangeURL,
+		config.EnvCacheJsonRpcCachePort: config.DefaultBotJSONRPCCachePort,
+		config.EnvCacheRequestTimeout:   jrpcache.BotCacheRequestTimeoutSeconds,
+		config.EnvCacheRequestInterval:  jrpcache.BotCacheRequestIntervalSeconds,
 	}
 	if botConfig.ChainID > 0 {
 		env[config.EnvFortaChainID] = fmt.Sprintf("%d", botConfig.ChainID)

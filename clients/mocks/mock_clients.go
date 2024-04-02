@@ -12,6 +12,7 @@ import (
 	types "github.com/docker/docker/api/types"
 	events "github.com/docker/docker/api/types/events"
 	domain "github.com/forta-network/forta-core-go/domain"
+	protocol "github.com/forta-network/forta-core-go/protocol"
 	docker "github.com/forta-network/forta-node/clients/docker"
 	config "github.com/forta-network/forta-node/config"
 	gomock "github.com/golang/mock/gomock"
@@ -707,4 +708,42 @@ func (m *MockIPAuthenticator) FindContainerNameFromRemoteAddr(ctx context.Contex
 func (mr *MockIPAuthenticatorMockRecorder) FindContainerNameFromRemoteAddr(ctx, hostPort interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindContainerNameFromRemoteAddr", reflect.TypeOf((*MockIPAuthenticator)(nil).FindContainerNameFromRemoteAddr), ctx, hostPort)
+}
+
+// MockBlocksDataClient is a mock of BlocksDataClient interface.
+type MockBlocksDataClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockBlocksDataClientMockRecorder
+}
+
+// MockBlocksDataClientMockRecorder is the mock recorder for MockBlocksDataClient.
+type MockBlocksDataClientMockRecorder struct {
+	mock *MockBlocksDataClient
+}
+
+// NewMockBlocksDataClient creates a new mock instance.
+func NewMockBlocksDataClient(ctrl *gomock.Controller) *MockBlocksDataClient {
+	mock := &MockBlocksDataClient{ctrl: ctrl}
+	mock.recorder = &MockBlocksDataClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockBlocksDataClient) EXPECT() *MockBlocksDataClientMockRecorder {
+	return m.recorder
+}
+
+// GetBlocksData mocks base method.
+func (m *MockBlocksDataClient) GetBlocksData(bucket int64) (*protocol.BlocksData, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBlocksData", bucket)
+	ret0, _ := ret[0].(*protocol.BlocksData)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBlocksData indicates an expected call of GetBlocksData.
+func (mr *MockBlocksDataClientMockRecorder) GetBlocksData(bucket interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlocksData", reflect.TypeOf((*MockBlocksDataClient)(nil).GetBlocksData), bucket)
 }
