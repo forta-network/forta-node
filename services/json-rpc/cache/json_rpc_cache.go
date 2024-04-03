@@ -221,7 +221,7 @@ func (c *JsonRpcCache) pollBlocksData() {
 			blocksData, err := c.blocksDataClient.GetBlocksData(b)
 			if err != nil {
 				c.msgClient.PublishProto(messaging.SubjectMetricAgent,
-					metrics.CreateEventMetric(time.Now(), "system", domain.MetricJSONRPCCachePollError, err.Error()))
+					metrics.CreateSystemMetric(domain.MetricJSONRPCCachePollError, 1, err.Error()))
 				log.WithError(err).Errorf("Failed to get BlocksData from dispatcher. bucket: %d", b)
 				return
 			}

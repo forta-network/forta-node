@@ -61,13 +61,13 @@ func (c *blocksDataClient) GetBlocksData(bucket int64) (_ *protocol.BlocksData, 
 
 		defer resp.Body.Close()
 
+		if resp.StatusCode == http.StatusForbidden {
+			return backoff.Permanent(fmt.Errorf("forbidden"))
+		}
+
 		b, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return err
-		}
-
-		if resp.StatusCode == http.StatusForbidden {
-			return backoff.Permanent(fmt.Errorf("forbidden"))
 		}
 
 		if resp.StatusCode == http.StatusNotFound && bytes.Contains(b, []byte("too old")) {
