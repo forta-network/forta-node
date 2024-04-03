@@ -12,7 +12,7 @@ import (
 
 	backoff "github.com/cenkalti/backoff/v4"
 	"github.com/forta-network/forta-core-go/protocol"
-	"github.com/forta-network/forta-core-go/utils/httpclient"
+	"golang.org/x/net/http2"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -24,13 +24,32 @@ const (
 
 type blocksDataClient struct {
 	dispatcherURL *url.URL
+	client        *http.Client
 }
 
 func NewBlocksDataClient(dispatcherURL string) *blocksDataClient {
 	u, _ := url.Parse(dispatcherURL)
 
+	transport := &http.Transport{}
+
+	// Get a copy of the HTTP2 transport
+	http2Transport, err := http2.ConfigureTransports(transport)
+	if err == nil {
+		// Enable healthchecks by setting the idle timeout
+		http2Transport.ReadIdleTimeout = time.Second * 30
+		// Change from the default of 15s
+		http2Transport.PingTimeout = time.Second * 5
+	}
+
+	// build client this time passing the transport in
+	client := http.Client{
+		Timeout:   30 * time.Second,
+		Transport: transport,
+	}
+
 	return &blocksDataClient{
 		dispatcherURL: u,
+		client:        &client,
 	}
 }
 
@@ -54,7 +73,7 @@ func (c *blocksDataClient) GetBlocksData(bucket int64) (_ *protocol.BlocksData, 
 	var item PresignedURLItem
 
 	err = backoff.Retry(func() error {
-		resp, err := httpclient.Default.Get(dispatcherUrl)
+		resp, err := c.client.Get(dispatcherUrl)
 		if err != nil {
 			return err
 		}
@@ -97,7 +116,7 @@ func (c *blocksDataClient) GetBlocksData(bucket int64) (_ *protocol.BlocksData, 
 	var blocks protocol.BlocksData
 
 	err = backoff.Retry(func() error {
-		resp, err := httpclient.Default.Get(item.PresignedURL)
+		resp, err := c.client.Get(item.PresignedURL)
 		if err != nil {
 			return err
 		}
