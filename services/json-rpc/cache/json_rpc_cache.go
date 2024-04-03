@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/forta-network/forta-core-go/domain"
 	"github.com/forta-network/forta-core-go/protocol"
 	"github.com/forta-network/forta-core-go/utils"
@@ -38,6 +39,7 @@ type JsonRpcCache struct {
 	botAuthenticator clients.IPAuthenticator
 	botRegistry      registry.BotRegistry
 	msgClient        clients.MessageClient
+	key              *keystore.Key
 
 	server *http.Server
 
@@ -46,15 +48,21 @@ type JsonRpcCache struct {
 	blocksDataClient clients.BlocksDataClient
 }
 
-func NewJsonRpcCache(ctx context.Context, cfg config.JsonRpcCacheConfig, botRegistry registry.BotRegistry) (*JsonRpcCache, error) {
+func NewJsonRpcCache(ctx context.Context, cfg config.Config, botRegistry registry.BotRegistry) (*JsonRpcCache, error) {
 	botAuthenticator, err := clients.NewBotAuthenticator(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	key, err := config.LoadKeyInContainer(cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	return &JsonRpcCache{
 		ctx:              ctx,
-		cfg:              cfg,
+		key:              key,
+		cfg:              cfg.JsonRpcCache,
 		botAuthenticator: botAuthenticator,
 		botRegistry:      botRegistry,
 		msgClient:        messaging.NewClient("json-rpc-cache", fmt.Sprintf("%s:%s", config.DockerNatsContainerName, config.DefaultNatsPort)),
@@ -73,7 +81,7 @@ func (c *JsonRpcCache) Start() error {
 		Handler: r,
 	}
 
-	c.blocksDataClient = blocksdata.NewBlocksDataClient(c.cfg.DispatcherURL)
+	c.blocksDataClient = blocksdata.NewBlocksDataClient(c.cfg.DispatcherURL, c.key)
 
 	utils.GoListenAndServe(c.server)
 

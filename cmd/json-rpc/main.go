@@ -18,7 +18,7 @@ func initJsonRpcProxy(ctx context.Context, cfg config.Config) (*jrp.JsonRpcProxy
 }
 
 func initJsonRpcCache(ctx context.Context, cfg config.Config, botRegistry registry.BotRegistry) (*jrpcache.JsonRpcCache, error) {
-	return jrpcache.NewJsonRpcCache(ctx, cfg.JsonRpcCache, botRegistry)
+	return jrpcache.NewJsonRpcCache(ctx, cfg, botRegistry)
 }
 
 func initServices(ctx context.Context, cfg config.Config) ([]services.Service, error) {
