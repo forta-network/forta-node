@@ -11,7 +11,9 @@ import (
 	"time"
 
 	backoff "github.com/cenkalti/backoff/v4"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/forta-network/forta-core-go/protocol"
+	"github.com/forta-network/forta-core-go/security"
 	"github.com/forta-network/forta-core-go/utils/httpclient"
 	"google.golang.org/protobuf/proto"
 )
@@ -24,13 +26,15 @@ const (
 
 type blocksDataClient struct {
 	dispatcherURL *url.URL
+	key           *keystore.Key
 }
 
-func NewBlocksDataClient(dispatcherURL string) *blocksDataClient {
+func NewBlocksDataClient(dispatcherURL string, key *keystore.Key) *blocksDataClient {
 	u, _ := url.Parse(dispatcherURL)
 
 	return &blocksDataClient{
 		dispatcherURL: u,
+		key:           key,
 	}
 }
 
@@ -54,6 +58,18 @@ func (c *blocksDataClient) GetBlocksData(bucket int64) (_ *protocol.BlocksData, 
 	var item PresignedURLItem
 
 	err = backoff.Retry(func() error {
+		req, err := http.NewRequest(http.MethodGet, dispatcherUrl, nil)
+		if err != nil {
+			return backoff.Permanent(err)
+		}
+
+		scannerJwt, err := security.CreateScannerJWT(c.key, nil)
+		if err != nil {
+			return backoff.Permanent(err)
+		}
+
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", scannerJwt))
+
 		resp, err := httpclient.Default.Get(dispatcherUrl)
 		if err != nil {
 			return err
@@ -61,13 +77,13 @@ func (c *blocksDataClient) GetBlocksData(bucket int64) (_ *protocol.BlocksData, 
 
 		defer resp.Body.Close()
 
+		if resp.StatusCode == http.StatusForbidden {
+			return backoff.Permanent(fmt.Errorf("forbidden"))
+		}
+
 		b, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return err
-		}
-
-		if resp.StatusCode == http.StatusForbidden {
-			return backoff.Permanent(fmt.Errorf("forbidden"))
 		}
 
 		if resp.StatusCode == http.StatusNotFound && bytes.Contains(b, []byte("too old")) {
