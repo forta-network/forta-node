@@ -63,12 +63,12 @@ func (c *blocksDataClient) GetBlocksData(bucket int64) (_ *protocol.BlocksData, 
 			return backoff.Permanent(err)
 		}
 
-		jwt, err := security.CreateScannerJWT(c.key, nil)
+		scannerJwt, err := security.CreateScannerJWT(c.key, nil)
 		if err != nil {
 			return backoff.Permanent(err)
 		}
 
-		req.Header.Set("Authorization", "Bearer "+jwt)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", scannerJwt))
 
 		resp, err := httpclient.Default.Get(dispatcherUrl)
 		if err != nil {
