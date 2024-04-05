@@ -7,7 +7,9 @@ type ContainerResources struct {
 }
 
 type CPUStats struct {
-	CPUUsage CPUUsage `json:"cpu_usage"`
+	CPUUsage    CPUUsage `json:"cpu_usage"`
+	SystemUsage uint64   `json:"system_cpu_usage"`
+	OnlineCPUs  uint32   `json:"online_cpus"`
 }
 
 type CPUUsage struct {

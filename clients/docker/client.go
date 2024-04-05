@@ -901,6 +901,8 @@ func (d *dockerClient) ContainerStats(ctx context.Context, id string) (*Containe
 			CPUUsage: CPUUsage{
 				TotalUsage: containerResources.CPUStats.CPUUsage.TotalUsage,
 			},
+			SystemUsage: containerResources.CPUStats.SystemUsage,
+			OnlineCPUs:  containerResources.CPUStats.OnlineCPUs,
 		},
 		MemoryStats: MemoryStats{
 			Usage: containerResources.MemoryStats.Usage,
