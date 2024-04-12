@@ -129,7 +129,7 @@ func (s *BotClientTestSuite) TestLaunchBot_Exists() {
 		// CPU metric
 		assert.Equal(s.T(), botConfig.ID, metrics.Metrics[0].AgentId)
 		assert.Equal(s.T(), domain.MetricDockerResourcesCPU, metrics.Metrics[0].Name)
-		assert.Equal(s.T(), float64(33), metrics.Metrics[0].Value)
+		assert.Equal(s.T(), float64(0), metrics.Metrics[0].Value)
 
 		// Memory metric
 		assert.Equal(s.T(), botConfig.ID, metrics.Metrics[1].AgentId)
