@@ -29,12 +29,10 @@ import (
 	"github.com/forta-network/forta-node/clients"
 	"github.com/forta-network/forta-node/clients/alertapi"
 	"github.com/forta-network/forta-node/clients/messaging"
-	"github.com/forta-network/forta-node/clients/storagegrpc"
 	"github.com/forta-network/forta-node/config"
 	"github.com/forta-network/forta-node/services/components/estimation"
 	"github.com/forta-network/forta-node/services/components/metrics"
 	"github.com/forta-network/forta-node/services/publisher/webhooklog"
-	"github.com/forta-network/forta-node/services/storage"
 	"github.com/forta-network/forta-node/store"
 	ipfsapi "github.com/ipfs/go-ipfs-api"
 	log "github.com/sirupsen/logrus"
@@ -59,7 +57,6 @@ type Publisher struct {
 	cfg               PublisherConfig
 	contract          AlertsContract
 	ipfs              ipfs.Client
-	storage           protocol.StorageClient
 	metricsAggregator *AgentMetricsAggregator
 	messageClient     clients.MessageClient
 	alertClient       clients.AlertAPIClient
@@ -67,8 +64,7 @@ type Publisher struct {
 
 	lifecycleMetrics metrics.Lifecycle
 
-	batchRefStore    store.StringStore
-	lastReceiptStore store.StringStore
+	batchRefStore store.StringStore
 
 	blockTimeline estimation.BlockTimeline
 
@@ -108,9 +104,6 @@ type Publisher struct {
 
 // LocalAlertClient sends the local alerts.
 type LocalAlertClient webhook.AlertWebhookClient
-
-// StorageClient stores content.
-type StorageClient protocol.StorageClient
 
 // EthClient interacts with the Ethereum API.
 type EthClient interface {
@@ -276,12 +269,6 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 		},
 	)
 
-	var lastReceipt string
-	lr, err := pub.lastReceiptStore.Get()
-	if err == nil {
-		lastReceipt = lr
-	}
-
 	signedBatchSummary, err := security.SignBatchSummary(
 		pub.cfg.Key, &protocol.BatchSummary{
 			Batch:            cid,
@@ -290,7 +277,6 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 			BlockEnd:         batch.BlockEnd,
 			AlertCount:       batch.AlertCount,
 			ScannerVersion:   batch.ScannerVersion,
-			PreviousReceipt:  lastReceipt,
 			LatestBlockInput: batch.LatestBlockInput,
 			Timestamp:        time.Now().UTC().Format(time.RFC3339),
 		},
@@ -302,7 +288,6 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 
 	scannerAddr := pub.cfg.Key.Address.Hex()
 
-	var resp *domain.AlertBatchResponse
 	for i := 0; i < defaultBatchSendRetryTimes; i++ {
 		var scannerJwt string
 		scannerJwt, err = security.CreateScannerJWT(
@@ -314,7 +299,7 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 			logger.WithError(err).Error("failed to create batch jwt")
 			return false, err
 		}
-		resp, err = pub.alertClient.PostBatch(&domain.AlertBatchRequest{
+		err = pub.alertClient.PostBatch(&domain.AlertBatchRequest{
 			Scanner:            scannerAddr,
 			ChainID:            int64(batch.ChainId),
 			BlockStart:         int64(batch.BlockStart),
@@ -338,47 +323,6 @@ func (pub *Publisher) publishNextBatch(batch *protocol.AlertBatch) (published bo
 	if err != nil {
 		logger.WithError(err).Error("alert while sending batch")
 		return false, fmt.Errorf("failed to send the alert tx: %v", err)
-	}
-
-	if resp.SignedReceipt != nil {
-		// store off receipt id
-		if err := pub.lastReceiptStore.Put(resp.ReceiptID); err != nil {
-			logger.WithError(err).Error("failed to marshal receipt")
-			return true, err
-		}
-		logger = logger.WithFields(
-			log.Fields{
-				"receiptId": resp.ReceiptID,
-			},
-		)
-
-		// if for some reason receipt can't marshal, log and move on
-		b, err := json.Marshal(resp.SignedReceipt)
-		if err != nil {
-			logger.WithError(err).Error("failed to marshal receipt (not saving receipt)")
-			return true, nil
-		}
-		logger = logger.WithFields(log.Fields{
-			"receipt": string(b),
-		})
-
-		if pub.cfg.Config.AdvancedConfig.IPFSExperiment {
-			ctx, cancel := context.WithTimeout(pub.ctx, time.Second*10)
-			defer cancel()
-			putResp, err := pub.storage.Put(ctx, &protocol.PutRequest{
-				User:  scannerAddr,
-				Kind:  storage.KindBatchReceipt,
-				Bytes: b,
-			})
-			if err != nil {
-				logger.WithError(err).Warn("failed to store batch receipt")
-			} else {
-				logger = logger.WithFields(log.Fields{
-					"storedReceiptRef":  putResp.ContentId,
-					"storedReceiptPath": putResp.ContentPath,
-				})
-			}
-		}
 	}
 
 	logger.Info("alert batch")
@@ -864,15 +808,7 @@ func NewPublisher(ctx context.Context, blockTimeline estimation.BlockTimeline, c
 
 	apiClient := alertapi.NewClient(cfg.Publish.APIURL)
 
-	var storageClient protocol.StorageClient
-	if !cfg.LocalModeConfig.Enable && cfg.AdvancedConfig.IPFSExperiment {
-		storageClient, err = storagegrpc.DialContext(ctx, fmt.Sprintf("%s:%s", config.DockerStorageContainerName, config.DefaultStoragePort))
-		if err != nil {
-			return nil, fmt.Errorf("failed to dial the storage client: %v", err)
-		}
-	}
-
-	return initPublisher(ctx, msgClient, lifecycleMetrics, apiClient, storageClient, blockTimeline,
+	return initPublisher(ctx, msgClient, lifecycleMetrics, apiClient, blockTimeline,
 		PublisherConfig{
 			ChainID:         cfg.ChainID,
 			Key:             key,
@@ -886,8 +822,7 @@ func NewPublisher(ctx context.Context, blockTimeline estimation.BlockTimeline, c
 func initPublisher(
 	ctx context.Context, mc clients.MessageClient,
 	lifecycleMetrics metrics.Lifecycle, alertClient clients.AlertAPIClient,
-	storageClient StorageClient, blockTimeline estimation.BlockTimeline,
-	cfg PublisherConfig,
+	blockTimeline estimation.BlockTimeline, cfg PublisherConfig,
 ) (*Publisher, error) {
 	ipfsClient, err := ipfs.NewClient(fmt.Sprintf("http://%s:5001", config.DockerIpfsContainerName))
 	if err != nil {
@@ -929,14 +864,12 @@ func initPublisher(
 		ctx:               ctx,
 		cfg:               cfg,
 		ipfs:              ipfsClient,
-		storage:           storageClient,
 		metricsAggregator: NewMetricsAggregator(time.Duration(*cfg.PublisherConfig.Batch.MetricsBucketIntervalSeconds)*time.Second, int64(cfg.ChainID)),
 		messageClient:     mc,
 		alertClient:       alertClient,
 		localAlertClient:  localAlertClient,
 		lifecycleMetrics:  lifecycleMetrics,
 		batchRefStore:     store.NewFileStringStore(path.Join(cfg.Config.FortaDir, ".last-batch")),
-		lastReceiptStore:  store.NewFileStringStore(path.Join(cfg.Config.FortaDir, ".last-receipt")),
 		blockTimeline:     blockTimeline,
 
 		skipEmpty:     cfg.PublisherConfig.Batch.SkipEmpty,
