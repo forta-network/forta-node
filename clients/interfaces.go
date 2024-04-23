@@ -60,7 +60,7 @@ type MessageClient interface {
 
 // AlertAPIClient calls an http api on the analyzer to store alerts
 type AlertAPIClient interface {
-	PostBatch(batch *domain.AlertBatchRequest, token string) (*domain.AlertBatchResponse, error)
+	PostBatch(batch *domain.AlertBatchRequest, token string) error
 }
 
 type IPAuthenticator interface {

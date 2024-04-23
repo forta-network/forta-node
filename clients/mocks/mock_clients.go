@@ -614,12 +614,11 @@ func (m *MockAlertAPIClient) EXPECT() *MockAlertAPIClientMockRecorder {
 }
 
 // PostBatch mocks base method.
-func (m *MockAlertAPIClient) PostBatch(batch *domain.AlertBatchRequest, token string) (*domain.AlertBatchResponse, error) {
+func (m *MockAlertAPIClient) PostBatch(batch *domain.AlertBatchRequest, token string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PostBatch", batch, token)
-	ret0, _ := ret[0].(*domain.AlertBatchResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // PostBatch indicates an expected call of PostBatch.
