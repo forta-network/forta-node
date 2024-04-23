@@ -42,7 +42,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.1.3
 	github.com/docker/docker v1.6.2
 	github.com/docker/go-connections v0.4.0
-	github.com/forta-network/forta-core-go v0.0.0-20240410112425-80ab9a87259c
+	github.com/forta-network/forta-core-go v0.0.0-20240423071831-edccde967e5b
 	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/client_model v0.3.0
 	github.com/prometheus/common v0.39.0
