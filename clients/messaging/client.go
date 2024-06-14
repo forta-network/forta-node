@@ -30,22 +30,30 @@ func NewClient(name, natsURL string) *Client {
 		nc  *nats.Conn
 		err error
 	)
-	for i := 0; i < 10; i++ {
-		nc, err = nats.Connect(natsURL)
-		if err == nil {
-			break
-		}
-		logger.WithError(err).Error("failed to connect to nats server")
-		time.Sleep(time.Second * 1) // don't retry too quickly - maybe it's not up yet
-	}
+	nc, err = nats.Connect(natsURL,
+		nats.ReconnectWait(2*time.Second),
+		nats.MaxReconnects(10),
+		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
+			fmt.Printf("Got disconnected! Reason: %s\n", err.Error())
+		}),
+		nats.ReconnectHandler(func(nc *nats.Conn) {
+			fmt.Printf("Got reconnected to %v!\n", nc.ConnectedUrl())
+		}),
+		nats.ClosedHandler(func(nc *nats.Conn) {
+			fmt.Printf("Connection closed. Reason: %s", nc.LastError().Error())
+		}),
+	)
+
 	if err != nil {
-		logger.Panic(err)
+		logger.Panic(fmt.Errorf("failed to connect to nats server %w", err))
 	}
+
 	logger.Info("successfully connected")
 	client := &Client{
 		logger: logger,
 		nc:     nc,
 	}
+
 	return client
 }
 
