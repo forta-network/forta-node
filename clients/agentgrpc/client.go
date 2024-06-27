@@ -56,12 +56,12 @@ func (client *client) DialWithRetry(cfg config.AgentConfig) error {
 		conn *grpc.ClientConn
 		err  error
 	)
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 40; i++ {
 		conn, err = grpc.Dial(
 			fmt.Sprintf("%s:%s", cfg.ContainerName(), cfg.GrpcPort()),
 			grpc.WithInsecure(),
 			grpc.WithBlock(),
-			grpc.WithTimeout(10*time.Second),
+			grpc.WithTimeout(30*time.Second),
 			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(defaultAgentResponseMaxByteCount)),
 		)
 		if err == nil {
